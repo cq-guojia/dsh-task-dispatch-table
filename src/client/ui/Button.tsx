@@ -3,7 +3,7 @@
  *
  * 两轴模型（同 Segmented）：
  *  - `variant`：`primary`（实心强调）/ `outline`（描边中性）/ `ghost`（无底无边）/ `danger`（实心红，破坏性确认）
- *  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— 高度一律吃 `--tdt-control-h-*`，**有边 / 无边同高**（边框在内部补回）
+ *  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— 高度一律吃 `--dshpc-control-h-*`，**有边 / 无边同高**（边框在内部补回）
  *
  * `IconButton` 是纯图标钮：`plain`（默认无底无边，hover 起灰底）/ `outline`（描边）/ `danger`（红）。
  * 链接型文字钮 = `Button variant="ghost"` + 修饰类 `dsh-tdt-btn--link`（红字危险描边 = `outline` + `dsh-tdt-btn--danger-ink`）。

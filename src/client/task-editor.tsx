@@ -637,7 +637,7 @@ export function definitionToDraft(definition: Record<string, unknown>): TaskEdit
 // ─────────────────────── 布局小件 ───────────────────────
 
 /** 区块小标题（分组标签）：600 字重小字。（原注释指向已删除的 `dsh-tdt-ed-input` 类，2026-10-01 修正。） */
-const sectionLabelStyle: CSSProperties = { fontSize: 'var(--tdt-font-sm)', fontWeight: 600, color: 'var(--tdt-fg)', marginBottom: '6px' }
+const sectionLabelStyle: CSSProperties = { fontSize: 'var(--dshpc-font-sm)', fontWeight: 600, color: 'var(--dshpc-fg)', marginBottom: '6px' }
 
 /**
  * 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
@@ -821,7 +821,7 @@ function IntervalControls(props: {
   return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
     // 一行说完：每隔 [1] [小时] 执行一次（照参考图的写法，不再拆成标签列）。
     h('div', { className: 'dsh-tdt-ed-row' },
-      h('span', { style: { fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' } }, t('editorIntervalEvery')),
+      h('span', { style: { fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg)' } }, t('editorIntervalEvery')),
       h(NumberInput, {
         value: Number.parseInt(draft.intervalStep, 10) || 1,
         min: 1,
@@ -839,7 +839,7 @@ function IntervalControls(props: {
         ariaLabel: t('editorIntervalUnit'),
         width: 96,
       }),
-      h('span', { style: { fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' } }, t('editorIntervalSuffix')),
+      h('span', { style: { fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg)' } }, t('editorIntervalSuffix')),
     ),
     h(WeekdayPicker, {
       value: draft.weekdays,
@@ -918,18 +918,18 @@ function stableStringify(value: unknown): string {
  * 提供语法高亮 + 行号；预览态复用官方 MarkdownText（GFM + KaTeX，主题与宿主一致）。
  * 右侧版本历史（保存 / 回滚）保留；编辑 / 预览切换在顶部（复用任务编辑器 tab 样式）。
  */
-// CodeMirror 主题：背景 / 文字 / 行号全部走 `--tdt-*` token，明暗自适应；
+// CodeMirror 主题：背景 / 文字 / 行号全部走 `--dshpc-*` token，明暗自适应；
 // 编辑器本身只负责「带语法高亮的纯文本」（gzip ~60KB，且仅在全屏编辑时才加载）。
 const promptEditorTheme = EditorView.theme({
-  '&': { backgroundColor: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', height: '100%', width: '100%' },
-  '.cm-editor': { height: '100%', width: '100%', backgroundColor: 'var(--tdt-surface-base, #22252a)' },
+  '&': { backgroundColor: 'var(--dshpc-surface-base, #22252a)', color: 'var(--dshpc-fg)', height: '100%', width: '100%' },
+  '.cm-editor': { height: '100%', width: '100%', backgroundColor: 'var(--dshpc-surface-base, #22252a)' },
   // 软折行：长行自动换行，不出现横向滚动条（编辑器随列宽收缩也跟着重折）。
-  '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 'var(--tdt-font-md)', lineHeight: '1.6', overflowX: 'hidden' },
+  '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 'var(--dshpc-font-md)', lineHeight: '1.6', overflowX: 'hidden' },
   '.cm-content': { width: '100%' },
   '.cm-line': { padding: '0 4px' },
-  '.cm-gutters': { backgroundColor: 'var(--tdt-surface-1, rgba(128,128,128,0.08))', color: 'var(--tdt-fg-2)', border: 'none' },
-  '.cm-activeLine': { backgroundColor: 'var(--tdt-hover, rgba(128,128,128,0.16))' },
-  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--tdt-fg)' },
+  '.cm-gutters': { backgroundColor: 'var(--dshpc-surface-1, rgba(128,128,128,0.08))', color: 'var(--dshpc-fg-2)', border: 'none' },
+  '.cm-activeLine': { backgroundColor: 'var(--dshpc-hover, rgba(128,128,128,0.16))' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--dshpc-fg)' },
   '&.cm-focused': { outline: 'none' },
 }, { dark: true })
 
@@ -946,15 +946,15 @@ function ConfirmDiscard(props: {
     role: 'alertdialog',
     'aria-modal': true,
     'aria-label': props.t('editorDiscardTitle'),
-    style: { position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--tdt-mask, rgba(0,0,0,0.45))' },
+    style: { position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dshpc-mask, rgba(0,0,0,0.45))' },
     onClick: props.onStay,
   },
     h('div', {
-      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--tdt-surface-2, #2a2e33)', borderRadius: 'var(--tdt-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '22px 24px', color: 'var(--tdt-fg)' },
+      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--dshpc-surface-2, #2a2e33)', borderRadius: 'var(--dshpc-radius-panel, 10px)', boxShadow: 'var(--dshpc-shadow-2)', padding: '22px 24px', color: 'var(--dshpc-fg)' },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
-      h('div', { style: { fontSize: 'var(--tdt-font-xl)', fontWeight: 500, marginBottom: '8px' } }, props.t('editorDiscardTitle')),
-      h('div', { style: { fontSize: 'var(--tdt-font-lg)', lineHeight: 'var(--tdt-line-lg)', color: 'var(--tdt-fg-2)', marginBottom: '20px' } }, props.t('editorDiscardDesc')),
+      h('div', { style: { fontSize: 'var(--dshpc-font-xl)', fontWeight: 500, marginBottom: '8px' } }, props.t('editorDiscardTitle')),
+      h('div', { style: { fontSize: 'var(--dshpc-font-lg)', lineHeight: 'var(--dshpc-line-lg)', color: 'var(--dshpc-fg-2)', marginBottom: '20px' } }, props.t('editorDiscardDesc')),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
         h(Button, { variant: 'outline', size: 'sm', onClick: props.onStay }, props.t('editorDiscardStay')),
         h(Button, { variant: 'primary', size: 'sm', onClick: props.onLeave }, props.t('editorDiscardLeave')),
@@ -986,33 +986,33 @@ function VersionConfirm(props: {
   return h('div', {
     role: 'alertdialog',
     'aria-modal': true,
-    style: { position: 'absolute', inset: 0, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--tdt-mask, rgba(0,0,0,0.45))' },
+    style: { position: 'absolute', inset: 0, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dshpc-mask, rgba(0,0,0,0.45))' },
     onClick: props.onCancel,
   },
     h('div', {
-      style: { width: 'min(400px, 100%)', boxSizing: 'border-box', background: 'var(--tdt-surface-2, #2a2e33)', borderRadius: 'var(--tdt-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '20px 24px 18px', color: 'var(--tdt-fg)' },
+      style: { width: 'min(400px, 100%)', boxSizing: 'border-box', background: 'var(--dshpc-surface-2, #2a2e33)', borderRadius: 'var(--dshpc-radius-panel, 10px)', boxShadow: 'var(--dshpc-shadow-2)', padding: '20px 24px 18px', color: 'var(--dshpc-fg)' },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
       // 层级：标题 15/600（警告橙可选）→ 说明 13 次要色 → 圆点清单 13 主色、条目间留呼吸 → 勾选 → 按钮。
-      h('div', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, lineHeight: 'var(--tdt-line-lg)', marginBottom: '10px', ...(props.warning === true ? { color: 'var(--tdt-warning)' } : {}) } }, props.title),
+      h('div', { style: { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, lineHeight: 'var(--dshpc-line-lg)', marginBottom: '10px', ...(props.warning === true ? { color: 'var(--dshpc-warning)' } : {}) } }, props.title),
       props.desc !== ''
-        ? h('div', { style: { fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', color: 'var(--tdt-fg-2)', marginBottom: props.bullets !== undefined ? '8px' : '18px' } }, props.desc)
+        ? h('div', { style: { fontSize: 'var(--dshpc-font-md)', lineHeight: 'var(--dshpc-line-md)', color: 'var(--dshpc-fg-2)', marginBottom: props.bullets !== undefined ? '8px' : '18px' } }, props.desc)
         : null,
       props.bullets !== undefined && props.bullets.length > 0
-        ? h('ul', { style: { listStyle: 'none', margin: '0 0 18px', padding: '10px 12px', borderRadius: 'var(--tdt-radius-md,8px)', background: 'var(--tdt-surface-1,rgba(128,128,128,.08))', display: 'flex', flexDirection: 'column', gap: '6px' } },
-          ...props.bullets.map(b => h('li', { key: b, style: { fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', display: 'flex', gap: '8px' } },
-            h('span', { style: { flex: 'none', width: '5px', height: '5px', borderRadius: '50%', background: 'var(--tdt-fg-3,rgba(128,128,128,.8))', margin: '7px 0 0' } }),
+        ? h('ul', { style: { listStyle: 'none', margin: '0 0 18px', padding: '10px 12px', borderRadius: 'var(--dshpc-radius-md,8px)', background: 'var(--dshpc-surface-1,rgba(128,128,128,.08))', display: 'flex', flexDirection: 'column', gap: '6px' } },
+          ...props.bullets.map(b => h('li', { key: b, style: { fontSize: 'var(--dshpc-font-md)', lineHeight: 'var(--dshpc-line-md)', display: 'flex', gap: '8px' } },
+            h('span', { style: { flex: 'none', width: '5px', height: '5px', borderRadius: '50%', background: 'var(--dshpc-fg-3,rgba(128,128,128,.8))', margin: '7px 0 0' } }),
             h('span', null, b),
           )),
         )
         : null,
       needAck
-        ? h('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', cursor: 'pointer', marginBottom: '16px' } },
+        ? h('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: 'var(--dshpc-font-md)', lineHeight: 'var(--dshpc-line-md)', cursor: 'pointer', marginBottom: '16px' } },
           h('input', {
             type: 'checkbox',
             checked: props.checkbox?.checked === true,
             onChange: (event: { target: { checked: boolean } }) => { props.checkbox?.onToggle(event.target.checked) },
-            style: { flex: 'none', margin: '2px 0 0', accentColor: 'var(--tdt-warning)', width: '14px', height: '14px', cursor: 'pointer' },
+            style: { flex: 'none', margin: '2px 0 0', accentColor: 'var(--dshpc-warning)', width: '14px', height: '14px', cursor: 'pointer' },
           }),
           h('span', null, props.checkbox?.label),
         )
@@ -1060,10 +1060,10 @@ function PromptEditorModal(props: {
   const versionTitle = editorMode === 'create' ? t('editorHistoryVersions') : t('editorVersions')
 
   return h('div', {
-    style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', overflow: 'hidden', position: 'relative' },
+    style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dshpc-surface-base, #22252a)', color: 'var(--dshpc-fg)', overflow: 'hidden', position: 'relative' },
   },
-    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid var(--tdt-border)` } },
-      h('span', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600 } }, t('editorPromptEditorTitle')),
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid var(--dshpc-border)` } },
+      h('span', { style: { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600 } }, t('editorPromptEditorTitle')),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
         h(Segmented, {
           id: 'dsh-tdt-ed-prompt-mode',
@@ -1116,13 +1116,13 @@ function PromptEditorModal(props: {
           ),
       showVersions
         // 面板缩窄（用户 2026-09-30：固定 280 太占地方）= 232px：够放日期 + hover 两个小钮，左栏多让 48px。
-        ? h('div', { style: { flex: '0 0 232px', borderLeft: `1px solid var(--tdt-border-heavy)`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
-            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid var(--tdt-border-heavy)`, fontSize: 'var(--tdt-font-md)', fontWeight: 600 } }, versionTitle),
+        ? h('div', { style: { flex: '0 0 232px', borderLeft: `1px solid var(--dshpc-border-heavy)`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
+            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid var(--dshpc-border-heavy)`, fontSize: 'var(--dshpc-font-md)', fontWeight: 600 } }, versionTitle),
             editorMode === 'create'
-              ? h('div', { style: { padding: '16px 12px', fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
+              ? h('div', { style: { padding: '16px 12px', fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
               : h('div', { style: { display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' } },
                 versions.length === 0
-                  ? h('p', { style: { padding: '0 12px', fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)' } }, t('editorNoVersions'))
+                  ? h('p', { style: { padding: '0 12px', fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)' } }, t('editorNoVersions'))
                   : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 0 8px', overflow: 'auto' } },
                     versions.map(v => h('li', {
                       key: v.file,
@@ -1183,9 +1183,9 @@ function PromptEditorModal(props: {
  */
 function ConfigPreviewPanel(props: { t: T; json: string; onClose: () => void }): ReactNode {
   const { t, json, onClose } = props
-  return h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', overflow: 'hidden', position: 'relative' } },
-    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid var(--tdt-border)` } },
-      h('span', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600 } }, t('editorPreview')),
+  return h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dshpc-surface-base, #22252a)', color: 'var(--dshpc-fg)', overflow: 'hidden', position: 'relative' } },
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid var(--dshpc-border)` } },
+      h('span', { style: { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600 } }, t('editorPreview')),
       h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
     ),
     h('div', { style: { flex: '1 1 auto', minWidth: 0, minHeight: 0, overflow: 'hidden' } },
@@ -1773,8 +1773,8 @@ export function TaskEditorDrawer(props: {
             h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, att.isDir === true ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: att.name, size: 16 })),
             // 文件名占据左侧所有可用空间，把「上传/链接」标签和「移除」按钮顶到最右边；
             // 自己保留 flex-shrink，容器窄时自动截断成省略号，不会挤变形按钮（用户 2026-10-03）。
-            h('span', { className: 'dsh-tdt-ellipsis', style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)' } }, att.name),
-            h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', borderRadius: 'var(--tdt-radius-xs)', padding: '1px 6px', background: 'var(--tdt-hover,rgba(38,49,72,.06))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
+            h('span', { className: 'dsh-tdt-ellipsis', style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--dshpc-font-md)' } }, att.name),
+            h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-2)', borderRadius: 'var(--dshpc-radius-xs)', padding: '1px 6px', background: 'var(--dshpc-hover,rgba(38,49,72,.06))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
             // 移除按钮保留（用户 2026-10-06），声明不收缩 / 不折行，确保不会被文件名挤到换行或压扁；
             // 点击要拦冒泡，否则会先删附件又触发整行的「查看」。
             h(Button, { variant: 'ghost', size: 'sm', onClick: (event: { stopPropagation: () => void }) => {
@@ -1789,7 +1789,7 @@ export function TaskEditorDrawer(props: {
     // 隐藏 input 挂卡片层、始终在册。
     h('div', { style: { display: 'flex', gap: '10px', alignItems: 'stretch' } },
       h('div', {
-        style: { flex: '1 1 auto', border: `1px dashed var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)', padding: '16px 12px', textAlign: 'center', cursor: uploading ? 'default' : 'pointer', background: 'var(--tdt-surface-1)' },
+        style: { flex: '1 1 auto', border: `1px dashed var(--dshpc-border-heavy)`, borderRadius: 'var(--dshpc-radius-md)', padding: '16px 12px', textAlign: 'center', cursor: uploading ? 'default' : 'pointer', background: 'var(--dshpc-surface-1)' },
         onClick: () => { if (!uploading) fileInputRef.current?.click() },
         onDragOver: (event: { preventDefault(): void }) => { event.preventDefault() },
         onDrop: (event: { preventDefault(): void; dataTransfer?: { files?: FileList } }) => {
@@ -1797,8 +1797,8 @@ export function TaskEditorDrawer(props: {
           if (!uploading && event.dataTransfer?.files !== undefined) void uploadFiles(event.dataTransfer.files)
         },
       },
-        h('div', { style: { fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
-        uploading ? null : h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', marginTop: '4px' } }, t('editorDropZoneFormats')),
+        h('div', { style: { fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg)' } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
+        uploading ? null : h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-2)', marginTop: '4px' } }, t('editorDropZoneFormats')),
       ),
       h('div', { style: { flex: 'none', display: 'flex' } },
         // 正方形虚线按钮（用户 2026-09-29：与投放区同语言——加号在上、文字在下）。
@@ -1815,12 +1815,12 @@ export function TaskEditorDrawer(props: {
           },
           style: {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
-            width: '92px', padding: '8px', border: `1px dashed var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)',
-            background: 'var(--tdt-surface-1)', cursor: 'pointer', color: 'var(--tdt-fg)',
+            width: '92px', padding: '8px', border: `1px dashed var(--dshpc-border-heavy)`, borderRadius: 'var(--dshpc-radius-md)',
+            background: 'var(--dshpc-surface-1)', cursor: 'pointer', color: 'var(--dshpc-fg)',
           },
         },
           h(IconPlusOutlineRegular, { size: 20 }),
-          h('span', { style: { fontSize: 'var(--tdt-font-sm)', lineHeight: 1.2 } }, t('editorPickWorkspaceFileShort')),
+          h('span', { style: { fontSize: 'var(--dshpc-font-sm)', lineHeight: 1.2 } }, t('editorPickWorkspaceFileShort')),
         ),
       ),
     ),
@@ -1886,12 +1886,12 @@ export function TaskEditorDrawer(props: {
       ),
     // 「预计执行」人话说明（用户 2026-09-30）：在「任务开始时间」上方画两条**虚线**，中间夹一句实时翻译。
     h('div', { style: { marginTop: '14px' } },
-      h('div', { style: { borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px', fontSize: 'var(--tdt-font-sm)', lineHeight: '1.6', color: 'var(--tdt-fg-2)' } },
-        h('span', { style: { color: 'var(--tdt-fg)', fontWeight: 600, marginRight: '4px' } }, t('editorSchedForecast') + '：'),
+      h('div', { style: { borderTop: `1px dashed var(--dshpc-border)`, paddingTop: '10px', fontSize: 'var(--dshpc-font-sm)', lineHeight: '1.6', color: 'var(--dshpc-fg-2)' } },
+        h('span', { style: { color: 'var(--dshpc-fg)', fontWeight: 600, marginRight: '4px' } }, t('editorSchedForecast') + '：'),
         // 关键片段（时间 / 「每 N 分钟执行一次」）加粗提亮（用户 2026-09-30：方法要支持样式参数）。
-        renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: 'var(--tdt-fg)' } }),
+        renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: 'var(--dshpc-fg)' } }),
       ),
-      h('div', { style: { borderTop: `1px dashed var(--tdt-border)`, marginTop: '10px' } }),
+      h('div', { style: { borderTop: `1px dashed var(--dshpc-border)`, marginTop: '10px' } }),
     ),
     // 底部：左 = 任务开始时间（锚点，周期/间隔都有，带 ? 说明），右 = 允许延迟（次要，居右）。
     // 上间距与「预计执行」上边线离「星期」的间距对齐 = 14px（此前 CSS margin12+padding12=24 是两倍）。
@@ -1902,7 +1902,7 @@ export function TaskEditorDrawer(props: {
     h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', borderTop: 'none', marginTop: '14px', paddingTop: '0' } },
       showTaskStart
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
-            h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg)' } }, t('editorTaskStart')),
+            h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg)' } }, t('editorTaskStart')),
             // ⚠️ 日期 / 时刻**不给定宽**（2026-10-02 返工）：定宽就有可能被内容顶破，
             // 框内文字走 `text-overflow:ellipsis` ⇒ 直接显示成「2026-09-3…」/「18:5…」，而日期必须完整可见。
             // 现在 = **内容宽 + flex:none**：框宽恰好等于内容（`2026-09-30` / `18:50` + 图标），
@@ -1929,7 +1929,7 @@ export function TaskEditorDrawer(props: {
         : null,
       h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto', minWidth: 0 } }),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
-        h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)' } }, t('editorWindow')),
+        h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-2)' } }, t('editorWindow')),
         h('span', { style: { flex: 'none', display: 'inline-flex' } }, h(SelectField, {
           value: draft.window,
           options: windowOptions,
@@ -1989,11 +1989,11 @@ export function TaskEditorDrawer(props: {
     h('div', { style: { marginBottom: '10px' } },
       draft.deps.length === 0
         ? h('div', {
-            // 空态 = 上传投放区（上方附件卡）同款虚线框，同一组 --tdt-* token 保证观感一致。
-            style: { border: `1px dashed var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)', padding: '16px 12px', textAlign: 'center', background: 'var(--tdt-surface-1)' },
+            // 空态 = 上传投放区（上方附件卡）同款虚线框，同一组 --dshpc-* token 保证观感一致。
+            style: { border: `1px dashed var(--dshpc-border-heavy)`, borderRadius: 'var(--dshpc-radius-md)', padding: '16px 12px', textAlign: 'center', background: 'var(--dshpc-surface-1)' },
           },
-            h('div', { style: { fontSize: 'var(--tdt-font-md)' } }, t('editorDepEmpty')),
-            h('div', { style: { color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-sm)', marginTop: '4px' } }, t('editorDepEmptyHint')),
+            h('div', { style: { fontSize: 'var(--dshpc-font-md)' } }, t('editorDepEmpty')),
+            h('div', { style: { color: 'var(--dshpc-fg-2)', fontSize: 'var(--dshpc-font-sm)', marginTop: '4px' } }, t('editorDepEmptyHint')),
           )
         : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
             draft.deps.filter(dep => dep.task !== currentTaskId).map((dep, index) => {
@@ -2001,18 +2001,18 @@ export function TaskEditorDrawer(props: {
               const ws = known?.workspace ?? ''
               return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
                 // 行首只留「有点任务」icon（官方 IconPlanOutlineRegular）——「前置任务：」文字按用户要求删除（太占地方）。
-                h('span', { style: { display: 'inline-flex', flex: 'none', color: 'var(--tdt-fg-3)' } }, h(IconPlanOutlineRegular, { size: 14 })),
+                h('span', { style: { display: 'inline-flex', flex: 'none', color: 'var(--dshpc-fg-3)' } }, h(IconPlanOutlineRegular, { size: 14 })),
                 // 任务名可点（r12：全站任务名都连查看档）⇒ 打开那个前置任务的查看档
                 //（内部走「未保存冲突」确认流）。未接回调时保持纯文本。
                 onViewTask === undefined
-                  ? h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)' } })
+                  ? h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--dshpc-font-md)' } })
                   : h('button', {
                     type: 'button', className: 'dsh-tdt-info-dep', title: t('infoViewTask'),
-                    style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)', textAlign: 'left' },
+                    style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--dshpc-font-md)', textAlign: 'left' },
                     onClick: () => { onViewTask(dep.task) },
                   }, h(MarqueeText, { text: known?.label ?? dep.task })),
                 // 工作区固定宽（72px）+ 省略号 + 跑马灯（跨工作区时分得清是哪个区的任务）。
-                ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)' } }),
+                ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: 'var(--dshpc-fg-2)', fontSize: 'var(--dshpc-font-xs)' } }),
                 // 「移除」宽度固定（flex none），不被任务名挤动。
                 h(Button, { variant: 'ghost', size: 'sm', style: { flex: 'none' }, onClick: () => { patch({ deps: draft.deps.filter(d => d.task !== dep.task) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
               )
@@ -2056,7 +2056,7 @@ export function TaskEditorDrawer(props: {
         onClick: addDep,
         // 三段式右段：定宽、居右（flex 布局里排最后即贴右），文字图标居中。
         // 88 → 72px（用户 2026-09-29：窄一点，把宽度让给中间的任务名）。
-        style: { flex: '0 0 72px', height: 'var(--tdt-control-h-lg)', justifyContent: 'center' },
+        style: { flex: '0 0 72px', height: 'var(--dshpc-control-h-lg)', justifyContent: 'center' },
       }, t('editorDepAdd')),
     ),
   )
@@ -2116,7 +2116,7 @@ export function TaskEditorDrawer(props: {
                   onChange: (next: boolean) => { patch({ goalMode: next }) },
                   label: t('editorGoal'),
                 }),
-                h('span', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 600 } }, t('editorGoal')),
+                h('span', { style: { fontSize: 'var(--dshpc-font-md)', fontWeight: 600 } }, t('editorGoal')),
               ),
               h('p', { className: 'dsh-tdt-ed-hint' }, t('editorGoalHint')),
             ),
@@ -2129,7 +2129,7 @@ export function TaskEditorDrawer(props: {
                   onChange: (next: boolean) => { patch({ agentTeam: next }) },
                   label: t('editorAgentTeam'),
                 }),
-                h('span', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 600 } }, t('editorAgentTeam')),
+                h('span', { style: { fontSize: 'var(--dshpc-font-md)', fontWeight: 600 } }, t('editorAgentTeam')),
               ),
               h('p', { className: 'dsh-tdt-ed-hint' }, t('editorAgentTeamHint')),
             ),
@@ -2241,7 +2241,7 @@ export function TaskEditorDrawer(props: {
                   label: t('editorEnabled'),
                   title: draft.enabled ? t('editorEnabledOn') : t('editorEnabledOff'),
                 }),
-                h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2,rgba(128,128,128,.95))' } },
+                h('span', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2,rgba(128,128,128,.95))' } },
                   draft.enabled ? t('editorEnabledStateOn') : t('editorEnabledStateOff')),
               ),
           h(IconButton, {
@@ -2483,10 +2483,10 @@ export function TaskEditorDrawer(props: {
               // （视口顶 − 12px 余量，封顶 660）——面板向上长，绝不顶出浏览器顶部。
               width: 'min(480px, calc(100vw - 24px))',
               height: Math.min(660, Math.max(240, rect.top - 12)),
-              background: 'var(--tdt-surface-2, #2a2e33)',
-              border: `1px solid var(--tdt-border)`,
-              borderRadius: 'var(--tdt-radius-md)',
-              boxShadow: 'var(--tdt-shadow-2)',
+              background: 'var(--dshpc-surface-2, #2a2e33)',
+              border: `1px solid var(--dshpc-border)`,
+              borderRadius: 'var(--dshpc-radius-md)',
+              boxShadow: 'var(--dshpc-shadow-2)',
             }
           })(),
         },
@@ -2520,7 +2520,7 @@ export function TaskEditorDrawer(props: {
                 // 自带的 border-left（浮层已有外框）。
                 style: { flex: '1 1 auto', width: '100%', minWidth: 0, minHeight: 0, borderLeft: 'none' },
               })
-              : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-md)' } }, t('editorPickerNoSession'))
+              : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: 'var(--dshpc-fg-2)', fontSize: 'var(--dshpc-font-md)' } }, t('editorPickerNoSession'))
           })(),
         ), document.body)
       : null,

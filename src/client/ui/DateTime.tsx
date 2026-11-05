@@ -2,7 +2,7 @@
  * 日期 / 时间控件 —— **全站唯一实现**（L2 组件皮肤，P4）
  *
  * 官方 primitives 没有日期 / 时间选择器 ⇒ 自绘日历弹层与时分列；结构、皮肤、交互只此一份，
- * 颜色 / 尺寸 / 圆角 / 影全走 `--tdt-*`（`controls-css.ts` 的 DATETIME_CSS），明暗自适应。
+ * 颜色 / 尺寸 / 圆角 / 影全走 `--dshpc-*`（`controls-css.ts` 的 DATETIME_CSS），明暗自适应。
  * 浮层定位 / 点外关闭走官方 `useAnchoredPosition` + `useDismissOnOutsidePointer`。
  */
 import { createElement as h, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from 'react'

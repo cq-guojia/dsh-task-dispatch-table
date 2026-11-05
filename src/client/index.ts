@@ -166,38 +166,38 @@ function displayParam(t: Translate, value: unknown): string {
 }
 
 // ── 主题适配（决策 26 修订）────────────────────────────────────────────
-// 所有颜色一律取统一 token 层 `--tdt-*`（映射自宿主主题变量
+// 所有颜色一律取统一 token 层 `--dshpc-*`（映射自宿主主题变量
 // 与 `--ds-*`）。宿主切「明色 / 暗色 / 跟随系统」时这些变量随之改变 ⇒ 插件自动跟着变，
 // 我们不需要自己判断当前是什么主题，也不写死任何颜色。括号里是变量缺失时的兜底值。
-const monoFont = 'var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
-const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease)`
+const monoFont = 'var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
+const transition = `background var(--dshpc-dur) var(--dshpc-ease), color var(--dshpc-dur) var(--dshpc-ease), border-color var(--dshpc-dur) var(--dshpc-ease)`
 
 const textareaStyle: Record<string, string | number> = {
   width: '100%', boxSizing: 'border-box', minHeight: '16em', resize: 'vertical',
-  fontFamily: monoFont, fontSize: 'var(--tdt-font-sm)', lineHeight: 1.5, padding: '8px',
-  color: 'var(--tdt-fg)', background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`, borderRadius: 'var(--tdt-radius-sm)',
+  fontFamily: monoFont, fontSize: 'var(--dshpc-font-sm)', lineHeight: 1.5, padding: '8px',
+  color: 'var(--dshpc-fg)', background: 'var(--dshpc-surface-1)', border: `1px solid var(--dshpc-border)`, borderRadius: 'var(--dshpc-radius-sm)',
 }
-const hintStyle: Record<string, string | number> = { color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-sm)', margin: '4px 0 8px' }
-const errorStyle: Record<string, string | number> = { color: 'var(--tdt-danger)', fontSize: 'var(--tdt-font-sm)', margin: '4px 0 0' }
+const hintStyle: Record<string, string | number> = { color: 'var(--dshpc-fg-2)', fontSize: 'var(--dshpc-font-sm)', margin: '4px 0 8px' }
+const errorStyle: Record<string, string | number> = { color: 'var(--dshpc-danger)', fontSize: 'var(--dshpc-font-sm)', margin: '4px 0 0' }
 const rowStyle: Record<string, string | number> = { display: 'flex', gap: '8px', margin: '8px 0' }
 const dlStyle: Record<string, string | number> = { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 16px', margin: '8px 0 0' }
 
 // ── 设置页卡片：只留一行「标题 + 描述 + 箭头」，点一下开面板（与宿主其它插件卡片同形）──
 const cardStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-  padding: '12px 14px', border: `1px solid var(--tdt-border)`, borderRadius: 'var(--tdt-radius-sm)',
+  padding: '12px 14px', border: `1px solid var(--dshpc-border)`, borderRadius: 'var(--dshpc-radius-sm)',
   cursor: 'pointer', width: '100%', boxSizing: 'border-box', background: 'transparent',
-  textAlign: 'left', color: 'var(--tdt-fg)', transition,
+  textAlign: 'left', color: 'var(--dshpc-fg)', transition,
 }
-const cardTitleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)' }
-const cardDescStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', marginTop: '2px' }
-const chevronStyle: Record<string, string | number> = { color: 'var(--tdt-fg-3)', display: 'flex', alignItems: 'center' }
+const cardTitleStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, color: 'var(--dshpc-fg)' }
+const cardDescStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', marginTop: '2px' }
+const chevronStyle: Record<string, string | number> = { color: 'var(--dshpc-fg-3)', display: 'flex', alignItems: 'center' }
 
 // ── 面板（main 槽整页）样式 ──
 /** 主区整页容器：占满中栏、自己滚动（会话区被 main 槽整页替换，无需遮罩）。 */
 const pageStyle: Record<string, string | number> = {
   height: '100%', width: '100%', boxSizing: 'border-box', overflow: 'auto',
-  padding: '27px 22px', color: 'var(--tdt-fg)', background: 'transparent',
+  padding: '27px 22px', color: 'var(--dshpc-fg)', background: 'transparent',
 }
 /** 抬头的三块：标题在左，右依次是「分组标签 · 关闭」。 */
 const panelHeaderStyle: Record<string, string | number> = {
@@ -207,18 +207,18 @@ const panelHeaderStyle: Record<string, string | number> = {
   marginBottom: '40px',
 }
 const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
-const panelTitleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xl)', fontWeight: 600, color: 'var(--tdt-fg)' }
-const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' }
+const panelTitleStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-xl)', fontWeight: 600, color: 'var(--dshpc-fg)' }
+const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg)' }
 const preStyle: Record<string, string | number> = {
-  fontFamily: monoFont, fontSize: 'var(--tdt-font-sm)', lineHeight: 1.5, margin: '4px 0',
+  fontFamily: monoFont, fontSize: 'var(--dshpc-font-sm)', lineHeight: 1.5, margin: '4px 0',
   whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '12em', overflow: 'auto',
-  background: 'var(--tdt-surface-2)', color: 'var(--tdt-fg)', padding: '8px', borderRadius: 'var(--tdt-radius-sm)',
+  background: 'var(--dshpc-surface-2)', color: 'var(--dshpc-fg)', padding: '8px', borderRadius: 'var(--dshpc-radius-sm)',
 }
 const tableStyle: Record<string, string | number> = {
-  borderCollapse: 'collapse', width: '100%', fontFamily: monoFont, fontSize: 'var(--tdt-font-sm)', margin: '4px 0',
+  borderCollapse: 'collapse', width: '100%', fontFamily: monoFont, fontSize: 'var(--dshpc-font-sm)', margin: '4px 0',
 }
 const cellStyle: Record<string, string | number> = {
-  border: `1px solid var(--tdt-border)`, padding: '2px 6px', textAlign: 'left', verticalAlign: 'top',
+  border: `1px solid var(--dshpc-border)`, padding: '2px 6px', textAlign: 'left', verticalAlign: 'top',
 }
 const detailCellStyle: Record<string, string | number> = {
   ...cellStyle, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxWidth: '480px',
@@ -1157,8 +1157,8 @@ function TaskPage(props: {
   const previewW = preview === null ? 0 : previewWidth
   // 浮层 Toast 样式注入（保存失败提示用，幂等）。
   ensureToastStyle()
-  // UI 基础层（P0）：登记 token 层（--tdt-* 变量表）并注入唯一样式入口。
-  // 阶段说明：此刻还没有任何规则消费 --tdt-*，所以**界面零变化**；逐期（P1→）把调用点搬上来。
+  // UI 基础层：token 表与注入器都由核心（dsh-plugin-core/design）提供，这里只确保已注入。
+  // 业务规则已全部消费 --dshpc-*；本仓不再自建 token 表。
   ensureUiBase()
   // 根容器 = 横向分栏：内容区（整页 + 会话弹窗层）flex:1，右侧两条 dock 各占一份宽度
   // （预览 `--dsh-tdt-preview-w`、编辑 `--dsh-tdt-editor-w`，收起时各自为 0）。
@@ -1300,12 +1300,12 @@ function TaskPage(props: {
                   : h('ul', { style: { listStyle: 'none', margin: 0, padding: 0 } },
                     taskRows.map(row => h('li', {
                       key: row.id,
-                      style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: `1px solid var(--tdt-border)` },
+                      style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: `1px solid var(--dshpc-border)` },
                     },
-                      h('span', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 500 } }, row.title === '' ? row.id : row.title),
-                      h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, row.code ?? row.id),
+                      h('span', { style: { fontSize: 'var(--dshpc-font-md)', fontWeight: 500 } }, row.title === '' ? row.id : row.title),
+                      h('span', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, row.code ?? row.id),
                       row.enabled === false
-                        ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('editorDisabledTag'))
+                        ? h('span', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('editorDisabledTag'))
                         : null,
                       h('span', { style: { flex: '1 1 auto' } }),
                       h(Button, {

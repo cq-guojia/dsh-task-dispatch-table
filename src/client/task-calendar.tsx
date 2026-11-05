@@ -39,17 +39,17 @@ import { interpolateTranslate, type Translate } from './locales'
 import type { TaskOverviewRow } from './task-overview'
 import { IconClockOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 
-// ── 样式（走基础层注入器；只消费 var(--tdt-*)，不自建 <style>、不硬编码色值）──
+// ── 样式（走基础层注入器；只消费 var(--dshpc-*)，不自建 <style>、不硬编码色值）──
 const CALENDAR_CSS = `
 /* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
-.dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
+.dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--dshpc-space-2);margin-bottom:var(--dshpc-space-3);}
 /* 月份标题：纯文本（无框、不可点）；左右单箭头走月、双箭头走年，不再用日期选择器弹层。
    固定宽度 + 居中（用户 2026-10-06：年 4 位 + 月 2 位，内容定长，但数字字形不等宽会带着箭头晃；
    定宽盒 + 文字居中 ⇒ 左右箭头不再跳动）。 */
-.dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);
+.dsh-tdt-cal-title{font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);font-weight:600;color:var(--dshpc-fg);
   flex:none;width:6em;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;}
 
-.dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
+.dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--dshpc-space-2);margin-left:auto;}
 
 /* 网格（用户 2026-10-06 定死的三条）：① 格子是**纯粹的正方形**、**不要圆角**；
    ② 格子之间只留 **1px 间隔**（容器底色从缝里透出来当分隔线）；③ 格子**不描边**，
@@ -58,109 +58,109 @@ const CALENDAR_CSS = `
    做法 = 与网格同材质：外圈与列间 1px 全走「容器底色透出」（padding + background），无独立边框；
    表头格底色与本月格一致（淡蓝），整表上下一个颜色。 */
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
-  background:var(--tdt-border);padding:1px 1px 0;}
-.dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);
+  background:var(--dshpc-border);padding:1px 1px 0;}
+.dsh-tdt-cal-head>div{text-align:center;font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);
   /* 表头字：加粗 + 提亮（用户 2026-10-06：比格内浅灰字更醒目；续：700 偏粗，回调到 650）。 */
-  font-weight:650;color:var(--tdt-fg);
+  font-weight:650;color:var(--dshpc-fg);
   /* 表头底：比本月格更深的蓝（business 14% vs 格 8%），和下面可选块形成对比（用户 2026-10-06）。 */
-  background:color-mix(in srgb,var(--tdt-business) 14%,var(--tdt-surface-1));padding:8px 0;}
-/* 「选中 / 展开」的底色走 **token 层的 --tdt-selected-bg**（主题特判只许在 token 层）：
+  background:color-mix(in srgb,var(--dshpc-business) 14%,var(--dshpc-surface-1));padding:8px 0;}
+/* 「选中 / 展开」的底色走 **token 层的 --dshpc-selected-bg**（主题特判只许在 token 层）：
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
-   别用 --tdt-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);padding:1px;}
+   别用 --dshpc-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--dshpc-border);padding:1px;}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
    下面空间是够的（104 - 12 - 6 = 86px，够 1 行日期 + 3 行标签的 80px）⇒ 所有格子统一留白、对齐一致。 */
 .dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:6px;
-  overflow:hidden;background:var(--tdt-cal-cell-bg);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
-  transition:background var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-cal-cell:hover{background:var(--tdt-cal-cell-hover);}
+  overflow:hidden;background:var(--dshpc-cal-cell-bg);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
+  transition:background var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-cal-cell:hover{background:var(--dshpc-cal-cell-hover);}
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */
-.dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);cursor:default;}
-.dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);}
+.dsh-tdt-cal-cell--out{background:var(--dshpc-surface-2);cursor:default;}
+.dsh-tdt-cal-cell--out:hover{background:var(--dshpc-surface-2);}
 /* 选中格（**点开的那一块**）= 顶部一条 4px 蓝胶囊线（离边 4px）；**底色与其它格子完全相同**
    （surface-1）。⚠️ 底色**不许叠淡蓝**：那层半透明蓝压在格内的状态色标签上 ⇒ 深色主题下发灰、
    浅色主题下发暗，把原本的绿色/红色全带脏了（用户 2026-10-06）。「选中」只由那条线表达。
    ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。
-   ⚠️ 底色（2026-10-06 续2 定稿）：**与拉开区同色** = --tdt-cal-panel-bg（浅色近白、深色近背景），
+   ⚠️ 底色（2026-10-06 续2 定稿）：**与拉开区同色** = --dshpc-cal-panel-bg（浅色近白、深色近背景），
    手风琴拉开时选中格与拉开区连成一体；「选中」由那条蓝胶囊线 + 与未选中格（淡蓝）的色差表达。
    **不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-cal-panel-bg);outline:0;padding-top:12px;
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--dshpc-cal-panel-bg);outline:0;padding-top:12px;
   /* 手风琴拉开时：脚下那道 1px 网格缝用 box-shadow 盖掉（只盖选中格自己一段），
      同行**未选中**格子的下边线保留（用户 2026-10-06）。选中格底色 = 拉开区同色 ⇒ 连成一体。 */
-  box-shadow:0 1px 0 var(--tdt-cal-panel-bg);}
-.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-cal-panel-bg);}
+  box-shadow:0 1px 0 var(--dshpc-cal-panel-bg);}
+.dsh-tdt-cal-cell--sel:hover{background:var(--dshpc-cal-panel-bg);}
 /* 线在格子**顶部**（不是底部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）；
-   稍亮的品牌蓝（--tdt-business），明确标出「这是当前选中那天」（用户 2026-10-06：用蓝表示选中）。 */
+   稍亮的品牌蓝（--dshpc-business），明确标出「这是当前选中那天」（用户 2026-10-06：用蓝表示选中）。 */
 .dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
-  border-radius:999px;background:var(--tdt-business);}
+  border-radius:999px;background:var(--dshpc-business);}
 /* 日期数字：左对齐、去掉 5px 内缩与胶囊框（用户 2026-10-06：左边距要和顶间距一致，之前太长） */
 .dsh-tdt-cal-daterow{display:flex;align-items:baseline;gap:4px;padding-left:6px;}
-.dsh-tdt-cal-num{font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);font-weight:600;}
-.dsh-tdt-cal-num--today{color:var(--tdt-business);font-weight:600;}
-.dsh-tdt-cal-today{color:var(--tdt-business);font-weight:600;font-size:var(--tdt-font-xs);}
-.dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
+.dsh-tdt-cal-num{font-size:var(--dshpc-font-sm);line-height:18px;color:var(--dshpc-fg-2);font-weight:600;}
+.dsh-tdt-cal-num--today{color:var(--dshpc-business);font-weight:600;}
+.dsh-tdt-cal-today{color:var(--dshpc-business);font-weight:600;font-size:var(--dshpc-font-xs);}
+.dsh-tdt-cal-num--out{color:var(--dshpc-fg-4);}
 /* 格内条目 = **方形小标签**（用户 2026-10-06：不要圆点、**不要任何圆角**）：
    标签前 3px 状态色竖线 + 同色系底 + 时刻；时刻位数固定 ⇒ 标签宽度固定；
    一行 3 个、共 3 行（第 9 个位子留给「…N」）；文字在**竖线后面的底色里居中**。 */
 .dsh-tdt-cal-tags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;overflow:hidden;}
 .dsh-tdt-cal-tag{display:flex;align-items:stretch;min-width:0;height:18px;border-radius:0;overflow:hidden;box-sizing:border-box;
   background:var(--cal-soft,transparent);}
-.dsh-tdt-cal-tag::before{content:'';flex:none;width:3px;background:var(--cal-tone,var(--tdt-fg-4));}
+.dsh-tdt-cal-tag::before{content:'';flex:none;width:3px;background:var(--cal-tone,var(--dshpc-fg-4));}
 .dsh-tdt-cal-tag>span{flex:1 1 auto;min-width:0;padding:0 2px;overflow:hidden;text-align:center;
   display:flex;align-items:center;justify-content:center;
-  font-size:var(--tdt-font-xs);line-height:18px;color:var(--tdt-fg);font-variant-numeric:tabular-nums;}
+  font-size:var(--dshpc-font-xs);line-height:18px;color:var(--dshpc-fg);font-variant-numeric:tabular-nums;}
 /* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开）；左侧竖线**实心**、整体走蓝
    （用户 2026-10-06：虚线与竖线都是蓝色、不要灰——与执行记录「预计执行」块同一支蓝）。
    用户 2026-10-06 续：虚线**只包上/右/下**，左边不包——左缘是那条实心蓝竖条，虚线从它右边起到最右；蓝色调淡一点。 */
-.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed color-mix(in srgb,var(--tdt-business) 50%,transparent);border-left:0;}
-.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px solid var(--tdt-business);}
-.dsh-tdt-cal-tag--plan>span{color:var(--tdt-fg-3);}
+.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);border-left:0;}
+.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px solid var(--dshpc-business);}
+.dsh-tdt-cal-tag--plan>span{color:var(--dshpc-fg-3);}
 /* 「还有 N 条」：占第 9 个位子，点了 = 拉开当天看全部 */
-.dsh-tdt-cal-tag--more{background:var(--tdt-chip-bg);}
-.dsh-tdt-cal-tag--more::before{background:var(--tdt-fg-4);}
-.dsh-tdt-cal-tag--more>span{color:var(--tdt-fg-3);}
+.dsh-tdt-cal-tag--more{background:var(--dshpc-chip-bg);}
+.dsh-tdt-cal-tag--more::before{background:var(--dshpc-fg-4);}
+.dsh-tdt-cal-tag--more>span{color:var(--dshpc-fg-3);}
 /* 语义色调 → 本域局部变量。底色取 **24%**（基础层 -soft 只有 8%，用户说「太浅看不出来」⇒ 这里调深；
-   只在本域局部变量上调深，不动 ui/tokens.ts 里的 token）。 */
-.dsh-tdt-cal-t--ok{--cal-tone:var(--tdt-success);--cal-soft:color-mix(in srgb,var(--tdt-success) 24%,transparent);}
-.dsh-tdt-cal-t--bad{--cal-tone:var(--tdt-danger);--cal-soft:color-mix(in srgb,var(--tdt-danger) 24%,transparent);}
-.dsh-tdt-cal-t--warn{--cal-tone:var(--tdt-warning);--cal-soft:color-mix(in srgb,var(--tdt-warning) 24%,transparent);}
-.dsh-tdt-cal-t--busy{--cal-tone:var(--tdt-business);--cal-soft:color-mix(in srgb,var(--tdt-business) 24%,transparent);}
-.dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
+   只在本域局部变量上调深，不动核心 token 层里的 token）。 */
+.dsh-tdt-cal-t--ok{--cal-tone:var(--dshpc-success);--cal-soft:color-mix(in srgb,var(--dshpc-success) 24%,transparent);}
+.dsh-tdt-cal-t--bad{--cal-tone:var(--dshpc-danger);--cal-soft:color-mix(in srgb,var(--dshpc-danger) 24%,transparent);}
+.dsh-tdt-cal-t--warn{--cal-tone:var(--dshpc-warning);--cal-soft:color-mix(in srgb,var(--dshpc-warning) 24%,transparent);}
+.dsh-tdt-cal-t--busy{--cal-tone:var(--dshpc-business);--cal-soft:color-mix(in srgb,var(--dshpc-business) 24%,transparent);}
+.dsh-tdt-cal-t--neutral{--cal-tone:var(--dshpc-fg-4);--cal-soft:var(--dshpc-chip-bg);}
 /* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-/* 拉开区与选中格**同色**（--tdt-cal-panel-bg，浅色近白/深色近背景）⇒ 视觉一体。
+/* 拉开区与选中格**同色**（--dshpc-cal-panel-bg，浅色近白/深色近背景）⇒ 视觉一体。
    margin-top 不再上提：与上一行之间保留那道 1px 网格缝——同行**未选中**格子的下边线要保留；
    选中格脚下那一段由 --sel 的 box-shadow 盖掉（用户 2026-10-06）。 */
-.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-cal-panel-bg);border:0;border-radius:0;
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--dshpc-cal-panel-bg);border:0;border-radius:0;
   /* 下内边距 = 左内边距（用户 2026-10-06：拉开区底部留白要跟左右一模一样，都是 16px）。 */
-  padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-4);
-  overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
+  padding:calc(var(--dshpc-space-4) + 6px) var(--dshpc-space-4) var(--dshpc-space-4);
+  overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--dshpc-ease);}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
 
-.dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
-  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
-.dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+.dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--dshpc-space-2);margin-bottom:var(--dshpc-space-2);
+  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);font-weight:500;}
+.dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--dshpc-space-1);}
 /* 拉开区里的**计划**条目（没有执行记录 ⇒ 不可展开）：虚线框一行，内容可折行 */
-.dsh-tdt-cal-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--tdt-space-1) var(--tdt-space-2);padding:7px 10px;
-  border-radius:0;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
+.dsh-tdt-cal-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--dshpc-space-1) var(--dshpc-space-2);padding:7px 10px;
+  border-radius:0;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);
   background:var(--cal-soft,transparent);}
 
 .dsh-tdt-cal-time{font-variant-numeric:tabular-nums;}
 /* 拉开区里可点的名字（任务名 / 前置任务名）：链接色 + hover 下划线，与执行记录页「任务名可点」同观感 */
-.dsh-tdt-cal-link{border:0;background:none;padding:0;font:inherit;color:var(--tdt-business);cursor:pointer;text-align:left;}
+.dsh-tdt-cal-link{border:0;background:none;padding:0;font:inherit;color:var(--dshpc-business);cursor:pointer;text-align:left;}
 .dsh-tdt-cal-link:hover{text-decoration:underline;}
 /* 拉开区里的小字标注（「计划」/ 条数）—— 与格内标签类重名会互相打架，故单独命名 */
-.dsh-tdt-cal-mini{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+.dsh-tdt-cal-mini{flex:none;font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
 /* 面板头里的日期小字行：时钟图标 + 日期 · 星期 · N 条（与执行记录页同款）。 */
-.dsh-tdt-cal-clock{flex:none;color:var(--tdt-fg-3);}
-.dsh-tdt-cal-sep{color:var(--tdt-border-heavy);}
-.dsh-tdt-cal-date{font-weight:500;color:var(--tdt-fg-2);}
-.dsh-tdt-cal-weekday{color:var(--tdt-fg-2);}
-.dsh-tdt-cal-hint{margin-top:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-danger);}
-.dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
+.dsh-tdt-cal-clock{flex:none;color:var(--dshpc-fg-3);}
+.dsh-tdt-cal-sep{color:var(--dshpc-border-heavy);}
+.dsh-tdt-cal-date{font-weight:500;color:var(--dshpc-fg-2);}
+.dsh-tdt-cal-weekday{color:var(--dshpc-fg-2);}
+.dsh-tdt-cal-hint{margin-top:var(--dshpc-space-2);font-size:var(--dshpc-font-xs);color:var(--dshpc-danger);}
+.dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--dshpc-font-md);color:var(--dshpc-fg-3);}
 `
 const CALENDAR_DOMAIN = 'domain:calendar'
 

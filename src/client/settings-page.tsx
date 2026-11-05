@@ -16,7 +16,7 @@ import { SettingsLogBlock } from './settings-log-block'
 import type { Translate } from './locales'
 
 /** 模块之间的纵向间距（唯一一份，三块共用）。 */
-export const SECTION_GAP: CSSProperties = { marginTop: 'var(--tdt-space-4)' }
+export const SECTION_GAP: CSSProperties = { marginTop: 'var(--dshpc-space-4)' }
 
 /**
  * 浅灰两色框（参考「执行记录」双色手法，仅用中性灰）。
@@ -30,9 +30,9 @@ const SETTINGS_CSS = `
   box-sizing:border-box;
   border:none;
   border-radius:0;
-  border-left:4px solid color-mix(in srgb,var(--tdt-fg) 14%,transparent);
-  background:color-mix(in srgb,var(--tdt-fg) 3%,transparent);
-  padding:var(--tdt-space-4);
+  border-left:4px solid color-mix(in srgb,var(--dshpc-fg) 14%,transparent);
+  background:color-mix(in srgb,var(--dshpc-fg) 3%,transparent);
+  padding:var(--dshpc-space-4);
 }
 `
 applyStyle(SETTINGS_DOMAIN, SETTINGS_CSS)

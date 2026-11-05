@@ -943,7 +943,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 列表启用开关与编辑器同款（官方默认选中色是 brand-primary ⇒ 亮色近黑 / 暗色近白，两处看着不一样）。
   // 2026-10-01：列表与编辑器启用开关共用 `.dsh-tdt-switch` 包装类（选中 success 绿）；空壳 `dsh-tdt-tl-switchwrap` 已删。
   check('列表启用开关与编辑器同款（共用 .dsh-tdt-switch，选中 success 绿）',
-    clientJs.includes('dsh-tdt-switch') && clientJs.includes('--tdt-success') && !clientJs.includes('dsh-tdt-tl-switchwrap'))
+    clientJs.includes('dsh-tdt-switch') && clientJs.includes('--dshpc-success') && !clientJs.includes('dsh-tdt-tl-switchwrap'))
   // 右上角刷新按钮已撤（用户 2026-09-30：反正改完立刻刷新，按钮没用）。
   check('右上角刷新按钮已移除（不再有 debugRefresh 按钮）', !clientJs.includes('title: t("debugRefresh")'))
   // 保存后乐观补行 ⇒ 改完**立刻**可见，不等服务端那 ~1 秒的落盘 + 重拉。
@@ -1071,7 +1071,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && clientJs.includes('previewCopyPath') && clientJs.includes('IconRefreshOutlineRegular'))
   check('拖拽条高亮 = 6px 浅色半透明带（上提基础层 .dsh-tdt-resizer，编辑分栏 / 预览 dock 共用，2026-10-05）',
     clientJs.includes('dsh-tdt-resizer')
-      && clientJs.includes('.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--tdt-hover')
+      && clientJs.includes('.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover')
       && !clientJs.includes('.dsh-tdt-sv-preview-dock:has(')
       && !clientJs.includes('border-left-color:rgba(255,255,255,1)'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
@@ -1208,7 +1208,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('截断横幅在顶部、警告色、滚动区之外（官方截图同款「文件过大，仅显示前 512KB」）',
     clientJs.includes('dsh-tdt-sv-truncated')
     && /\.dsh-tdt-sv-truncated\{[^}]*flex:none/.test(clientJs)
-    && /\.dsh-tdt-sv-truncated\{[^}]*var\(--tdt-warning/.test(clientJs))
+    && /\.dsh-tdt-sv-truncated\{[^}]*var\(--dshpc-warning/.test(clientJs))
   check('源码态配色走 CodeMirror 主题（one-dark/one-light + 13px 透明底，非 Shiki 默认米白底小字）',
     clientJs.includes('codeMirrorTheme') && clientJs.includes('dsh-tdt-sv-cm-editor'))
   check('源码态单滚动容器（body overflow:hidden，滚动只在 CodeBlock 内部，官方 :has 规则同款）',
@@ -1252,7 +1252,6 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   {
     const tlSrc = readFileSync(join(process.cwd(), 'src', 'client', 'records-timeline.tsx'), 'utf8')
     const idxSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
-    const tkSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'tokens.ts'), 'utf8')
     const ctrlSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
     const locSrc = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
     check('执行记录流水账进产物（RecordsTimelineView + 日期行 / 块容器 / 色条 / 两行条目 / 加载区类名）',
@@ -1267,20 +1266,20 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       !tlSrc.includes('dsh-tdt-rec-band') && !/\.dsh-tdt-rec-band::before/.test(tlSrc)
       && !/::before\{[^}]*top:0;bottom:0/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-dot'))
     check('日期 = 一行**小字**（时钟 icon + 日期 · 星期 · N 条），且**不吸顶**',
-      /\.dsh-tdt-rec-dayrow\{[^}]*font-size:var\(--tdt-font-md\)/.test(tlSrc)
+      /\.dsh-tdt-rec-dayrow\{[^}]*font-size:var\(--dshpc-font-md\)/.test(tlSrc)
       && tlSrc.includes('IconClockOutlineRegular') && /weekdayFormatter/.test(tlSrc) && /weekdayOf\(/.test(tlSrc)
       && /tt\('recordsDayCount'/.test(tlSrc)
-      && !/position:sticky/.test(tlSrc) && !tlSrc.includes('--tdt-z-sticky'))
+      && !/position:sticky/.test(tlSrc) && !tlSrc.includes('--dshpc-z-sticky'))
     check('块皮肤 = **状态色浅底**（色调类给局部变量）+ **5px 方角通高竖条**贴左缘 + 块间 **4px**',
       /\.dsh-tdt-rec-item\{[^}]*background:var\(--rec-tone-soft,transparent\)/.test(tlSrc)
       && /\.dsh-tdt-rec-bar\{[^}]*left:0;top:0;bottom:0;width:var\(--rec-bar-w,5px\)/.test(tlSrc)
       && /\.dsh-tdt-rec-item\{[^}]*--rec-bar-w:5px/.test(tlSrc)
       && !/\.dsh-tdt-rec-bar\{[^}]*border-radius/.test(tlSrc)
-      && /--rec-tone-soft:var\(--tdt-success-soft\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-items\{[^}]*gap:var\(--tdt-space-1\)/.test(tlSrc))
-    check('四个状态浅底 token 收在 tokens.ts 单点（8% 透明 color-mix），业务侧不写字面量色值',
+      && /--rec-tone-soft:var\(--dshpc-success-soft\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-items\{[^}]*gap:var\(--dshpc-space-1\)/.test(tlSrc))
+    check('四个状态浅底 token 由核心 token 层提供（8% 透明 color-mix），业务侧不写字面量色值',
       ['success', 'warning', 'danger', 'business'].every(t =>
-        tkSrc.includes(`--tdt-${t}-soft:color-mix(in srgb,var(--tdt-${t}) 8%,transparent)`)))
+        clientJs.includes(`--dshpc-${t}-soft:color-mix(in srgb,var(--dshpc-${t}) 8%,transparent)`)))
     check('条目至少两行：第 1 行 名称 + 状态 + 查看会话；第 2 行 工作区/计划/实际/时长/Token + 产出物',
       tlSrc.includes("t('recPlan')") && tlSrc.includes("t('recActual')") && tlSrc.includes("t('colDuration')")
       && tlSrc.includes("t('viewSession')") && tlSrc.includes('dsh-tdt-rec-note')
@@ -1290,7 +1289,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /disabled: !canOpenFile/.test(tlSrc)
       && idxSrc.includes('onOpenFile: canPreview ? openFile : undefined'))
     check('三层交互（照任务卡片）：容器不可点、**头部可点**（只有 hover 变色）、展开区不可点（第七轮反向：展开常亮与 --open 类已删）',
-      /\.dsh-tdt-rec-head:hover\{background-image:linear-gradient\(var\(--tdt-hover\),var\(--tdt-hover\)\)/.test(tlSrc)
+      /\.dsh-tdt-rec-head:hover\{background-image:linear-gradient\(var\(--dshpc-hover\),var\(--dshpc-hover\)\)/.test(tlSrc)
       && !/dsh-tdt-rec-item--open/.test(tlSrc)
       && !/\.dsh-tdt-rec-item\{[^}]*border-bottom:1px solid/.test(tlSrc))
     check('时间轴走 HTTP 游标分页：读 nextCursor 并回写（且 page size / 上限对齐 50/2000）',
@@ -1324,7 +1323,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('减弱动效仍被尊重（脉动 / 淡入在 prefers-reduced-motion 下关闭）', tlSrc.includes('prefers-reduced-motion'))
     check('不用图标表成败：色调走 statusToneOf 单源 + toneClassOf 映射（源码内无状态图标）',
       /statusToneOf\(/.test(tlSrc) && /toneClassOf\(/.test(tlSrc)
-      && ['--tdt-success', '--tdt-danger', '--tdt-warning', '--tdt-business'].every(tk => tlSrc.includes(`var(${tk})`))
+      && ['--dshpc-success', '--dshpc-danger', '--dshpc-warning', '--dshpc-business'].every(tk => tlSrc.includes(`var(${tk})`))
       && !tlSrc.includes('StatusIcon') && !tlSrc.includes('IconCheckCircle'))
     check('records 分支排在 data === undefined 门槛之前（HTTP 页不被调试快照挡住）',
       /tab === 'records'\n\s*\? h\(RecordsTimelineView/.test(idxSrc)
@@ -1364,7 +1363,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       !tlSrc.includes('recordsStatusPh')
       && !readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8').includes('recordsStatusPh'))
     check('产出物图标 chip = 基础层唯一实现（`.dsh-tdt-chip` 定义在 controls-css，两页共用）',
-      ctrlSrc.includes('.dsh-tdt-chip{') && ctrlSrc.includes('--tdt-chip-bg-hover')
+      ctrlSrc.includes('.dsh-tdt-chip{') && ctrlSrc.includes('--dshpc-chip-bg-hover')
       && /className: 'dsh-tdt-chip'/.test(tlSrc) && /dsh-tdt-chip--label/.test(tlSrc))
     check('收编后无同名冲突：全仓只有一份产出物 chip 皮肤（`.dsh-tdt-rec-out` 已不存在）',
       !/\.dsh-tdt-rec-out\s*\{/.test(ctrlSrc) && !tlSrc.includes('dsh-tdt-rec-out')
@@ -1406,7 +1405,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /h\('button', \{[\s\S]{0,300}dsh-tdt-rec-depmark--btn'[\s\S]{0,200}onViewTask\(dep\.task\)/.test(tlSrc)
       && !/h\(Tooltip,[\s\S]{0,80}dsh-tdt-rec-depmark/.test(depArea))
     check('第八轮：圈码悬停**只加深底色**（浅底实心圆不描边），溢出项「+N」走胶囊档并同挂官方气泡',
-      /\.dsh-tdt-rec-depmark:hover\{background:var\(--tdt-chip-bg-hover\);color:var\(--tdt-fg\);\}/.test(tlSrc)
+      /\.dsh-tdt-rec-depmark:hover\{background:var\(--dshpc-chip-bg-hover\);color:var\(--dshpc-fg\);\}/.test(tlSrc)
       && /\.dsh-tdt-rec-depmark--more\{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;\}/.test(tlSrc)
       && /dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more/.test(tlSrc)
       && /h\(Tooltip, \{ label: t\('listSectionDepends'\), side: 'top' \},/.test(tlSrc)
@@ -1434,9 +1433,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('第九轮：加载**只用页面右下角统一的那一个 Loading**（2026-10-06：无文案；反向：页脚不再自己显示加载文案）',
       /loading \? h\(Loading, \{\} ?\) : null,/.test(tlSrc)
       && !tlSrc.includes("t('recordsLoading')"))
-    check('第九轮：深色主题下状态浅底压到 **5%**（浅色仍是 8% ⇒ 两端各自给值）',
-      ((tkSrc.match(/--tdt-(?:success|warning|danger|business)-soft:color-mix\(in srgb,var\(--tdt-(?:success|warning|danger|business)\) 5%,transparent\)/g)) ?? []).length === 4
-      && ((tkSrc.match(/\) 8%,transparent\);/g)) ?? []).length >= 4)
+    check('第九轮：深色主题下状态浅底压到 **5%**（浅色仍是 8% ⇒ 两端各自给值，由核心 token 层提供）',
+      ((clientJs.match(/--dshpc-(?:success|warning|danger|business)-soft:color-mix\(in srgb,var\(--dshpc-(?:success|warning|danger|business)\) 5%,transparent\)/g)) ?? []).length === 4
+      && ((clientJs.match(/\) 8%,transparent\);/g)) ?? []).length >= 4)
     check('第九轮：展开区前置格有**产出物图标**（在「查看会话」左边，上限 DEP_OUT_MAX = 5，右列不折行）',
       /const DEP_OUT_MAX = 5/.test(tlSrc)
       && /depOuts\.slice\(0, depOuts\.length > DEP_OUT_MAX \? DEP_OUT_MAX - 1 : DEP_OUT_MAX\)/.test(tlSrc)
@@ -1454,10 +1453,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && !/variant: 'outline'/.test(depArea)
       && /\.dsh-tdt-rec-dep\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/.test(tlSrc))
     check('第七轮：前置格留白与圆角放大到约 1.5~2 倍（走 token 档位，反向：内部再无 2px 裸值间距）',
-      /\.dsh-tdt-rec-dep\{[^}]*padding:var\(--tdt-space-2\) var\(--tdt-space-3\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-dep\{[^}]*border-radius:var\(--tdt-radius-sm\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-depgrid\{[^}]*gap:var\(--tdt-space-2\) var\(--tdt-space-3\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-depsec\{[^}]*gap:var\(--tdt-space-2\)/.test(tlSrc)
+      /\.dsh-tdt-rec-dep\{[^}]*padding:var\(--dshpc-space-2\) var\(--dshpc-space-3\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-dep\{[^}]*border-radius:var\(--dshpc-radius-sm\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-depgrid\{[^}]*gap:var\(--dshpc-space-2\) var\(--dshpc-space-3\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-depsec\{[^}]*gap:var\(--dshpc-space-2\)/.test(tlSrc)
       && !/\.dsh-tdt-rec-dep\{[^}]*gap:2px/.test(tlSrc))
     check('第六轮：Token 悬停写详细 —— 总数 + **带标签**的三段明细（输入 / 输出 / 缓存）',
       /tt\('recTokenDetail', \{/.test(tlSrc)
@@ -1470,7 +1469,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('第五轮：小图标统一 12px（三枚字段图标 + 日期行小时钟），时长图标换官方 IconQueue（反向：不再出现刷新图标）',
       (tlSrc.match(/size: 12 \}/g) ?? []).length >= 4
       && /IconQueueOutlineRegular/.test(tlSrc) && !/IconRefreshOutlineRegular/.test(tlSrc)
-      && /\.dsh-tdt-rec-field>svg\{flex:none;width:var\(--tdt-font-sm\);height:var\(--tdt-font-sm\)/.test(tlSrc))
+      && /\.dsh-tdt-rec-field>svg\{flex:none;width:var\(--dshpc-font-sm\);height:var\(--dshpc-font-sm\)/.test(tlSrc))
     check('第五轮：展开区产出物 = 附件区同款（行内 + 40ch 跑马灯，不占整行；反向：时间轴不再用 --block）',
       /className: 'dsh-tdt-filechip dsh-tdt-filechip--inline'/.test(tlSrc)
       && /\.dsh-tdt-rec-expouts\{display:flex;flex-wrap:wrap;gap:2px 10px/.test(tlSrc)
@@ -1496,7 +1495,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       // 前置格里那个「查看会话」已按用户要求改成链接款；这里只钉**条目右列**这个仍是描边款。
       && /variant: 'outline',[\s\S]{0,160}t\('viewSession'\)/.test(tlSrc))
     check('第四轮 / 第六轮：留白落在**头部**上（上/下/右 12、左 = 16 + 竖条宽；容器无 padding ⇒ hover 高亮顶到块边）',
-      /\.dsh-tdt-rec-main\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) calc\(var\(--tdt-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc)
+      /\.dsh-tdt-rec-main\{[^}]*padding:var\(--dshpc-space-3\) var\(--dshpc-space-3\) var\(--dshpc-space-3\) calc\(var\(--dshpc-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc)
       && !/\.dsh-tdt-rec-item\{[^}]*padding:/.test(tlSrc))
     check('第四轮：信息行 = **固定单行 + 溢出省略**，三个字段各带官方近似图标，Token 从右下角迁到行尾',
       /\.dsh-tdt-rec-r2\{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis/.test(tlSrc)
@@ -1509,7 +1508,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && locSrc.includes("recPrevDay: '前一天'") && locSrc.includes("recNextDay: '次日'"))
     check('第四轮：产出物 chip **平时透明、hover 才出底色**（28×28 与不可点态保留）',
       /\.dsh-tdt-chip\{[^}]*background:transparent/.test(ctrlSrc)
-      && /\.dsh-tdt-chip:hover:not\(:disabled\)\{background:var\(--tdt-chip-bg-hover\)/.test(ctrlSrc))
+      && /\.dsh-tdt-chip:hover:not\(:disabled\)\{background:var\(--dshpc-chip-bg-hover\)/.test(ctrlSrc))
     check('第四轮：展开区产出物 = 行式清单（可点开预览）；**无产出不渲染那一行**；事件流水带「执行日志」小标题',
       /className: 'dsh-tdt-rec-expouts'/.test(tlSrc) && /\.dsh-tdt-rec-expouts\{display:flex;flex-wrap:wrap;gap:2px 10px/.test(tlSrc)
       && /className: 'dsh-tdt-rec-evtitle'/.test(tlSrc) && /t\('recEventsTitle'\)/.test(tlSrc)
@@ -1616,26 +1615,26 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && tlSrc10.includes("dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}")
       && tlSrc10.indexOf('dsh-tdt-rec-tag') < tlSrc10.indexOf("}, t('viewSession'))")
       && !/recTag(Failed|Skipped|Running|Unknown)/.test(tlSrc10) && !/recTag(Failed|Skipped|Running|Unknown)/.test(locSrc10))
-    check('第十一轮：状态标签 = **状态色实底 + 反色字**（背景吃 --rec-tone、字走 --tdt-on-signal），字号小一号、padding 上下 3 / 左右 8',
+    check('第十一轮：状态标签 = **状态色实底 + 反色字**（背景吃 --rec-tone、字走 --dshpc-on-signal），字号小一号、padding 上下 3 / 左右 8',
       /\.dsh-tdt-rec-tag\{[^}]*padding:3px 8px;/.test(tlSrc10)
-      && /\.dsh-tdt-rec-tag\{[^}]*background:var\(--rec-tone,var\(--tdt-fg-3\)\);color:var\(--tdt-on-signal\)/.test(tlSrc10)
-      && /\.dsh-tdt-rec-tag\{[^}]*font-size:var\(--tdt-font-xs\)/.test(tlSrc10)
+      && /\.dsh-tdt-rec-tag\{[^}]*background:var\(--rec-tone,var\(--dshpc-fg-3\)\);color:var\(--dshpc-on-signal\)/.test(tlSrc10)
+      && /\.dsh-tdt-rec-tag\{[^}]*font-size:var\(--dshpc-font-xs\)/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag--(bad|warn|busy|neutral)\{/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag\{[^}]*min-width/.test(tlSrc10))
-    check('第十一轮：状态标签**高度比「查看会话」按钮矮 2px**（同令牌 --tdt-control-h-sm，减 2）、圆角同档 --tdt-radius-md',
-      /\.dsh-tdt-rec-tag\{[^}]*height:calc\(var\(--tdt-control-h-sm\) - 2px\)/.test(tlSrc10)
-      && /\.dsh-tdt-rec-tag\{[^}]*border-radius:var\(--tdt-radius-md\)/.test(tlSrc10)
-      && !/\.dsh-tdt-rec-tag\{[^}]*height:var\(--tdt-control-h-sm\);/.test(tlSrc10)
+    check('第十一轮：状态标签**高度比「查看会话」按钮矮 2px**（同令牌 --dshpc-control-h-sm，减 2）、圆角同档 --dshpc-radius-md',
+      /\.dsh-tdt-rec-tag\{[^}]*height:calc\(var\(--dshpc-control-h-sm\) - 2px\)/.test(tlSrc10)
+      && /\.dsh-tdt-rec-tag\{[^}]*border-radius:var\(--dshpc-radius-md\)/.test(tlSrc10)
+      && !/\.dsh-tdt-rec-tag\{[^}]*height:var\(--dshpc-control-h-sm\);/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag\{[^}]*height:auto/.test(tlSrc10)
-      && !/\.dsh-tdt-rec-tag\{[^}]*border-radius:var\(--tdt-radius-sm\)/.test(tlSrc10)
-      && /\.dsh-tdt-btn\{[^}]*border-radius:var\(--tdt-radius-md\)/.test(ctrlSrc)
-      && /\.dsh-tdt-btn--sm\{[^}]*height:var\(--tdt-control-h-sm\)/.test(ctrlSrc)
+      && !/\.dsh-tdt-rec-tag\{[^}]*border-radius:var\(--dshpc-radius-sm\)/.test(tlSrc10)
+      && /\.dsh-tdt-btn\{[^}]*border-radius:var\(--dshpc-radius-md\)/.test(ctrlSrc)
+      && /\.dsh-tdt-btn--sm\{[^}]*height:var\(--dshpc-control-h-sm\)/.test(ctrlSrc)
       && tlSrc10.indexOf("}, t('viewSession'))") > 0)
     check('第十一轮：条目左内边距**从竖条右缘起算**（竖条宽度 --rec-bar-w 计入 padding-left）',
       /\.dsh-tdt-rec-item\{[^}]*--rec-bar-w:5px/.test(tlSrc10)
       && /\.dsh-tdt-rec-bar\{[^}]*width:var\(--rec-bar-w,5px\)/.test(tlSrc10)
-      && /\.dsh-tdt-rec-main\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) calc\(var\(--tdt-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc10)
-      && /\.dsh-tdt-rec-exp\{[^}]*calc\(var\(--tdt-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc10))
+      && /\.dsh-tdt-rec-main\{[^}]*padding:var\(--dshpc-space-3\) var\(--dshpc-space-3\) var\(--dshpc-space-3\) calc\(var\(--dshpc-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc10)
+      && /\.dsh-tdt-rec-exp\{[^}]*calc\(var\(--dshpc-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc10))
     check('第十一轮：执行记录页过滤行的分段控件与「任务配置」页**同一皮肤**（走默认变体：有外描边；不再 inset）',
       tlSrc10.includes("h(Segmented<StatusBucket | 'all'>") && !/variant: 'inset'/.test(tlSrc10)
       && tlListSrc.includes("h(Segmented<'all' | 'enabled' | 'disabled' | 'abnormal'>")
@@ -1904,13 +1903,13 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       /maxWidth:\s*["']40ch["']/.test(client) && /textOverflow:\s*["']ellipsis["']/.test(client))
     check('顶部输入区：文件名跑马灯走全站唯一实现 MarqueeText（不自己造第二套）',
       client.includes('MarqueeText') && client.includes('dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}'))
-    check('顶部输入区：前置任务标记 = **宽高相等的方块序号**，字号与基础信息「前置任务」行同源（var(--tdt-font-sm)）',
+    check('顶部输入区：前置任务标记 = **宽高相等的方块序号**，字号与基础信息「前置任务」行同源（var(--dshpc-font-sm)）',
       client.includes('dsh-tdt-sv-tfc-seq') && client.includes('width:16px;height:16px;padding:0;border-radius:4px')
-      && client.includes('font-size:var(--tdt-font-sm)') && client.includes('String(index + 1)')
+      && client.includes('font-size:var(--dshpc-font-sm)') && client.includes('String(index + 1)')
       && !client.includes('dsh-tdt-sv-tfc-taskbar'))
     check('顶部输入区：序号块亮度 = chip-bg 底 + fg-2 字（比 plate/fg-3 亮一档、且非纯白）',
-      /background:\s*var\(--tdt-chip-bg/.test(client) && /color:\s*var\(--tdt-fg-2/.test(client)
-      && !/\.dsh-tdt-sv-tfc-seq\{[^}]*--tdt-plate/.test(client))
+      /background:\s*var\(--dshpc-chip-bg/.test(client) && /color:\s*var\(--dshpc-fg-2/.test(client)
+      && !/\.dsh-tdt-sv-tfc-seq\{[^}]*--dshpc-plate/.test(client))
     check('顶部输入区：附件 >10 个才折叠（10 个以下全显示；用户 2026-10-03）',
       client.includes('COLLAPSE_FILES = 10') || /const COLLAPSE_FILES = 10/.test(client))
     check('顶部输入区：来源 / 状态标记方括号**前置**（[链接]foo.md），不再挂右侧像按钮',
@@ -1946,7 +1945,7 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     check('卡片创建时间：**每个任务都有这一行**（老定义缺 createdAt 显示占位，不整段消失、也不编造时间）',
       client.includes('listCreatedUnknown') && client.includes('创建时间未知'))
     check('筛选角标：**正圆**（固定 16×16 + border-radius 50%，多位数字不再撑成椭圆）',
-      client.includes('border-radius:50%;background:var(--tdt-danger)')
+      client.includes('border-radius:50%;background:var(--dshpc-danger)')
       && !client.includes('min-width:16px;height:16px;padding:0 4px'))
     // 术语：界面一律叫「前置任务」（用户 2026-10-03）。⚠️ 只断言**产物里出现给用户看的文案**，
     // 源码内部术语（resolvedDeps / upstream 字段 / BLOCK_KIND 的 key）沿用既有决策 43 的叫法，不动。
@@ -2357,28 +2356,28 @@ console.log('\n[14] runtime-index')
         && client.includes('跳过') && !client.includes('待执行')
     })())
 
-  // ── 15. UI 基础层 P0：token 层（--tdt-*）与唯一样式注入入口 ──
+  // ── 15. UI 基础层 P0：token 层（--dshpc-*）与唯一样式注入入口 ──
   // 本期的验收口径：地基进产物、变量名/取值按宿主 0.2.0-rc.2 核实结果直绑、明暗差异只有一处、
-  // 注入入口唯一；**且界面零变化**（此时还没有任何规则消费 --tdt-*）。
+  // 注入入口唯一；**且界面零变化**（此时还没有任何规则消费 --dshpc-*）。
   console.log('\n[15] UI 基础层 P0（token 层 + 统一样式入口）')
   {
     const uiJs = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
     const countOf = (needle) => uiJs.split(needle).length - 1
     check('token 表已打进产物（文字 / 面 / 两档控件高度）',
-      uiJs.includes('--tdt-fg:') && uiJs.includes('--tdt-surface-sunken:')
-      && uiJs.includes('--tdt-control-h-sm:24px') && uiJs.includes('--tdt-control-h-md:28px'))
+      uiJs.includes('--dshpc-fg:') && uiJs.includes('--dshpc-surface-sunken:')
+      && uiJs.includes('--dshpc-control-h-sm:24px') && uiJs.includes('--dshpc-control-h-md:28px'))
     check('token 直绑宿主真变量（含 warn 真名；焦点环不走默认透明的 focus-ring-color）',
-      uiJs.includes('--tdt-warning:var(--dsw-alias-state-warn-primary')
-      && uiJs.includes('--tdt-focus:var(--dsw-alias-state-business-primary')
-      && uiJs.includes('--tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover')
-      && !uiJs.includes('--tdt-focus:var(--dsw-focus-ring-color'))
+      uiJs.includes('--dshpc-warning:var(--dsw-alias-state-warn-primary')
+      && uiJs.includes('--dshpc-focus:var(--dsw-alias-state-business-primary')
+      && uiJs.includes('--dshpc-surface-sunken:var(--dsw-alias-interactive-bg-hover')
+      && !uiJs.includes('--dshpc-focus:var(--dsw-focus-ring-color'))
     check('字号 / 圆角直绑宿主字号族与圆角真值（不自定 px 刻度）',
-      uiJs.includes('--tdt-font-md:var(--dsw-font-xs-13-font-size')
-      && uiJs.includes('--tdt-radius-md:var(--dsw-radius-md,12px)'))
-    check('同一 token 只在一处定义（P0「--tdt- 只有一处定义」验收）',
-      countOf('--tdt-control-h-md:') === 1 && countOf('--tdt-fg:') === 1 && countOf('--tdt-radius-sm:') === 1)
+      uiJs.includes('--dshpc-font-md:var(--dsw-font-xs-13-font-size')
+      && uiJs.includes('--dshpc-radius-md:var(--dsw-radius-md,12px)'))
+    check('同一 token 只在一处定义（P0「--dshpc- 只有一处定义」验收）',
+      countOf('--dshpc-control-h-md:') === 1 && countOf('--dshpc-fg:') === 1 && countOf('--dshpc-radius-sm:') === 1)
     check('明暗差异唯一落点 = token 层（固定中性面覆盖段在产物里）',
-      uiJs.includes('body[data-ds-dark-theme]{') && uiJs.includes('--tdt-plate:var(--dsw-static-neutral-850'))
+      uiJs.includes('body[data-ds-dark-theme]{') && uiJs.includes('--dshpc-plate:var(--dsw-static-neutral-850'))
     // 注：applyStyle 是给 P5 过渡期用的便捷入口，此刻无调用点 ⇒ 被摇树属正常，不为它写断言。
     check('统一样式入口唯一（单 style id + 注入器 API + 入口接线）',
       uiJs.includes('dsh-task-dispatch-table-ui') && uiJs.includes('ensureUiBase')
@@ -2394,17 +2393,17 @@ console.log('\n[14] runtime-index')
     check('分段控件进了产物（段 / 变体 / 两档高度 / 段内角标 / 无障碍组）',
       p1Js.includes('dsh-tdt-seg__item') && p1Js.includes('dsh-tdt-seg--default') && p1Js.includes('dsh-tdt-seg--inset')
       && p1Js.includes('dsh-tdt-seg--md') && p1Js.includes('dsh-tdt-seg__badge') && p1Js.includes('aria-pressed'))
-    check('两套基础样式都在（纯黑 default=第二层面+描边 / 灰底 inset=交互灰 hover 底无描边；段高两档；角标 --tdt-on-signal）',
-      p1Js.includes('--seg-track:var(--tdt-surface-2)') && p1Js.includes('--seg-track:var(--tdt-hover)')
-      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised)')
-      && p1Js.includes('height:calc(var(--tdt-control-h-sm) - 6px)') && p1Js.includes('height:calc(var(--tdt-control-h-md) - 6px)')
-      && p1Js.includes('background:var(--tdt-danger);color:var(--tdt-on-signal)'))
+    check('两套基础样式都在（纯黑 default=第二层面+描边 / 灰底 inset=交互灰 hover 底无描边；段高两档；角标 --dshpc-on-signal）',
+      p1Js.includes('--seg-track:var(--dshpc-surface-2)') && p1Js.includes('--seg-track:var(--dshpc-hover)')
+      && p1Js.includes('--seg-thumb:var(--dshpc-surface-raised)')
+      && p1Js.includes('height:calc(var(--dshpc-control-h-sm) - 6px)') && p1Js.includes('height:calc(var(--dshpc-control-h-md) - 6px)')
+      && p1Js.includes('background:var(--dshpc-danger);color:var(--dshpc-on-signal)'))
     // 2026-10-01 用户拍板（同日修正 +2）：有边 / 无边总高必须 == token，边框在内部补回，不许额外撑高。
     // 统一几何 = 段高 = token − 6px（上下各 2px padding + 1px 边框）：default 真边框 + padding2；inset 无边框 + padding3 补回缺的 1px。
     check('有边 / 无边等高（1px 边框 + 2px padding：default 真边框 + padding2；inset 无边框 + padding3，外框 == token）',
       p1Js.includes('.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;')
-      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}')
-      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised);border:0;padding:3px;}'))
+      && p1Js.includes('--seg-thumb:var(--dshpc-surface-raised);border:1px solid var(--dshpc-border);}')
+      && p1Js.includes('--seg-thumb:var(--dshpc-surface-raised);border:0;padding:3px;}'))
     check('三处就地自绘的旧实现已删（同一控件不再有第二/三份）',
       !p1Js.includes('segTrackStyle') && !p1Js.includes('segStyle') && !p1Js.includes('tabStyle')
       && !p1Js.includes('countBadge') && !p1Js.includes('segmentStyle') && !p1Js.includes('segmentedStyle'))
@@ -2420,7 +2419,7 @@ console.log('\n[14] runtime-index')
   {
     const p1bJs = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
     check('第三档高度 lg 已进基础层（token + 皮肤规则）',
-      p1bJs.includes('--tdt-control-h-lg:32px') && p1bJs.includes('dsh-tdt-seg--lg'))
+      p1bJs.includes('--dshpc-control-h-lg:32px') && p1bJs.includes('dsh-tdt-seg--lg'))
     check('编辑器卡内分段已迁到统一 Segmented（编辑预览 · 排期 两处 id 在产物中）',
       p1bJs.includes('dsh-tdt-ed-prompt-mode') && p1bJs.includes('dsh-tdt-ed-schedule'))
     check('周几多选组件仍在且挂在间隔卡（multiple 模式走统一 Segmented，由类型与导入保证）',
@@ -2429,8 +2428,8 @@ console.log('\n[14] runtime-index')
       !p1bJs.includes('dsh-tdt-ed-seg{padding:3px}') && !p1bJs.includes(".dsh-tdt-ed-seg>span[aria-hidden"))
     check('周几多选特殊化变体：正方形 + 蓝选中（用户 2026-10-01 定制，复刻原 WeekdayPicker 观感）',
       p1bJs.includes('dsh-tdt-seg--weekday')
-      && p1bJs.includes('.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--tdt-control-h-lg) - 6px)')
-      && p1bJs.includes('background:var(--tdt-business);color:var(--tdt-fg-inverse)'))
+      && p1bJs.includes('.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--dshpc-control-h-lg) - 6px)')
+      && p1bJs.includes('background:var(--dshpc-business);color:var(--dshpc-fg-inverse)'))
   }
 
   // ── 17b. U21：新增 / 编辑任务改「占布局的分栏」+ 删执行记录切换 ──
@@ -2518,7 +2517,7 @@ console.log('\n[14] runtime-index')
       if (src.includes('const C = {')) cTableFiles++
       if (src.includes("createElement('style')")) selfInjectFiles++
     }
-    check('业务文件宿主变量引用清零（--dsw- 只应出现在 ui/tokens.ts）', dswFiles === 0)
+    check('业务文件宿主变量引用清零（--dsw- 只允许出现在核心 token 层）', dswFiles === 0)
     check('C 常量表已删净（const C = { 为 0）', cTableFiles === 0)
     check('使用点不再自注入 <style>（统一走 ui/style.ts 的 applyStyle）', selfInjectFiles === 0)
   }
@@ -2558,16 +2557,16 @@ console.log('\n[14] runtime-index')
     // 只锁定表头那一块（弹窗等处用 surface-base 是合理的，不在本断言范围）。
     const headBlock = /const recHeadStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? ''
     check('表头：居中 + 加高 + 上下各一条线（走 **box-shadow** ⇒ 跟着表头不随滚动滑走）',
-      headBlock.includes("textAlign: 'center'") && headBlock.includes("background: 'var(--tdt-head-bg)'")
+      headBlock.includes("textAlign: 'center'") && headBlock.includes("background: 'var(--dshpc-head-bg)'")
       && headBlock.includes("padding: '11px 10px'")
-      && headBlock.includes('boxShadow:') && headBlock.includes('inset 0 1px 0 var(--tdt-border)')
-      && headBlock.includes('inset 0 -1px 0 var(--tdt-border)')
+      && headBlock.includes('boxShadow:') && headBlock.includes('inset 0 1px 0 var(--dshpc-border)')
+      && headBlock.includes('inset 0 -1px 0 var(--dshpc-border)')
       && !headBlock.includes('borderTop:') && !headBlock.includes('borderBottom:'))
     check('状态过滤下拉顺序 全部 / 成功 / 失败 / 运行中（下拉不必守两字）',
       tl.includes("value: 'succeeded'") && tl.includes("value: 'failed'") && tl.includes("value: 'running'")
       && tl.includes("t('filterRunning')"))
     check('日期 / 时间锚点边框与下拉一致（0.5px + radius-md，同排并放是一套）',
-      cc.includes('border:0.5px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md)'))
+      cc.includes('border:0.5px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md)'))
     check('日志条数选择器居右（marginLeft:auto）', tl.includes("marginLeft: 'auto'"))
     check('时间范围控件：半开区间上界（次日 00:00 / 下一分钟 :00），不再用 .999 补丁',
       tr.includes('toParsed.d + 1') && tr.includes('toParsed.mm + 1') && !tr.includes('23:59:59.999')
@@ -2586,15 +2585,15 @@ console.log('\n[14] runtime-index')
       fmt.includes('${d.getFullYear()}-') && !fmt.includes('getFullYear() % 100'))
     check('产出物图标 28×28 + 底板 hover 两端都更明显（现为基础层 `.dsh-tdt-chip`，全站一份）',
       readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
-        .includes('width:var(--tdt-control-h-md);height:var(--tdt-control-h-md)'))
+        .includes('width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md)'))
     check('列序：查看会话在最后、产出物在倒数第二（「要点的」排在一起）',
       tl.indexOf("t('colNote')") < tl.indexOf("t('colOutputs')")
       && tl.indexOf("t('colOutputs')") < tl.indexOf("t('colSession')"))
-    check('备注**不用红色**：走最浅的灰 --tdt-fg-3（不是要提醒他去看）',
-      tl.includes("color: 'var(--tdt-fg-3)'") && !tl.includes("color: 'var(--tdt-danger)',\n"))
-    check('展开行 / 展开内容区走**带透明度的蓝**（--tdt-open-bg / -soft），不用灰色',
-      tl.includes('var(--tdt-open-bg)') && tl.includes('var(--tdt-open-bg-soft)')
-      && !tl.includes("open ? { background: 'var(--tdt-surface-2)' }"))
+    check('备注**不用红色**：走最浅的灰 --dshpc-fg-3（不是要提醒他去看）',
+      tl.includes("color: 'var(--dshpc-fg-3)'") && !tl.includes("color: 'var(--dshpc-danger)',\n"))
+    check('展开行 / 展开内容区走**带透明度的蓝**（--dshpc-open-bg / -soft），不用灰色',
+      tl.includes('var(--dshpc-open-bg)') && tl.includes('var(--dshpc-open-bg-soft)')
+      && !tl.includes("open ? { background: 'var(--dshpc-surface-2)' }"))
     check('展开区直接铺执行日志：**无标题、无黑框**（小字段亦已移除）',
       !tl.includes("t('eventsOf')") && !tl.includes("t('colAttempt')")
       && !tl.includes("t('colDispatchedAt')")
@@ -2608,17 +2607,17 @@ console.log('\n[14] runtime-index')
     check('loading 阈值已回归正式值：400ms 后才显 + 返回即消失（无保底停留）',
       tl.includes('BUSY_DELAY_MS = 400') && tl.includes('BUSY_HOLD_MS = 0'))
     check('任务卡片 hover 只作用主行（dsh-tdt-card-row），展开区不会跟着变蓝',
-      tl.includes('.dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }')
+      tl.includes('.dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }')
       && tl.includes("className: 'dsh-tdt-card-row'")
       // 整卡 hover 已废除：否则展开后整页发蓝（用户 2026-10-03）。
       && !tl.includes('.dsh-tdt-card:hover')
       // 只查 cardStyle 这个对象：inline 背景优先级高于 CSS class，会盖掉 :hover；
       // 且卡片本身不再统一 padding（padding 移到主行 / 展开区各自带，hover 才能边到边高亮）。
-      // （别的控件比如控制按钮确实有 `background: var(--tdt-surface-1), color: var(--tdt-fg)`，那条正经，故收口到 cardStyle 块内。）
+      // （别的控件比如控制按钮确实有 `background: var(--dshpc-surface-1), color: var(--dshpc-fg)`，那条正经，故收口到 cardStyle 块内。）
       && (() => {
         const m = tl.match(/const cardStyle[\s\S]*?\n\}/)
         const block = m ? m[0] : ''
-        return !block.includes("background: 'var(--tdt-surface-1)'") && !block.includes('padding:')
+        return !block.includes("background: 'var(--dshpc-surface-1)'") && !block.includes('padding:')
       })())
     check('loading 定位：fixed 到页面底部，right 按 #dsh-tdt-main 内容盒右边缘动态量',
       ld.includes("position: 'fixed'") && ld.includes('function useContentRight') && ld.includes('function Loading')
@@ -2644,7 +2643,7 @@ console.log('\n[14] runtime-index')
       && !tl.includes("recLoading ? h('span'") && !tl.includes("logLoading ? h('span'"))
     check('展开区排布放宽：外圈 padding 翻倍 + 日志行间距 + 字色压暗一档',
       tl.includes("padding: '18px 20px'") && tl.includes("marginBottom: '7px'")
-      && tl.includes("color: 'var(--tdt-fg-2)'") && !tl.includes("color: 'var(--tdt-accent)' }, `${event.kind}"))
+      && tl.includes("color: 'var(--dshpc-fg-2)'") && !tl.includes("color: 'var(--dshpc-accent)' }, `${event.kind}"))
     check('执行记录 / 日志都有条数过滤：`显示 <N> 条`，统一居右',
       tl.includes("t('limitPrefix')") && tl.includes("t('limitSuffix')") && tl.includes('recLimit')
       && (tl.match(/limitRowStyle/g) ?? []).length >= 3)
@@ -2689,7 +2688,7 @@ console.log('\n[14] runtime-index')
       // 不再有任何带文字的 Loading。
       && !tl.includes("h(Loading, { label: t('loading') })")
       // 基础信息右栏不再出现把 loading 文案直接当文字渲染的旧写法。
-      && !tl.includes("color: 'var(--tdt-fg-3)' } }, t('loading'))"))
+      && !tl.includes("color: 'var(--dshpc-fg-3)' } }, t('loading'))"))
     const rec = readFileSync(join(process.cwd(), 'src', 'reconcile.ts'), 'utf8')
     check('token 取数按官方 TokenUsage 口径：inputTokens 是**未缓存**输入 ⇒ 计费输入 = inputTokens + cacheReadTokens + cacheWriteTokens',
       rec.includes('num(u.inputTokens)') && rec.includes('num(u.cacheReadTokens)')
@@ -2706,9 +2705,9 @@ console.log('\n[14] runtime-index')
       && ti.includes('MarqueeText, { text: sessionName }')
       && ti.includes('IconSearchOutlineRegular')
       // 无虚线 / 无边框；图标包一个灰色小标签框；hover 变蓝。
-      && ti.includes('dsh-tdt-info-session-icon') && tic.includes('background: var(--tdt-chip-bg)')
-      && !ti.includes('border-bottom: 1px dashed var(--tdt-border-strong)')
-      && tic.includes('.dsh-tdt-info-session:hover { color: var(--tdt-business)')
+      && ti.includes('dsh-tdt-info-session-icon') && tic.includes('background: var(--dshpc-chip-bg)')
+      && !ti.includes('border-bottom: 1px dashed var(--dshpc-border-strong)')
+      && tic.includes('.dsh-tdt-info-session:hover { color: var(--dshpc-business)')
       && tic.includes('width: 18px; height: 18px')
       // 标签列不再写死宽度：整栏共用 grid + `max-content` 自动定宽（中文窄、英文宽，都不留白不溢出）。
       && tic.includes('grid-template-columns: max-content 1fr')
@@ -2814,8 +2813,8 @@ console.log('\n[14] runtime-index')
       && tv.includes('IconPlanOutlineRegular') && tv.includes('IconClockOutlineRegular') && tv.includes('IconThinkOutlineRegular')
       // r13：块标题 = 标签（浅底 chip）；状态行 = 色点 + 文字（task-info 共享层）；草稿 chip 走警告色。
       && tv.includes('dsh-tdt-ed-view-tag') && tec.includes('.dsh-tdt-ed-view-tag{')
-      && tiS.includes("view.enabled ? 'var(--tdt-success)' : 'var(--tdt-fg-3)'")
-      && tec.includes('color:var(--tdt-warning')
+      && tiS.includes("view.enabled ? 'var(--dshpc-success)' : 'var(--dshpc-fg-3)'")
+      && tec.includes('color:var(--dshpc-warning')
       && tv.includes('dsh-tdt-ed-view-badge') && tv.includes('lastRunFields({')
       && tv.includes('hideStatus: true'))
 
@@ -2826,12 +2825,12 @@ console.log('\n[14] runtime-index')
       && tv.includes('CodeViewer') && !tv.includes('onOpenPromptFullscreen')
       && tv.includes("variant: 'outline', size: 'sm'")           // 展开/收起 = 文字钮（与源码/预览同高同右）
       && !tv.includes('dsh-tdt-ed-view-more')                      // 底部「查看全部」已移除
-      && tec.includes('.dsh-tdt-ed-view-tag::before') && tec.includes('width:3px') && tec.includes('var(--tdt-business)')
+      && tec.includes('.dsh-tdt-ed-view-tag::before') && tec.includes('width:3px') && tec.includes('var(--dshpc-business)')
       && !tec.includes('.dsh-tdt-ed-view-block::before')          // 整块长线已移除（用户 2026-10-05 修正）
       && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:100px')
       && tec.includes('.dsh-tdt-ed-view-prompt--open{max-height:none;}')
       && tec.includes('.dsh-tdt-ed-view-expchevron')
-      && tec.includes('.dsh-tdt-ed-view-promptbox{') && tec.includes('color-mix(in srgb,var(--tdt-fg) 3%')
+      && tec.includes('.dsh-tdt-ed-view-promptbox{') && tec.includes('color-mix(in srgb,var(--dshpc-fg) 3%')
       && !tec.includes('.dsh-tdt-ed-view-more')
       && !lcSrc.includes('editorViewFullscreen'))
 
@@ -2908,7 +2907,7 @@ console.log('\n[14] runtime-index')
 
     check('入口：卡片展开区「前置任务」行任务名可点（hover 变蓝，与「任务会话」同款做法）',
       tiS.includes("className: 'dsh-tdt-info-dep'") && tiS.includes('onViewTask(dep.id)')
-      && ticS.includes('.dsh-tdt-info-dep:hover { color: var(--tdt-business)')
+      && ticS.includes('.dsh-tdt-info-dep:hover { color: var(--dshpc-business)')
       && lvSrc.includes('onViewTask'))
 
     check('查看档文案中英双语齐备且进产物',
@@ -3206,8 +3205,12 @@ console.log('\n[14] runtime-index')
       ['trayLabel', 'settingsResetDone', 'durSec', 'editorCustomCron', 'previewLoading']
         .every(k => !new RegExp(`\\|\\s*'${k}'`).test(locSrc))
       && !/^\s{2}trayLabel:/m.test(locSrc))
-    check('【CSS】基线明写：JS=chrome99（构建），CSS=Chrome 111（color-mix 现算、跟随宿主主题色）',
-      S('client/ui/tokens.ts').includes('CSS 基线 = Chrome 111'))
+    const kitBundle = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    check('【CSS】基线由核心统一维护：产物里 kit 真实初始化 + 明暗判据与状态浅底由核心 token 层提供',
+      /setStyleKit\(createStyleKit\(\{ id: UI_STYLE_ID \}\)\)/.test(kitBundle)
+      && kitBundle.includes('body[data-ds-dark-theme]')
+      && ['success', 'warning', 'danger', 'business'].every(t =>
+        kitBundle.includes(`--dshpc-${t}-soft:color-mix(in srgb,var(--dshpc-${t}) 8%,transparent)`)))
     check('【日志归属】进程级观测进 `plugin_log`，不进 `task_log`（后者只收任务诊断）',
       S('store.ts').includes('CREATE TABLE IF NOT EXISTS plugin_log')
       && S('store.ts').includes('INSERT INTO plugin_log')
@@ -3238,10 +3241,19 @@ console.log('\n[14] runtime-index')
     // 附件临时区清理由 index.ts 的 6 小时清道夫负责（每 6h 醒一次、跨天才真遍历目录）。
     check('【清道夫】临时附件区接在 6 小时清道夫上（按 attachmentTmpRetentionDays 清）',
       S('index.ts').includes('purgeTmp(paths, configRef.attachmentTmpRetentionDays)'))
-    check('【CSS】固定中性面的 6 个 token 已补明文回退（旧内核不再变透明）',
+    check('【CSS】产物里消费的每个 `--dshpc-*` 都在核心 token 白名单内且有定义（不许自造 token）',
+      (() => {
+        const coreSrc = readFileSync(join(process.cwd(), 'node_modules', 'dsh-plugin-core', 'dist', 'design', 'tokens-css.generated.js'), 'utf8')
+        const whitelist = new Set([...coreSrc.matchAll(/(--dshpc-[a-z0-9-]+):/g)].map(m => m[1]))
+        const consumed = new Set([...kitBundle.matchAll(/var\((--dshpc-[a-z0-9-]+)/g)].map(m => m[1]))
+        const defined = new Set([...kitBundle.matchAll(/(--dshpc-[a-z0-9-]+):/g)].map(m => m[1]))
+        return [...consumed].every(t => whitelist.has(t) && defined.has(t))
+      })())
+    check('【CSS】固定中性面的明文回退由核心 token 层提供（本仓不再自建 token 表）',
       ['rgba(255,255,255,.5)', 'rgba(15,15,15,.07)', 'rgba(15,15,15,.14)',
         'rgba(255,255,255,.05)', 'rgba(255,255,255,.08)', 'rgba(255,255,255,.16)']
-        .every(v => S('client/ui/tokens.ts').includes(v)))
+        .every(v => kitBundle.includes(v))
+      && !existsSync(join(process.cwd(), 'src', 'client', 'ui', 'tokens.ts')))
     check('日历计划指纹含 title / workspace（否则改名后计划格显示旧名）',
       /\$\{row\.id\}\|\$\{row\.enabled\}\|\$\{row\.title\}\|\$\{row\.workspace\}/.test(S('client/task-calendar.tsx')))
     check('拨片守卫有寿命（确认快照不来时不会永久锁死左→右同步）',

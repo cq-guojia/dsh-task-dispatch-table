@@ -87,21 +87,21 @@ const MAX_DEPMARKS = 20
  */
 const DEP_OUT_MAX = 5
 
-// ── 样式（走基础层注入器，不自建 <style>；只消费 var(--tdt-*)，间距/时长全走 token）──
+// ── 样式（走基础层注入器，不自建 <style>；只消费 var(--dshpc-*)，间距/时长全走 token）──
 const RECORDS_CSS = `
 /* ── 执行记录流水账（**无容器**）───────────────────────────────────────────
    没有外框、没有贯穿竖轴：整页铺在宿主面板底上，节奏靠「日期小字行 + 一条条自带底色的独立块」建立。 */
-.dsh-tdt-rec-group{margin-top:var(--tdt-space-2);}
+.dsh-tdt-rec-group{margin-top:var(--dshpc-space-2);}
 /* 日期小字行：时钟图标 + 日期 · 星期 · N 条（**不吸顶**——撤掉外框后底是透明的，
    吸顶必须给不透明底色，怕与宿主底色差出一条横带）。 */
 .dsh-tdt-rec-dayrow{display:flex;align-items:center;gap:6px;flex:none;
-  padding:var(--tdt-space-3) 0 var(--tdt-space-2);
-  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-dayrow>svg{flex:none;color:var(--tdt-fg-3);}
-.dsh-tdt-rec-daylabel{font-weight:500;color:var(--tdt-fg-2);}
-.dsh-tdt-rec-daycount{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
-/* 块之间 **4px**（用户指定；--tdt-space-1 正好 = 4px） */
-.dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+  padding:var(--dshpc-space-3) 0 var(--dshpc-space-2);
+  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-dayrow>svg{flex:none;color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-daylabel{font-weight:500;color:var(--dshpc-fg-2);}
+.dsh-tdt-rec-daycount{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3);}
+/* 块之间 **4px**（用户指定；--dshpc-space-1 正好 = 4px） */
+.dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--dshpc-space-1);}
 /* 条目块 = **容器**（自带状态色浅底；底色由色调类给的局部变量驱动，见下）。
    ⚠️ 三层结构照任务卡片（用户 2026-10-04：「参考前面配置任务的展开」）：
      容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
@@ -111,23 +111,23 @@ const RECORDS_CSS = `
    （用户 2026-10-05：左边距应该从竖条的**右边缘**开始算，不是从块的左边缘）⇒ 见 .dsh-tdt-rec-main / -exp。 */
 .dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;--rec-bar-w:5px;box-sizing:border-box;
   border:1px solid transparent;
-  background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
-  animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
-/* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
-   token 只在 tokens.ts 定义；块底那条「状态色浅底」的 token 就在那里）。 */
-.dsh-tdt-rec-tone--ok{--rec-tone:var(--tdt-success);--rec-tone-soft:var(--tdt-success-soft);}
-.dsh-tdt-rec-tone--bad{--rec-tone:var(--tdt-danger);--rec-tone-soft:var(--tdt-danger-soft);}
-.dsh-tdt-rec-tone--warn{--rec-tone:var(--tdt-warning);--rec-tone-soft:var(--tdt-warning-soft);}
-.dsh-tdt-rec-tone--busy{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);}
+  background:var(--rec-tone-soft,transparent);color:var(--dshpc-fg);font:inherit;text-align:left;
+  animation:dsh-tdt-rec-in var(--dshpc-dur-fast) var(--dshpc-ease);}
+/* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --dshpc-* token ——
+   token 只在核心 token 层（dsh-plugin-core/design）定义；块底那条「状态色浅底」的 token 就在那里）。 */
+.dsh-tdt-rec-tone--ok{--rec-tone:var(--dshpc-success);--rec-tone-soft:var(--dshpc-success-soft);}
+.dsh-tdt-rec-tone--bad{--rec-tone:var(--dshpc-danger);--rec-tone-soft:var(--dshpc-danger-soft);}
+.dsh-tdt-rec-tone--warn{--rec-tone:var(--dshpc-warning);--rec-tone-soft:var(--dshpc-warning-soft);}
+.dsh-tdt-rec-tone--busy{--rec-tone:var(--dshpc-business);--rec-tone-soft:var(--dshpc-business-soft);}
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
-.dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
+.dsh-tdt-rec-tone--mute{--rec-tone:var(--dshpc-fg-3);--rec-tone-soft:var(--dshpc-chip-bg);}
 /* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。
-   用户 2026-10-06：虚线与竖条都走**同一支正蓝**（--tdt-business），不要调暗、更不要灰。
+   用户 2026-10-06：虚线与竖条都走**同一支正蓝**（--dshpc-business），不要调暗、更不要灰。
    用户 2026-10-06 续：虚线**只包上/右/下**，左边不包——左缘是那条实心蓝竖条（--rec-bar-w），虚线从它右边起到最右；蓝色调淡一点。 */
-.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:color-mix(in srgb,var(--tdt-business) 50%,transparent);border-left:0;}
+.dsh-tdt-rec-tone--planned{--rec-tone:var(--dshpc-business);--rec-tone-soft:var(--dshpc-business-soft);border-style:dashed;border-color:color-mix(in srgb,var(--dshpc-business) 50%,transparent);border-left:0;}
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
-.dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
+.dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--dshpc-fg-3));}
 /* 运行中脉动走统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse）：条子直接挂 RUN_PULSE_CLASS，不再另写一份动画。 */
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
@@ -138,45 +138,45 @@ const RECORDS_CSS = `
    **只有鼠标悬停**才叠一层中性半透明（不盖掉块底的状态色浅底）。
    ⚠️ 2026-10-04 第七轮：删掉「展开态常亮」——用户原话「如果我鼠标不移到这一块，它是不变色的，
    还是没展开时的颜色呀。只是鼠标移到这一块，它才换一个颜色」；展开与否**不再影响**头部底色。 */
-/* 左内边距 = --tdt-space-4 **+ 竖条宽度**（从竖条右缘起算，不与条子叠在一起）。 */
-.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;
-  padding:var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-3) calc(var(--tdt-space-4) + var(--rec-bar-w,5px));}
+/* 左内边距 = --dshpc-space-4 **+ 竖条宽度**（从竖条右缘起算，不与条子叠在一起）。 */
+.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;
+  padding:var(--dshpc-space-3) var(--dshpc-space-3) var(--dshpc-space-3) calc(var(--dshpc-space-4) + var(--rec-bar-w,5px));}
 .dsh-tdt-rec-head{cursor:pointer;}
-.dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
-.dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
-.dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
+.dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--dshpc-hover),var(--dshpc-hover));}
+.dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--dshpc-space-1);flex:1 1 auto;min-width:0;}
+.dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;}
 /* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
-   字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --tdt-on-signal，一眼就是个带色的牌子。
+   字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --dshpc-on-signal，一眼就是个带色的牌子。
    ⚠️ 高度 / 圆角**跟着右列「查看会话」按钮走同一档令牌**，但**总高度比按钮矮 2px**（用户 2026-10-05 续：
      不要和按钮一模一样，总高 -2 ⇒ 24-2=22px，用固定的 height 减 2，padding / 圆角 / 字号**其他不变**）——
-     高度 height:calc(var(--tdt-control-h-sm) - 2px)（border-box ⇒ 含边框在内 22）、
-     圆角 border-radius:var(--tdt-radius-md)（按钮是 --md，不是 --sm）。
+     高度 height:calc(var(--dshpc-control-h-sm) - 2px)（border-box ⇒ 含边框在内 22）、
+     圆角 border-radius:var(--dshpc-radius-md)（按钮是 --md，不是 --sm）。
    ⚠️ 宽度仍**自适应**（不写 min-width，字多就长、字少就短）：padding 上下 3px / 左右 8px。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  height:calc(var(--tdt-control-h-sm) - 2px);padding:3px 8px;border-radius:var(--tdt-radius-md);
-  background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
-  font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
+  height:calc(var(--dshpc-control-h-sm) - 2px);padding:3px 8px;border-radius:var(--dshpc-radius-md);
+  background:var(--rec-tone,var(--dshpc-fg-3));color:var(--dshpc-on-signal);
+  font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);white-space:nowrap;}
 /* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
-.dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed color-mix(in srgb,var(--tdt-business) 50%,transparent);}
-.dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
-.dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
+.dsh-tdt-rec-tag--planned{background:transparent;color:var(--dshpc-business);border:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);}
+.dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;}
+.dsh-tdt-rec-title{font-size:var(--dshpc-font-lg);font-weight:600;line-height:var(--dshpc-line-md);}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
    最窄也要能放下「工作区 · 计划 · 实际 · 时长 · Token」的一部分，永不换行、永不横向滚动。 */
 .dsh-tdt-rec-r2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);min-width:0;}
+  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3);min-width:0;}
 /* 信息行里的一段（「图标 + 标签 + 值」）；段与段之间的「·」由 ::before 自动补，不用手写分隔节点。 */
 .dsh-tdt-rec-field{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;}
-.dsh-tdt-rec-field+.dsh-tdt-rec-field::before{content:'·';margin:0 var(--tdt-space-1);color:var(--tdt-border-heavy);}
-/* 字段小图标**统一 12px**（= --tdt-font-sm；用户 2026-10-04：几个图标一大一小、都缩小一号）
+.dsh-tdt-rec-field+.dsh-tdt-rec-field::before{content:'·';margin:0 var(--dshpc-space-1);color:var(--dshpc-border-heavy);}
+/* 字段小图标**统一 12px**（= --dshpc-font-sm；用户 2026-10-04：几个图标一大一小、都缩小一号）
    —— 这里再兜一道：将来漏传 size 也不会又变大。 */
-.dsh-tdt-rec-field>svg{flex:none;width:var(--tdt-font-sm);height:var(--tdt-font-sm);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-sep{color:var(--tdt-border-heavy);}
-.dsh-tdt-rec-num{font-variant-numeric:tabular-nums;font-family:var(--tdt-font-mono);}
+.dsh-tdt-rec-field>svg{flex:none;width:var(--dshpc-font-sm);height:var(--dshpc-font-sm);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-sep{color:var(--dshpc-border-heavy);}
+.dsh-tdt-rec-num{font-variant-numeric:tabular-nums;font-family:var(--dshpc-font-mono);}
 .dsh-tdt-rec-chiprow{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;}
 /* 展开箭头**不再自绘**：用基础层 IconButton（与任务配置卡片的箭头同一份实现，
    hover 底色 / 尺寸 / 翻转都一致）—— 2026-10-04 第五轮收编。 */
 /* 折叠态：名字后面的**前置圈码**（有几个 = 本次执行实际用到了几个上游） */
-.dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:var(--tdt-space-1);flex:none;}
+.dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:var(--dshpc-space-1);flex:none;}
 /* 前置圈码 = **自绘正圆徽标**（2026-10-04 第八轮定稿：浅色实心、无描边、**固定正圆**）。
    ⚠️ 复盘：上一版写成 min-width:18px + padding:0 3px + border-radius:999px ⇒ 一位数恰好是圆，
       两位数字会把圆**撑成胶囊**（用户 2026-10-04：「一定要是个圆的」「你要确定两位能显示成圆的」
@@ -184,78 +184,78 @@ const RECORDS_CSS = `
    📏 尺寸依据（**实测**，非估计）：用容器里最宽的常见 UI 字体 DejaVu Sans 渲染，11px 下两位数字
       宽 15px，**20px 圆尚余 5px**；宿主界面字体（本插件**未引入任何外部字体**，文字继承宿主）比它更窄。
       另加 min-width / min-height / aspect-ratio 三道兜底 ⇒ 不论父级怎么排，它都是正圆。
-   🎨 底色走 --tdt-chip-bg（暗色主题自动换成白色 8%，与产出物 chip 同源）；悬停**只加深底色**、
+   🎨 底色走 --dshpc-chip-bg（暗色主题自动换成白色 8%，与产出物 chip 同源）；悬停**只加深底色**、
       不再动描边（用户明确「不要描边，就要浅色实心圆」）。提示走官方 Tooltip（见折叠态渲染处）。 */
 .dsh-tdt-rec-depmark{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
   width:20px;height:20px;min-width:20px;min-height:20px;aspect-ratio:1/1;padding:0;border:none;border-radius:50%;
-  background:var(--tdt-chip-bg);
-  color:var(--tdt-fg-2);font-size:var(--tdt-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
-  transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
-.dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);color:var(--tdt-fg);}
+  background:var(--dshpc-chip-bg);
+  color:var(--dshpc-fg-2);font-size:var(--dshpc-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
+.dsh-tdt-rec-depmark:hover{background:var(--dshpc-chip-bg-hover);color:var(--dshpc-fg);}
 /* 折叠态前置圈码可点（开任务查看档）：清掉按钮默认外壳 + 手指（用户 2026-10-05）。
    ⚠️ 只继承 font-family、**不要 font:inherit**：font:inherit 会把数字字号拉成父级头部字号，
    使折叠态圈码比展开态（同款 class、固定 11px）数字大一圈——用户 2026-10-05 指出两处「1、2」大小不一致。 */
 .dsh-tdt-rec-depmark--btn{appearance:none;-webkit-appearance:none;cursor:pointer;font-family:inherit;}
 /* 展开态前置格整块可点：手指提示（只有接了 onViewTask 才挂这个类）。 */
 .dsh-tdt-rec-dep--click{cursor:pointer;}
-/* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --tdt-hover）；框内任务名 hover **不变色**
+/* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --dshpc-hover）；框内任务名 hover **不变色**
    （整框已给反馈，名字再变蓝是多余——用户 2026-10-05；只在此作用域关掉 .dsh-tdt-info-dep 的 hover 蓝）。 */
-.dsh-tdt-rec-dep--click:hover{background:var(--tdt-chip-bg-hover);}
-.dsh-tdt-rec-dep .dsh-tdt-info-dep:hover{color:var(--tdt-fg);}
+.dsh-tdt-rec-dep--click:hover{background:var(--dshpc-chip-bg-hover);}
+.dsh-tdt-rec-dep .dsh-tdt-info-dep:hover{color:var(--dshpc-fg);}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
 .dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
-.dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
+.dsh-tdt-rec-note{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3);}
 /* ── 展开区（点头部就地展开；手风琴，同时只开一条）───────────────────────
    ⚠️ **不可点、无 cursor**：展开出来的内容（产出物 / 前置 / 日志）要能直接拖选复制
       （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 /* 展开区同样从竖条右缘起算 ⇒ 展开后的内容与头部标题**左对齐**（条子是通高的，也压在展开区上）。 */
-.dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--tdt-space-2);
-  padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3) calc(var(--tdt-space-4) + var(--rec-bar-w,5px));
-  border-top:1px solid var(--tdt-border-faint);}
+.dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--dshpc-space-2);
+  padding:var(--dshpc-space-2) var(--dshpc-space-3) var(--dshpc-space-3) calc(var(--dshpc-space-4) + var(--rec-bar-w,5px));
+  border-top:1px solid var(--dshpc-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
 .dsh-tdt-rec-expouts{display:flex;flex-wrap:wrap;gap:2px 10px;min-width:0;}
 /* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
-.dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--tdt-font-xs);font-weight:500;color:var(--tdt-fg-3);}
+.dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--dshpc-font-xs);font-weight:500;color:var(--dshpc-fg-3);}
 /* 前置任务（展开区**第二排**）：**一排两个**（用户 2026-10-04），每格「左列两行 + 右列按钮」——
    左列：圈码 + 任务名 ／「执行于 2026-10-03 23:50:12」；右列：「查看会话」链接型小按钮（靠右 + 上下居中）。
    格子本身不可点（只有里面那个按钮可点）。
    ⚠️ 2026-10-04 第七轮三处返工：① 时间改**书面表达 + 全量长格式**（用户否掉「本次取自…」那种说法）；
    ② 按钮从信息行里挪出来落右列（无边框链接型）——顺带治好「两行中间被 24px 按钮撑高」的挤；
    ③ 留白与圆角整体放大到约 1.5~2 倍（用户：「看着就是贴边，很挤」「完全看不出来圆角」）。 */
-.dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--tdt-space-2);min-width:0;}
-.dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--tdt-space-2) var(--tdt-space-3);}
+.dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--dshpc-space-2);min-width:0;}
+.dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2) var(--dshpc-space-3);}
 .dsh-tdt-rec-dep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
-  column-gap:var(--tdt-space-3);min-width:0;
-  padding:var(--tdt-space-2) var(--tdt-space-3);border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);}
-.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;overflow:hidden;}
+  column-gap:var(--dshpc-space-3);min-width:0;
+  padding:var(--dshpc-space-2) var(--dshpc-space-3);border-radius:var(--dshpc-radius-sm);background:var(--dshpc-chip-bg);}
+.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--dshpc-space-1);min-width:0;overflow:hidden;}
 /* 前置格**右列**：产出物图标 → 查看会话。**整列不折行**（用户 2026-10-04：页面拉伸时不要把内容
    压成折行）⇒ 挤的时候先让左列的名字 / 时间省略，右列控件始终完整可见。 */
-.dsh-tdt-rec-depright{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;white-space:nowrap;}
-.dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
-  font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
-.dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
-  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-ev{font-family:var(--tdt-font-mono);font-size:var(--tdt-font-xs);
-  line-height:var(--tdt-line-md);color:var(--tdt-fg-2);}
+.dsh-tdt-rec-depright{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;white-space:nowrap;}
+.dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;
+  font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-2);}
+.dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;
+  font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-ev{font-family:var(--dshpc-font-mono);font-size:var(--dshpc-font-xs);
+  line-height:var(--dshpc-line-md);color:var(--dshpc-fg-2);}
 .dsh-tdt-rec-evrow{margin-bottom:6px;word-break:break-all;}
-.dsh-tdt-rec-evempty{font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-foot{display:flex;align-items:center;justify-content:center;gap:var(--tdt-space-2);
-  padding:var(--tdt-space-3) 0 var(--tdt-space-1);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-err{color:var(--tdt-danger);}
+.dsh-tdt-rec-evempty{font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-foot{display:flex;align-items:center;justify-content:center;gap:var(--dshpc-space-2);
+  padding:var(--dshpc-space-3) 0 var(--dshpc-space-1);font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-err{color:var(--dshpc-danger);}
 `
 const RECORDS_DOMAIN = 'domain:records'
 
 const filterRowStyle: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-2)', flexWrap: 'wrap', marginBottom: 'var(--tdt-space-3)',
+  display: 'flex', alignItems: 'center', gap: 'var(--dshpc-space-2)', flexWrap: 'wrap', marginBottom: 'var(--dshpc-space-3)',
 }
 const filterRightStyle: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-2)', marginLeft: 'auto', flexWrap: 'wrap',
+  display: 'flex', alignItems: 'center', gap: 'var(--dshpc-space-2)', marginLeft: 'auto', flexWrap: 'wrap',
 }
 const emptyStyle: CSSProperties = {
-  padding: '40px 0', textAlign: 'center', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg-3)',
+  padding: '40px 0', textAlign: 'center', fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg-3)',
 }
 
 /** 本地日历日的 key（`YYYY-MM-DD`）。 */
@@ -339,7 +339,7 @@ function weekdayOf(key: string, formatter: Intl.DateTimeFormat | null): string {
 }
 
 /**
- * 语义色调 → 块的色调类名（色值本身全在 CSS 里读 --tdt-* / --tdt-*-soft，
+ * 语义色调 → 块的色调类名（色值本身全在 CSS 里读 --dshpc-* / --dshpc-*-soft，
  * 业务侧只做「哪一档」的映射；档位由 `status-text.ts` 的 `statusToneOf` 单源决定）。
  */
 function toneClassOf(tone: 'ok' | 'bad' | 'warn' | 'busy' | 'neutral' | 'planned'): string {
@@ -647,7 +647,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
           }, t('viewSession'))
           : null,
         // 展开箭头 = **与任务卡片头部逐字一致**的写法（用户 2026-10-04：抄任务配置那套，
-        // 连鼠标移上去都要一样）：基础层 IconButton（plain + sm = 24×24，hover 走 --tdt-hover）
+        // 连鼠标移上去都要一样）：基础层 IconButton（plain + sm = 24×24，hover 走 --dshpc-hover）
         // + chevron + aria-expanded + 展开翻转。外面包一层 span 拦冒泡（否则会先触发自己的 onClick
         // 再冒泡到整块 ⇒ 展开后立刻又收起）。故意**不挂 title**：图标自明，只留无障碍名（与卡片同理）。
         // ⚠️ 预计执行且无前置（也没有产出/日志）⇒ **不画箭头**（展开后是空框、毫无意义 —— 用户 2026-10-06）。
@@ -814,9 +814,9 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                 : h('div', { className: 'dsh-tdt-rec-ev' },
                   h('div', { className: 'dsh-tdt-rec-evtitle' }, t('recEventsTitle')),
                   events.map(event => h('div', { key: event.seq, className: 'dsh-tdt-rec-evrow' },
-                    h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${stampOf(event.ts)} `),
-                    h('span', { style: { color: 'var(--tdt-fg-2)' } }, `${event.kind} `),
-                    h('span', { style: { color: 'var(--tdt-fg-2)' } }, event.detail ?? ''),
+                    h('span', { style: { color: 'var(--dshpc-fg-3)' } }, `${stampOf(event.ts)} `),
+                    h('span', { style: { color: 'var(--dshpc-fg-2)' } }, `${event.kind} `),
+                    h('span', { style: { color: 'var(--dshpc-fg-2)' } }, event.detail ?? ''),
                   )),
                 ),
       )

@@ -76,29 +76,29 @@ export interface TaskPickerProps {
   align?: 'start' | 'end'
 }
 
-/** 任务选择器浮层的皮肤规则（只消费 `var(--tdt-*)`，间距走 `--tdt-space-*`）。 */
+/** 任务选择器浮层的皮肤规则（只消费 `var(--dshpc-*)`，间距走 `--dshpc-space-*`）。 */
 export const TASKPICKER_CSS = `
 /* ── 任务选择器（带搜索）────────────────────────────────────────────────
    结构：搜索行 + 列表 +「更多 / 收起」。浮层外壳由官方 Menu 提供，这里只管内容。
    ⚠️ 官方 MenuSurface 自带内边距与圆角 ⇒ 本面板不再套第二层壳，避免双层底。 */
-.dsh-tdt-tp{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:220px;max-width:340px;}
-.dsh-tdt-tp-search{display:flex;align-items:center;gap:var(--tdt-space-1);padding:0 var(--tdt-space-1);color:var(--tdt-fg-3);}
+.dsh-tdt-tp{display:flex;flex-direction:column;gap:var(--dshpc-space-1);min-width:220px;max-width:340px;}
+.dsh-tdt-tp-search{display:flex;align-items:center;gap:var(--dshpc-space-1);padding:0 var(--dshpc-space-1);color:var(--dshpc-fg-3);}
 .dsh-tdt-tp-search > span{display:inline-flex;flex:none;}
 /* 列表定高（内容区尺寸，属 ui-style-guide §三「已知例外」的内容区定高一类）。 */
 .dsh-tdt-tp-list{display:flex;flex-direction:column;max-height:264px;overflow-y:auto;}
-.dsh-tdt-tp-row{display:flex;align-items:center;gap:var(--tdt-space-2);width:100%;padding:6px var(--tdt-space-2);
-  border:0;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg);font:inherit;
-  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);text-align:left;cursor:pointer;}
-.dsh-tdt-tp-row:hover{background:var(--tdt-hover);}
+.dsh-tdt-tp-row{display:flex;align-items:center;gap:var(--dshpc-space-2);width:100%;padding:6px var(--dshpc-space-2);
+  border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg);font:inherit;
+  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);text-align:left;cursor:pointer;}
+.dsh-tdt-tp-row:hover{background:var(--dshpc-hover);}
 /* 键盘可达性：与其它控件同款描边（不得只靠 hover 表达可交互）。 */
-.dsh-tdt-tp-row:focus-visible,.dsh-tdt-tp-more:focus-visible{outline:2px solid var(--tdt-business);outline-offset:-2px;}
-.dsh-tdt-tp-row--on{color:var(--tdt-business);}
+.dsh-tdt-tp-row:focus-visible,.dsh-tdt-tp-more:focus-visible{outline:2px solid var(--dshpc-business);outline-offset:-2px;}
+.dsh-tdt-tp-row--on{color:var(--dshpc-business);}
 .dsh-tdt-tp-name{flex:1 1 auto;min-width:0;}
 .dsh-tdt-tp-check{flex:none;display:inline-flex;width:14px;align-items:center;justify-content:center;}
-.dsh-tdt-tp-more{border:0;border-top:1px solid var(--tdt-border-faint);margin-top:2px;padding:6px var(--tdt-space-2);
-  background:transparent;color:var(--tdt-business);font:inherit;font-size:var(--tdt-font-sm);text-align:left;cursor:pointer;}
-.dsh-tdt-tp-more:hover{background:var(--tdt-hover);}
-.dsh-tdt-tp-empty{padding:var(--tdt-space-2);color:var(--tdt-fg-3);font-size:var(--tdt-font-sm);text-align:center;}
+.dsh-tdt-tp-more{border:0;border-top:1px solid var(--dshpc-border-faint);margin-top:2px;padding:6px var(--dshpc-space-2);
+  background:transparent;color:var(--dshpc-business);font:inherit;font-size:var(--dshpc-font-sm);text-align:left;cursor:pointer;}
+.dsh-tdt-tp-more:hover{background:var(--dshpc-hover);}
+.dsh-tdt-tp-empty{padding:var(--dshpc-space-2);color:var(--dshpc-fg-3);font-size:var(--dshpc-font-sm);text-align:center;}
 `
 
 /** 皮肤域固定名（注入顺序在 controls 之后）。 */
@@ -174,7 +174,7 @@ export function TaskPicker(props: TaskPickerProps): ReturnType<typeof h> {
       ...FIELD_ANCHOR_STYLE,
       height: metrics.height, gap: metrics.gap, fontSize: metrics.font, lineHeight: metrics.line,
       width: props.width,
-      background: hover && props.disabled !== true ? 'var(--tdt-hover)' : 'var(--tdt-surface-1)',
+      background: hover && props.disabled !== true ? 'var(--dshpc-hover)' : 'var(--dshpc-surface-1)',
       cursor: props.disabled === true ? 'not-allowed' : 'pointer',
       opacity: props.disabled === true ? 0.6 : 1,
     },
@@ -183,11 +183,11 @@ export function TaskPicker(props: TaskPickerProps): ReturnType<typeof h> {
       text: shownLabel,
       title: props.ariaLabel,
       className: 'dsh-tdt-ellipsis',
-      style: { ...FIELD_LABEL_STYLE, color: current === undefined || props.value === '' ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' },
+      style: { ...FIELD_LABEL_STYLE, color: current === undefined || props.value === '' ? 'var(--dshpc-fg-dim)' : 'var(--dshpc-fg)' },
     }),
     // 掉出作用域：给一个可见的告警记号（细节在 title / outOfScopeHint 里）。
-    outOfScope ? h('span', { style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-warning)' } }, '!') : null,
-    h('span', { style: { display: 'inline-flex', width: `${metrics.icon}px`, height: `${metrics.icon}px`, alignItems: 'center', justifyContent: 'center', flex: 'none', color: 'var(--tdt-fg-3)' } },
+    outOfScope ? h('span', { style: { flex: 'none', fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-warning)' } }, '!') : null,
+    h('span', { style: { display: 'inline-flex', width: `${metrics.icon}px`, height: `${metrics.icon}px`, alignItems: 'center', justifyContent: 'center', flex: 'none', color: 'var(--dshpc-fg-3)' } },
       h(IconChevronDownOutlineRegular, { size: metrics.icon })),
   )
 

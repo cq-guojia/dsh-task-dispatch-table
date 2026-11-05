@@ -131,7 +131,7 @@ export function TaskViewPanel(props: {
     // 查看档没有可写的启用开关 ⇒ 用基础信息里的「状态」一行表达（切换前的卡片则不给这个字段）。
     enabled: draft.enabled,
     // 排期人话：与编辑器底部「排期预览」**同一份实现**（`schedule-text.ts` 单源）。
-    scheduleLine: renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: 'var(--tdt-fg)' } }),
+    scheduleLine: renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: 'var(--dshpc-fg)' } }),
     // 预计执行：社交化相对时间（LiveText 每秒自刷）+ 具体时刻，与卡片同款（`renderNextExec`）。
     nextSlot: renderNextExec(nextExecIso, t),
     // 空字段一律给「未填」占位，不留白、也不编造。
@@ -193,11 +193,11 @@ export function TaskViewPanel(props: {
           h(IconClockOutlineRegular, { size: 12 }), t('infoLastRun')),
         last === null ? null : h('span', { className: 'dsh-tdt-ed-view-badge', style: { background: infoStatusColorOf(last.status) } }),
         last === null ? null : h('span', {
-          style: { fontSize: 'var(--tdt-font-sm)', fontWeight: 600, color: infoStatusColorOf(last.status) },
+          style: { fontSize: 'var(--dshpc-font-sm)', fontWeight: 600, color: infoStatusColorOf(last.status) },
         }, statusTextOf(last.status, t)),
       ),
       error !== null
-        ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${error}`)
+        ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${error}`)
         : !loaded
           // 加载中**空着**（用户铁律：全站只有一个 loading，不许在这里新增实例、文案或样式）。
           ? null

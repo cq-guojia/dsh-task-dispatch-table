@@ -6,7 +6,7 @@
  * - `NumberInput`：数字步进（显式 `− / +`，替换原生 `<input type="number">` 的浏览器 spinner，
  *   支持 step / min / max、clamp、Enter 提交、失焦回弹）。
  *
- * 高度一律吃 `--tdt-control-h-*`；有边 / 无边同高（边框在内部补回）。
+ * 高度一律吃 `--dshpc-control-h-*`；有边 / 无边同高（边框在内部补回）。
  */
 import { createElement as h, useEffect, useMemo, useState, type CSSProperties, type ReactElement, type ReactNode, type RefObject } from 'react'
 import { IconChevronDownOutlineRegular, Menu, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -196,11 +196,11 @@ export interface EditorOption {
  * 不许各抄一份（2026-10-04 评审：TaskPicker 曾抄第二/第三份，观感会持续漂移）。
  */
 export const FIELD_ANCHOR_STYLE: CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: '6px', height: 'var(--tdt-control-h-lg)', boxSizing: 'border-box',
-  minWidth: 0, maxWidth: '100%', padding: '0 var(--tdt-space-2)',
-  border: '0.5px solid var(--tdt-border-heavy)', borderRadius: 'var(--tdt-radius-md)', background: 'var(--tdt-surface-1)',
-  color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', cursor: 'pointer',
-  transition: 'background var(--tdt-dur-fast) var(--tdt-ease), color var(--tdt-dur-fast) var(--tdt-ease), border-color var(--tdt-dur-fast) var(--tdt-ease)',
+  display: 'inline-flex', alignItems: 'center', gap: '6px', height: 'var(--dshpc-control-h-lg)', boxSizing: 'border-box',
+  minWidth: 0, maxWidth: '100%', padding: '0 var(--dshpc-space-2)',
+  border: '0.5px solid var(--dshpc-border-heavy)', borderRadius: 'var(--dshpc-radius-md)', background: 'var(--dshpc-surface-1)',
+  color: 'var(--dshpc-fg)', font: 'inherit', fontSize: 'var(--dshpc-font-md)', lineHeight: 'var(--dshpc-line-md)', cursor: 'pointer',
+  transition: 'background var(--dshpc-dur-fast) var(--dshpc-ease), color var(--dshpc-dur-fast) var(--dshpc-ease), border-color var(--dshpc-dur-fast) var(--dshpc-ease)',
 }
 
 /** 下拉锚点里那行文字（省略号三件套收敛到 `.dsh-tdt-ellipsis`，见 ui-style-guide §三 待抽象 #1）。 */
@@ -211,16 +211,16 @@ export const FIELD_LABEL_STYLE: CSSProperties = {
 /** 尺寸档 → 锚点几何（高度 / 字号 / 行高 / 图标 / 间距）。**翻译只此一处**，下拉类控件共用。 */
 export function fieldMetricsOf(size: FieldSize): { height: string; font: string; line: string; icon: number; gap: string } {
   return {
-    height: size === 'sm' ? 'var(--tdt-control-h-sm)' : size === 'md' ? 'var(--tdt-control-h-md)' : 'var(--tdt-control-h-lg)',
-    font: size === 'sm' ? 'var(--tdt-font-sm)' : 'var(--tdt-font-md)',
-    line: size === 'sm' ? 'var(--tdt-line-sm)' : 'var(--tdt-line-md)',
+    height: size === 'sm' ? 'var(--dshpc-control-h-sm)' : size === 'md' ? 'var(--dshpc-control-h-md)' : 'var(--dshpc-control-h-lg)',
+    font: size === 'sm' ? 'var(--dshpc-font-sm)' : 'var(--dshpc-font-md)',
+    line: size === 'sm' ? 'var(--dshpc-line-sm)' : 'var(--dshpc-line-md)',
     icon: size === 'sm' ? 14 : 16,
-    gap: size === 'sm' ? 'var(--tdt-space-1)' : '6px',
+    gap: size === 'sm' ? 'var(--dshpc-space-1)' : '6px',
   }
 }
 
 function IconSeat(props: { children: ReactNode }): ReactElement {
-  return h('span', { style: { display: 'inline-flex', width: '16px', height: '16px', alignItems: 'center', justifyContent: 'center', flex: 'none', color: 'var(--tdt-fg-3)' } }, props.children)
+  return h('span', { style: { display: 'inline-flex', width: '16px', height: '16px', alignItems: 'center', justifyContent: 'center', flex: 'none', color: 'var(--dshpc-fg-3)' } }, props.children)
 }
 
 export interface SelectFieldProps {
@@ -292,7 +292,7 @@ export function SelectField(props: SelectFieldProps): ReactElement {
       height: metrics.height, gap: metrics.gap, fontSize: metrics.font, lineHeight: metrics.line,
       width: props.width ?? (props.block === true ? '100%' : undefined),
       ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
-      background: hover && usable ? 'var(--tdt-hover)' : 'var(--tdt-surface-1)',
+      background: hover && usable ? 'var(--dshpc-hover)' : 'var(--dshpc-surface-1)',
       cursor: usable ? 'pointer' : 'not-allowed',
       opacity: usable ? 1 : 0.6,
     },
@@ -303,9 +303,9 @@ export function SelectField(props: SelectFieldProps): ReactElement {
         text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
         title: props.title ?? props.ariaLabel,
         className: 'dsh-tdt-ellipsis',
-        style: { ...FIELD_LABEL_STYLE, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' },
+        style: { ...FIELD_LABEL_STYLE, color: current === undefined ? 'var(--dshpc-fg-dim)' : 'var(--dshpc-fg)' },
       })
-      : h('span', { className: 'dsh-tdt-ellipsis', style: { ...FIELD_LABEL_STYLE, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' } },
+      : h('span', { className: 'dsh-tdt-ellipsis', style: { ...FIELD_LABEL_STYLE, color: current === undefined ? 'var(--dshpc-fg-dim)' : 'var(--dshpc-fg)' } },
         current?.label ?? (usable ? props.placeholder : props.emptyLabel)),
     h(IconSeat, null, h(IconChevronDownOutlineRegular, { size: iconSize })),
   )

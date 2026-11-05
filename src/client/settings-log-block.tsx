@@ -23,7 +23,7 @@ const PAGE_SIZES = [50, 100, 200]
 /** 条数过滤的外壳：与任务配置 `limitRowStyle` 同款（`marginLeft:auto` ⇒ 整组里它最右）。 */
 const limitRowStyle: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto',
-  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)',
+  fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)',
 }
 
 export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProperties }): ReturnType<typeof h> {
@@ -67,7 +67,7 @@ export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProper
     h(SectionHead, {
       icon: h(IconCodeOutlineRegular, { size: 16 }),
       title: t('settingsBlockLogTitle'),
-      right: h('div', { style: { display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-2)', flexWrap: 'wrap' } },
+      right: h('div', { style: { display: 'flex', alignItems: 'center', gap: 'var(--dshpc-space-2)', flexWrap: 'wrap' } },
         h(Checkbox, { checked: auto, onChange: (next: boolean) => setAuto(next), label: t('settingsAutoRefresh') }),
         h(Button, { variant: 'outline', size: 'md', onClick: () => void load(), disabled: loading }, t('settingsRefresh')),
         h('label', { style: limitRowStyle },
@@ -87,7 +87,7 @@ export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProper
       ),
     }),
     error !== null
-      ? h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-danger)', marginBottom: 'var(--tdt-space-2)' } }, error)
+      ? h('div', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-danger)', marginBottom: 'var(--dshpc-space-2)' } }, error)
       : null,
     h(DbTable, { table: result, t, emptyText: t('settingsLogEmpty') }),
   )

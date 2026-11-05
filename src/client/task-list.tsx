@@ -53,14 +53,14 @@ import { applyStyle, Button, ensureRunningStyle, IconButton, Input as TdtInput, 
 
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
-const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease)`
+const transition = `background var(--dshpc-dur) var(--dshpc-ease), color var(--dshpc-dur) var(--dshpc-ease), border-color var(--dshpc-dur) var(--dshpc-ease)`
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
-const monoFont = 'var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
+const monoFont = 'var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
 // `NO_TIME` 占位与「时间社交化表达 / 秒级心跳 / LiveText / renderNextExec」已于 2026-10-05
 // 上提共享层 ⇒ `task-info.tsx`（卡片与右侧栏查看档共用同一份）。
 /** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
  *  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
-const CONTROL_H = 'var(--tdt-control-h-md)'
+const CONTROL_H = 'var(--dshpc-control-h-md)'
 /** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
 const WS_WIDTH = 180
 
@@ -75,21 +75,21 @@ const TASK_LIST_CSS = [
   //    与旁边的 `SelectField` 天然一致；此前手写的 `border-radius:radius-sm` 是覆盖基类、导致圆角与众不同的根因，已删。
   `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; }`,
   `.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
-  `.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
+  `.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--dshpc-font-sm); }`,
   // 记录表头吸顶（内容区定高滚动、表头不动）：原注释声称由 `.dsh-tdt-rec-head th` 接管，
-  // 但迁移时这条规则丢了、表头实际不吸顶；这里补回，底色随卡片面（--tdt-surface-1）免得滚动时透内容。
-  '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }',
+  // 但迁移时这条规则丢了、表头实际不吸顶；这里补回，底色随卡片面（--dshpc-surface-1）免得滚动时透内容。
+  '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--dshpc-head-bg); }',
   // 任务卡片：底色 + **hover 微高亮**（用户 2026-10-03）。
   // 底色必须写在这里而不是 inline style —— inline 会盖掉下面的 `:hover`。
-  // 高亮用**淡蓝** `--tdt-card-hover`：灰色高亮在卡片底色上几乎看不出来。
-  '.dsh-tdt-card { background: var(--tdt-surface-1); }',
+  // 高亮用**淡蓝** `--dshpc-card-hover`：灰色高亮在卡片底色上几乎看不出来。
+  '.dsh-tdt-card { background: var(--dshpc-surface-1); }',
   // hover 只作用在**主行**（`dsh-tdt-card-row`：标题 / 状态 / 开关 / 箭头那一溜基本信息）。
   // 展开区是兄弟节点、不在这个 div 里 ⇒ 即便展开了，下面的设置 / 记录 / 日志也**不会**跟着变蓝
   // （否则展开后整页发蓝，反而晃眼，用户 2026-10-03）。
-  '.dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }',
+  '.dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }',
   // 行 hover 高亮（用户 2026-10-02：斑马纹之上再给一层鼠标反馈）。
   // 特异性 (0,2,0) > `.dsh-tdt-rec-alt` (0,1,0) ⇒ 能盖住斑马纹底色。
-  '.dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }',
+  '.dsh-tdt-rec-row:hover { background: var(--dshpc-plate-hover); }',
   // ⚠️ 产出物图标底板**已上提基础层**（2026-10-04）：改用 `.dsh-tdt-chip`（`ui/controls-css.ts`）。
   // 原先这里与执行记录页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，两份 CSS 都注入同一页面
   // ⇒ 谁后注册谁生效、两页外观互相污染；现在是全站唯一实现。
@@ -99,8 +99,8 @@ const TASK_LIST_CSS = [
   // ⚠️ 基础信息「标签—值」纸表格 / 「任务会话」/ 前置任务可点 / 状态图标配色 = **2026-10-05 已上提共享层**：
   // 卡片展开区与右侧栏**查看档**共用同一份 ⇒ 规则迁至 `task-info-css.ts`（域 `domain:task-info`，
   // 两处渲染前各调一次 `ensureTaskInfoStyle()`）。这里只留执行记录表格自己那一条。
-  // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
-  '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
+  // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--dshpc-plate`）。
+  '.dsh-tdt-rec-alt { background: var(--dshpc-plate); }',
 ].join('\n')
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。 */
@@ -155,7 +155,7 @@ function useFlip(signature: string): (id: string) => (el: HTMLElement | null) =>
     }
     const frame = requestAnimationFrame(() => {
       for (const [el] of moved) {
-        el.style.transition = `transform 260ms var(--tdt-ease)`
+        el.style.transition = `transform 260ms var(--dshpc-ease)`
         el.style.transform = ''
       }
       window.setTimeout(() => { for (const [el] of moved) el.style.transition = '' }, 320)
@@ -197,7 +197,7 @@ function RunningRail() {
     className: `${RUN_PULSE_CLASS} dsh-tdt-rail`,
     style: {
       display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
-      borderRadius: 'var(--tdt-radius-xs)', background: RUNNING_TONE,
+      borderRadius: 'var(--dshpc-radius-xs)', background: RUNNING_TONE,
     },
   })
 }
@@ -208,8 +208,8 @@ function StatusRail(props: { row: TaskOverviewRow; t: Translate }) {
   // `skipped` = 「未执行」（决策 54 补记的终态行：附件找不到 / 工作区不存在等任务级错误）——
   // 必须**和失败一样显眼**（用户：都是这个任务出错了），但提示要说清是「没执行」而不是「跑砸了」。
   const color = !row.enabled
-    ? 'var(--tdt-fg-3)'
-    : row.lastStatus === 'failed' || row.lastStatus === 'skipped' ? 'var(--tdt-danger)' : 'var(--tdt-success)'
+    ? 'var(--dshpc-fg-3)'
+    : row.lastStatus === 'failed' || row.lastStatus === 'skipped' ? 'var(--dshpc-danger)' : 'var(--dshpc-success)'
   const hint = !row.enabled
     ? t('statusRailOff')
     : row.lastStatus === 'failed'
@@ -221,8 +221,8 @@ function StatusRail(props: { row: TaskOverviewRow; t: Translate }) {
     title: hint,
     style: {
       display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
-      borderRadius: 'var(--tdt-radius-xs)', background: color,
-      transition: `background var(--tdt-dur) var(--tdt-ease)`,
+      borderRadius: 'var(--dshpc-radius-xs)', background: color,
+      transition: `background var(--dshpc-dur) var(--dshpc-ease)`,
     },
   })
 }
@@ -241,7 +241,7 @@ function StatusRail(props: { row: TaskOverviewRow; t: Translate }) {
  */
 const pillOuterStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'stretch', flex: 'none', height: '20px',
-  borderRadius: 'var(--tdt-radius-sm)', overflow: 'hidden', border: `1px solid var(--tdt-border)`,
+  borderRadius: 'var(--dshpc-radius-sm)', overflow: 'hidden', border: `1px solid var(--dshpc-border)`,
 }
 /** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
 const pillIconCell = (bg: string, fg: string): Record<string, string | number> => ({
@@ -249,8 +249,8 @@ const pillIconCell = (bg: string, fg: string): Record<string, string | number> =
 })
 /** 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。 */
 const pillTimeCell: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', padding: '0 8px', background: 'var(--tdt-surface-1)', color: 'var(--tdt-fg)',
-  fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-xs)', whiteSpace: 'nowrap',
+  display: 'inline-flex', alignItems: 'center', padding: '0 8px', background: 'var(--dshpc-surface-1)', color: 'var(--dshpc-fg)',
+  fontSize: 'var(--dshpc-font-xs)', lineHeight: 'var(--dshpc-line-xs)', whiteSpace: 'nowrap',
   fontVariantNumeric: 'tabular-nums', fontFamily: monoFont,
 }
 
@@ -264,14 +264,14 @@ function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   // `unknown`（重启收口）仍中性：它会被下一轮正常收掉。⇒ 只有 succeeded / unknown 不染红。
   const colored = has && row.lastStatus !== null && row.lastStatus !== 'unknown'
   const bg = !has || row.lastStatus === 'unknown'
-    ? 'var(--tdt-surface-3)'
-    : row.lastStatus === 'succeeded' ? 'var(--tdt-success)' : 'var(--tdt-danger)'
+    ? 'var(--dshpc-surface-3)'
+    : row.lastStatus === 'succeeded' ? 'var(--dshpc-success)' : 'var(--dshpc-danger)'
   const title = has ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') }) : t('listNever')
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
       // ⚠️ 图标前景跟着底色走：白字只配「绿 / 红」实底；中性浅灰底（无状态 / skipped / unknown）
       // 必须用常态文字色，否则白图标压在浅灰上几乎看不见（2026-09-30 复核）。
-      h('span', { style: pillIconCell(bg, colored ? 'var(--tdt-on-signal)' : 'var(--tdt-fg-2)') }, h(IconClockOutlineRegular, { size: 12 })),
+      h('span', { style: pillIconCell(bg, colored ? 'var(--dshpc-on-signal)' : 'var(--dshpc-fg-2)') }, h(IconClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): string => {
@@ -304,7 +304,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   if (row.running) {
     return h(Tooltip, { label: t('listRunning'), side: 'bottom' },
       h('div', { style: pillOuterStyle },
-        h('span', { style: pillIconCell(RUNNING_TONE, 'var(--tdt-on-signal)') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+        h('span', { style: pillIconCell(RUNNING_TONE, 'var(--dshpc-on-signal)') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
         h('span', { style: { ...pillTimeCell, color: RUNNING_TONE } }, h(RunningBlocks, {})),
       ),
     )
@@ -333,7 +333,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
             : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })))
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
-      h('span', { style: pillIconCell('var(--tdt-surface-3)', 'var(--tdt-fg)') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+      h('span', { style: pillIconCell('var(--dshpc-surface-3)', 'var(--dshpc-fg)') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): ReactNode => {
@@ -362,17 +362,17 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
 // ── 卡片 ───────────────────────────────────────────────────────────────
 const cardStyle: Record<string, string | number> = {
   display: 'block', width: '100%', boxSizing: 'border-box', textAlign: 'left',
-  marginBottom: '10px', borderRadius: 'var(--tdt-radius-sm)',
-  border: `1px solid var(--tdt-border)`, color: 'var(--tdt-fg)',
-  transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`,
+  marginBottom: '10px', borderRadius: 'var(--dshpc-radius-sm)',
+  border: `1px solid var(--dshpc-border)`, color: 'var(--dshpc-fg)',
+  transition: `border-color var(--dshpc-dur) var(--dshpc-ease), background var(--dshpc-dur) var(--dshpc-ease)`,
   // ⚠️ **background 不放这里**：inline 背景的优先级高于 CSS class，会盖掉 `.dsh-tdt-card-row:hover` 的高亮。
   // 底色走 CSS（`.dsh-tdt-card`）；hover 高亮走 `.dsh-tdt-card-row:hover`（只作用主行，展开区不跟着蓝）。
 }
 // ⚠️ 不带 `color`（r13 修）：标题可点后走 `.dsh-tdt-info-dep` 的 hover 变蓝——inline color 会把 :hover 压死
-//（鼠标移上去不变色的根因）；纯文本分支继承根色（--tdt-fg），观感不变。
-const titleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, lineHeight: 'var(--tdt-line-md)' }
-const metaStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
-const faintStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
+//（鼠标移上去不变色的根因）；纯文本分支继承根色（--dshpc-fg），观感不变。
+const titleStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, lineHeight: 'var(--dshpc-line-md)' }
+const metaStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', lineHeight: 'var(--dshpc-line-sm)', marginTop: '2px' }
+const faintStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)', lineHeight: 'var(--dshpc-line-sm)', marginTop: '2px' }
 // 基础信息的布局常量（`infoWrapStyle` / `infoConfigStyle` / `infoRecentStyle` / `infoGroupTitleStyle`）
 // 与纸表格一行（`InfoField`）、状态→色（`infoStatusColorOf`）、`baseNameOf` / `durationMsOf`
 // 已于 2026-10-05 **上提共享层** ⇒ `task-info.tsx`（卡片展开区与右侧栏「查看档」共用同一份）。
@@ -416,48 +416,48 @@ const panelScrollFillStyle: Record<string, string | number> = {
 const panelWrapStyle: Record<string, string | number> = {
   // 卡片不再统一留白后，展开区自己补左右 / 下内边距，否则内容贴边。
   // 顶部间距交给主行的 12px 下内边距，这里不再留 marginTop（只留虚线 + 10px 上内边距）。
-  borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px', paddingLeft: '14px', paddingRight: '14px', paddingBottom: '12px',
+  borderTop: `1px dashed var(--dshpc-border)`, paddingTop: '10px', paddingLeft: '14px', paddingRight: '14px', paddingBottom: '12px',
 }
 const panelBarStyle: Record<string, string | number> = {
   // 表底**贴着**虚线（用户 2026-10-02）：去掉上外边距，只留虚线上方的内边距。
   // 面板总高不变（`panelBoxStyle` 定高 + 内容区 flex:1 自动吃掉这 10px）。
-  paddingTop: '10px', borderTop: `1px dashed var(--tdt-border)`,
+  paddingTop: '10px', borderTop: `1px dashed var(--dshpc-border)`,
   display: 'flex', alignItems: 'center', gap: '8px',
 }
-const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--tdt-font-sm)' }
+const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--dshpc-font-sm)' }
 const miniCellStyle: Record<string, string | number> = {
   // 行更松（用户 2026-10-02：「上下拉高一点、大气些」）；**不用实线分隔** ⇒ 去掉 borderBottom，
   // 改行交错浅底（`.dsh-tdt-rec-alt`）。
   padding: '9px 10px', textAlign: 'left',
-  color: 'var(--tdt-fg)', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-sm)',
+  color: 'var(--dshpc-fg)', whiteSpace: 'nowrap', fontSize: 'var(--dshpc-font-sm)',
 }
 const miniCellWrapStyle: Record<string, string | number> = { ...miniCellStyle, whiteSpace: 'normal', wordBreak: 'break-word' }
 /** 居中格（用户 2026-10-02：除**产出物 / 备注**两列外，各列内容一律居中）。 */
 const miniCellCenterStyle: Record<string, string | number> = { ...miniCellStyle, textAlign: 'center' }
 /**
  * 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
- * 上沿一条线（与执行记录表头上沿线同色 `--tdt-border`），从这条线到下方虚线**整块铺底色**，
+ * 上沿一条线（与执行记录表头上沿线同色 `--dshpc-border`），从这条线到下方虚线**整块铺底色**，
  * 日志直接铺在里面。等宽字体跟环境风格走。
  */
 const logAreaStyle: Record<string, string | number> = {
   ...panelScrollFillStyle,
-  borderTop: `1px solid var(--tdt-border)`,
-  background: 'var(--tdt-surface-1)',
+  borderTop: `1px solid var(--dshpc-border)`,
+  background: 'var(--dshpc-surface-1)',
   // 左右**不留 padding**（用户 2026-10-03）：让日志左边缘与上方过滤下拉框对齐。
   padding: '10px 0',
-  fontFamily: monoFont, fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-sm)',
+  fontFamily: monoFont, fontSize: 'var(--dshpc-font-xs)', lineHeight: 'var(--dshpc-line-sm)',
 }
 /** 日志行：行间距拉开一点（用户 2026-10-03）。 */
 const logRowStyle: Record<string, string | number> = { marginBottom: '6px', wordBreak: 'break-all' }
 const overlayStyle: Record<string, string | number> = {
-  position: 'fixed', inset: 0, zIndex: 'var(--tdt-z-modal)', background: 'var(--tdt-mask)',
+  position: 'fixed', inset: 0, zIndex: 'var(--dshpc-z-modal)', background: 'var(--dshpc-mask)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 const dialogStyle: Record<string, string | number> = {
   width: '360px', maxWidth: 'calc(100vw - 48px)', boxSizing: 'border-box',
-  background: 'var(--tdt-surface-base, #fff)', color: 'var(--tdt-fg)',
-  border: `1px solid var(--tdt-border)`, borderRadius: 'var(--tdt-radius-md)', padding: '18px',
-  boxShadow: 'var(--tdt-shadow-2, 0 12px 32px rgba(0,0,0,0.4))',
+  background: 'var(--dshpc-surface-base, #fff)', color: 'var(--dshpc-fg)',
+  border: `1px solid var(--dshpc-border)`, borderRadius: 'var(--dshpc-radius-md)', padding: '18px',
+  boxShadow: 'var(--dshpc-shadow-2, 0 12px 32px rgba(0,0,0,0.4))',
 }
 
 /** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
@@ -475,7 +475,7 @@ const formatStamp = (iso: string | null): string =>
 const plainIconBtnStyle: Record<string, string | number> = {
   appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   width: '20px', height: '20px', padding: 0, border: 'none', background: 'transparent',
-  color: 'var(--tdt-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit', transition,
+  color: 'var(--dshpc-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit', transition,
 }
 /** 产出物图标格（最多 3 个 +「…」更多）。 */
 const outputCellStyle: Record<string, string | number> = {
@@ -490,31 +490,31 @@ const filterRowStyle: Record<string, string | number> = {
 }
 /** 过滤行里的字段名（「状态：」等）。 */
 const filterLabelStyle: Record<string, string | number> = {
-  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', flex: 'none',
+  fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)', flex: 'none',
 }
 /** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
 const limitRowStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto',
-  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)',
+  fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)',
 }
 /** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
 const recHeadStyle: Record<string, string | number> = {
   // 标题一律**居中**（用户 2026-10-02）。
-  // 底色走 `--tdt-head-bg`：浅色主题**偏深**、暗色主题**偏亮**（两侧都与卡片面拉开层次，
-  // 不再出现「浅色纯白 / 暗色纯黑」）。明暗差异单点落在 ui/tokens.ts。
+  // 底色走 `--dshpc-head-bg`：浅色主题**偏深**、暗色主题**偏亮**（两侧都与卡片面拉开层次，
+  // 不再出现「浅色纯白 / 暗色纯黑」）。明暗差异单点落在核心 token 层。
   ...miniCellStyle,
   // 表头**加高**（用户 2026-10-02：太薄了）。
   padding: '11px 10px',
-  textAlign: 'center', fontWeight: 600, color: 'var(--tdt-fg-2)',
-  background: 'var(--tdt-head-bg)',
+  textAlign: 'center', fontWeight: 600, color: 'var(--dshpc-fg-2)',
+  background: 'var(--dshpc-head-bg)',
   // **上下各一条线，且亮度一致**；⚠️ 必须走 **box-shadow**：
   // `border-collapse: collapse` 下边框归**表格网格**所有 ⇒ sticky 表头滚动时边框会「滑走」
   // （用户 2026-10-02 揪出）。box-shadow 属于 th 自身 ⇒ 跟着表头不动。
-  boxShadow: 'inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)',
+  boxShadow: 'inset 0 1px 0 var(--dshpc-border), inset 0 -1px 0 var(--dshpc-border)',
 }
 /** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 const statusStyleOf = (status: string): Record<string, string | number> | undefined =>
-  status === 'failed' || status === 'skipped' ? { color: 'var(--tdt-danger)', fontWeight: 600 } : undefined
+  status === 'failed' || status === 'skipped' ? { color: 'var(--dshpc-danger)', fontWeight: 600 } : undefined
 
 // `windowLabel`（「允许延迟」ISO → 人话）已于 2026-10-05 上提 `task-info.tsx`（查看档也要用同一份）。
 
@@ -785,12 +785,12 @@ function TaskExpandPanel(props: {
         h('div', { style: infoRecentStyle },
           h('div', { style: infoGroupTitleStyle }, t('infoLastRun')),
           infoError !== null
-            ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
+            ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
             : infoLoading && !infoLoaded
               // 忙碌指示**统一走右下角那个共用 Loading**（用户铁律：全站只有一个 loading，不在这里另写文字）。
               ? h(Loading, {})
               : infoLast === null
-                ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('infoNoRun'))
+                ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('infoNoRun'))
                 : lastRunFields({ t, instance: infoLast, onOpenSession, onOpenFile }),
         ),
       ),
@@ -842,7 +842,7 @@ function TaskExpandPanel(props: {
         }),
         t('limitSuffix'),
       ),
-      recError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${recError}`) : null,
+      recError !== null ? h('span', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${recError}`) : null,
     ),
     h('div', { style: panelScrollFillStyle },
       records === null
@@ -887,8 +887,8 @@ function TaskExpandPanel(props: {
                   // 斑马纹：奇数行浅底（`.dsh-tdt-rec-alt`）；展开行盖成第二层面。
                   // 斑马纹 + hover 高亮（hover 由 `.dsh-tdt-rec-row:hover` 接管）。
                   className: ['dsh-tdt-rec-row', open || index % 2 === 0 ? '' : 'dsh-tdt-rec-alt'].join(' ').trim(),
-                  // 展开态走**带透明度的蓝**（`--tdt-open-bg`）——不用灰色：灰跟斑马纹分不出来。
-                  style: { cursor: 'pointer', ...(open ? { background: 'var(--tdt-open-bg)' } : {}) },
+                  // 展开态走**带透明度的蓝**（`--dshpc-open-bg`）——不用灰色：灰跟斑马纹分不出来。
+                  style: { cursor: 'pointer', ...(open ? { background: 'var(--dshpc-open-bg)' } : {}) },
                   onClick: () => { setOpenInstance(open ? null : instance.id) },
                 },
                   // ① 状态图标 + 通用短名（**居中**：状态已统一两字，按字宽算好间距）。
@@ -896,7 +896,7 @@ function TaskExpandPanel(props: {
                     h('span', { style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' } },
                       h(StatusIcon, { status: instance.status }),
                       h('span', {
-                        style: instance.status === 'succeeded' ? { color: 'var(--tdt-success)' } : statusStyleOf(instance.status),
+                        style: instance.status === 'succeeded' ? { color: 'var(--dshpc-success)' } : statusStyleOf(instance.status),
                       }, statusTextOf(instance.status, t)),
                     ),
                   ),
@@ -911,11 +911,11 @@ function TaskExpandPanel(props: {
                   // ⑤ 消耗 token（用户 2026-10-02 提上一级）：总量 K/M 格式，hover 看输入/输出/缓存明细。
                   h('td', { style: miniCellCenterStyle },
                     instance.token_in === null && instance.token_out === null
-                      ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '-')
+                      ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, '-')
                       : h('span', { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
                   // ⑥ 备注：**错误 / 未执行的原因**（服务端 `attachNotes` 从最新原因事件推导）。
                   // 全表**唯一弹性列**（不定长）：拉伸 / 收缩只动它；超长省略号，hover 看全文。
-                  // ⚠️ **不要红色**（用户 2026-10-02：不是要提醒他去看备注）——走最浅的灰 `--tdt-fg-3`，
+                  // ⚠️ **不要红色**（用户 2026-10-02：不是要提醒他去看备注）——走最浅的灰 `--dshpc-fg-3`，
                   // 比正文更淡，深浅两主题都是「退后一层」的存在感。
                   h('td', { style: { ...miniCellStyle, maxWidth: 0 } },
                     instance.note === null || instance.note === undefined || instance.note === ''
@@ -923,7 +923,7 @@ function TaskExpandPanel(props: {
                       :                       h('span', {
                         title: instance.note,
                         className: 'dsh-tdt-ellipsis',
-                        style: { display: 'block', color: 'var(--tdt-fg-3)' },
+                        style: { display: 'block', color: 'var(--dshpc-fg-3)' },
                       }, instance.note),
                   ),
                   // ⑦ 产出物（**倒数第二列**，紧挨「查看会话」）：官方文件类型图标 ≤3 个；
@@ -970,29 +970,29 @@ function TaskExpandPanel(props: {
                 )
                 const detailRow = open
                   ? h('tr', { key: `${instance.id}-detail` },
-                    // 展开内容区：**更淡一档的蓝**（`--tdt-open-bg-soft`）⇒ 与展开行本身区隔开，
+                    // 展开内容区：**更淡一档的蓝**（`--dshpc-open-bg-soft`）⇒ 与展开行本身区隔开，
                     // 且不是灰 / 不是纯黑纯白（用户 2026-10-02）。
                     // 展开区（用户 2026-10-02）：**外圈 padding 翻倍**（9/10 → 18/20），别再密密麻麻。
                     h('td', {
                       colSpan: 8,
-                      style: { ...miniCellWrapStyle, padding: '18px 20px', background: 'var(--tdt-open-bg-soft)' },
+                      style: { ...miniCellWrapStyle, padding: '18px 20px', background: 'var(--dshpc-open-bg-soft)' },
                     },
                       // 展开区**直接铺执行日志**（用户 2026-10-02）：**不要标题、不要黑框**——
                       // 展开的日志本来就是给要看细节的人看的，套一层框 + 一个小标题纯属多余。
-                      // 底色沿用 `--tdt-open-bg-soft`（淡蓝）就够了，用它把展开区区隔出来。
+                      // 底色沿用 `--dshpc-open-bg-soft`（淡蓝）就够了，用它把展开区区隔出来。
                       eventsError !== null
-                        ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${eventsError}`)
+                        ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${eventsError}`)
                         : events === null
                           ? null
                           : events.length === 0
-                            ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('cardEventsEmpty'))
+                            ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('cardEventsEmpty'))
                             // 行间距拉开；字色整体**压暗一档**（日志是慢慢翻的，不要跟正文一样刺眼）。
                             : events.map(event => h('div', {
-                              key: event.seq, style: { marginBottom: '7px', lineHeight: 'var(--tdt-line-md)' },
+                              key: event.seq, style: { marginBottom: '7px', lineHeight: 'var(--dshpc-line-md)' },
                             },
-                              h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(event.ts)} `),
-                              h('span', { style: { color: 'var(--tdt-fg-2)' } }, `${event.kind} `),
-                              h('span', { style: { color: 'var(--tdt-fg-2)' } }, event.detail ?? ''),
+                              h('span', { style: { color: 'var(--dshpc-fg-3)' } }, `${formatStamp(event.ts)} `),
+                              h('span', { style: { color: 'var(--dshpc-fg-2)' } }, `${event.kind} `),
+                              h('span', { style: { color: 'var(--dshpc-fg-2)' } }, event.detail ?? ''),
                             )),
                     ),
                   )
@@ -1037,9 +1037,9 @@ function TaskExpandPanel(props: {
         t('limitSuffix'),
       ),
 
-      logError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${logError}`) : null,
+      logError !== null ? h('span', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${logError}`) : null,
     ),
-    // 日志整区（用户 2026-10-03）：**不套框** —— 上面一条线（与执行记录表头上沿线同色 `--tdt-border`），
+    // 日志整区（用户 2026-10-03）：**不套框** —— 上面一条线（与执行记录表头上沿线同色 `--dshpc-border`），
     // 从这条线一直到下方虚线，整块铺上日志原本的底色；日志直接铺在里面。
     h('div', { style: logAreaStyle },
       logs === null
@@ -1047,17 +1047,17 @@ function TaskExpandPanel(props: {
         : logs.length === 0
           ? h('p', { style: faintStyle }, t('cardLogsEmpty'))
           : logs.map(row => h('div', { key: row.seq, style: logRowStyle },
-            h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(row.ts)} `),
+            h('span', { style: { color: 'var(--dshpc-fg-3)' } }, `${formatStamp(row.ts)} `),
             h('span', {
               style: {
-                color: row.level === 'error' ? 'var(--tdt-danger)' : row.level === 'warn' ? 'var(--tdt-accent)' : 'var(--tdt-fg-3)',
+                color: row.level === 'error' ? 'var(--dshpc-danger)' : row.level === 'warn' ? 'var(--dshpc-accent)' : 'var(--dshpc-fg-3)',
                 fontWeight: row.level === 'error' ? 600 : 400,
               },
             }, `[${row.level}]`),
             ' ',
-            // 事件类型与正文都压到 `--tdt-fg-2`：纯白在深底上太刺眼（用户 2026-10-03）。
-            h('span', { style: { color: 'var(--tdt-fg-2)' } }, `${row.kind}: `),
-            h('span', { style: { color: 'var(--tdt-fg-2)' } }, row.message),
+            // 事件类型与正文都压到 `--dshpc-fg-2`：纯白在深底上太刺眼（用户 2026-10-03）。
+            h('span', { style: { color: 'var(--dshpc-fg-2)' } }, `${row.kind}: `),
+            h('span', { style: { color: 'var(--dshpc-fg-2)' } }, row.message),
           )),
     ),
   )
@@ -1068,8 +1068,8 @@ function TaskExpandPanel(props: {
     onClick: () => { if (!deleting) setConfirmDelete(false) },
   },
     h('div', { style: dialogStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-      h('div', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, marginBottom: '8px' } }, t('cardDeleteTitle')),
-      h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginBottom: '14px' } }, t('cardDeleteDesc')),
+      h('div', { style: { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, marginBottom: '8px' } }, t('cardDeleteTitle')),
+      h('div', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', lineHeight: 'var(--dshpc-line-sm)', marginBottom: '14px' } }, t('cardDeleteDesc')),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
         h(Button, {
           variant: 'outline', size: 'sm', disabled: deleting,
@@ -1092,8 +1092,8 @@ function TaskExpandPanel(props: {
     onClick: () => { if (!runBusy) setConfirmRun(false) },
   },
     h('div', { style: dialogStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-      h('div', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, marginBottom: '8px' } }, t('cardRunNowTitle')),
-      h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginBottom: '14px' } }, t('cardRunNowDesc')),
+      h('div', { style: { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, marginBottom: '8px' } }, t('cardRunNowTitle')),
+      h('div', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', lineHeight: 'var(--dshpc-line-sm)', marginBottom: '14px' } }, t('cardRunNowDesc')),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
         h(Button, {
           variant: 'outline', size: 'sm', disabled: runBusy,
@@ -1418,19 +1418,19 @@ export function TaskListView(props: {
         ? rows.length === 0 && !ready
           ? null
           : rows.length === 0
-            // 真·零任务：虚线引导卡（图标 + 主文案 + 小提示 + 新建按钮）。圆角取 --tdt-radius-md，与 Button/输入框一致。
+            // 真·零任务：虚线引导卡（图标 + 主文案 + 小提示 + 新建按钮）。圆角取 --dshpc-radius-md，与 Button/输入框一致。
             ? h('div', { style: {
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 margin: '24px auto 0', padding: '48px 32px', textAlign: 'center',
-                border: '1px dashed var(--tdt-border-heavy)', borderRadius: 'var(--tdt-radius-md)',
-                background: 'var(--tdt-surface-1)',
+                border: '1px dashed var(--dshpc-border-heavy)', borderRadius: 'var(--dshpc-radius-md)',
+                background: 'var(--dshpc-surface-1)',
               } },
-              h('div', { style: { color: 'var(--tdt-fg-3)' } },
+              h('div', { style: { color: 'var(--dshpc-fg-3)' } },
                 h(IconAlarmClockOutlineRegular, { size: 40 })),
-              h('div', { style: { marginTop: '12px', fontSize: 'var(--tdt-font-lg)', fontWeight: 600 } }, t('listEmptyTitle')),
+              h('div', { style: { marginTop: '12px', fontSize: 'var(--dshpc-font-lg)', fontWeight: 600 } }, t('listEmptyTitle')),
               h('div', { style: {
-                marginTop: '6px', maxWidth: '360px', fontSize: 'var(--tdt-font-sm)',
-                color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)',
+                marginTop: '6px', maxWidth: '360px', fontSize: 'var(--dshpc-font-sm)',
+                color: 'var(--dshpc-fg-2)', lineHeight: 'var(--dshpc-line-sm)',
               } }, t('listEmptyHint')),
               h(Button, { variant: 'primary', size: 'md', style: { marginTop: '16px' }, onClick: () => { onCreate() } }, t('listEmptyAction')),
             )

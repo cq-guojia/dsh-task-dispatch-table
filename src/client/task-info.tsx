@@ -37,16 +37,16 @@ export const infoConfigStyle: Record<string, string | number> = { flex: '1 1 aut
 /** 右栏（上次执行）：**定宽**（用户 2026-10-03：窗口拖动时让左边变、右边别跟着变）。 */
 export const infoRecentStyle: Record<string, string | number> = {
   flex: 'none', width: '320px', overflowY: 'auto',
-  borderLeft: '1px solid var(--tdt-border-faint)', paddingLeft: '16px',
+  borderLeft: '1px solid var(--dshpc-border-faint)', paddingLeft: '16px',
 }
 /** 栏内小标题（「任务配置」/「上次执行」）；左栏标题在共用 grid 里 ⇒ 横跨标签 / 值两列。 */
 export const infoGroupTitleStyle: Record<string, string | number> = {
-  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', fontWeight: 600,
+  fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)', fontWeight: 600,
   marginBottom: '6px', letterSpacing: '0.02em',
   gridColumn: '1 / -1',
 }
-const infoGridLabelStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', whiteSpace: 'nowrap' }
-const infoGridValueStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg)', minWidth: 0, wordBreak: 'break-word', lineHeight: 'var(--tdt-line-md)' }
+const infoGridLabelStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', whiteSpace: 'nowrap' }
+const infoGridValueStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg)', minWidth: 0, wordBreak: 'break-word', lineHeight: 'var(--dshpc-line-md)' }
 
 /** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
 export function InfoField(props: { label: string; children: ReactNode }): ReturnType<typeof h> {
@@ -58,9 +58,9 @@ export function InfoField(props: { label: string; children: ReactNode }): Return
 
 /** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
 export const infoStatusColorOf = (status: string | null): string =>
-  status === 'succeeded' ? 'var(--tdt-success)'
-    : status === 'failed' || status === 'skipped' ? 'var(--tdt-danger)'
-      : 'var(--tdt-fg-2)'
+  status === 'succeeded' ? 'var(--dshpc-success)'
+    : status === 'failed' || status === 'skipped' ? 'var(--dshpc-danger)'
+      : 'var(--dshpc-fg-2)'
 
 // 路径末段 `baseNameOf` 已收编到 `format.ts`（唯一实现，M5）。
 
@@ -172,7 +172,7 @@ export function taskInfoBaseFields(props: {
           h('span', {
             style: {
               flex: 'none', width: '8px', height: '8px', borderRadius: '2px',
-              background: view.enabled ? 'var(--tdt-success)' : 'var(--tdt-fg-3)',
+              background: view.enabled ? 'var(--dshpc-success)' : 'var(--dshpc-fg-3)',
             },
           }),
           view.enabled ? t('infoStateEnabled') : t('infoStateDisabled')),
@@ -186,7 +186,7 @@ export function taskInfoBaseFields(props: {
     InfoField({
       label: t('listSectionAttachments'),
       children: view.attachments.length === 0
-        ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
+        ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, t('listNone'))
         : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '2px 10px' } },
           view.attachments.map(item => {
             const absPath = item.path
@@ -217,7 +217,7 @@ export function taskInfoBaseFields(props: {
     InfoField({
       label: t('listSectionDepends'),
       children: view.depends.length === 0
-        ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
+        ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, t('listNone'))
         // 每个前置任务前面带 **1、2、3 序号**（用户 2026-10-03：不然像两段莫名其妙的话摆在这儿）。
         // 名字可点（用户 2026-10-05）⇒ 右侧栏以**查看档**打开它（入口见 `onViewTask`）。
         : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
@@ -226,8 +226,8 @@ export function taskInfoBaseFields(props: {
               style: {
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
                 minWidth: '18px', height: '18px', padding: '0 4px', boxSizing: 'border-box',
-                borderRadius: 'var(--tdt-radius-xs)', background: 'var(--tdt-chip-bg)',
-                color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)',
+                borderRadius: 'var(--dshpc-radius-xs)', background: 'var(--dshpc-chip-bg)',
+                color: 'var(--dshpc-fg-2)', fontSize: 'var(--dshpc-font-xs)',
                 fontVariantNumeric: 'tabular-nums',
               },
             }, String(index + 1))
@@ -283,11 +283,11 @@ export function lastRunFields(props: {
   const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } }, h(MarqueeText, { text: sessionName }))
   const sessionLinkStyle: Record<string, string | number> = {
     display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', boxSizing: 'border-box',
-    padding: 0, font: 'inherit', fontSize: 'var(--tdt-font-sm)', textAlign: 'left',
+    padding: 0, font: 'inherit', fontSize: 'var(--dshpc-font-sm)', textAlign: 'left',
     cursor: canOpenSession ? 'pointer' : 'default',
   }
   const sessionChip = sid === null || sessionName === ''
-    ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '—')
+    ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, '—')
     : canOpenSession
       ? h('button', {
         type: 'button', className: 'dsh-tdt-info-session', title: sessionName, style: sessionLinkStyle,
@@ -318,12 +318,12 @@ export function lastRunFields(props: {
       tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: formatTokenDetail(instance) }, tokens) }),
       note === ''
         ? null
-        : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--tdt-danger)' } }, note) }),
+        : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--dshpc-danger)' } }, note) }),
     ),
     outputs.length === 0
       ? null
       : h('div', { style: { marginTop: '14px' } },
-        h('div', { style: { marginBottom: '6px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('colOutputs')),
+        h('div', { style: { marginBottom: '6px', fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('colOutputs')),
         h('div', { style: { display: 'flex', flexDirection: 'column' } },
           outputs.map(output => h('button', {
             key: output, type: 'button', title: output,

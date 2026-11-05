@@ -19,7 +19,7 @@ export function ConfigPanel(props: ConfigPanelProps) {
   return h('div', { style: { padding: '4px 2px', maxWidth: '640px' } },
     h('p', {
       style: {
-        fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg,#1f2328)',
+        fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg,#1f2328)',
         lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap',
       },
     }, t('settingsIntro')),

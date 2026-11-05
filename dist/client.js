@@ -31,8 +31,8 @@ window.__ModuleLoader__.load({
 		let react$1 = __toESM(react, 1);
 		react = __toESM(react);
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
-		let react_dom = require("react-dom");
 		let react_jsx_runtime = require("react/jsx-runtime");
+		let react_dom = require("react-dom");
 		//#region src/client/format.ts
 		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
 		function pad2$1(value) {
@@ -1619,336 +1619,130 @@ window.__ModuleLoader__.load({
 			vAttachmentInvalid: "Attachment \"{name}\" has an invalid ref — it must be a workspace-relative path. Remove and re-pick it."
 		};
 		//#endregion
-		//#region src/client/ui/tokens.ts
+		//#region node_modules/dsh-plugin-core/dist/design/tokens-css.generated.js
+		const TOKENS_CSS_TEMPLATE = "\n/* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */\nbody{\n  --dshpc-fg:var(--dsw-alias-label-primary,#1f2328);\n  --dshpc-fg-2:var(--dsw-alias-label-secondary,#5c6370);\n  --dshpc-fg-3:var(--dsw-alias-label-tertiary,#767d87);\n  --dshpc-fg-4:var(--dsw-alias-label-caption,#9aa1ab);\n  --dshpc-fg-dim:var(--dsw-alias-label-dimmed,#b9bfc7);\n  /* 反色面上的字（实心钮 / 角标）：暗色下是 bluish-1000，故用 -foreground 而非 -inverted */\n  --dshpc-fg-inverse:var(--dsw-alias-label-primary-foreground,#fff);\n\n  /* ── 面（宿主 bg-layer 三档 + 下沉轨道底）──────────────────────────── */\n  --dshpc-surface-1:var(--dsw-alias-bg-layer-1,#fff);\n  --dshpc-surface-2:var(--dsw-alias-bg-layer-2,#fff);\n  --dshpc-surface-3:var(--dsw-alias-bg-layer-3,#fff);\n  /* 「选中亮片」的底盘色（配 --dshpc-shadow-raised 用） */\n  --dshpc-surface-raised:var(--dsw-alias-bg-layer-1,#fff);\n  /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */\n  --dshpc-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));\n  /* 整页 / 编辑器底（bg-base） */\n  --dshpc-surface-base:var(--dsw-alias-bg-base,#fff);\n  /* 自绘浮层 / 菜单卡的不透明底（= base；不要用半透明的 specific-menu） */\n  --dshpc-surface-menu:var(--dshpc-surface-base);\n  /* markdown 代码块面 / 字体（会话镜像里用到） */\n  --dshpc-code-surface:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));\n  --dshpc-code-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,monospace));\n  /* 警告文字色（宿主 state-warn-label） */\n  --dshpc-warning-label:var(--dsw-alias-state-warn-label,#f5a623);\n  /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */\n  --dshpc-solid:var(--dsw-static-neutral-00,#fff);\n  --dshpc-on-solid:var(--dsw-alias-label-primary,#1f2328);\n  /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */\n  --dshpc-plate:var(--dsw-static-neutral-50,#fafafa);\n  --dshpc-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);\n  /* ⚠️ 这些**固定中性面一律用 rgba 字面量**（2026-10-19 真机教训）：不要写成\n     「rgba 回退行 + 嵌 --dsw-static-* 的 color-mix 行」两条同名声明——自定义属性**后者恒胜**，\n     哪怕它的值在宿主里算不出来（static 变量 invalid）⇒ 整条 token 作废、rgba 兜底一起被废，\n     0.2.6 里 Segmented 轨道全透明就是这么来的。要跟宿主主题联动的面用 alias token（那些实测有效）。 */\n  --dshpc-icon-plate:rgba(255,255,255,.5);\n  /* 表头底：浅色主题**偏深**，且必须**比斑马纹（--dshpc-plate）再深一档**——\n     两者不能撞色（用户 2026-10-02：表头跟斑马纹一模一样）。 */\n  --dshpc-head-bg:var(--dsw-static-neutral-100,#f5f5f5);\n  /* 表格底 / 行 hover（2026-10-30 用户二次定案：表头与通栏**互换**底色）：\n     表头默认底 = 通栏原来那层灰（--dshpc-surface-sunken，跟着宿主交互面走）；\n     通栏默认底 = 表头原来那色（亮 #f6f8fa / 暗 #151b23，参考图实测，与深色段同源）；\n     行 hover 是「一层极淡的黑」≈1.5%（用户：再浅一半，要特别淡）。 */\n  --dshpc-table-head-bg:var(--dshpc-surface-sunken);\n  --dshpc-table-banner-bg:#f6f8fa;\n  --dshpc-table-row-hover:rgba(15,15,15,.015);\n  /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */\n  --dshpc-chip-bg:rgba(15,15,15,.07);\n  --dshpc-chip-bg-hover:rgba(15,15,15,.14);\n  /* 展开行：**带透明度的蓝**——不是灰、也不是纯色，透出卡片底色，一眼看出「这是展开的」\n     （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */\n  --dshpc-open-bg:rgba(37,99,235,.10);\n  --dshpc-open-bg-soft:rgba(37,99,235,.05);\n  --dshpc-card-hover:rgba(37,99,235,.07);\n\n  /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */\n  --dshpc-border-faint:var(--dsw-alias-border-l1,#0000000a);\n  --dshpc-border:var(--dsw-alias-border-l2,#0000001a);\n  --dshpc-border-strong:var(--dsw-alias-border-l3,#0000001f);\n  --dshpc-border-heavy:var(--dsw-alias-border-l4,#00000029);\n\n  /* ── 品牌 / 语义色 ────────────────────────────────────────────────── */\n  /* 品牌「面」色：明色近黑、暗色近白（官方 Switch 选中态即此），**不是蓝色** */\n  --dshpc-accent:var(--dsw-alias-brand-primary,#0f1115);\n  /* 蓝色：强调 / 选中 / 焦点，一律走这条 */\n  --dshpc-business:var(--dsw-alias-state-business-primary,#3b5bdb);\n  --dshpc-success:var(--dsw-alias-state-success-primary,#22c55e);\n  /* ⚠️ 是 state-warn（不是 state-warning，后者宿主无此定义） */\n  --dshpc-warning:var(--dsw-alias-state-warn-primary,#f59e0b);\n  --dshpc-danger:var(--dsw-alias-state-error-primary,#ec1313);\n  --dshpc-link:var(--dsw-alias-link,#3b5bdb);\n  /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，\n     故这是一条与主题无关的常量；不要拿 --dshpc-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */\n  --dshpc-on-signal:#fff;\n  /* 黄底上的字：黄色是中高明度，白字看不清 ⇒ 固定深色（与主题无关）。 */\n  --dshpc-on-warning:#1f2328;\n  /* 告警严重度的圆点底色（2026-11-03 从 feedback.css 收到这里）。\n     与主题无关的一组常量：这几个色要在任意底色上都认得出来，所以**不跟宿主 state 色走**\n     （宿主 state-warn-primary 偏亮，压白 ✕ 看不清）。语义色改动请只改这里。 */\n  --dshpc-sev-info:#2563eb;\n  --dshpc-sev-success:#16a34a;\n  --dshpc-sev-warning:#d97706;\n  --dshpc-sev-error:#dc2626;\n\n  /* ── 实心按钮的 hover / active 派生态（2026-10-19 用户点名）─────────────────\n     原实现是 :hover 直接压 opacity .9：黑底压 10% 几乎看不出来，用户原话「完全感觉不到颜色变了」。\n     ⇒ 改成对底色做**明确的混色**（压 22% / 34%），不用 opacity：\n       · 亮色主题：黑底（--dshpc-accent）掺白提亮；红 / 绿 / 黄 / 蓝底掺黑压深；\n       · 暗色主题：反过来（暗底掺白、亮底掺黑）。\n     混色对象是**固定中性色字面量**（#fff / #000），不依赖宿主 static-neutral 是否存在；\n     旧内核不认 color-mix 时整条声明作废 ⇒ 回落各档原色（可接受：仍可点，只是没有 hover 反馈）。 */\n  --dshpc-accent-hover:color-mix(in srgb,var(--dshpc-accent) 78%,#ffffff);\n  --dshpc-accent-active:color-mix(in srgb,var(--dshpc-accent) 64%,#ffffff);\n  --dshpc-danger-hover:color-mix(in srgb,var(--dshpc-danger) 78%,#000000);\n  --dshpc-danger-active:color-mix(in srgb,var(--dshpc-danger) 64%,#000000);\n  --dshpc-success-hover:color-mix(in srgb,var(--dshpc-success) 78%,#000000);\n  --dshpc-success-active:color-mix(in srgb,var(--dshpc-success) 64%,#000000);\n  --dshpc-warning-hover:color-mix(in srgb,var(--dshpc-warning) 78%,#000000);\n  --dshpc-warning-active:color-mix(in srgb,var(--dshpc-warning) 64%,#000000);\n  --dshpc-business-hover:color-mix(in srgb,var(--dshpc-business) 78%,#000000);\n  --dshpc-business-active:color-mix(in srgb,var(--dshpc-business) 64%,#000000);\n  /* 语义色**浅底**：状态色系的「一块底色」——执行记录页每条流水账的块底就是它\n     （用户 2026-10-04：正常态给同色系很浅的透明底、失败用红底透出来）。\n     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，主题一换自动成立。\n     ⚠️ **深色下要更淡**：用户 2026-10-04「深色风格的绿色和红色好像都有点深」⇒ dark 段\n     把这四条压到 5%（更贴近面板底、存在感更弱）；浅色段维持 8%。两端各自给值，不共用一条曲线。\n     命名收在 tokens.ts 单点（本仓硬规矩：业务文件不许自造 --dshpc-*）。 */\n  --dshpc-success-soft:color-mix(in srgb,var(--dshpc-success) 8%,transparent);\n  --dshpc-warning-soft:color-mix(in srgb,var(--dshpc-warning) 8%,transparent);\n  --dshpc-danger-soft:color-mix(in srgb,var(--dshpc-danger) 8%,transparent);\n  --dshpc-business-soft:color-mix(in srgb,var(--dshpc-business) 8%,transparent);\n\n  /* ── 扩展语义色（2026-10-29 用户拍板：分类 / 图表常用色八支）──────────────\n     宿主无对应 alias ⇒ 写死 hex（不跟随宿主换肤）；实心面字色统一走 --dshpc-on-signal（白），\n     因八支明度都低于黄 / 青柠，白字两主题均 ≥4.5:1 可读。每条自带 hover/active/soft 派生；\n     暗色段只覆盖派生（base 写死、两主题同值）。 */\n  --dshpc-purple:#9333ea;\n  --dshpc-purple-hover:color-mix(in srgb,var(--dshpc-purple) 78%,#000000);\n  --dshpc-purple-active:color-mix(in srgb,var(--dshpc-purple) 64%,#000000);\n  --dshpc-purple-soft:color-mix(in srgb,var(--dshpc-purple) 8%,transparent);\n  --dshpc-pink:#db2777;\n  --dshpc-pink-hover:color-mix(in srgb,var(--dshpc-pink) 78%,#000000);\n  --dshpc-pink-active:color-mix(in srgb,var(--dshpc-pink) 64%,#000000);\n  --dshpc-pink-soft:color-mix(in srgb,var(--dshpc-pink) 8%,transparent);\n  --dshpc-cyan:#0e7490;\n  --dshpc-cyan-hover:color-mix(in srgb,var(--dshpc-cyan) 78%,#000000);\n  --dshpc-cyan-active:color-mix(in srgb,var(--dshpc-cyan) 64%,#000000);\n  --dshpc-cyan-soft:color-mix(in srgb,var(--dshpc-cyan) 8%,transparent);\n  --dshpc-teal:#0f766e;\n  --dshpc-teal-hover:color-mix(in srgb,var(--dshpc-teal) 78%,#000000);\n  --dshpc-teal-active:color-mix(in srgb,var(--dshpc-teal) 64%,#000000);\n  --dshpc-teal-soft:color-mix(in srgb,var(--dshpc-teal) 8%,transparent);\n  --dshpc-orange:#c2410c;\n  --dshpc-orange-hover:color-mix(in srgb,var(--dshpc-orange) 78%,#000000);\n  --dshpc-orange-active:color-mix(in srgb,var(--dshpc-orange) 64%,#000000);\n  --dshpc-orange-soft:color-mix(in srgb,var(--dshpc-orange) 8%,transparent);\n  --dshpc-indigo:#4f46e5;\n  --dshpc-indigo-hover:color-mix(in srgb,var(--dshpc-indigo) 78%,#000000);\n  --dshpc-indigo-active:color-mix(in srgb,var(--dshpc-indigo) 64%,#000000);\n  --dshpc-indigo-soft:color-mix(in srgb,var(--dshpc-indigo) 8%,transparent);\n  --dshpc-rose:#e11d48;\n  --dshpc-rose-hover:color-mix(in srgb,var(--dshpc-rose) 78%,#000000);\n  --dshpc-rose-active:color-mix(in srgb,var(--dshpc-rose) 64%,#000000);\n  --dshpc-rose-soft:color-mix(in srgb,var(--dshpc-rose) 8%,transparent);\n  --dshpc-slate:#475569;\n  --dshpc-slate-hover:color-mix(in srgb,var(--dshpc-slate) 78%,#000000);\n  --dshpc-slate-active:color-mix(in srgb,var(--dshpc-slate) 64%,#000000);\n  --dshpc-slate-soft:color-mix(in srgb,var(--dshpc-slate) 8%,transparent);\n\n  /* ⚠️ 2026-10-18 用户拍板：宿主 alias 的 hover（暗色白 8% / 亮色 6%）**太弱**，\n     「移上去要仔细看才看得出来」⇒ 不再委托宿主 hover 别名，改为自掺中性色并加重：\n     亮色掺黑 10%、暗色掺白 14%（active 再加一档）。按钮 / 分段轨道 / 各类 hover 底同时受益。\n     ⚠️ 必须保留 rgba 兜底行在前（本文件惯例，见 icon-plate 注释）：掺的是**固定中性色**\n     （neutral-900=#0f0f0f / neutral-00=#fff），预计算无损；旧内核不认 color-mix 时走兜底，\n     否则整条 background:var(--seg-track) 作废 ⇒ 分段轨道透明（真踩过：预览站轨道消失）。 */\n  --dshpc-hover:rgba(15,15,15,.10);\n  --dshpc-active:rgba(15,15,15,.18);\n  /* 分段控件轨道底：专用 token（rgba 字面量、不借 --dshpc-hover 中转）——\n     2026-10-19 教训：变量链中间任何一环 invalid ⇒ background 整条作废、轨道全透明。\n     亮色：黑 7%（比 hover 的 10% 淡一档，选中白片才跳得出）。 */\n  --dshpc-seg-track:rgba(15,15,15,.07);\n  --dshpc-mask:var(--dsw-alias-bg-mask-1,#0000003d);\n  /* 弹窗锁定态给**自绘控件**的降透明度档（2026-11-05）。放在 token 里是为了让消费方\n     在自己元素上写 --dshpc-lock-dim: 1 就能退出这条效果，不用 !important 打架。 */\n  --dshpc-lock-dim:.5;\n  /* 「选中面」（2026-10-06，任务日程页首创）= 当前底色**朝更深掺 12% 文字色**：\n     浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。\n     语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */\n  --dshpc-selected-bg:color-mix(in srgb,var(--dshpc-surface-1) 88%,var(--dshpc-fg));\n  /* 任务日程页本月格默认底（2026-10-06 → 续2）：浅色下给**淡蓝**（business 8% 透白底）——\n     参照用户参考稿里未选中日程块 / Tuesday 列的那种蓝、再浅一点点；\n     相邻月补位格仍走 --dshpc-surface-2（更灰），不受影响。\n     深色段维持 #23262e（用户：深色 UI 已差不多，不动）。 */\n  --dshpc-cal-cell-bg:color-mix(in srgb,var(--dshpc-business) 8%,var(--dshpc-surface-1));\n  /* 任务日程页「点开某天」展开的面板底（2026-10-06 续）：浅色下**无限接近白、只带一丁点灰**\n     （neutral-50 = #fafafa）——面板里装半透明执行记录列表，底再深整片就发糊发灰；\n     深色段沿用原 selected-bg 暗值，保持不动。 */\n  --dshpc-cal-panel-bg:var(--dsw-static-neutral-50,#fafafa);\n  /* 任务日程页本月格 hover 底（浅色段，2026-10-06 续3）：不再走灰色通用交互底——\n     鼠标移上去应是「更亮一点点的蓝」（与深色段同语义：hover = 提亮的蓝，不是灰下去）。\n     浓度**介于**表头蓝（14%）与未选中格蓝（8%）之间、略偏表头一侧：business 12% 透白底\n     （比表头浅一点、比未选中格深一点）。 */\n  --dshpc-cal-cell-hover:color-mix(in srgb,var(--dshpc-business) 12%,var(--dshpc-surface-1));\n\n  /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */\n  --dshpc-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);\n  /* 亮片自带的浮起感（选中态用；与 --dshpc-surface-raised 配对） */\n  --dshpc-shadow-raised:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);\n  --dshpc-shadow-2:var(--dsw-shadow-lv3,0 12px 32px 0 #00000014);\n  /* 键盘焦点环。⚠️ 不用宿主 --dsw-focus-ring-color：它默认值是 transparent（兜底不生效、会隐身） */\n  --dshpc-focus:var(--dsw-alias-state-business-primary,#3b5bdb);\n\n  /* ── 圆角（宿主真值 4 / 8 / 12 / 16 / 20 / 28）─────────────────────── */\n  --dshpc-radius-xs:var(--dsw-radius-xs,4px);\n  --dshpc-radius-sm:var(--dsw-radius-sm,8px);\n  --dshpc-radius-md:var(--dsw-radius-md,12px);\n  --dshpc-radius-lg:var(--dsw-radius-lg,16px);\n  --dshpc-radius-xl:var(--dsw-radius-xl,20px);\n  --dshpc-radius-panel:var(--dsw-radius-panel,28px);\n  /* 全圆（胶囊标签）：宿主的 radius 档最大只有 28px，撑不满 24px 高的 chip */\n  --dshpc-radius-pill:999px;\n\n  /* ── 间距四拍（只许用这四档，不许出现 5 / 7 / 9px）────────────────── */\n  --dshpc-space-1:4px;\n  --dshpc-space-2:8px;\n  --dshpc-space-3:12px;\n  --dshpc-space-4:16px;\n\n  /* ── 控件高度：离散三档（控件用 size=\"sm|md|lg\" 选；调用点不许自定义高度，\n       真不够用才允许在调用点本地覆盖 --dshpc-control-h-*，属例外而非常态）── */\n  --dshpc-control-h-sm:24px;\n  --dshpc-control-h-md:28px;\n  --dshpc-control-h-lg:32px;\n\n  /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */\n  --dshpc-font-xs:var(--dsw-font-xxxs-11-font-size,11px);\n  --dshpc-font-sm:var(--dsw-font-xxs-12-font-size,12px);\n  --dshpc-font-md:var(--dsw-font-xs-13-font-size,13px);\n  --dshpc-font-lg:var(--dsw-font-s-14-font-size,14px);\n  --dshpc-font-xl:var(--dsw-font-base-16-font-size,16px);\n  --dshpc-line-xs:var(--dsw-font-xxxs-11-line-height,14px);\n  --dshpc-line-sm:var(--dsw-font-xxs-12-line-height,18px);\n  --dshpc-line-md:var(--dsw-font-xs-13-line-height,20px);\n  --dshpc-line-lg:var(--dsw-font-s-14-line-height,22px);\n  --dshpc-line-xl:var(--dsw-font-base-16-line-height,24px);\n  --dshpc-font-mono:var(--ds-font-family-code,monospace);\n\n  /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */\n  /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */\n  /* 内容层吸顶（天标签 / 表头这类「跟着滚但压住同层内容」的元素）：只压同层兄弟，\n     必须低于下面所有浮层档 —— 所以它不是「开新浮层档」，而是内容层内部的排序位。 */\n  --dshpc-z-sticky:10;\n  --dshpc-z-dock:1030;\n  --dshpc-z-drawer:1040;\n  --dshpc-z-modal:1070;\n  /* 收起后的耳朵：必须高于弹窗遮罩，否则弹窗一开就点不到它（2026-11-04 用户真机）。\n     只给耳朵用，页面级分栏本体仍是布局成员，不跟着抬高。 */\n  --dshpc-z-ear:1080;\n  --dshpc-z-menu:1100;\n  --dshpc-z-tip:1200;\n  /* 语义别名（2026-11-03 面板皮肤统一）：业务文件只许用这两个说「我要一层浮层」，\n     不再各自写 1099/1100/1200/1201 这类字面量。\n       panel   = 浮层面板本体（picker 弹窗、锚定面板）；\n       popmenu = 叠在面板之上的菜单（▾ 选层、Picker 下拉）与其透明遮罩。 */\n  --dshpc-z-panel:var(--dshpc-z-menu);\n  --dshpc-z-popmenu:var(--dshpc-z-tip);\n\n  /* ── 动效 ─────────────────────────────────────────────────────────── */\n  --dshpc-dur:var(--ds-transition-duration,.2s);\n  --dshpc-dur-fast:var(--ds-transition-duration-fast,.12s);\n  --dshpc-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));\n  /* 运行中状态的脉动时长（2026-10-06 统一前后两端：任务配置里的绿呼吸 → 蓝、放慢；\n     执行记录里的蓝闪 → 放慢一点。两者用同一个值，动画形状本就一致）。 */\n  --dshpc-dur-run:500ms;\n}\n\n/* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────\n   判据 = body[data-ds-dark-theme]（宿主 0.2.0-rc.2 源码核实：启动脚本 toggleAttribute 写入，\n   唯一明暗判据；插件禁止用 prefers-color-scheme —— 它跟的是系统、不是用户在宿主里的选择）。\n   下面只放 alias 表达不了的「固定中性面」；颜色若能靠 alias 自动跟随，一律不要写在这里。 */\nbody[data-ds-dark-theme]{\n  /* 深色段的蓝**刻意不跟随宿主 alias**（唯一例外）：宿主暗色 alias 给的是 #60a5fa 一档的高亮蓝，\n     实心面（Chip / Button info / 日期选中格）压白字会发糊 —— 用户 2026-10-29 实测反馈。\n     ⇒ 深色下改定向浅色状态的蓝（#3b5bdb）靠，只在明度上抬一点点，保证它在暗底上仍看得见：\n     #4c6bd8 对白字 ≈4.8:1（原亮蓝只有 ~2.3:1），对日历格底 ≈3.2:1 仍过 UI 件的 3:1 线。\n     代价：宿主换品牌色时深色不再自动跟着变，需要这里手动同步。 */\n  --dshpc-business:#4c6bd8;\n  --dshpc-solid:var(--dsw-static-neutral-900,#0f0f0f);\n  --dshpc-on-solid:var(--dsw-static-neutral-00,#fff);\n  /* 实心按钮 hover / active（暗色版）：黑底（浅色主题的近黑 → 暗色下的近白）掺黑压深；\n     红 / 绿 / 黄 / 蓝掺白提亮。与亮色段方向相反，保证两种主题下「一眼看出变了」。 */\n  --dshpc-accent-hover:color-mix(in srgb,var(--dshpc-accent) 80%,#000000);\n  --dshpc-accent-active:color-mix(in srgb,var(--dshpc-accent) 66%,#000000);\n  --dshpc-danger-hover:color-mix(in srgb,var(--dshpc-danger) 78%,#ffffff);\n  --dshpc-danger-active:color-mix(in srgb,var(--dshpc-danger) 64%,#ffffff);\n  --dshpc-success-hover:color-mix(in srgb,var(--dshpc-success) 78%,#ffffff);\n  --dshpc-success-active:color-mix(in srgb,var(--dshpc-success) 64%,#ffffff);\n  --dshpc-warning-hover:color-mix(in srgb,var(--dshpc-warning) 78%,#ffffff);\n  --dshpc-warning-active:color-mix(in srgb,var(--dshpc-warning) 64%,#ffffff);\n  /* 同上：掺白比例从 22% / 36% 收到 12% / 22% —— 底色已变深，照旧比例提亮会在 hover 瞬间\n     把白字对比打回 ~3:1（正是用户嫌糊的那一档）；收窄后 hover 仍可感知、字仍清晰。 */\n  --dshpc-business-hover:color-mix(in srgb,var(--dshpc-business) 88%,#ffffff);\n  --dshpc-business-active:color-mix(in srgb,var(--dshpc-business) 78%,#ffffff);\n  /* 暗色 hover 掺白 14% / active 24%（对齐上面 2026-10-18 的加重拍板）。rgba 兜底行同上。 */\n  --dshpc-hover:rgba(255,255,255,.14);\n  --dshpc-active:rgba(255,255,255,.24);\n  /* 分段轨道（暗色版）：白 10%——比 hover 淡一档，选中亮片才跳得出。 */\n  --dshpc-seg-track:rgba(255,255,255,.10);\n  --dshpc-plate:var(--dsw-static-neutral-850,#212123);\n  --dshpc-plate-hover:var(--dsw-static-neutral-800,#292929);\n  --dshpc-icon-plate:rgba(255,255,255,.05);\n  /* 暗色主题**反过来**：表头要比卡片面**亮**、比斑马纹再**浅一档**（用户：纯黑背景没法看）。 */\n  --dshpc-head-bg:var(--dshpc-surface-2);\n  /* 表格（2026-10-30 用户二次定案：与通栏互换底色）：通栏底取表头原来那色 #151b23\n     （亮色段对应 #f6f8fa）；表头默认底沿用亮色段定义的 --dshpc-surface-sunken，不在暗色段重写；\n     行 hover 是「一层极淡的白」≈3% —— 暗底上用黑会越悬越暗，看不出「浅灰」反馈。 */\n  --dshpc-table-banner-bg:#151b23;\n  --dshpc-table-row-hover:rgba(255,255,255,.03);\n  /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */\n  --dshpc-chip-bg:rgba(255,255,255,.08);\n  --dshpc-chip-bg-hover:rgba(255,255,255,.16);\n  /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */\n  --dshpc-open-bg:rgba(96,165,250,.18);\n  --dshpc-open-bg-soft:rgba(96,165,250,.08);\n  --dshpc-card-hover:rgba(96,165,250,.13);\n  /* 语义色**浅底**（深色版）：用户嫌深色的绿 / 红「有点深」⇒ 压到 **5%**（浅色段是 8%），\n     更贴近面板底色、存在感更弱；块底与状态色竖条仍同源（竖条是实色，不受这条影响）。 */\n  --dshpc-success-soft:color-mix(in srgb,var(--dshpc-success) 5%,transparent);\n  --dshpc-warning-soft:color-mix(in srgb,var(--dshpc-warning) 5%,transparent);\n  --dshpc-danger-soft:color-mix(in srgb,var(--dshpc-danger) 5%,transparent);\n  --dshpc-business-soft:color-mix(in srgb,var(--dshpc-business) 5%,transparent);\n  /* 扩展色深色派生：底色写死、hover 掺白 12%/22%（同 business，防白字发糊），soft 5%。 */\n  --dshpc-purple-hover:color-mix(in srgb,var(--dshpc-purple) 88%,#ffffff);\n  --dshpc-purple-active:color-mix(in srgb,var(--dshpc-purple) 78%,#ffffff);\n  --dshpc-purple-soft:color-mix(in srgb,var(--dshpc-purple) 5%,transparent);\n  --dshpc-pink-hover:color-mix(in srgb,var(--dshpc-pink) 88%,#ffffff);\n  --dshpc-pink-active:color-mix(in srgb,var(--dshpc-pink) 78%,#ffffff);\n  --dshpc-pink-soft:color-mix(in srgb,var(--dshpc-pink) 5%,transparent);\n  --dshpc-cyan-hover:color-mix(in srgb,var(--dshpc-cyan) 88%,#ffffff);\n  --dshpc-cyan-active:color-mix(in srgb,var(--dshpc-cyan) 78%,#ffffff);\n  --dshpc-cyan-soft:color-mix(in srgb,var(--dshpc-cyan) 5%,transparent);\n  --dshpc-teal-hover:color-mix(in srgb,var(--dshpc-teal) 88%,#ffffff);\n  --dshpc-teal-active:color-mix(in srgb,var(--dshpc-teal) 78%,#ffffff);\n  --dshpc-teal-soft:color-mix(in srgb,var(--dshpc-teal) 5%,transparent);\n  --dshpc-orange-hover:color-mix(in srgb,var(--dshpc-orange) 88%,#ffffff);\n  --dshpc-orange-active:color-mix(in srgb,var(--dshpc-orange) 78%,#ffffff);\n  --dshpc-orange-soft:color-mix(in srgb,var(--dshpc-orange) 5%,transparent);\n  --dshpc-indigo-hover:color-mix(in srgb,var(--dshpc-indigo) 88%,#ffffff);\n  --dshpc-indigo-active:color-mix(in srgb,var(--dshpc-indigo) 78%,#ffffff);\n  --dshpc-indigo-soft:color-mix(in srgb,var(--dshpc-indigo) 5%,transparent);\n  --dshpc-rose-hover:color-mix(in srgb,var(--dshpc-rose) 88%,#ffffff);\n  --dshpc-rose-active:color-mix(in srgb,var(--dshpc-rose) 78%,#ffffff);\n  --dshpc-rose-soft:color-mix(in srgb,var(--dshpc-rose) 5%,transparent);\n  --dshpc-slate-hover:color-mix(in srgb,var(--dshpc-slate) 88%,#ffffff);\n  --dshpc-slate-active:color-mix(in srgb,var(--dshpc-slate) 78%,#ffffff);\n  --dshpc-slate-soft:color-mix(in srgb,var(--dshpc-slate) 5%,transparent);\n  /* 「选中面」（深色版，2026-10-06）：掺 **~40% 背景色**（--dshpc-surface-base）⇒ 无限接近页面背景的黑、\n     只比背景略深一点点（用户：深色下展开区压着任务透明绿会发灰，底色要尽量贴近背景才不显灰）。\n     ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅。 */\n  --dshpc-selected-bg:color-mix(in srgb,var(--dshpc-surface-1) 60%,var(--dshpc-surface-base));\n  /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），\n     比原来的卡片面更沉、更偏蓝灰；选中格仍走 --dshpc-selected-bg（更暗一档），层级不变。 */\n  --dshpc-cal-cell-bg:#23262e;\n  /* 任务日程页本月格 hover 底（深色段，2026-10-06）：原先走 --dshpc-hover（宿主浅色叠加）在深底上显得\n     「灰发亮」，不好看 ⇒ 换成更贴底的蓝调微亮（与 open-bg-soft 同族），hover 时不刺眼、又有反馈。 */\n  --dshpc-cal-cell-hover:rgba(96,165,250,.12);\n  /* 任务日程页展开面板底（深色段，2026-10-06 续）：与原 selected-bg 暗值一致，深色 UI 不动 */\n  --dshpc-cal-panel-bg:color-mix(in srgb,var(--dshpc-surface-1) 60%,var(--dshpc-surface-base));\n}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/design/style-kit.js
+		/** 全生态统一的 CSS 变量前缀。 */
+		const CSS_PREFIX = "dshpc";
+		/** token 域固定名：变量定义必须先于消费它的规则出现。 */
+		const TOKENS_DOMAIN$1 = "tokens";
 		/**
-		* L1 语义 token 层（UI 基础层 · P0 地基）
+		* 领一套本插件专属的样式设施。
 		*
-		* 这一份文件是**全站唯一的「宿主变量 → 插件语义名」翻译表**。规矩见
-		* docs/design/ui-style-guide.md：
-		*  - `--tdt-*` **只允许在本文件定义**；其它任何文件只能 `var(--tdt-*)` 消费，
-		*    不许再定义 `--tdt-*`，也不许直接写 `var(--dsw-*)`；
-		*  - 每个 token 都带兜底值 ⇒ 宿主升级换名时不炸（最坏退到兜底色，不会白屏）；
-		*  - **明暗差异只写在本文件**：能靠宿主 alias 表达的一律不写覆盖段（alias 自己随主题变），
-		*    只有 alias 表达不了的「固定中性面 / 反色面」才进 `body[data-ds-dark-theme]` 段。
-		*
-		* 宿主变量名 / 亮暗取值 / 哪个是真变量 —— 真源是
-		* docs/design/external/dsh-capabilities.md §主题与设计变量
-		* （2026-10-01 按宿主 0.2.0-rc.2 解包五个包逐条核实；兜底值取的就是宿主真值）。
-		*
-		* 挂载点选 `body`：插件界面（含 portal 到 body 的弹窗）全在 body 内，
-		* 定义在 body 上零调用点成本；名字统一带 `--tdt-` 前缀，不会与宿主变量打架。
-		*
-		* ⚠️ **两条基线，别混**（2026-10-07 审计后明写）：
-		*  - **JS 语法基线 = chrome99**：那是构建 target（`tsdown.client.config.ts`），只约束语法与 API。
-		*  - **CSS 基线 = Chrome 111**：本文件用 `color-mix()`（111 起）**现算**语义色的浅底 —— 目的是让浅底
-		*    **跟随宿主 alias**（宿主主题一换、浅底自动成立）。写成死 `rgba()` 就失去了这个性质。
-		*    ⇒ 11x–110 的旧内核上，这些声明会被整条丢弃（底色变透明，**不破布局**）。当前实际客户端为新版
-		*       Chromium，不受影响；若将来真要支持更旧内核，配方是：给每条 `color-mix` token **先写一条**
-		*       `rgba(...)` 明文回退（浅/深两段各写一份），代价是浅底不再跟随宿主主题色。
-		*  - 样式是 **TS 模板字符串**、不经过任何 CSS 工具链 ⇒ 没有 autoprefixer / 降级；想加回退只能手写。
-		*    （本仓唯一已做回退的范例见 `toast-css.ts`：先写 `background: var(...)` 再写 `color-mix`。）
+		* 为什么是工厂而不是模块级单例：单例只有一个固定 style id，
+		* 多个插件同处一页时会抢同一个 `<style>` 标签、后挂载的覆盖先挂载的（见需求文档 §5.2）。
 		*/
-		const UI_TOKENS_CSS = `
-/* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */
-body{
-  --tdt-fg:var(--dsw-alias-label-primary,#1f2328);
-  --tdt-fg-2:var(--dsw-alias-label-secondary,#5c6370);
-  --tdt-fg-3:var(--dsw-alias-label-tertiary,#767d87);
-  --tdt-fg-4:var(--dsw-alias-label-caption,#9aa1ab);
-  --tdt-fg-dim:var(--dsw-alias-label-dimmed,#b9bfc7);
-  /* 反色面上的字（实心钮 / 角标）：暗色下是 bluish-1000，故用 -foreground 而非 -inverted */
-  --tdt-fg-inverse:var(--dsw-alias-label-primary-foreground,#fff);
-
-  /* ── 面（宿主 bg-layer 三档 + 下沉轨道底）──────────────────────────── */
-  --tdt-surface-1:var(--dsw-alias-bg-layer-1,#fff);
-  --tdt-surface-2:var(--dsw-alias-bg-layer-2,#fff);
-  --tdt-surface-3:var(--dsw-alias-bg-layer-3,#fff);
-  /* 「选中亮片」的底盘色（配 --tdt-shadow-raised 用） */
-  --tdt-surface-raised:var(--dsw-alias-bg-layer-1,#fff);
-  /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */
-  --tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
-  /* 整页 / 编辑器底（bg-base） */
-  --tdt-surface-base:var(--dsw-alias-bg-base,#fff);
-  /* 自绘浮层 / 菜单卡的不透明底（= base；不要用半透明的 specific-menu） */
-  --tdt-surface-menu:var(--tdt-surface-base);
-  /* markdown 代码块面 / 字体（会话镜像里用到） */
-  --tdt-code-surface:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));
-  --tdt-code-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,monospace));
-  /* 警告文字色（宿主 state-warn-label） */
-  --tdt-warning-label:var(--dsw-alias-state-warn-label,#f5a623);
-  /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */
-  --tdt-solid:var(--dsw-static-neutral-00,#fff);
-  --tdt-on-solid:var(--dsw-alias-label-primary,#1f2328);
-  /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */
-  --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
-  --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
-  /* 旧内核回退（Chrome <111 不认 color-mix ⇒ 这条生效；新内核被下面那条覆盖）。
-     这几个是**固定中性面**、不靠跟随宿主主题色，故可以无损地给明文回退。 */
-  --tdt-icon-plate:rgba(255,255,255,.5);
-  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
-  /* 表头底：浅色主题**偏深**，且必须**比斑马纹（--tdt-plate）再深一档**——
-     两者不能撞色（用户 2026-10-02：表头跟斑马纹一模一样）。 */
-  --tdt-head-bg:var(--dsw-static-neutral-100,#f5f5f5);
-  /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */
-  --tdt-chip-bg:rgba(15,15,15,.07);
-  --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 7%,transparent);
-  --tdt-chip-bg-hover:rgba(15,15,15,.14);
-  --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 14%,transparent);
-  /* 展开行：**带透明度的蓝**——不是灰、也不是纯色，透出卡片底色，一眼看出「这是展开的」
-     （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */
-  --tdt-open-bg:rgba(37,99,235,.10);
-  --tdt-open-bg-soft:rgba(37,99,235,.05);
-  --tdt-card-hover:rgba(37,99,235,.07);
-
-  /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
-  --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
-  --tdt-border:var(--dsw-alias-border-l2,#0000001a);
-  --tdt-border-strong:var(--dsw-alias-border-l3,#0000001f);
-  --tdt-border-heavy:var(--dsw-alias-border-l4,#00000029);
-
-  /* ── 品牌 / 语义色 ────────────────────────────────────────────────── */
-  /* 品牌「面」色：明色近黑、暗色近白（官方 Switch 选中态即此），**不是蓝色** */
-  --tdt-accent:var(--dsw-alias-brand-primary,#0f1115);
-  /* 蓝色：强调 / 选中 / 焦点，一律走这条 */
-  --tdt-business:var(--dsw-alias-state-business-primary,#3b5bdb);
-  --tdt-success:var(--dsw-alias-state-success-primary,#22c55e);
-  /* ⚠️ 是 state-warn（不是 state-warning，后者宿主无此定义） */
-  --tdt-warning:var(--dsw-alias-state-warn-primary,#f59e0b);
-  --tdt-danger:var(--dsw-alias-state-error-primary,#ec1313);
-  --tdt-link:var(--dsw-alias-link,#3b5bdb);
-  /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，
-     故这是一条与主题无关的常量；不要拿 --tdt-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */
-  --tdt-on-signal:#fff;
-  /* 语义色**浅底**：状态色系的「一块底色」——执行记录页每条流水账的块底就是它
-     （用户 2026-10-04：正常态给同色系很浅的透明底、失败用红底透出来）。
-     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，主题一换自动成立。
-     ⚠️ **深色下要更淡**：用户 2026-10-04「深色风格的绿色和红色好像都有点深」⇒ dark 段
-     把这四条压到 5%（更贴近面板底、存在感更弱）；浅色段维持 8%。两端各自给值，不共用一条曲线。
-     命名收在 tokens.ts 单点（本仓硬规矩：业务文件不许自造 --tdt-*）。 */
-  --tdt-success-soft:color-mix(in srgb,var(--tdt-success) 8%,transparent);
-  --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 8%,transparent);
-  --tdt-danger-soft:color-mix(in srgb,var(--tdt-danger) 8%,transparent);
-  --tdt-business-soft:color-mix(in srgb,var(--tdt-business) 8%,transparent);
-
-  /* ── 交互底 / 遮罩 ────────────────────────────────────────────────── */
-  --tdt-hover:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
-  --tdt-active:var(--dsw-alias-interactive-bg-active,#2631481a);
-  --tdt-mask:var(--dsw-alias-bg-mask-1,#0000003d);
-  /* 「选中面」（2026-10-06，任务日程页首创）= 当前底色**朝更深掺 12% 文字色**：
-     浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。
-     语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */
-  --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
-  /* 任务日程页本月格默认底（2026-10-06 → 续2）：浅色下给**淡蓝**（business 8% 透白底）——
-     参照用户参考稿里未选中日程块 / Tuesday 列的那种蓝、再浅一点点；
-     相邻月补位格仍走 --tdt-surface-2（更灰），不受影响。
-     深色段维持 #23262e（用户：深色 UI 已差不多，不动）。 */
-  --tdt-cal-cell-bg:color-mix(in srgb,var(--tdt-business) 8%,var(--tdt-surface-1));
-  /* 任务日程页「点开某天」展开的面板底（2026-10-06 续）：浅色下**无限接近白、只带一丁点灰**
-     （neutral-50 = #fafafa）——面板里装半透明执行记录列表，底再深整片就发糊发灰；
-     深色段沿用原 selected-bg 暗值，保持不动。 */
-  --tdt-cal-panel-bg:var(--dsw-static-neutral-50,#fafafa);
-  /* 任务日程页本月格 hover 底（浅色段，2026-10-06 续3）：不再走灰色通用交互底——
-     鼠标移上去应是「更亮一点点的蓝」（与深色段同语义：hover = 提亮的蓝，不是灰下去）。
-     浓度**介于**表头蓝（14%）与未选中格蓝（8%）之间、略偏表头一侧：business 12% 透白底
-     （比表头浅一点、比未选中格深一点）。 */
-  --tdt-cal-cell-hover:color-mix(in srgb,var(--tdt-business) 12%,var(--tdt-surface-1));
-
-  /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
-  --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
-  /* 亮片自带的浮起感（选中态用；与 --tdt-surface-raised 配对） */
-  --tdt-shadow-raised:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
-  --tdt-shadow-2:var(--dsw-shadow-lv3,0 12px 32px 0 #00000014);
-  /* 键盘焦点环。⚠️ 不用宿主 --dsw-focus-ring-color：它默认值是 transparent（兜底不生效、会隐身） */
-  --tdt-focus:var(--dsw-alias-state-business-primary,#3b5bdb);
-
-  /* ── 圆角（宿主真值 4 / 8 / 12 / 16 / 20 / 28）─────────────────────── */
-  --tdt-radius-xs:var(--dsw-radius-xs,4px);
-  --tdt-radius-sm:var(--dsw-radius-sm,8px);
-  --tdt-radius-md:var(--dsw-radius-md,12px);
-  --tdt-radius-lg:var(--dsw-radius-lg,16px);
-  --tdt-radius-xl:var(--dsw-radius-xl,20px);
-  --tdt-radius-panel:var(--dsw-radius-panel,28px);
-
-  /* ── 间距四拍（只许用这四档，不许出现 5 / 7 / 9px）────────────────── */
-  --tdt-space-1:4px;
-  --tdt-space-2:8px;
-  --tdt-space-3:12px;
-  --tdt-space-4:16px;
-
-  /* ── 控件高度：离散三档（控件用 size="sm|md|lg" 选；调用点不许自定义高度，
-       真不够用才允许在调用点本地覆盖 --tdt-control-h-*，属例外而非常态）── */
-  --tdt-control-h-sm:24px;
-  --tdt-control-h-md:28px;
-  --tdt-control-h-lg:32px;
-
-  /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */
-  --tdt-font-xs:var(--dsw-font-xxxs-11-font-size,11px);
-  --tdt-font-sm:var(--dsw-font-xxs-12-font-size,12px);
-  --tdt-font-md:var(--dsw-font-xs-13-font-size,13px);
-  --tdt-font-lg:var(--dsw-font-s-14-font-size,14px);
-  --tdt-font-xl:var(--dsw-font-base-16-font-size,16px);
-  --tdt-line-xs:var(--dsw-font-xxxs-11-line-height,14px);
-  --tdt-line-sm:var(--dsw-font-xxs-12-line-height,18px);
-  --tdt-line-md:var(--dsw-font-xs-13-line-height,20px);
-  --tdt-line-lg:var(--dsw-font-s-14-line-height,22px);
-  --tdt-line-xl:var(--dsw-font-base-16-line-height,24px);
-  --tdt-font-mono:var(--ds-font-family-code,monospace);
-
-  /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */
-  /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */
-  /* 内容层吸顶（天标签 / 表头这类「跟着滚但压住同层内容」的元素）：只压同层兄弟，
-     必须低于下面所有浮层档 —— 所以它不是「开新浮层档」，而是内容层内部的排序位。 */
-  --tdt-z-sticky:10;
-  --tdt-z-dock:1030;
-  --tdt-z-drawer:1040;
-  --tdt-z-modal:1070;
-  --tdt-z-menu:1100;
-  --tdt-z-tip:1200;
-
-  /* ── 动效 ─────────────────────────────────────────────────────────── */
-  --tdt-dur:var(--ds-transition-duration,.2s);
-  --tdt-dur-fast:var(--ds-transition-duration-fast,.12s);
-  --tdt-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));
-  /* 运行中状态的脉动时长（2026-10-06 统一前后两端：任务配置里的绿呼吸 → 蓝、放慢；
-     执行记录里的蓝闪 → 放慢一点。两者用同一个值，动画形状本就一致）。 */
-  --tdt-dur-run:500ms;
-}
-
-/* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────
-   判据 = body[data-ds-dark-theme]（宿主 0.2.0-rc.2 源码核实：启动脚本 toggleAttribute 写入，
-   唯一明暗判据；插件禁止用 prefers-color-scheme —— 它跟的是系统、不是用户在宿主里的选择）。
-   下面只放 alias 表达不了的「固定中性面」；颜色若能靠 alias 自动跟随，一律不要写在这里。 */
-body[data-ds-dark-theme]{
-  --tdt-solid:var(--dsw-static-neutral-900,#0f0f0f);
-  --tdt-on-solid:var(--dsw-static-neutral-00,#fff);
-  --tdt-plate:var(--dsw-static-neutral-850,#212123);
-  --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
-  --tdt-icon-plate:rgba(255,255,255,.05);
-  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
-  /* 暗色主题**反过来**：表头要比卡片面**亮**、比斑马纹再**浅一档**（用户：纯黑背景没法看）。 */
-  --tdt-head-bg:var(--tdt-surface-2);
-  /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */
-  --tdt-chip-bg:rgba(255,255,255,.08);
-  --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 8%,transparent);
-  --tdt-chip-bg-hover:rgba(255,255,255,.16);
-  --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 16%,transparent);
-  /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */
-  --tdt-open-bg:rgba(96,165,250,.18);
-  --tdt-open-bg-soft:rgba(96,165,250,.08);
-  --tdt-card-hover:rgba(96,165,250,.13);
-  /* 语义色**浅底**（深色版）：用户嫌深色的绿 / 红「有点深」⇒ 压到 **5%**（浅色段是 8%），
-     更贴近面板底色、存在感更弱；块底与状态色竖条仍同源（竖条是实色，不受这条影响）。 */
-  --tdt-success-soft:color-mix(in srgb,var(--tdt-success) 5%,transparent);
-  --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 5%,transparent);
-  --tdt-danger-soft:color-mix(in srgb,var(--tdt-danger) 5%,transparent);
-  --tdt-business-soft:color-mix(in srgb,var(--tdt-business) 5%,transparent);
-  /* 「选中面」（深色版，2026-10-06）：掺 **~40% 背景色**（--tdt-surface-base）⇒ 无限接近页面背景的黑、
-     只比背景略深一点点（用户：深色下展开区压着任务透明绿会发灰，底色要尽量贴近背景才不显灰）。
-     ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅。 */
-  --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 60%,var(--tdt-surface-base));
-  /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），
-     比原来的卡片面更沉、更偏蓝灰；选中格仍走 --tdt-selected-bg（更暗一档），层级不变。 */
-  --tdt-cal-cell-bg:#23262e;
-  /* 任务日程页本月格 hover 底（深色段，2026-10-06）：原先走 --tdt-hover（宿主浅色叠加）在深底上显得
-     「灰发亮」，不好看 ⇒ 换成更贴底的蓝调微亮（与 open-bg-soft 同族），hover 时不刺眼、又有反馈。 */
-  --tdt-cal-cell-hover:rgba(96,165,250,.12);
-  /* 任务日程页展开面板底（深色段，2026-10-06 续）：与原 selected-bg 暗值一致，深色 UI 不动 */
-  --tdt-cal-panel-bg:color-mix(in srgb,var(--tdt-surface-1) 60%,var(--tdt-surface-base));
-}
-`;
+		function createStyleKit(options) {
+			const { id } = options;
+			if (id === "") throw new Error("dsh-plugin-core/design: id 不能为空");
+			const tokensCss = TOKENS_CSS_TEMPLATE;
+			const domains = /* @__PURE__ */ new Map();
+			let tag = null;
+			let dirty = true;
+			const composeCss = () => {
+				const entries = [...domains.entries()];
+				entries.sort((a, b) => a[0] === TOKENS_DOMAIN$1 ? -1 : b[0] === TOKENS_DOMAIN$1 ? 1 : 0);
+				return entries.map(([, css]) => css).join("\n");
+			};
+			const flush = () => {
+				if (tag === null) return;
+				tag.textContent = composeCss();
+				dirty = false;
+			};
+			const ensureStyles = () => {
+				if (typeof document === "undefined") return;
+				if (tag === null || !tag.isConnected) {
+					const head = document.head;
+					if (head === null) return;
+					const found = document.getElementById(id);
+					if (found !== null) tag = found;
+					else {
+						const el = document.createElement("style");
+						el.id = id;
+						head.appendChild(el);
+						tag = el;
+					}
+					dirty = true;
+				}
+				if (dirty) flush();
+			};
+			const registerStyle = (domain, css) => {
+				if (domains.get(domain) === css) return;
+				domains.set(domain, css);
+				dirty = true;
+				if (tag?.isConnected === true) flush();
+			};
+			const dispose = () => {
+				if (tag?.isConnected === true) tag.remove();
+				tag = null;
+				domains.clear();
+				dirty = true;
+			};
+			return {
+				id,
+				tokensCss,
+				cssVar: (name) => `--${CSS_PREFIX}-${name}`,
+				registerStyle,
+				ensureStyles,
+				dispose,
+				applyStyle: (domain, css) => {
+					registerStyle(domain, css);
+					ensureStyles();
+				}
+			};
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/css.js
+		/**
+		* 当前插件的样式设施。
+		*
+		* 为什么是模块级而不是 React Context：core 会被**内联进每个插件各自的 bundle**，
+		* 模块级变量天然按插件隔离（不像共享运行时那样会互相踩）。
+		* 插件启动时 `setStyleKit(createStyleKit({ id }))` 一次即可；不设就走默认 kit。
+		*/
+		let current = createStyleKit({ id: "dsh-plugin-core-ui" });
+		function setStyleKit(kit) {
+			current = kit;
+		}
+		function getStyleKit() {
+			return current;
+		}
 		//#endregion
 		//#region src/client/ui/style.ts
 		/**
-		* 统一样式注入器（UI 基础层 · P0 地基）
+		* 样式注入器（薄壳）：实现全部交给 `dsh-plugin-core` 的 style kit。
 		*
-		* 为什么必须运行时注入：客户端产物是 `window.__ModuleLoader__.load({ factory })` 的 CJS 闭包，
-		* `import './x.css'` 只会产出独立 css 资源、内核不会加载它（task-editor-css.ts / archive-session-css.ts /
-		* toast-css.ts 三处注释已结论）⇒ CSS 只能以字符串在运行时打进 `<style>`。
+		* 保留本文件只为两件事：
+		*  ① 固定本插件的 `<style>` id（多插件同页互不覆盖）；
+		*  ② 给历史调用点（`ensureXxxStyle()` / `applyStyle`）一个过渡入口。
+		* 注入机制、域排序、token 表都不再在本仓实现 —— 真源是
+		* `dsh-plugin-core/design`（`createStyleKit` + `tokens.css`）。
 		*
-		* 本模块把「各文件自己 createElement('style')」收成**唯一入口**：
-		*  - 全站只有**一个** `<style id="dsh-task-dispatch-table-ui">`；
-		*  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` /
-		*    `domain:records`（执行记录时间轴）/ `domain:taskpicker`（任务选择器）…），
-		*    同一域重复登记 = 覆盖（后写胜），便于过渡期逐块搬；
-		*  - `tokens` 域恒排最前 —— 变量定义必须先于消费它的规则出现（同一条 style 内也讲先后）；
-		*  - 幂等：重复调用不重复插入；`registerStyle` 在标签已挂上时会立刻刷新内容。
-		*
-		* 三条硬规矩（docs/design/ui-style-guide.md）：
-		*  ① 不许再有第二处 `document.createElement('style')`；
-		*  ② 不许再出现第二套 style 标签 id；
-		*  ③ 域内的规则只能消费 `var(--tdt-*)`（颜色 / 尺寸 / 字号一律来自 token 层）。
+		* 规矩：全站仍然只有**一处**注入器（kit 的标签），业务文件不许自己
+		* `document.createElement('style')`，也不许再定义 `--dshpc-*`。
 		*/
-		/** 全站唯一的样式标签 id（改名 = 大范围回归，不要动）。 */
+		/** 本插件的样式标签 id（改名 = 大范围回归，不要动）。 */
 		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
-		/** 契约：域 → CSS 文本（插入顺序 = 首次登记顺序，`tokens` 恒最前）。 */
-		const domains = /* @__PURE__ */ new Map();
-		/** token 域固定名（`ui/index.ts` 的 ensureUiBase 用它登记变量表）。 */
+		/** token 域固定名（kit 内 `tokens` 恒排最前）。 */
 		const TOKENS_DOMAIN = "tokens";
-		/** 已挂载的 style 标签（缓存引用；被外部移除时 ensureUiStyles 会重新接管）。 */
-		let tag$1 = null;
-		/** 内容是否落后于 domains（登记后置位，flush 后清除）。 */
-		let dirty = true;
-		/** 按「tokens 优先、其余按登记顺序」拼出整条 CSS。 */
-		function buildCss() {
-			const entries = [...domains.entries()];
-			entries.sort((a, b) => a[0] === "tokens" ? -1 : b[0] === "tokens" ? 1 : 0);
-			return entries.map(([, css]) => css).join("\n");
-		}
-		/** 把最新内容写进标签（唯一写点）。 */
-		function flush() {
-			if (tag$1 === null) return;
-			tag$1.textContent = buildCss();
-			dirty = false;
-		}
-		/**
-		* 登记一个域的样式（纯登记，不强制挂载）。
-		*
-		* @param domain 域名（见本文件头部的清单）；同名重复登记 = 覆盖。
-		* @param css 该域的 CSS 文本。
-		*/
+		setStyleKit(createStyleKit({ id: UI_STYLE_ID }));
+		const active = getStyleKit();
+		/** 登记一个域的样式（同名重复登记 = 覆盖）。 */
 		function registerStyle(domain, css) {
-			if (domains.get(domain) === css) return;
-			domains.set(domain, css);
-			dirty = true;
-			if (tag$1 !== null && tag$1.isConnected) flush();
+			active.registerStyle(domain, css);
 		}
-		/**
-		* 确保样式已挂载且是最新（幂等；无 document / 无 head 的环境静默跳过）。
-		*/
+		/** 确保标签已挂载且内容最新（幂等）。 */
 		function ensureUiStyles() {
-			if (typeof document === "undefined") return;
-			if (tag$1 === null || !tag$1.isConnected) {
-				const found = document.getElementById(UI_STYLE_ID);
-				if (found !== null) tag$1 = found;
-				else {
-					const head = document.head;
-					if (head === null) return;
-					const el = document.createElement("style");
-					el.id = UI_STYLE_ID;
-					head.appendChild(el);
-					tag$1 = el;
-				}
-				dirty = true;
-			}
-			if (dirty) flush();
+			active.ensureStyles();
 		}
-		/**
-		* 过渡期便捷入口：登记 + 立刻确保挂载（老 `ensureXxxStyle()` 一行替换成这个）。
-		*
-		* @param domain 域名。
-		* @param css 该域的 CSS 文本。
-		*/
+		/** 登记 + 立刻确保挂载。 */
 		function applyStyle(domain, css) {
-			registerStyle(domain, css);
-			ensureUiStyles();
+			active.applyStyle(domain, css);
 		}
-		/**
-		* 入口 / 组件调用一次即可：登记 token 层并确保样式已注入（幂等）。
-		*
-		* 放在本文件（而不是 index.ts）是为了让 `ui/` 内的组件也能直接调用它而不产生循环依赖。
-		*/
+		/** 登记核心 token 层并确保样式已注入（幂等）。 */
 		function ensureUiBase() {
-			registerStyle(TOKENS_DOMAIN, UI_TOKENS_CSS);
+			registerStyle(TOKENS_DOMAIN, active.tokensCss);
 			ensureUiStyles();
 		}
 		//#endregion
@@ -1957,9 +1751,9 @@ body[data-ds-dark-theme]{
 		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
 		*
 		* 规矩（docs/design/ui-style-guide.md §三）：
-		*  - **只消费 `var(--tdt-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
+		*  - **只消费 `var(--dshpc-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
 		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达（本文件的 `--seg-*`）；
-		*  - 高度只取 `--tdt-control-h-sm` / `-md` / `-lg` 三档（段高 = 控件总高 − 6px：上下 padding 2px×2 + 描边 1px×2；真不够用才在调用点本地覆盖 `--tdt-control-h-*`，属例外）。
+		*  - 高度只取 `--dshpc-control-h-sm` / `-md` / `-lg` 三档（段高 = 控件总高 − 6px：上下 padding 2px×2 + 描边 1px×2；真不够用才在调用点本地覆盖 `--dshpc-control-h-*`，属例外）。
 		*
 		* 分期：P1 只有分段控件（滑动块）；P2 按钮 / P3 输入下拉 / P4 开关日期时间会往本文件追加，
 		* 追加时保持「一段一控件、段头写清哪一期」的写法。
@@ -1977,20 +1771,20 @@ body[data-ds-dark-theme]{
    几何 = 段高 = token − 6px（上下各 2px padding + 1px 边框）；default 真边框 1px + padding 2px，
    inset 无边框故 padding 收 3px 把缺的 1px 补回，两种外观总高都 == token（24/28/32），不再多 +2px。
    以后 Button / Input 的有边 / 无边同此规则。 */
-.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:var(--tdt-radius-md);background:var(--seg-track);}
-.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
-.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:3px;}
+.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:var(--dshpc-radius-md);background:var(--seg-track);}
+.dsh-tdt-seg--default{--seg-track:var(--dshpc-surface-2);--seg-thumb:var(--dshpc-surface-raised);border:1px solid var(--dshpc-border);}
+.dsh-tdt-seg--inset{--seg-track:var(--dshpc-hover);--seg-thumb:var(--dshpc-surface-raised);border:0;padding:3px;}
 
 .dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
-  height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--tdt-radius-sm);
-  background:transparent;color:var(--tdt-fg-2);font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
+  height:calc(var(--dshpc-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--dshpc-radius-sm);
+  background:transparent;color:var(--dshpc-fg-2);font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);
   font-weight:400;white-space:nowrap;cursor:pointer;
-  transition:color var(--tdt-dur-fast) var(--tdt-ease),background-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-md) - 6px);}
-.dsh-tdt-seg--lg .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-lg) - 6px);}
-.dsh-tdt-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--tdt-fg);}
-.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--tdt-shadow-raised);color:var(--tdt-fg);font-weight:600;}
-.dsh-tdt-seg__item:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
+  transition:color var(--dshpc-dur-fast) var(--dshpc-ease),background-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--dshpc-control-h-md) - 6px);}
+.dsh-tdt-seg--lg .dsh-tdt-seg__item{height:calc(var(--dshpc-control-h-lg) - 6px);}
+.dsh-tdt-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--dshpc-fg);}
+.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--dshpc-shadow-raised);color:var(--dshpc-fg);font-weight:600;}
+.dsh-tdt-seg__item:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px;}
 .dsh-tdt-seg__item:disabled{cursor:default;opacity:.4;}
 
 /* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染。
@@ -1999,7 +1793,7 @@ body[data-ds-dark-theme]{
    数字缩到 10px 塞得下；不再用 min-width + 左右 padding（那会让宽度随位数增长变椭圆）。 */
 .dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;flex:none;
   width:16px;height:16px;padding:0;overflow:hidden;
-  border-radius:50%;background:var(--tdt-danger);color:var(--tdt-on-signal);
+  border-radius:50%;background:var(--dshpc-danger);color:var(--dshpc-on-signal);
   font-size:10px;line-height:16px;font-weight:500;font-variant-numeric:tabular-nums;}
 
 /* block：撑满父宽（表单行用），各段等分 */
@@ -2009,80 +1803,80 @@ body[data-ds-dark-theme]{
 /* weekday：星期多选方块（任务新增 / 编辑页）。基础插件的特殊化定制（用户 2026-10-01 明确要求：
    原 WeekdayPicker 即「蓝底 + 近似方形」，统一到 Segmented 后由这一修饰类补回两处差异）：
    - 每格做成正方形（宽 = 段高）；
-   - 选中态用品牌蓝（--tdt-business）、反白字，轨道用 hover 灰（与原自绘轨道一致）。
+   - 选中态用品牌蓝（--dshpc-business）、反白字，轨道用 hover 灰（与原自绘轨道一致）。
    皮肤集中在此、不内联；调用点只挂 .dsh-tdt-seg--weekday 一个修饰类，符合「皮肤只在 controls-css」的规矩。 */
-.dsh-tdt-seg--weekday{--seg-track:var(--tdt-hover);}
-.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--tdt-control-h-lg) - 6px);padding:0;justify-content:center;}
-.dsh-tdt-seg--weekday .dsh-tdt-seg__item[aria-pressed='true']{background:var(--tdt-business);color:var(--tdt-fg-inverse);box-shadow:var(--tdt-shadow-raised);}
+.dsh-tdt-seg--weekday{--seg-track:var(--dshpc-hover);}
+.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--dshpc-control-h-lg) - 6px);padding:0;justify-content:center;}
+.dsh-tdt-seg--weekday .dsh-tdt-seg__item[aria-pressed='true']{background:var(--dshpc-business);color:var(--dshpc-fg-inverse);box-shadow:var(--dshpc-shadow-raised);}
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
 `;
 		/** 按钮 / 图标钮的皮肤规则（P2）。 */
 		const BUTTON_CSS = `
 /* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────
-   与 Segmented 同一条高度纪律：--tdt-control-h-sm(24) / -md(28) / -lg(32)，
+   与 Segmented 同一条高度纪律：--dshpc-control-h-sm(24) / -md(28) / -lg(32)，
    有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。
    variant 只换颜色，结构 / 尺寸 / 交互只此一份。 */
-.dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--tdt-space-1);
-  box-sizing:border-box;border:1px solid transparent;border-radius:var(--tdt-radius-md);
-  background:transparent;color:var(--tdt-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;
-  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-btn--sm{height:var(--tdt-control-h-sm);padding:0 10px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
-.dsh-tdt-btn--md{height:var(--tdt-control-h-md);padding:0 12px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-btn--lg{height:var(--tdt-control-h-lg);padding:0 14px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--dshpc-space-1);
+  box-sizing:border-box;border:1px solid transparent;border-radius:var(--dshpc-radius-md);
+  background:transparent;color:var(--dshpc-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;
+  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),opacity var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-btn--sm{height:var(--dshpc-control-h-sm);padding:0 10px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
+.dsh-tdt-btn--md{height:var(--dshpc-control-h-md);padding:0 12px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-btn--lg{height:var(--dshpc-control-h-lg);padding:0 14px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
 .dsh-tdt-btn__icon{display:inline-flex;align-items:center;flex:none;}
 
-.dsh-tdt-btn--primary{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
+.dsh-tdt-btn--primary{background:var(--dshpc-accent);color:var(--dshpc-fg-inverse);}
 .dsh-tdt-btn--primary:hover:not(:disabled){opacity:.9;}
-.dsh-tdt-btn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border-strong);color:var(--tdt-fg);}
-.dsh-tdt-btn--outline:hover:not(:disabled){background:var(--tdt-hover);}
-.dsh-tdt-btn--ghost{color:var(--tdt-fg-2);}
-.dsh-tdt-btn--ghost:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
-.dsh-tdt-btn--danger{background:var(--tdt-danger);color:var(--tdt-on-signal);}
+.dsh-tdt-btn--outline{background:var(--dshpc-surface-1);border-color:var(--dshpc-border-strong);color:var(--dshpc-fg);}
+.dsh-tdt-btn--outline:hover:not(:disabled){background:var(--dshpc-hover);}
+.dsh-tdt-btn--ghost{color:var(--dshpc-fg-2);}
+.dsh-tdt-btn--ghost:hover:not(:disabled){background:var(--dshpc-hover);color:var(--dshpc-fg);}
+.dsh-tdt-btn--danger{background:var(--dshpc-danger);color:var(--dshpc-on-signal);}
 .dsh-tdt-btn--danger:hover:not(:disabled){opacity:.9;}
 /* danger-ink：红字描边（破坏性次要操作，如卡片上的「删除」），挂与 outline 组合的修饰类 */
-.dsh-tdt-btn--danger-ink{border-color:var(--tdt-danger);color:var(--tdt-danger);}
-.dsh-tdt-btn--danger-ink:hover:not(:disabled){background:color-mix(in srgb,var(--tdt-danger) 10%,transparent);color:var(--tdt-danger);}
+.dsh-tdt-btn--danger-ink{border-color:var(--dshpc-danger);color:var(--dshpc-danger);}
+.dsh-tdt-btn--danger-ink:hover:not(:disabled){background:color-mix(in srgb,var(--dshpc-danger) 10%,transparent);color:var(--dshpc-danger);}
 /* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */
-.dsh-tdt-btn--link{height:auto;padding:0;border:0;background:none;color:var(--tdt-link);font-weight:400;text-align:left;}
-.dsh-tdt-btn--link:hover:not(:disabled){background:none;color:var(--tdt-link);text-decoration:underline;}
-.dsh-tdt-btn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-btn--link{height:auto;padding:0;border:0;background:none;color:var(--dshpc-link);font-weight:400;text-align:left;}
+.dsh-tdt-btn--link:hover:not(:disabled){background:none;color:var(--dshpc-link);text-decoration:underline;}
+.dsh-tdt-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
 .dsh-tdt-btn:disabled{cursor:default;opacity:.5;}
 
 .dsh-tdt-iconbtn{appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;
-  border:1px solid transparent;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg-2);
+  border:1px solid transparent;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);
   font-family:inherit;cursor:pointer;flex:none;
-  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-iconbtn--sm{width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);font-size:var(--tdt-font-sm);}
-.dsh-tdt-iconbtn--md{width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);font-size:var(--tdt-font-md);}
-.dsh-tdt-iconbtn--lg{width:var(--tdt-control-h-lg);height:var(--tdt-control-h-lg);font-size:var(--tdt-font-md);}
-.dsh-tdt-iconbtn--plain{color:var(--tdt-fg-2);}
-.dsh-tdt-iconbtn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border);color:var(--tdt-fg-2);}
-.dsh-tdt-iconbtn--danger{color:var(--tdt-danger);}
-.dsh-tdt-iconbtn:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
-.dsh-tdt-iconbtn--danger:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-danger);}
-.dsh-tdt-iconbtn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),opacity var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-iconbtn--sm{width:var(--dshpc-control-h-sm);height:var(--dshpc-control-h-sm);font-size:var(--dshpc-font-sm);}
+.dsh-tdt-iconbtn--md{width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);font-size:var(--dshpc-font-md);}
+.dsh-tdt-iconbtn--lg{width:var(--dshpc-control-h-lg);height:var(--dshpc-control-h-lg);font-size:var(--dshpc-font-md);}
+.dsh-tdt-iconbtn--plain{color:var(--dshpc-fg-2);}
+.dsh-tdt-iconbtn--outline{background:var(--dshpc-surface-1);border-color:var(--dshpc-border);color:var(--dshpc-fg-2);}
+.dsh-tdt-iconbtn--danger{color:var(--dshpc-danger);}
+.dsh-tdt-iconbtn:hover:not(:disabled){background:var(--dshpc-hover);color:var(--dshpc-fg);}
+.dsh-tdt-iconbtn--danger:hover:not(:disabled){background:var(--dshpc-hover);color:var(--dshpc-danger);}
+.dsh-tdt-iconbtn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
 .dsh-tdt-iconbtn:disabled{cursor:default;opacity:.4;}
 
 /* ── 产出物「图标 chip」P2：28×28 方角小底板 + 官方文件类型图标 ──────────────
    用途：产出物列表里**只给图标**的小按钮（卡片「执行记录」面板、执行记录总查询页、展开区都挂它）。
    ⚠️ 底板**必须走 class**——inline background 会盖掉 :hover（用户 2026-10-03 踩过）。
-   hover 用 「--tdt-chip-bg-hover」：浅色更深、暗色更亮（两端都是「更明显」）；不许拿
-   「--tdt-plate-hover」 顶——暗色下反而更淡，鼠标移上去底板就消失了。
+   hover 用 「--dshpc-chip-bg-hover」：浅色更深、暗色更亮（两端都是「更明显」）；不许拿
+   「--dshpc-plate-hover」 顶——暗色下反而更淡，鼠标移上去底板就消失了。
    ✅ **全站唯一实现**（2026-10-04 收编）：此前卡片面板与执行记录页各写一份**同名不同皮**的
    「.dsh-tdt-rec-out」，两份 CSS 都注入同一页面 ⇒ 谁后注册谁生效、互相污染；现已收成这一份。 */
 .dsh-tdt-chip{appearance:none;-webkit-appearance:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
-  width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);padding:0;border:none;border-radius:var(--tdt-radius-sm);
-  background:transparent;color:var(--tdt-fg-2);font-family:inherit;line-height:0;cursor:pointer;
-  transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
+  width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);padding:0;border:none;border-radius:var(--dshpc-radius-sm);
+  background:transparent;color:var(--dshpc-fg-2);font-family:inherit;line-height:0;cursor:pointer;
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
 /* 底板**平时透明、鼠标移上去才浮出来**（用户 2026-10-04：「那个带底色的框，鼠标移上去才有」）。
    只给图标、没有文字可读 ⇒ hover 用更明显的那档（浅色更深、暗色更亮，两端都是「更明显」）。 */
-.dsh-tdt-chip:hover:not(:disabled){background:var(--tdt-chip-bg-hover);}
-.dsh-tdt-chip:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
+.dsh-tdt-chip:hover:not(:disabled){background:var(--dshpc-chip-bg-hover);}
+.dsh-tdt-chip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
 /* 不可点（没有会话 / 预览面未就位）：没有底板、没有手指，别给假入口 */
-.dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--tdt-fg-3);}
+.dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
 /* 文字型 chip（「…」 / 「+N」）：不固定方宽，按内容撑开 */
-.dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
 
 /* ── 行式文件按钮（图标 + 文件名）P2：**全站唯一实现**（2026-10-04 收编）──────────
    用途：「产出物 / 附件」那种**一行一个文件**的清单项（基础信息右栏产出物清单、附件区、
@@ -2092,74 +1886,74 @@ body[data-ds-dark-theme]{
      --inline  内容宽（跟在文字后头，如附件行）
    收编原因：这份皮肤此前只写在 task-list.tsx 的 TASK_LIST_CSS 里（旧名 .dsh-tdt-info-out），
    执行记录页展开区要用同一种观感 ⇒ 上提基础层，避免再出现「各写一份外观」（同名不同皮的坑刚踩过）。 */
-.dsh-tdt-filechip{appearance:none;-webkit-appearance:none;border:0;border-radius:var(--tdt-radius-xs);
-  background:transparent;color:var(--tdt-fg);font:inherit;text-align:left;cursor:pointer;min-width:0;
-  transition:background-color var(--tdt-dur) var(--tdt-ease);}
-.dsh-tdt-filechip:hover:not(:disabled){background:var(--tdt-chip-bg);}
-.dsh-tdt-filechip:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
-.dsh-tdt-filechip:disabled{cursor:default;background:transparent;color:var(--tdt-fg-3);}
+.dsh-tdt-filechip{appearance:none;-webkit-appearance:none;border:0;border-radius:var(--dshpc-radius-xs);
+  background:transparent;color:var(--dshpc-fg);font:inherit;text-align:left;cursor:pointer;min-width:0;
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease);}
+.dsh-tdt-filechip:hover:not(:disabled){background:var(--dshpc-chip-bg);}
+.dsh-tdt-filechip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
+.dsh-tdt-filechip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
 .dsh-tdt-filechip--block{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;
-  padding:4px 6px;font-size:var(--tdt-font-xs);}
-.dsh-tdt-filechip--inline{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;font-size:var(--tdt-font-sm);}
+  padding:4px 6px;font-size:var(--dshpc-font-xs);}
+.dsh-tdt-filechip--inline{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;font-size:var(--dshpc-font-sm);}
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn,.dsh-tdt-chip,.dsh-tdt-filechip{transition:none;}}
 `;
 		/** 输入 / 前缀输入 / 数字步进的皮肤规则（P3）。 */
 		const FIELD_CSS = `
 /* ── 输入类 P3 ────────────────────────────────────────────────────────── */
-.dsh-tdt-input{box-sizing:border-box;border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-md);
-  background:var(--tdt-surface-1);color:var(--tdt-fg);font-family:inherit;outline:none;
-  transition:border-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-input--sm{height:var(--tdt-control-h-sm);padding:0 8px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
-.dsh-tdt-input--md{height:var(--tdt-control-h-md);padding:0 10px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-input--lg{height:var(--tdt-control-h-lg);padding:0 12px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-input::placeholder{color:var(--tdt-fg-dim);}
-.dsh-tdt-input:focus{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
-.dsh-tdt-input--error{border-color:var(--tdt-danger);}
+.dsh-tdt-input{box-sizing:border-box;border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-md);
+  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font-family:inherit;outline:none;
+  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-input--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
+.dsh-tdt-input--md{height:var(--dshpc-control-h-md);padding:0 10px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-input--lg{height:var(--dshpc-control-h-lg);padding:0 12px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-input::placeholder{color:var(--dshpc-fg-dim);}
+.dsh-tdt-input:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}
+.dsh-tdt-input--error{border-color:var(--dshpc-danger);}
 .dsh-tdt-input:disabled{cursor:default;opacity:.5;}
 
 .dsh-tdt-pfx{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
-  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-md);background:var(--tdt-surface-1);color:var(--tdt-fg);}
-.dsh-tdt-pfx--sm{height:var(--tdt-control-h-sm);}
-.dsh-tdt-pfx--md{height:var(--tdt-control-h-md);}
-.dsh-tdt-pfx--lg{height:var(--tdt-control-h-lg);}
+  border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg);}
+.dsh-tdt-pfx--sm{height:var(--dshpc-control-h-sm);}
+.dsh-tdt-pfx--md{height:var(--dshpc-control-h-md);}
+.dsh-tdt-pfx--lg{height:var(--dshpc-control-h-lg);}
 /* md / lg 档字号跟档走（与同档下拉同字号）：此前写死 sm(12px)，同排下拉是 13px ⇒ 显得「input 字小」。 */
-.dsh-tdt-pfx--md .dsh-tdt-pfx__label,.dsh-tdt-pfx--lg .dsh-tdt-pfx__label{font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-pfx--md .dsh-tdt-pfx__input,.dsh-tdt-pfx--lg .dsh-tdt-pfx__input{font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-pfx--error{border-color:var(--tdt-danger);}
-.dsh-tdt-pfx:focus-within{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
-.dsh-tdt-pfx__label{padding:0 8px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;border-right:1px solid var(--tdt-border);}
-.dsh-tdt-pfx__input{flex:1 1 auto;min-width:0;height:100%;padding:0 8px;border:0;background:transparent;color:var(--tdt-fg);
-  font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);outline:none;}
-.dsh-tdt-pfx__input::placeholder{color:var(--tdt-fg-dim);}
+.dsh-tdt-pfx--md .dsh-tdt-pfx__label,.dsh-tdt-pfx--lg .dsh-tdt-pfx__label{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-pfx--md .dsh-tdt-pfx__input,.dsh-tdt-pfx--lg .dsh-tdt-pfx__input{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-pfx--error{border-color:var(--dshpc-danger);}
+.dsh-tdt-pfx:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}
+.dsh-tdt-pfx__label{padding:0 8px;color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);white-space:nowrap;border-right:1px solid var(--dshpc-border);}
+.dsh-tdt-pfx__input{flex:1 1 auto;min-width:0;height:100%;padding:0 8px;border:0;background:transparent;color:var(--dshpc-fg);
+  font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);outline:none;}
+.dsh-tdt-pfx__input::placeholder{color:var(--dshpc-fg-dim);}
 
 .dsh-tdt-num{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
-  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-md);background:var(--tdt-surface-1);color:var(--tdt-fg);}
-.dsh-tdt-num--sm{height:var(--tdt-control-h-sm);}
-.dsh-tdt-num--md{height:var(--tdt-control-h-md);}
-.dsh-tdt-num--lg{height:var(--tdt-control-h-lg);}
-.dsh-tdt-num--md .dsh-tdt-num__input,.dsh-tdt-num--lg .dsh-tdt-num__input{font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-num--md .dsh-tdt-num__suffix,.dsh-tdt-num--lg .dsh-tdt-num__suffix{font-size:var(--tdt-font-md);}
+  border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg);}
+.dsh-tdt-num--sm{height:var(--dshpc-control-h-sm);}
+.dsh-tdt-num--md{height:var(--dshpc-control-h-md);}
+.dsh-tdt-num--lg{height:var(--dshpc-control-h-lg);}
+.dsh-tdt-num--md .dsh-tdt-num__input,.dsh-tdt-num--lg .dsh-tdt-num__input{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-num--md .dsh-tdt-num__suffix,.dsh-tdt-num--lg .dsh-tdt-num__suffix{font-size:var(--dshpc-font-md);}
 .dsh-tdt-num--disabled{opacity:.5;}
-.dsh-tdt-num__input{width:36px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
-  font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);text-align:center;outline:none;}
-.dsh-tdt-num__suffix{padding:0 6px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);white-space:nowrap;}
-.dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--tdt-fg-2);}
+.dsh-tdt-num__input{width:36px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--dshpc-fg);
+  font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);text-align:center;outline:none;}
+.dsh-tdt-num__suffix{padding:0 6px;color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm);white-space:nowrap;}
+.dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--dshpc-fg-2);}
 
 /* 官方 Switch 包装统一：选中 = success 绿。
    （合并原先 task-editor-css / task-list 两处就地覆盖；选择器带包装类 + role，特异性高于官方。） */
-.dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--tdt-success);}
+.dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
 
 /* 多行文本输入（提示词等，P3）：卡内无边框（视觉重心在整张卡上），占位色走 dimmed；校验不通过描红盒。
    （从 task-editor-css 的 .dsh-tdt-ed-prompt 上提而来；业务文件不再自写 textarea 皮肤。） */
-.dsh-tdt-textarea{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-lg);line-height:1.6;resize:vertical;}
-.dsh-tdt-textarea::placeholder{color:var(--tdt-fg-dim);}
-.dsh-tdt-textarea--error{box-shadow:0 0 0 1px var(--tdt-danger);}
+.dsh-tdt-textarea{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--dshpc-fg);font:inherit;font-size:var(--dshpc-font-lg);line-height:1.6;resize:vertical;}
+.dsh-tdt-textarea::placeholder{color:var(--dshpc-fg-dim);}
+.dsh-tdt-textarea--error{box-shadow:0 0 0 1px var(--dshpc-danger);}
 
 /* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
    具体 z-index 由 .dsh-tdt-ed-resizer / .dsh-tdt-sv-resizer 各自补。 */
 .dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
-.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover,rgba(38,49,72,.06));}
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
 `;
@@ -2169,52 +1963,52 @@ body[data-ds-dark-theme]{
 .dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
 /* ⚠️ 边框粗细 / 圆角必须与下拉锚点（dsh-tdt-ed-field 的 fieldButtonStyle）完全一致
    （用户 2026-10-02 点名：同排的日期框与下拉框看着不是一套）⇒ 这里也是 0.5px + radius-md。 */
-.dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--tdt-control-h-lg);
-  min-width:0;max-width:100%;padding:0 8px;border:0.5px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md);
-  background:var(--tdt-surface-1);color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);
-  cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--dshpc-control-h-lg);
+  min-width:0;max-width:100%;padding:0 8px;border:0.5px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);
+  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font:inherit;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);
+  cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease);}
 /* 日期 / 时间锚点：三档高度（默认 lg=32）。base 已含 lg 高度作兜底，下面三档按 size 覆盖。 */
-.dsh-tdt-dtf--sm{height:var(--tdt-control-h-sm);padding:0 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
-.dsh-tdt-dtf--md{height:var(--tdt-control-h-md);padding:0 8px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-dtf--lg{height:var(--tdt-control-h-lg);padding:0 8px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-dtf:hover:not(:disabled){background:var(--tdt-hover);}
-.dsh-tdt-dtf:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-dtf--sm{height:var(--dshpc-control-h-sm);padding:0 6px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
+.dsh-tdt-dtf--md{height:var(--dshpc-control-h-md);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-dtf--lg{height:var(--dshpc-control-h-lg);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-dtf:hover:not(:disabled){background:var(--dshpc-hover);}
+.dsh-tdt-dtf:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
 .dsh-tdt-dtf:disabled{cursor:not-allowed;opacity:.6;}
 .dsh-tdt-dtf__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
-.dsh-tdt-dtf__label--ph{color:var(--tdt-fg-dim);}
-.dsh-tdt-dtf__icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:none;color:var(--tdt-fg-3);}
+.dsh-tdt-dtf__label--ph{color:var(--dshpc-fg-dim);}
+.dsh-tdt-dtf__icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:none;color:var(--dshpc-fg-3);}
 
-.dsh-tdt-layer{position:fixed;z-index:var(--tdt-z-menu);box-sizing:border-box;padding:8px;background:var(--tdt-surface-1);
-  box-shadow:var(--tdt-shadow-2);border-radius:var(--tdt-radius-md);color:var(--tdt-fg);font-size:var(--tdt-font-md);}
+.dsh-tdt-layer{position:fixed;z-index:var(--dshpc-z-menu);box-sizing:border-box;padding:8px;background:var(--dshpc-surface-1);
+  box-shadow:var(--dshpc-shadow-2);border-radius:var(--dshpc-radius-md);color:var(--dshpc-fg);font-size:var(--dshpc-font-md);}
 
 .dsh-tdt-cal__head{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px;}
-.dsh-tdt-cal__title{flex:1 1 auto;text-align:center;font-size:var(--tdt-font-md);font-weight:600;color:var(--tdt-fg);}
+.dsh-tdt-cal__title{flex:1 1 auto;text-align:center;font-size:var(--dshpc-font-md);font-weight:600;color:var(--dshpc-fg);}
 .dsh-tdt-cal__grid{display:grid;grid-template-columns:repeat(7,32px);gap:2px;}
-.dsh-tdt-cal__weekday{height:24px;display:flex;align-items:center;justify-content:center;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
+.dsh-tdt-cal__weekday{height:24px;display:flex;align-items:center;justify-content:center;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3);}
 .dsh-tdt-cal__cell{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;
-  border:1px solid transparent;border-radius:var(--tdt-radius-md);background:transparent;color:var(--tdt-fg);
-  font:inherit;font-size:var(--tdt-font-md);cursor:pointer;
-  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-cal__cell--hover{background:var(--tdt-hover);}
-.dsh-tdt-cal__cell--out{color:var(--tdt-fg-dim);}
-.dsh-tdt-cal__cell--today{border-color:var(--tdt-business);}
-.dsh-tdt-cal__cell[aria-pressed='true']{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
-.dsh-tdt-cal__foot{margin-top:6px;padding-top:6px;border-top:1px solid var(--tdt-border);}
+  border:1px solid transparent;border-radius:var(--dshpc-radius-md);background:transparent;color:var(--dshpc-fg);
+  font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;
+  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-cal__cell--hover{background:var(--dshpc-hover);}
+.dsh-tdt-cal__cell--out{color:var(--dshpc-fg-dim);}
+.dsh-tdt-cal__cell--today{border-color:var(--dshpc-business);}
+.dsh-tdt-cal__cell[aria-pressed='true']{background:var(--dshpc-accent);color:var(--dshpc-fg-inverse);}
+.dsh-tdt-cal__foot{margin-top:6px;padding-top:6px;border-top:1px solid var(--dshpc-border);}
 
 .dsh-tdt-time__cols{display:flex;gap:4px;}
 .dsh-tdt-time__list{width:56px;max-height:196px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
-.dsh-tdt-time__opt{padding:5px 0;border:0;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg-2);
-  font:inherit;font-size:var(--tdt-font-md);cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-time__opt[aria-selected='true']{background:var(--tdt-hover);color:var(--tdt-fg);font-weight:600;}
-.dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--tdt-border);}
+.dsh-tdt-time__opt{padding:5px 0;border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);
+  font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-time__opt[aria-selected='true']{background:var(--dshpc-hover);color:var(--dshpc-fg);font-weight:600;}
+.dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--dshpc-border);}
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-cal__cell,.dsh-tdt-time__opt{transition:none;}}
 `;
 		/** 下拉锚点 / 跑马灯的皮肤规则（P6：原 editor-fields 内联 + task-editor-css 迁入基础层）。 */
 		const SELECT_CSS = `
 /* 下拉 / 日历 / 时分锚点：键盘可达性描边 + 校验描红（类名从业务层沿用，皮肤归位基础层） */
-.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--tdt-business);outline-offset:1px;}
-.dsh-tdt-ed-field--error{border-color:var(--tdt-danger)!important;box-shadow:0 0 0 1px var(--tdt-danger);}
+.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dshpc-business);outline-offset:1px;}
+.dsh-tdt-ed-field--error{border-color:var(--dshpc-danger)!important;box-shadow:0 0 0 1px var(--dshpc-danger);}
 /* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满 */
 .dsh-tdt-ed-selectwrap{width:100%;}
 
@@ -2238,11 +2032,11 @@ body[data-ds-dark-theme]{
    不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用 .dsh-tdt-filechip--inline。 */
 .dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
 .dsh-tdt-proc-head{appearance:none;-webkit-appearance:none;align-self:flex-start;display:inline-flex;align-items:center;
-  gap:6px;padding:2px 6px;border:0;border-radius:var(--tdt-radius-xs);background:transparent;color:var(--tdt-fg-3);
-  font:inherit;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);cursor:pointer;
-  transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
-.dsh-tdt-proc-head:hover{background:var(--tdt-chip-bg);color:var(--tdt-fg-2);}
-.dsh-tdt-proc-head:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
+  gap:6px;padding:2px 6px;border:0;border-radius:var(--dshpc-radius-xs);background:transparent;color:var(--dshpc-fg-3);
+  font:inherit;font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);cursor:pointer;
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
+.dsh-tdt-proc-head:hover{background:var(--dshpc-chip-bg);color:var(--dshpc-fg-2);}
+.dsh-tdt-proc-head:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
 .dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-proc-head{transition:none;}}
@@ -2262,7 +2056,7 @@ body[data-ds-dark-theme]{
 		*
 		* 它是「同一份结构 + 两个受控轴」的样板：
 		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— **离散三档**，调用点**不许**自己写高度
-		*    （真不够用才允许在调用点本地覆盖 `--tdt-control-h-*`，属例外而非常态）；
+		*    （真不够用才允许在调用点本地覆盖 `--dshpc-control-h-*`，属例外而非常态）；
 		*  - `variant`：`default`（纯黑面：轨道=第二层面 + 外描边）/ `inset`（灰底面：抄「版本」开关观感，
 		*    轨道=交互灰 hover 底、无外描边）—— 两套都保留、不合并；变体只改两个颜色变量，结构 / 尺寸 / 交互规则零重复。
 		*
@@ -2323,7 +2117,7 @@ body[data-ds-dark-theme]{
 		*
 		* 两轴模型（同 Segmented）：
 		*  - `variant`：`primary`（实心强调）/ `outline`（描边中性）/ `ghost`（无底无边）/ `danger`（实心红，破坏性确认）
-		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— 高度一律吃 `--tdt-control-h-*`，**有边 / 无边同高**（边框在内部补回）
+		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— 高度一律吃 `--dshpc-control-h-*`，**有边 / 无边同高**（边框在内部补回）
 		*
 		* `IconButton` 是纯图标钮：`plain`（默认无底无边，hover 起灰底）/ `outline`（描边）/ `danger`（红）。
 		* 链接型文字钮 = `Button variant="ghost"` + 修饰类 `dsh-tdt-btn--link`（红字危险描边 = `outline` + `dsh-tdt-btn--danger-ink`）。
@@ -2431,7 +2225,7 @@ body[data-ds-dark-theme]{
 		* - `NumberInput`：数字步进（显式 `− / +`，替换原生 `<input type="number">` 的浏览器 spinner，
 		*   支持 step / min / max、clamp、Enter 提交、失焦回弹）。
 		*
-		* 高度一律吃 `--tdt-control-h-*`；有边 / 无边同高（边框在内部补回）。
+		* 高度一律吃 `--dshpc-control-h-*`；有边 / 无边同高（边框在内部补回）。
 		*/
 		function sizeClass(size) {
 			return size === "lg" ? "--lg" : size === "md" ? "--md" : "--sm";
@@ -2558,20 +2352,20 @@ body[data-ds-dark-theme]{
 			display: "inline-flex",
 			alignItems: "center",
 			gap: "6px",
-			height: "var(--tdt-control-h-lg)",
+			height: "var(--dshpc-control-h-lg)",
 			boxSizing: "border-box",
 			minWidth: 0,
 			maxWidth: "100%",
-			padding: "0 var(--tdt-space-2)",
-			border: "0.5px solid var(--tdt-border-heavy)",
-			borderRadius: "var(--tdt-radius-md)",
-			background: "var(--tdt-surface-1)",
-			color: "var(--tdt-fg)",
+			padding: "0 var(--dshpc-space-2)",
+			border: "0.5px solid var(--dshpc-border-heavy)",
+			borderRadius: "var(--dshpc-radius-md)",
+			background: "var(--dshpc-surface-1)",
+			color: "var(--dshpc-fg)",
 			font: "inherit",
-			fontSize: "var(--tdt-font-md)",
-			lineHeight: "var(--tdt-line-md)",
+			fontSize: "var(--dshpc-font-md)",
+			lineHeight: "var(--dshpc-line-md)",
 			cursor: "pointer",
-			transition: "background var(--tdt-dur-fast) var(--tdt-ease), color var(--tdt-dur-fast) var(--tdt-ease), border-color var(--tdt-dur-fast) var(--tdt-ease)"
+			transition: "background var(--dshpc-dur-fast) var(--dshpc-ease), color var(--dshpc-dur-fast) var(--dshpc-ease), border-color var(--dshpc-dur-fast) var(--dshpc-ease)"
 		};
 		/** 下拉锚点里那行文字（省略号三件套收敛到 `.dsh-tdt-ellipsis`，见 ui-style-guide §三 待抽象 #1）。 */
 		const FIELD_LABEL_STYLE = {
@@ -2582,11 +2376,11 @@ body[data-ds-dark-theme]{
 		/** 尺寸档 → 锚点几何（高度 / 字号 / 行高 / 图标 / 间距）。**翻译只此一处**，下拉类控件共用。 */
 		function fieldMetricsOf(size) {
 			return {
-				height: size === "sm" ? "var(--tdt-control-h-sm)" : size === "md" ? "var(--tdt-control-h-md)" : "var(--tdt-control-h-lg)",
-				font: size === "sm" ? "var(--tdt-font-sm)" : "var(--tdt-font-md)",
-				line: size === "sm" ? "var(--tdt-line-sm)" : "var(--tdt-line-md)",
+				height: size === "sm" ? "var(--dshpc-control-h-sm)" : size === "md" ? "var(--dshpc-control-h-md)" : "var(--dshpc-control-h-lg)",
+				font: size === "sm" ? "var(--dshpc-font-sm)" : "var(--dshpc-font-md)",
+				line: size === "sm" ? "var(--dshpc-line-sm)" : "var(--dshpc-line-md)",
 				icon: size === "sm" ? 14 : 16,
-				gap: size === "sm" ? "var(--tdt-space-1)" : "6px"
+				gap: size === "sm" ? "var(--dshpc-space-1)" : "6px"
 			};
 		}
 		function IconSeat(props) {
@@ -2597,7 +2391,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				justifyContent: "center",
 				flex: "none",
-				color: "var(--tdt-fg-3)"
+				color: "var(--dshpc-fg-3)"
 			} }, props.children);
 		}
 		/**
@@ -2641,7 +2435,7 @@ body[data-ds-dark-theme]{
 					lineHeight: metrics.line,
 					width: props.width ?? (props.block === true ? "100%" : void 0),
 					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
-					background: hover && usable ? "var(--tdt-hover)" : "var(--tdt-surface-1)",
+					background: hover && usable ? "var(--dshpc-hover)" : "var(--dshpc-surface-1)",
 					cursor: usable ? "pointer" : "not-allowed",
 					opacity: usable ? 1 : .6
 				}
@@ -2651,13 +2445,13 @@ body[data-ds-dark-theme]{
 				className: "dsh-tdt-ellipsis",
 				style: {
 					...FIELD_LABEL_STYLE,
-					color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+					color: current === void 0 ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
 				}
 			}) : (0, react$1.createElement)("span", {
 				className: "dsh-tdt-ellipsis",
 				style: {
 					...FIELD_LABEL_STYLE,
-					color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+					color: current === void 0 ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
 				}
 			}, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react$1.createElement)(IconSeat, null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
 			if (!usable) return anchor;
@@ -2702,29 +2496,29 @@ body[data-ds-dark-theme]{
 		*    字母键不拦 ⇒ 搜索框能正常打字；方向键在浮层内游走属预期（等同于下拉的键盘操作）。
 		*  - `autoFocus` 会把焦点抢到浮层第一个按钮（`:4038-4044`）⇒ **不用它**，打开后自己聚焦搜索框。
 		*/
-		/** 任务选择器浮层的皮肤规则（只消费 `var(--tdt-*)`，间距走 `--tdt-space-*`）。 */
+		/** 任务选择器浮层的皮肤规则（只消费 `var(--dshpc-*)`，间距走 `--dshpc-space-*`）。 */
 		const TASKPICKER_CSS = `
 /* ── 任务选择器（带搜索）────────────────────────────────────────────────
    结构：搜索行 + 列表 +「更多 / 收起」。浮层外壳由官方 Menu 提供，这里只管内容。
    ⚠️ 官方 MenuSurface 自带内边距与圆角 ⇒ 本面板不再套第二层壳，避免双层底。 */
-.dsh-tdt-tp{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:220px;max-width:340px;}
-.dsh-tdt-tp-search{display:flex;align-items:center;gap:var(--tdt-space-1);padding:0 var(--tdt-space-1);color:var(--tdt-fg-3);}
+.dsh-tdt-tp{display:flex;flex-direction:column;gap:var(--dshpc-space-1);min-width:220px;max-width:340px;}
+.dsh-tdt-tp-search{display:flex;align-items:center;gap:var(--dshpc-space-1);padding:0 var(--dshpc-space-1);color:var(--dshpc-fg-3);}
 .dsh-tdt-tp-search > span{display:inline-flex;flex:none;}
 /* 列表定高（内容区尺寸，属 ui-style-guide §三「已知例外」的内容区定高一类）。 */
 .dsh-tdt-tp-list{display:flex;flex-direction:column;max-height:264px;overflow-y:auto;}
-.dsh-tdt-tp-row{display:flex;align-items:center;gap:var(--tdt-space-2);width:100%;padding:6px var(--tdt-space-2);
-  border:0;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg);font:inherit;
-  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);text-align:left;cursor:pointer;}
-.dsh-tdt-tp-row:hover{background:var(--tdt-hover);}
+.dsh-tdt-tp-row{display:flex;align-items:center;gap:var(--dshpc-space-2);width:100%;padding:6px var(--dshpc-space-2);
+  border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg);font:inherit;
+  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);text-align:left;cursor:pointer;}
+.dsh-tdt-tp-row:hover{background:var(--dshpc-hover);}
 /* 键盘可达性：与其它控件同款描边（不得只靠 hover 表达可交互）。 */
-.dsh-tdt-tp-row:focus-visible,.dsh-tdt-tp-more:focus-visible{outline:2px solid var(--tdt-business);outline-offset:-2px;}
-.dsh-tdt-tp-row--on{color:var(--tdt-business);}
+.dsh-tdt-tp-row:focus-visible,.dsh-tdt-tp-more:focus-visible{outline:2px solid var(--dshpc-business);outline-offset:-2px;}
+.dsh-tdt-tp-row--on{color:var(--dshpc-business);}
 .dsh-tdt-tp-name{flex:1 1 auto;min-width:0;}
 .dsh-tdt-tp-check{flex:none;display:inline-flex;width:14px;align-items:center;justify-content:center;}
-.dsh-tdt-tp-more{border:0;border-top:1px solid var(--tdt-border-faint);margin-top:2px;padding:6px var(--tdt-space-2);
-  background:transparent;color:var(--tdt-business);font:inherit;font-size:var(--tdt-font-sm);text-align:left;cursor:pointer;}
-.dsh-tdt-tp-more:hover{background:var(--tdt-hover);}
-.dsh-tdt-tp-empty{padding:var(--tdt-space-2);color:var(--tdt-fg-3);font-size:var(--tdt-font-sm);text-align:center;}
+.dsh-tdt-tp-more{border:0;border-top:1px solid var(--dshpc-border-faint);margin-top:2px;padding:6px var(--dshpc-space-2);
+  background:transparent;color:var(--dshpc-business);font:inherit;font-size:var(--dshpc-font-sm);text-align:left;cursor:pointer;}
+.dsh-tdt-tp-more:hover{background:var(--dshpc-hover);}
+.dsh-tdt-tp-empty{padding:var(--dshpc-space-2);color:var(--dshpc-fg-3);font-size:var(--dshpc-font-sm);text-align:center;}
 `;
 		/** 皮肤域固定名（注入顺序在 controls 之后）。 */
 		const TASKPICKER_DOMAIN = "domain:taskpicker";
@@ -2806,7 +2600,7 @@ body[data-ds-dark-theme]{
 					fontSize: metrics.font,
 					lineHeight: metrics.line,
 					width: props.width,
-					background: hover && props.disabled !== true ? "var(--tdt-hover)" : "var(--tdt-surface-1)",
+					background: hover && props.disabled !== true ? "var(--dshpc-hover)" : "var(--dshpc-surface-1)",
 					cursor: props.disabled === true ? "not-allowed" : "pointer",
 					opacity: props.disabled === true ? .6 : 1
 				}
@@ -2816,12 +2610,12 @@ body[data-ds-dark-theme]{
 				className: "dsh-tdt-ellipsis",
 				style: {
 					...FIELD_LABEL_STYLE,
-					color: current === void 0 || props.value === "" ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+					color: current === void 0 || props.value === "" ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
 				}
 			}), outOfScope ? (0, react$1.createElement)("span", { style: {
 				flex: "none",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-warning)"
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-warning)"
 			} }, "!") : null, (0, react$1.createElement)("span", { style: {
 				display: "inline-flex",
 				width: `${metrics.icon}px`,
@@ -2829,7 +2623,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				justifyContent: "center",
 				flex: "none",
-				color: "var(--tdt-fg-3)"
+				color: "var(--dshpc-fg-3)"
 			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: metrics.icon })));
 			const allOpt = props.allOption;
 			const allRow = allOpt === void 0 ? null : (0, react$1.createElement)("button", {
@@ -2901,7 +2695,7 @@ body[data-ds-dark-theme]{
 		* 日期 / 时间控件 —— **全站唯一实现**（L2 组件皮肤，P4）
 		*
 		* 官方 primitives 没有日期 / 时间选择器 ⇒ 自绘日历弹层与时分列；结构、皮肤、交互只此一份，
-		* 颜色 / 尺寸 / 圆角 / 影全走 `--tdt-*`（`controls-css.ts` 的 DATETIME_CSS），明暗自适应。
+		* 颜色 / 尺寸 / 圆角 / 影全走 `--dshpc-*`（`controls-css.ts` 的 DATETIME_CSS），明暗自适应。
 		* 浮层定位 / 点外关闭走官方 `useAnchoredPosition` + `useDismissOnOutsidePointer`。
 		*/
 		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
@@ -3349,8 +3143,8 @@ body[data-ds-dark-theme]{
 			display: "inline-flex",
 			alignItems: "center",
 			gap: "4px",
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)",
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-fg-3)",
 			flex: "none"
 		};
 		/** 本机今天（`YYYY-MM-DD`）—— 分钟档里只选了时刻、没选日期时补的默认日期。 */
@@ -3483,7 +3277,7 @@ body[data-ds-dark-theme]{
 		* - 浮动 Loading pill（`<Loading />`）
 		* - 运行中 / loading 三个脉动小方块（`.dsh-tdt-run-blocks`）
 		*
-		* 消费 token：`--tdt-*`（颜色 / 尺寸 / 层级全部来自 tokens.ts）。
+		* 消费 token：`--dshpc-*`（颜色 / 尺寸 / 层级全部来自核心 token 层 `dsh-plugin-core/design`）。
 		*/
 		/** loading 样式域（由 `<Loading />` 渲染时登记）。 */
 		const LOADING_DOMAIN = "loading";
@@ -3525,18 +3319,18 @@ body[data-ds-dark-theme]{
 		const pillStyle = {
 			position: "fixed",
 			bottom: "16px",
-			zIndex: "var(--tdt-z-dock)",
+			zIndex: "var(--dshpc-z-dock)",
 			display: "inline-flex",
 			alignItems: "center",
 			gap: "6px",
 			padding: "5px 10px",
-			borderRadius: "var(--tdt-radius-md)",
-			background: "var(--tdt-surface-1)",
-			border: "1px solid var(--tdt-border)",
-			boxShadow: "var(--tdt-shadow-1, 0 2px 8px rgba(0,0,0,.12))",
-			color: "var(--tdt-fg-2)",
-			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-sm)",
+			borderRadius: "var(--dshpc-radius-md)",
+			background: "var(--dshpc-surface-1)",
+			border: "1px solid var(--dshpc-border)",
+			boxShadow: "var(--dshpc-shadow-1, 0 2px 8px rgba(0,0,0,.12))",
+			color: "var(--dshpc-fg-2)",
+			fontSize: "var(--dshpc-font-xs)",
+			lineHeight: "var(--dshpc-line-sm)",
 			pointerEvents: "none"
 		};
 		const RIGHT_MARGIN_PX = 0;
@@ -3616,7 +3410,7 @@ body[data-ds-dark-theme]{
 		* 勾选框（P3 输入类家族唯一实现；U20 #6，2026-10-05）。
 		*
 		* 以前确认弹窗里是裸 `<input type="checkbox">` + 业务内联样式，现上提为基础层件。
-		* 标记色默认随业务色；高危确认可传 `accentColor`（如 `var(--tdt-warning)`）染橙。
+		* 标记色默认随业务色；高危确认可传 `accentColor`（如 `var(--dshpc-warning)`）染橙。
 		*/
 		/** 勾选框（label + input 一体，整行可点）。 */
 		function Checkbox(props) {
@@ -3627,8 +3421,8 @@ body[data-ds-dark-theme]{
 					display: "flex",
 					alignItems: "flex-start",
 					gap: "8px",
-					fontSize: "var(--tdt-font-md)",
-					lineHeight: "var(--tdt-line-md)",
+					fontSize: "var(--dshpc-font-md)",
+					lineHeight: "var(--dshpc-line-md)",
 					cursor: disabled === true ? "default" : "pointer"
 				}
 			}, (0, react$1.createElement)("input", {
@@ -3638,7 +3432,7 @@ body[data-ds-dark-theme]{
 				style: {
 					flex: "none",
 					margin: "2px 0 0",
-					accentColor: accentColor ?? "var(--tdt-business)",
+					accentColor: accentColor ?? "var(--dshpc-business)",
 					width: "14px",
 					height: "14px",
 					cursor: disabled === true ? "default" : "pointer"
@@ -3656,7 +3450,7 @@ body[data-ds-dark-theme]{
 		* 覆盖范围：统一回顶部按钮 `<BackToTop />`。
 		* 行为约定：fixed 定位在主内容列**右缘外侧**、页面靠下；滚动超过阈值才显形（`.is-visible`）。
 		*
-		* 消费 token：`--tdt-*`（颜色 / 尺寸 / 圆角 / 字号 / 层级 / 动效全部来自 tokens.ts）。
+		* 消费 token：`--dshpc-*`（颜色 / 尺寸 / 圆角 / 字号 / 层级 / 动效全部来自核心 token 层 `dsh-plugin-core/design`）。
 		*/
 		/** back-to-top 样式域（由 `<BackToTop />` 渲染时登记）。 */
 		const BACK_TO_TOP_DOMAIN = "back-to-top";
@@ -3666,31 +3460,31 @@ body[data-ds-dark-theme]{
    横向 left 由组件按主内容列右缘实时算出（贴在其右侧外侧），不写死。 */
 .dsh-tdt-backtotop{
   position:fixed;
-  bottom:var(--tdt-space-4);
-  z-index:var(--tdt-z-dock);
+  bottom:var(--dshpc-space-4);
+  z-index:var(--dshpc-z-dock);
   width:44px;height:44px;
   display:inline-flex;align-items:center;justify-content:center;
   padding:0;margin:0;
   box-sizing:border-box;
-  border:1px solid var(--tdt-border);
+  border:1px solid var(--dshpc-border);
   border-radius:50%;
-  background:var(--tdt-solid);
-  color:var(--tdt-on-solid);
-  box-shadow:var(--tdt-shadow-2);
+  background:var(--dshpc-solid);
+  color:var(--dshpc-on-solid);
+  box-shadow:var(--dshpc-shadow-2);
   cursor:pointer;
   opacity:0;
   transform:translateY(8px) scale(.92);
-  transition:opacity var(--tdt-dur) var(--tdt-ease),
-             transform var(--tdt-dur) var(--tdt-ease),
-             background-color var(--tdt-dur-fast) var(--tdt-ease);
+  transition:opacity var(--dshpc-dur) var(--dshpc-ease),
+             transform var(--dshpc-dur) var(--dshpc-ease),
+             background-color var(--dshpc-dur-fast) var(--dshpc-ease);
   pointer-events:none;
 }
 .dsh-tdt-backtotop.is-visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
-.dsh-tdt-backtotop:hover{background:var(--tdt-hover);}
-.dsh-tdt-backtotop:active{background:var(--tdt-active);}
-.dsh-tdt-backtotop:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-backtotop:hover{background:var(--dshpc-hover);}
+.dsh-tdt-backtotop:active{background:var(--dshpc-active);}
+.dsh-tdt-backtotop:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
 @media (prefers-reduced-motion: reduce){
-  .dsh-tdt-backtotop{transition:opacity var(--tdt-dur-fast) linear;transform:none;}
+  .dsh-tdt-backtotop{transition:opacity var(--dshpc-dur-fast) linear;transform:none;}
 }
 `;
 		/**
@@ -3809,31 +3603,31 @@ body[data-ds-dark-theme]{
 		* 2026-10-08 设置页重构时定型：每块 = 标题行 + 一块内容，标题行左侧 icon、右侧留给该块的控件
 		* （日志块的自动刷新 / 刷新钮，表查询块的表切换）。此前三个块各写一个 `h3`，形态不统一。
 		*
-		* 排版规则：字号 / 行高 / 字色走 `--tdt-*` token；`right` 用 `marginLeft:auto` 靠右；
+		* 排版规则：字号 / 行高 / 字色走 `--dshpc-*` token；`right` 用 `marginLeft:auto` 靠右；
 		* 标题 `flex:none` 不被压缩（与手册 §五「窄栏里的一行」同口径）。
 		*/
 		function SectionHead(props) {
 			return (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
-				gap: "var(--tdt-space-2)",
-				marginBottom: "var(--tdt-space-3)"
+				gap: "var(--dshpc-space-2)",
+				marginBottom: "var(--dshpc-space-3)"
 			} }, (0, react$1.createElement)("span", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				flex: "none",
-				color: "var(--tdt-fg-3)"
+				color: "var(--dshpc-fg-3)"
 			} }, props.icon), (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-lg)",
-				lineHeight: "var(--tdt-line-lg)",
+				fontSize: "var(--dshpc-font-lg)",
+				lineHeight: "var(--dshpc-line-lg)",
 				fontWeight: 600,
-				color: "var(--tdt-fg)",
+				color: "var(--dshpc-fg)",
 				flex: "none"
 			} }, props.title), props.right === void 0 ? null : (0, react$1.createElement)("div", { style: {
 				marginLeft: "auto",
 				display: "flex",
 				alignItems: "center",
-				gap: "var(--tdt-space-2)",
+				gap: "var(--dshpc-space-2)",
 				minWidth: 0
 			} }, props.right));
 		}
@@ -3936,12 +3730,12 @@ body[data-ds-dark-theme]{
 		//#endregion
 		//#region src/client/ui/running.ts
 		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
-		const RUNNING_TONE = "var(--tdt-business)";
+		const RUNNING_TONE = "var(--dshpc-business)";
 		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
 		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
 		const RUNNING_CSS = `
 @keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
-.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite; }
+.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--dshpc-dur-run) var(--dshpc-ease) infinite; }
 @media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
 `;
 		let ensured = false;
@@ -7734,7 +7528,7 @@ body[data-ds-dark-theme]{
 			if (!a) a = noAttrs$1;
 			if (!b) b = noAttrs$1;
 			let keysA = Object.keys(a), keysB = Object.keys(b);
-			if (keysA.length - (ignore && keysA.indexOf(ignore) > -1 ? 1 : 0) != keysB.length - (ignore && keysB.indexOf(ignore) > -1 ? 1 : 0)) return false;
+			if (keysA.length - 0 != keysB.length - 0) return false;
 			for (let key of keysA) if (key != ignore && (keysB.indexOf(key) == -1 || a[key] !== b[key])) return false;
 			return true;
 		}
@@ -8071,6 +7865,8 @@ body[data-ds-dark-theme]{
 			}
 		};
 		BlockWrapper.prototype.startSide = BlockWrapper.prototype.endSide = -1;
+		const isElt = (node) => node.nodeType == 1;
+		const isText = (node) => node.nodeType == 3;
 		function getSelection(root) {
 			let target;
 			if (root.nodeType == 11) target = root.getSelection ? root : root.ownerDocument;
@@ -8089,8 +7885,8 @@ body[data-ds-dark-theme]{
 			}
 		}
 		function clientRectsFor(dom) {
-			if (dom.nodeType == 3) return textRange(dom, 0, dom.nodeValue.length).getClientRects();
-			else if (dom.nodeType == 1) return dom.getClientRects();
+			if (isText(dom)) return textRange(dom, 0, dom.nodeValue.length).getClientRects();
+			else if (isElt(dom)) return dom.getClientRects();
 			else return [];
 		}
 		function isEquivalentPosition(node, off, targetNode, targetOff) {
@@ -8103,7 +7899,7 @@ body[data-ds-dark-theme]{
 			}
 		}
 		function isBlockElement(node) {
-			return node.nodeType == 1 && /^(DIV|P|LI|UL|OL|BLOCKQUOTE|DD|DT|H\d|SECTION|PRE)$/.test(node.nodeName);
+			return isElt(node) && /^(DIV|P|LI|UL|OL|BLOCKQUOTE|DD|DT|H\d|SECTION|PRE)$/.test(node.nodeName);
 		}
 		function scanFor(node, off, targetNode, targetOff, dir) {
 			for (;;) {
@@ -8111,18 +7907,18 @@ body[data-ds-dark-theme]{
 				if (off == (dir < 0 ? 0 : maxOffset(node))) {
 					if (node.nodeName == "DIV") return false;
 					let parent = node.parentNode;
-					if (!parent || parent.nodeType != 1) return false;
+					if (!parent || !isElt(parent)) return false;
 					off = domIndex(node) + (dir < 0 ? 0 : 1);
 					node = parent;
-				} else if (node.nodeType == 1) {
+				} else if (isElt(node)) {
 					node = node.childNodes[off + (dir < 0 ? -1 : 0)];
-					if (node.nodeType == 1 && node.contentEditable == "false") return false;
+					if (isElt(node) && (node.nodeName == "IMG" || node.nodeName == "BR" || node.contentEditable == "false")) return false;
 					off = dir < 0 ? maxOffset(node) : 0;
 				} else return false;
 			}
 		}
 		function maxOffset(node) {
-			return node.nodeType == 3 ? node.nodeValue.length : node.childNodes.length;
+			return isText(node) ? node.nodeValue.length : node.childNodes.length;
 		}
 		function flattenRect(rect, toLeft) {
 			let { left, right } = rect;
@@ -8162,13 +7958,16 @@ body[data-ds-dark-theme]{
 		}
 		function scrollRectIntoView(dom, rect, side, x, y, xMargin, yMargin, ltr) {
 			let doc = dom.ownerDocument, win = doc.defaultView || window;
-			for (let cur = dom, stop = false; cur && !stop;) if (cur.nodeType == 1) {
+			for (let cur = dom, stop = false; cur && !stop;) if (isElt(cur)) {
 				let bounding, top = cur == doc.body;
-				let scaleX = 1, scaleY = 1;
+				let scaleX = 1, scaleY = 1, xScroll = true, yScroll = true;
 				if (top) bounding = windowRect(win);
 				else {
-					if (/^(fixed|sticky)$/.test(getComputedStyle(cur).position)) stop = true;
-					if (cur.scrollHeight <= cur.clientHeight && cur.scrollWidth <= cur.clientWidth) {
+					let style = getComputedStyle(cur);
+					if (/^(fixed|sticky)$/.test(style.position)) stop = true;
+					if (cur.scrollHeight <= cur.clientHeight || !/auto|scroll/.test(style.overflowY)) yScroll = false;
+					if (cur.scrollWidth <= cur.clientWidth || !/auto|scroll/.test(style.overflowX)) xScroll = false;
+					if (!xScroll && !yScroll) {
 						cur = cur.assignedSlot || cur.parentNode;
 						continue;
 					}
@@ -8182,7 +7981,8 @@ body[data-ds-dark-theme]{
 					};
 				}
 				let moveX = 0, moveY = 0;
-				if (y == "nearest") {
+				if (!yScroll);
+				else if (y == "nearest") {
 					if (rect.top < bounding.top + yMargin) {
 						moveY = rect.top - (bounding.top + yMargin);
 						if (side > 0 && rect.bottom > bounding.bottom + moveY) moveY = rect.bottom - bounding.bottom + yMargin;
@@ -8194,7 +7994,8 @@ body[data-ds-dark-theme]{
 					let rectHeight = rect.bottom - rect.top, boundingHeight = bounding.bottom - bounding.top;
 					moveY = (y == "center" && rectHeight <= boundingHeight ? rect.top + rectHeight / 2 - boundingHeight / 2 : y == "start" || y == "center" && side < 0 ? rect.top - yMargin : rect.bottom - boundingHeight + yMargin) - bounding.top;
 				}
-				if (x == "nearest") {
+				if (!xScroll);
+				else if (x == "nearest") {
 					if (rect.left < bounding.left + xMargin) {
 						moveX = rect.left - (bounding.left + xMargin);
 						if (side > 0 && rect.right > bounding.right + moveX) moveX = rect.right - bounding.right + xMargin;
@@ -8241,9 +8042,9 @@ body[data-ds-dark-theme]{
 		function scrollableParents(dom, getX = true) {
 			let doc = dom.ownerDocument, x = null, y = null;
 			for (let cur = dom.parentNode; cur;) if (cur == doc.body || (!getX || x) && y) break;
-			else if (cur.nodeType == 1) {
-				if (!y && cur.scrollHeight > cur.clientHeight) y = cur;
-				if (getX && !x && cur.scrollWidth > cur.clientWidth) x = cur;
+			else if (isElt(cur)) {
+				if (!y && cur.scrollHeight > cur.clientHeight && /scroll|auto/.test(getComputedStyle(cur).overflowY)) y = cur;
+				if (getX && !x && cur.scrollWidth > cur.clientWidth && /scroll|auto/.test(getComputedStyle(cur).overflowX)) x = cur;
 				cur = cur.assignedSlot || cur.parentNode;
 			} else if (cur.nodeType == 11) cur = cur.host;
 			else break;
@@ -8275,7 +8076,7 @@ body[data-ds-dark-theme]{
 		};
 		function getScrollStack(target) {
 			let stack = [];
-			for (let cur = target; cur; cur = cur.nodeType == 11 ? cur.host : cur.parentNode) if (cur.nodeType == 1) stack.push({
+			for (let cur = target; cur; cur = cur.nodeType == 11 ? cur.host : cur.parentNode) if (isElt(cur)) stack.push({
 				node: cur,
 				left: cur.scrollLeft,
 				top: cur.scrollTop
@@ -8339,7 +8140,7 @@ body[data-ds-dark-theme]{
 			if (!node || selection.anchorNode != node || selection.anchorOffset != offset) return false;
 			offset = Math.min(offset, maxOffset(node));
 			for (;;) if (offset) {
-				if (node.nodeType != 1) return false;
+				if (!isElt(node)) return false;
 				let prev = node.childNodes[offset - 1];
 				if (prev.contentEditable == "false") offset--;
 				else {
@@ -8357,11 +8158,11 @@ body[data-ds-dark-theme]{
 			return elt.scrollTop > Math.max(1, elt.scrollHeight - elt.clientHeight - 4);
 		}
 		function textNodeBefore(startNode, startOffset) {
-			for (let node = startNode, offset = startOffset;;) if (node.nodeType == 3 && offset > 0) return {
+			for (let node = startNode, offset = startOffset;;) if (isText(node) && offset > 0) return {
 				node,
 				offset
 			};
-			else if (node.nodeType == 1 && offset > 0) {
+			else if (isElt(node) && offset > 0) {
 				if (node.contentEditable == "false") return null;
 				node = node.childNodes[offset - 1];
 				offset = maxOffset(node);
@@ -8371,11 +8172,11 @@ body[data-ds-dark-theme]{
 			} else return null;
 		}
 		function textNodeAfter(startNode, startOffset) {
-			for (let node = startNode, offset = startOffset;;) if (node.nodeType == 3 && offset < node.nodeValue.length) return {
+			for (let node = startNode, offset = startOffset;;) if (isText(node) && offset < node.nodeValue.length) return {
 				node,
 				offset
 			};
-			else if (node.nodeType == 1 && offset < node.childNodes.length) {
+			else if (isElt(node) && offset < node.childNodes.length) {
 				if (node.contentEditable == "false") return null;
 				node = node.childNodes[offset];
 				offset = 0;
@@ -8710,7 +8511,6 @@ body[data-ds-dark-theme]{
 				if (type == 1) return LTR;
 				if (type == 2 || type == 4) return RTL;
 			}
-			return LTR;
 		}
 		const clickAddsSelectionRange = /*@__PURE__*/ Facet.define();
 		const dragMovesSelection$1 = /*@__PURE__*/ Facet.define();
@@ -8885,7 +8685,6 @@ body[data-ds-dark-theme]{
 					let level = result;
 					for (let i = active.length - 1; i >= 0; i--, open--) {
 						let direction = active[i].spec.bidiIsolate, update;
-						if (direction == null) direction = autoDirection(line.text, from, to);
 						if (open > 0 && level.length && (update = level[level.length - 1]).to == from && update.direction == direction) {
 							update.to = to;
 							level = update.inner;
@@ -8902,7 +8701,26 @@ body[data-ds-dark-theme]{
 					}
 				}
 			});
-			return result;
+			return resolveIsolates(line.text, result);
+		}
+		function resolveIsolates(text, isolates) {
+			for (let i of isolates) {
+				if (i.direction == null) {
+					for (let pos = i.from, j = 0; pos < i.to; j++) {
+						let nextInner = j < i.inner.length ? i.inner[j] : null;
+						let dir = autoDirection(text, pos, nextInner ? nextInner.from : i.to);
+						if (dir) {
+							i.direction = dir;
+							break;
+						}
+						if (!nextInner) break;
+						pos = nextInner.to;
+					}
+					if (i.direction == null) i.direction = Direction.LTR;
+				}
+				resolveIsolates(text, i.inner);
+			}
+			return isolates;
 		}
 		const scrollMargins = /*@__PURE__*/ Facet.define();
 		function getScrollMargins(view) {
@@ -9302,17 +9120,17 @@ body[data-ds-dark-theme]{
 			get domAttrs() {
 				return this.attrs;
 			}
-			resolveInline(pos, side, forCoords) {
+			resolveInline(pos, side, forCoords = false) {
 				let before = null, beforeOff = -1, after = null, afterOff = -1;
 				function scan(tile, pos) {
 					for (let i = 0, off = 0; i < tile.children.length && off <= pos; i++) {
 						let child = tile.children[i], end = off + child.length;
 						if (end >= pos) {
 							if (child.isComposite()) scan(child, pos - off);
-							else if ((!after || after.isHidden && (side > 0 && !(after.flags & 32) || forCoords && onSameLine(after, child))) && (end > pos || child.flags & 32 && side <= 1)) {
+							else if ((!after || forCoords && after.isHidden && (side > 0 && !(after.flags & 32) || forCoords && onSameLine(after, child))) && (end > pos || child.flags & 32 && side <= 1)) {
 								after = child;
 								afterOff = pos - off;
-							} else if (off < pos || child.flags & 16 && !child.isHidden && side >= -1) {
+							} else if (off < pos || child.flags & 16 && !(forCoords && child.isHidden) && side >= -1) {
 								before = child;
 								beforeOff = pos - off;
 							}
@@ -10547,7 +10365,7 @@ body[data-ds-dark-theme]{
 			}
 		}
 		function betweenUneditable(pos) {
-			return pos.node.nodeType == 1 && pos.node.firstChild && (pos.offset == 0 || pos.node.childNodes[pos.offset - 1].contentEditable == "false") && (pos.offset == pos.node.childNodes.length || pos.node.childNodes[pos.offset].contentEditable == "false");
+			return isElt(pos.node) && pos.node.firstChild && (pos.offset == 0 || pos.node.childNodes[pos.offset - 1].contentEditable == "false") && (pos.offset == pos.node.childNodes.length || pos.node.childNodes[pos.offset].contentEditable == "false");
 		}
 		function findCompositionNode(view, headPos) {
 			let sel = view.observer.selectionRange;
@@ -10585,7 +10403,7 @@ body[data-ds-dark-theme]{
 			};
 		}
 		function nextToUneditable(node, offset) {
-			if (node.nodeType != 1) return 0;
+			if (!isElt(node)) return 0;
 			return (offset && node.childNodes[offset - 1].contentEditable == "false" ? 1 : 0) | (offset < node.childNodes.length && node.childNodes[offset].contentEditable == "false" ? 2 : 0);
 		}
 		let DecorationComparator$1 = class DecorationComparator {
@@ -10625,7 +10443,7 @@ body[data-ds-dark-theme]{
 			return comp.changes;
 		}
 		function inUneditable(node, inside) {
-			for (let cur = node; cur && cur != inside; cur = cur.assignedSlot || cur.parentNode) if (cur.nodeType == 1 && cur.contentEditable == "false") return true;
+			for (let cur = node; cur && cur != inside; cur = cur.assignedSlot || cur.parentNode) if (isElt(cur) && cur.contentEditable == "false") return true;
 			return false;
 		}
 		function touchesComposition(changes, composition) {
@@ -10715,13 +10533,13 @@ body[data-ds-dark-theme]{
 			if (coords) {
 				let editorRect = view.dom.getBoundingClientRect();
 				let direction = view.textDirectionAt(block.from);
-				let pos = view.posAtCoords({
+				let pos = view.posAndSideAtCoords({
 					x: forward == (direction == Direction.LTR) ? editorRect.right - 1 : editorRect.left + 1,
 					y: (coords.top + coords.bottom) / 2
 				});
-				if (pos != null) return EditorSelection.cursor(pos, forward ? -1 : 1);
+				if (pos) return EditorSelection.cursor(pos.pos, pos.assoc);
 			}
-			return EditorSelection.cursor(forward ? block.to : block.from, forward ? -1 : 1);
+			return EditorSelection.cursor(forward ? block.to : block.from, forward ? 1 : -1);
 		}
 		function moveByChar(view, start, forward, by) {
 			let line = view.state.doc.lineAt(start.head), spans = view.bidiSpans(line);
@@ -10971,7 +10789,7 @@ body[data-ds-dark-theme]{
 				let scan = this.scan(positions, (i) => {
 					let child = tile.children[i];
 					if (child.flags & 48) return null;
-					return (child.dom.nodeType == 1 ? child.dom : textRange(child.dom, 0, child.length)).getClientRects();
+					return (isElt(child.dom) ? child.dom : textRange(child.dom, 0, child.length)).getClientRects();
 				});
 				let child = tile.children[scan.i], pos = positions[scan.i];
 				if (child.isText()) return this.scanText(child, pos);
@@ -11040,16 +10858,16 @@ body[data-ds-dark-theme]{
 					this.findPointInside(node, fromView.length);
 					for (let i = fromView.iter(); !i.next().done;) if (i.lineBreak) this.lineBreak();
 					else this.append(i.value);
-				} else if (node.nodeType == 3) this.readTextNode(node);
+				} else if (isText(node)) this.readTextNode(node);
 				else if (node.nodeName == "BR") {
 					if (node.nextSibling) this.lineBreak();
-				} else if (node.nodeType == 1) this.readRange(node.firstChild, null);
+				} else if (isElt(node)) this.readRange(node.firstChild, null);
 			}
 			findPointBefore(node, next) {
 				for (let point of this.points) if (point.node == node && node.childNodes[point.offset] == next) point.pos = this.text.length;
 			}
 			findPointInside(node, length) {
-				for (let point of this.points) if (node.nodeType == 3 ? point.node == node : node.contains(point.node)) point.pos = this.text.length + (isAtEnd(node, point.node, point.offset) ? length : 0);
+				for (let point of this.points) if (isText(node) ? point.node == node : node.contains(point.node)) point.pos = this.text.length + (isAtEnd(node, point.node, point.offset) ? length : 0);
 			}
 		};
 		function isAtEnd(parent, node, offset) {
@@ -12015,12 +11833,12 @@ body[data-ds-dark-theme]{
 			view.observer.clearSelectionRange();
 			updateForFocusChange(view);
 		};
-		observers.compositionstart = observers.compositionupdate = (view) => {
+		observers.compositionstart = observers.compositionupdate = (view, event) => {
 			if (view.observer.editContext) return;
 			if (view.inputState.compositionFirstChange == null) view.inputState.compositionFirstChange = true;
 			if (view.inputState.composing < 0) {
 				let { main } = view.state.selection;
-				if (!main.empty && view.lineBlockAt(main.from).from != view.lineBlockAt(main.to).from) view.dispatch({
+				if (!main.empty && view.lineBlockAt(main.from).from != view.lineBlockAt(main.to).from && !view.state.readOnly) view.dispatch({
 					changes: view.state.selection.ranges.filter((r) => !r.empty).map((r) => ({
 						from: r.from,
 						to: r.to
@@ -12724,17 +12542,16 @@ body[data-ds-dark-theme]{
 			let doc = dom.ownerDocument, win = doc.defaultView || window;
 			let left = Math.max(0, rect.left), right = Math.min(win.innerWidth, rect.right);
 			let top = Math.max(0, rect.top), bottom = Math.min(win.innerHeight, rect.bottom);
-			for (let parent = dom.parentNode; parent && parent != doc.body;) if (parent.nodeType == 1) {
-				let elt = parent;
-				let style = window.getComputedStyle(elt);
-				if ((elt.scrollHeight > elt.clientHeight || elt.scrollWidth > elt.clientWidth) && style.overflow != "visible") {
-					let parentRect = elt.getBoundingClientRect();
+			for (let parent = dom.parentNode; parent && parent != doc.body;) if (isElt(parent)) {
+				let style = window.getComputedStyle(parent);
+				if ((parent.scrollHeight > parent.clientHeight || parent.scrollWidth > parent.clientWidth) && style.overflow != "visible") {
+					let parentRect = parent.getBoundingClientRect();
 					left = Math.max(left, parentRect.left);
 					right = Math.min(right, parentRect.right);
 					top = Math.max(top, parentRect.top);
 					bottom = Math.min(parent == dom.parentNode ? win.innerHeight : bottom, parentRect.bottom);
 				}
-				parent = style.position == "absolute" || style.position == "fixed" ? elt.offsetParent : elt.parentNode;
+				parent = style.position == "absolute" || style.position == "fixed" ? parent.offsetParent : parent.parentNode;
 			} else if (parent.nodeType == 11) parent = parent.host;
 			else break;
 			return {
@@ -12857,7 +12674,7 @@ body[data-ds-dark-theme]{
 			}
 			updateScaler() {
 				let scaler = this.scaler;
-				this.scaler = this.heightMap.height <= 7e6 ? IdScaler : new BigScaler(this.heightOracle, this.heightMap, this.viewports);
+				this.scaler = this.heightMap.height <= 7e6 ? IdScaler : BigScaler.get(this.heightOracle, this.heightMap, this.viewports);
 				return scaler.eq(this.scaler) ? 0 : 2;
 			}
 			updateViewportLines() {
@@ -13149,7 +12966,7 @@ body[data-ds-dark-theme]{
 				return this.scrollParent == this.view.scrollDOM ? this.scrollParent.scrollTop * this.scaleY : (this.scrollParent ? this.scrollParent.getBoundingClientRect().top : 0) - this.view.contentDOM.getBoundingClientRect().top;
 			}
 			scrollAnchorAt(scrollOffset) {
-				let block = this.lineBlockAtHeight(scrollOffset + 8);
+				let block = this.lineBlockAtHeight(scrollOffset + 12 - this.paddingTop);
 				return block.from >= this.viewport.from || this.viewportLines[0].top - scrollOffset > 200 ? block : this.viewportLines[0];
 			}
 			elementAtHeight(height) {
@@ -13238,9 +13055,13 @@ body[data-ds-dark-theme]{
 			return deco;
 		}
 		var BigScaler = class BigScaler {
-			constructor(oracle, heightMap, viewports) {
+			constructor(scale, viewports) {
+				this.scale = scale;
+				this.viewports = viewports;
+			}
+			static get(oracle, heightMap, viewports) {
 				let vpHeight = 0, base = 0, domBase = 0;
-				this.viewports = viewports.map(({ from, to }) => {
+				let vps = viewports.map(({ from, to }) => {
 					let top = heightMap.lineAt(from, QueryType$1.ByPos, oracle, 0, 0).top;
 					let bottom = heightMap.lineAt(to, QueryType$1.ByPos, oracle, 0, 0).bottom;
 					vpHeight += bottom - top;
@@ -13253,12 +13074,14 @@ body[data-ds-dark-theme]{
 						domBottom: 0
 					};
 				});
-				this.scale = (7e6 - vpHeight) / (heightMap.height - vpHeight);
-				for (let obj of this.viewports) {
-					obj.domTop = domBase + (obj.top - base) * this.scale;
+				if (heightMap.height - vpHeight < 10) return IdScaler;
+				let scale = (7e6 - vpHeight) / (heightMap.height - vpHeight);
+				for (let obj of vps) {
+					obj.domTop = domBase + (obj.top - base) * scale;
 					domBase = obj.domBottom = obj.domTop + (obj.bottom - obj.top);
 					base = obj.bottom;
 				}
+				return new BigScaler(scale, vps);
 			}
 			toDOM(n) {
 				for (let i = 0, base = 0, domBase = 0;; i++) {
@@ -13486,7 +13309,7 @@ body[data-ds-dark-theme]{
 				verticalAlign: "bottom"
 			},
 			".cm-widgetBuffer": {
-				verticalAlign: "text-top",
+				verticalAlign: "baseline",
 				height: "1em",
 				width: 0,
 				display: "inline"
@@ -13621,7 +13444,7 @@ body[data-ds-dark-theme]{
 				if (this.intersecting) this.view.measure();
 			}
 			onScroll(e) {
-				if (this.intersecting) this.flush(false);
+				if (this.intersecting) this.flush(this.pendingRecords().length > 0);
 				if (this.editContext) this.view.requestMeasure(this.editContext.measureReq);
 				this.onScrollChanged(e);
 			}
@@ -13686,7 +13509,7 @@ body[data-ds-dark-theme]{
 			listenForScroll() {
 				this.parentCheck = -1;
 				let i = 0, changed = null;
-				for (let dom = this.dom; dom;) if (dom.nodeType == 1) {
+				for (let dom = this.dom; dom;) if (isElt(dom)) {
 					if (!changed && i < this.scrollTargets.length && this.scrollTargets[i] == dom) i++;
 					else if (!changed) changed = this.scrollTargets.slice(0, i);
 					if (changed) changed.push(dom);
@@ -13802,14 +13625,14 @@ body[data-ds-dark-theme]{
 			flush(readSelection = true) {
 				if (this.delayedFlush >= 0 || this.delayedAndroidKey) return false;
 				if (readSelection) this.readSelectionRange();
-				let domChange = this.readChange();
+				let selChange = this.selectionChanged, domChange = this.readChange();
 				if (!domChange) {
 					this.view.requestMeasure();
 					return false;
 				}
 				let startState = this.view.state;
 				let handled = applyDOMChange(this.view, domChange);
-				if (this.view.state == startState && (domChange.domChanged || domChange.newSel && !sameSelPos(this.view.state.selection, domChange.newSel.main))) this.view.update([]);
+				if (this.view.state == startState && (domChange.domChanged || selChange)) this.view.update([]);
 				return handled;
 			}
 			readMutation(rec) {
@@ -14531,7 +14354,7 @@ body[data-ds-dark-theme]{
 			/**
 			Schedule a layout measurement, optionally providing callbacks to
 			do custom DOM measuring followed by a DOM write phase. Using
-			this is preferable reading DOM layout directly from, for
+			this is preferable to reading DOM layout directly from, for
 			example, an event handler, because it'll make sure measuring and
 			drawing done by other components is synchronized, avoiding
 			unnecessary DOM layout computations.
@@ -15607,6 +15430,7 @@ body[data-ds-dark-theme]{
 		function layer(config) {
 			return [ViewPlugin.define((v) => new LayerView(v, config)), layerOrder.of(config)];
 		}
+		const drawMainRange = !browser.ios;
 		const selectionConfig = /*@__PURE__*/ Facet.define({ combine(configs) {
 			return combineConfig(configs, {
 				cursorBlinkRate: 1200,
@@ -15680,7 +15504,7 @@ body[data-ds-dark-theme]{
 			above: false,
 			markers(view) {
 				let markers = [], { main, ranges } = view.state.selection;
-				for (let r of ranges) if (!r.empty) for (let marker of RectangleMarker.forRange(view, "cm-selectionBackground", r)) markers.push(marker);
+				for (let r of ranges) if (!r.empty && (drawMainRange || r != main)) for (let marker of RectangleMarker.forRange(view, "cm-selectionBackground", r)) markers.push(marker);
 				if (browser.ios && !main.empty && view.state.facet(selectionConfig).iosSelectionHandles) {
 					for (let piece of RectangleMarker.forRange(view, "cm-selectionHandle cm-selectionHandle-start", EditorSelection.cursor(main.from, 1))) markers.push(piece);
 					for (let piece of RectangleMarker.forRange(view, "cm-selectionHandle cm-selectionHandle-end", EditorSelection.cursor(main.to, 1))) markers.push(piece);
@@ -15695,14 +15519,14 @@ body[data-ds-dark-theme]{
 		const selectionBg = browser.gecko && browser.gecko_version == 153 ? "#ffffff01" : "transparent";
 		const hideNativeSelection = /*@__PURE__*/ Prec.highest(/*@__PURE__*/ EditorView.theme({
 			".cm-line": {
-				"& ::selection, &::selection": { backgroundColor: `${selectionBg} !important` },
+				...drawMainRange ? { "& ::selection, &::selection": { backgroundColor: `${selectionBg} !important` } } : {},
 				caretColor: "transparent !important"
 			},
 			".cm-content": {
 				caretColor: "transparent !important",
 				"& :focus": {
 					caretColor: "initial !important",
-					"&::selection, & ::selection": { backgroundColor: "Highlight !important" }
+					...drawMainRange ? { "&::selection, & ::selection": { backgroundColor: "Highlight !important" } } : {}
 				}
 			}
 		}));
@@ -16282,13 +16106,26 @@ body[data-ds-dark-theme]{
 				return true;
 			}
 		};
+		function fixedRange(view) {
+			let docElt = view.dom.ownerDocument.documentElement, width = docElt.clientWidth;
+			let style = getComputedStyle(docElt);
+			if (!/stable/.test(style.scrollbarGutter || "")) return {
+				left: 0,
+				right: width
+			};
+			let rect = docElt.getBoundingClientRect(), scrollX = view.win.scrollX;
+			return {
+				left: Math.max(0, rect.left + scrollX - parseFloat(style.marginLeft)),
+				right: Math.min(width, rect.right + scrollX + parseFloat(style.marginRight))
+			};
+		}
 		function windowSpace(view) {
-			let docElt = view.dom.ownerDocument.documentElement;
+			let { left, right } = fixedRange(view);
 			return {
 				top: 0,
-				left: 0,
-				bottom: docElt.clientHeight,
-				right: docElt.clientWidth
+				left,
+				right,
+				bottom: view.dom.ownerDocument.documentElement.clientHeight
 			};
 		}
 		const tooltipConfig = /*@__PURE__*/ Facet.define({ combine: (values) => {
@@ -16401,7 +16238,7 @@ body[data-ds-dark-theme]{
 				clearTimeout(this.measureTimeout);
 			}
 			readMeasure() {
-				let scaleX = 1, scaleY = 1, makeAbsolute = false;
+				let scaleX = 1, scaleY = 1, makeAbsolute = false, fixedLeft = 0;
 				if (this.position == "fixed" && this.manager.tooltipViews.length) {
 					let { dom } = this.manager.tooltipViews[0];
 					if (browser.safari) {
@@ -16417,7 +16254,7 @@ body[data-ds-dark-theme]{
 							scaleY = rect.height / this.parent.offsetHeight;
 						}
 					} else ({scaleX, scaleY} = this.view.viewState);
-				}
+				} else fixedLeft = fixedRange(this.view).left;
 				let visible = this.view.scrollDOM.getBoundingClientRect(), margins = getScrollMargins(this.view);
 				return {
 					visible: {
@@ -16435,7 +16272,8 @@ body[data-ds-dark-theme]{
 					space: this.view.state.facet(tooltipConfig).tooltipSpace(this.view),
 					scaleX,
 					scaleY,
-					makeAbsolute
+					makeAbsolute,
+					fixedLeft
 				};
 			}
 			writeMeasure(measured) {
@@ -16480,7 +16318,7 @@ body[data-ds-dark-theme]{
 						setLeftStyle(dom, (left - measured.parent.left) / scaleX);
 					} else {
 						dom.style.top = top / scaleY + "px";
-						setLeftStyle(dom, left / scaleX);
+						setLeftStyle(dom, (left - measured.fixedLeft) / scaleX);
 					}
 					if (arrow) {
 						let arrowLeft = pos.left + (ltr ? offset.x : -offset.x) - (left + 14 - 7);
@@ -17126,6 +16964,7 @@ body[data-ds-dark-theme]{
 			}, ["×"]));
 			if (config.class) panel.className = config.class;
 			panel.classList.add("cm-dialog");
+			let focus = typeof config.focus == "string" ? content.querySelector(config.focus) : config.focus ? content.querySelector("input") || content.querySelector("button") : null;
 			function done(form) {
 				if (panel.contains(panel.ownerDocument.activeElement)) view.focus();
 				result(form);
@@ -17134,14 +16973,12 @@ body[data-ds-dark-theme]{
 				dom: panel,
 				top: config.top,
 				mount: () => {
-					if (config.focus) {
-						let focus;
-						if (typeof config.focus == "string") focus = content.querySelector(config.focus);
-						else focus = content.querySelector("input") || content.querySelector("button");
-						if (focus && "select" in focus) focus.select();
-						else if (focus && "focus" in focus) focus.focus();
+					if (focus) {
+						if ("select" in focus) focus.select();
+						else if ("focus" in focus) focus.focus();
 					}
-				}
+				},
+				destroy: () => result(null)
 			};
 		}
 		/**
@@ -20366,6 +20203,172 @@ body[data-ds-dark-theme]{
 			}
 		]);
 		//#endregion
+		//#region node_modules/@codemirror/streamparser/dist/index.js
+		function countCol(string, end, tabSize, startIndex = 0, startValue = 0) {
+			if (end == null) {
+				end = string.search(/[^\s\u00a0]/);
+				if (end == -1) end = string.length;
+			}
+			let n = startValue;
+			for (let i = startIndex; i < end; i++) if (string.charCodeAt(i) == 9) n += tabSize - n % tabSize;
+			else n++;
+			return n;
+		}
+		/**
+		Encapsulates a single line of input. Given to stream syntax code,
+		which uses it to tokenize the content.
+		*/
+		var StringStream = class {
+			/**
+			Create a stream.
+			*/
+			constructor(string, tabSize, indentUnit, overrideIndent) {
+				this.string = string;
+				this.tabSize = tabSize;
+				this.indentUnit = indentUnit;
+				this.overrideIndent = overrideIndent;
+				/**
+				The current position on the line.
+				*/
+				this.pos = 0;
+				/**
+				The start position of the current token.
+				*/
+				this.start = 0;
+				this.lastColumnPos = 0;
+				this.lastColumnValue = 0;
+			}
+			/**
+			True if we are at the end of the line.
+			*/
+			eol() {
+				return this.pos >= this.string.length;
+			}
+			/**
+			True if we are at the start of the line.
+			*/
+			sol() {
+				return this.pos == 0;
+			}
+			/**
+			Get the next code unit after the current position, or undefined
+			if we're at the end of the line.
+			*/
+			peek() {
+				return this.string.charAt(this.pos) || void 0;
+			}
+			/**
+			Read the next code unit and advance `this.pos`.
+			*/
+			next() {
+				if (this.pos < this.string.length) return this.string.charAt(this.pos++);
+			}
+			/**
+			Match the next character against the given string, regular
+			expression, or predicate. Consume and return it if it matches.
+			*/
+			eat(match) {
+				let ch = this.string.charAt(this.pos);
+				let ok;
+				if (typeof match == "string") ok = ch == match;
+				else ok = ch && (match instanceof RegExp ? match.test(ch) : match(ch));
+				if (ok) {
+					++this.pos;
+					return ch;
+				}
+			}
+			/**
+			Continue matching characters that match the given string,
+			regular expression, or predicate function. Return true if any
+			characters were consumed.
+			*/
+			eatWhile(match) {
+				let start = this.pos;
+				while (this.eat(match));
+				return this.pos > start;
+			}
+			/**
+			Consume whitespace ahead of `this.pos`. Return true if any was
+			found.
+			*/
+			eatSpace() {
+				let start = this.pos;
+				while (/[\s\u00a0]/.test(this.string.charAt(this.pos))) ++this.pos;
+				return this.pos > start;
+			}
+			/**
+			Move to the end of the line.
+			*/
+			skipToEnd() {
+				this.pos = this.string.length;
+			}
+			/**
+			Move to directly before the given character, if found on the
+			current line.
+			*/
+			skipTo(ch) {
+				let found = this.string.indexOf(ch, this.pos);
+				if (found > -1) {
+					this.pos = found;
+					return true;
+				}
+			}
+			/**
+			Move back `n` characters.
+			*/
+			backUp(n) {
+				this.pos -= n;
+			}
+			/**
+			Get the column position at `this.pos`.
+			*/
+			column() {
+				if (this.lastColumnPos < this.start) {
+					this.lastColumnValue = countCol(this.string, this.start, this.tabSize, this.lastColumnPos, this.lastColumnValue);
+					this.lastColumnPos = this.start;
+				}
+				return this.lastColumnValue;
+			}
+			/**
+			Get the indentation column of the current line.
+			*/
+			indentation() {
+				var _a;
+				return (_a = this.overrideIndent) !== null && _a !== void 0 ? _a : countCol(this.string, null, this.tabSize);
+			}
+			/**
+			Match the input against the given string or regular expression
+			(which should start with a `^`). Return true or the regexp match
+			if it matches.
+			
+			Unless `consume` is set to `false`, this will move `this.pos`
+			past the matched text.
+			
+			When matching a string `caseInsensitive` can be set to true to
+			make the match case-insensitive.
+			*/
+			match(pattern, consume, caseInsensitive) {
+				if (typeof pattern == "string") {
+					let cased = (str) => caseInsensitive ? str.toLowerCase() : str;
+					if (cased(this.string.substr(this.pos, pattern.length)) == cased(pattern)) {
+						if (consume !== false) this.pos += pattern.length;
+						return true;
+					} else return null;
+				} else {
+					let match = this.string.slice(this.pos).match(pattern);
+					if (match && match.index > 0) return null;
+					if (match && consume !== false) this.pos += match[0].length;
+					return match;
+				}
+			}
+			/**
+			Get the current token.
+			*/
+			current() {
+				return this.string.slice(this.start, this.pos);
+			}
+		};
+		//#endregion
 		//#region node_modules/@codemirror/language/dist/index.js
 		var _a;
 		/**
@@ -22149,170 +22152,6 @@ body[data-ds-dark-theme]{
 				matched: false
 			} : null;
 		}
-		function countCol(string, end, tabSize, startIndex = 0, startValue = 0) {
-			if (end == null) {
-				end = string.search(/[^\s\u00a0]/);
-				if (end == -1) end = string.length;
-			}
-			let n = startValue;
-			for (let i = startIndex; i < end; i++) if (string.charCodeAt(i) == 9) n += tabSize - n % tabSize;
-			else n++;
-			return n;
-		}
-		/**
-		Encapsulates a single line of input. Given to stream syntax code,
-		which uses it to tokenize the content.
-		*/
-		var StringStream = class {
-			/**
-			Create a stream.
-			*/
-			constructor(string, tabSize, indentUnit, overrideIndent) {
-				this.string = string;
-				this.tabSize = tabSize;
-				this.indentUnit = indentUnit;
-				this.overrideIndent = overrideIndent;
-				/**
-				The current position on the line.
-				*/
-				this.pos = 0;
-				/**
-				The start position of the current token.
-				*/
-				this.start = 0;
-				this.lastColumnPos = 0;
-				this.lastColumnValue = 0;
-			}
-			/**
-			True if we are at the end of the line.
-			*/
-			eol() {
-				return this.pos >= this.string.length;
-			}
-			/**
-			True if we are at the start of the line.
-			*/
-			sol() {
-				return this.pos == 0;
-			}
-			/**
-			Get the next code unit after the current position, or undefined
-			if we're at the end of the line.
-			*/
-			peek() {
-				return this.string.charAt(this.pos) || void 0;
-			}
-			/**
-			Read the next code unit and advance `this.pos`.
-			*/
-			next() {
-				if (this.pos < this.string.length) return this.string.charAt(this.pos++);
-			}
-			/**
-			Match the next character against the given string, regular
-			expression, or predicate. Consume and return it if it matches.
-			*/
-			eat(match) {
-				let ch = this.string.charAt(this.pos);
-				let ok;
-				if (typeof match == "string") ok = ch == match;
-				else ok = ch && (match instanceof RegExp ? match.test(ch) : match(ch));
-				if (ok) {
-					++this.pos;
-					return ch;
-				}
-			}
-			/**
-			Continue matching characters that match the given string,
-			regular expression, or predicate function. Return true if any
-			characters were consumed.
-			*/
-			eatWhile(match) {
-				let start = this.pos;
-				while (this.eat(match));
-				return this.pos > start;
-			}
-			/**
-			Consume whitespace ahead of `this.pos`. Return true if any was
-			found.
-			*/
-			eatSpace() {
-				let start = this.pos;
-				while (/[\s\u00a0]/.test(this.string.charAt(this.pos))) ++this.pos;
-				return this.pos > start;
-			}
-			/**
-			Move to the end of the line.
-			*/
-			skipToEnd() {
-				this.pos = this.string.length;
-			}
-			/**
-			Move to directly before the given character, if found on the
-			current line.
-			*/
-			skipTo(ch) {
-				let found = this.string.indexOf(ch, this.pos);
-				if (found > -1) {
-					this.pos = found;
-					return true;
-				}
-			}
-			/**
-			Move back `n` characters.
-			*/
-			backUp(n) {
-				this.pos -= n;
-			}
-			/**
-			Get the column position at `this.pos`.
-			*/
-			column() {
-				if (this.lastColumnPos < this.start) {
-					this.lastColumnValue = countCol(this.string, this.start, this.tabSize, this.lastColumnPos, this.lastColumnValue);
-					this.lastColumnPos = this.start;
-				}
-				return this.lastColumnValue;
-			}
-			/**
-			Get the indentation column of the current line.
-			*/
-			indentation() {
-				var _a;
-				return (_a = this.overrideIndent) !== null && _a !== void 0 ? _a : countCol(this.string, null, this.tabSize);
-			}
-			/**
-			Match the input against the given string or regular expression
-			(which should start with a `^`). Return true or the regexp match
-			if it matches.
-			
-			Unless `consume` is set to `false`, this will move `this.pos`
-			past the matched text.
-			
-			When matching a string `caseInsensitive` can be set to true to
-			make the match case-insensitive.
-			*/
-			match(pattern, consume, caseInsensitive) {
-				if (typeof pattern == "string") {
-					let cased = (str) => caseInsensitive ? str.toLowerCase() : str;
-					if (cased(this.string.substr(this.pos, pattern.length)) == cased(pattern)) {
-						if (consume !== false) this.pos += pattern.length;
-						return true;
-					} else return null;
-				} else {
-					let match = this.string.slice(this.pos).match(pattern);
-					if (match && match.index > 0) return null;
-					if (match && consume !== false) this.pos += match[0].length;
-					return match;
-				}
-			}
-			/**
-			Get the current token.
-			*/
-			current() {
-				return this.string.slice(this.start, this.pos);
-			}
-		};
 		function fullParser(spec) {
 			return {
 				name: spec.name || "",
@@ -49403,8 +49242,8 @@ body[data-ds-dark-theme]{
 		//#region src/client/ui/cm-themes.ts
 		/**
 		* CodeMirror 6 主题（移植自 DSH-better-sidebar 的 cm-themes.ts，token 名换成
-		* 本仓的 --tdt-*）。提供：
-		*  - cmSurfaceTheme：透明底 + 13px + 等宽字体 + 行号槽用 --tdt-fg-3，随宿主滚动；
+		* 本仓的 --dshpc-*）。提供：
+		*  - cmSurfaceTheme：透明底 + 13px + 等宽字体 + 行号槽用 --dshpc-fg-3，随宿主滚动；
 		*  - codeMirrorTheme(dark)：表面主题 + 选区/激活行微调 + one-dark/one-light 语法色。
 		* 主矛盾是“不卡”，配色/字号顺带对齐到用户认可的 one-dark 13px 观感。
 		*
@@ -49446,16 +49285,16 @@ body[data-ds-dark-theme]{
 				height: "100%",
 				fontSize: "13px",
 				backgroundColor: "transparent",
-				color: "var(--tdt-fg, #1f2328)"
+				color: "var(--dshpc-fg, #1f2328)"
 			},
 			".cm-scroller": {
 				overflow: "auto",
-				fontFamily: "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)"
+				fontFamily: "var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)"
 			},
-			".cm-content": { caretColor: "var(--tdt-fg, #1f2328)" },
+			".cm-content": { caretColor: "var(--dshpc-fg, #1f2328)" },
 			".cm-gutters": {
 				backgroundColor: "transparent",
-				color: "var(--tdt-fg-3, rgba(128,128,128,0.8))",
+				color: "var(--dshpc-fg-3, rgba(128,128,128,0.8))",
 				border: "none"
 			},
 			".cm-activeLine": { backgroundColor: "transparent" },
@@ -49919,7 +49758,7 @@ body[data-ds-dark-theme]{
    两条都算进来 ⇒ 右侧留出的宽度 = 两者之和（缺省各 0），弹窗不遮盖任何一条分栏；
    两条同时开着时也是一个加法，无需特判（用户 2026-10-01 Q4）。
    与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/features/artifact-opening.md §四-C）。 */
-.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--tdt-mask,rgba(0,0,0,.45));transition:right .12s var(--tdt-ease,ease);}
+.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dshpc-mask,rgba(0,0,0,.45));transition:right .12s var(--dshpc-ease,ease);}
 /* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
    滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
    sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
@@ -49927,21 +49766,21 @@ body[data-ds-dark-theme]{
    ⚠️ **本条不设 z-index**：它是 sticky 布局成员、不是浮层；一旦给它显式正 z-index，就会无条件
    压过宿主 portal 到 body 的弹窗（「系统设置」等，官方 Modal 后挂载居上只在**同层**时成立）
    ⇒ 真机 2026-10-05「侧边栏盖住宿主设置弹窗」。去掉后由 DOM 顺序裁决，宿主弹窗回到上层。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
+.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));box-shadow:var(--dshpc-shadow-2,0 12px 32px rgba(0,0,0,.4));}
 /* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize，**不画任何线**（用户 2026-09-28）。
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
-   （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
+   （--dshpc-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
 /* z-index 7：必须高于源码态 CodeViewer 内容（复制钮 z-index:5 + cm-editor 正文）；
    z-index:5 时会被 CodeViewer 复制钮/代码体盖住，真机 2026-10-04 表现为「浅灰竖条在源码标题行处断开」即此。 */
 /* 拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index:7（高于 CodeViewer 复制钮，真机 2026-10-04）。 */
 .dsh-tdt-sv-resizer{z-index:7;}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
-/* 面板底色 = 官方会话面 --tdt-surface-base（官方 chat 页即此色）：
-   官方 ReasoningRow 展开行是 sticky + background:var(--tdt-surface-base)（ReasoningRow.module.css），
+/* 面板底色 = 官方会话面 --dshpc-surface-base（官方 chat 页即此色）：
+   官方 ReasoningRow 展开行是 sticky + background:var(--dshpc-surface-base)（ReasoningRow.module.css），
    若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
-.dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
-.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
+.dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dshpc-surface-base,#1a1a1a);color:var(--dshpc-fg,#1f2328);border:1px solid var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-md);box-shadow:var(--dshpc-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
+.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));flex-wrap:wrap;}
 /* 内间距定尺。**纵向单一真源 = .dsh-tdt-sv-frame**：
    官方 scroll 命中时自带纵向 16px，官方 frame 的纵向又不确定；不命中时官方 scroll 不存在，
    .dsh-tdt-sv-body 又会盖掉 frame 的补足（同元素、body 在后面）。⇒ 统一收口（2026-10-03）：
@@ -49959,8 +49798,8 @@ body[data-ds-dark-theme]{
    本仓与官方注入顺序不定 ⇒ 取 auto 这个共同值，两边顺序颠倒也不会改变布局。 */
 .dsh-tdt-sv-chat{flex:1 1 auto;min-height:0;}
 .dsh-tdt-sv-heading{min-width:0;}
-.dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
+.dsh-tdt-sv-title{font-size:var(--dshpc-font-lg);font-weight:600;color:var(--dshpc-fg,#1f2328);}
+.dsh-tdt-sv-sid{font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3,rgba(128,128,128,.8));word-break:break-all;}
 .dsh-tdt-sv-actions{display:flex;align-items:center;gap:8px;}
 /* 会话区左右边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px。
    **纵向不在这里**（官方类命中与否会打架，见上面 frame / scroll 两条钩子）⇒ 本类只写左右。 */
@@ -49971,20 +49810,20 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-visuallyhidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 .dsh-tdt-sv-flowitem{min-width:0;}
 .dsh-tdt-sv-older{display:flex;justify-content:center;}
-.dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.9));background:var(--tdt-hover-solid,rgba(128,128,128,.2));border:none;border-radius:var(--tdt-radius-sm,6px);padding:4px 12px;}
+.dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);cursor:pointer;color:var(--dshpc-fg-2,rgba(128,128,128,.9));background:var(--dshpc-hover,rgba(128,128,128,.2));border:none;border-radius:var(--dshpc-radius-sm,6px);padding:4px 12px;}
 .dsh-tdt-sv-older button:disabled{cursor:default;opacity:.6;}
-.dsh-tdt-sv-process{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--tdt-border,rgba(128,128,128,.35));color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex;}
-.dsh-tdt-sv-process:hover{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-process{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--dshpc-border,rgba(128,128,128,.35));color:var(--dshpc-fg-3,rgba(128,128,128,.8));cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex;}
+.dsh-tdt-sv-process:hover{color:var(--dshpc-fg,#1f2328);}
 .dsh-tdt-sv-process:not([data-open]){margin-bottom:8px;}
 .dsh-tdt-sv-process-label{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
-.dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--tdt-fg-4,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
+.dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--dshpc-fg-4,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
 .dsh-tdt-sv-process[data-open] .dsh-tdt-sv-process-chevron{transform:rotate(180deg);}
 .dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
-.dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
-.dsh-tdt-sv-action:hover{color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.28));border-radius:var(--tdt-radius-md);padding:10px 14px;font-size:var(--tdt-font-lg);line-height:1.6;word-break:break-word;}
-.dsh-tdt-sv-assistant{align-self:stretch;font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
-.dsh-tdt-sv-image{align-self:flex-start;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));border:1px dashed var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm);padding:4px 10px;}
+.dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:var(--dshpc-control-h-sm);height:var(--dshpc-control-h-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
+.dsh-tdt-sv-action:hover{color:var(--dshpc-fg,#1f2328);}
+.dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--dshpc-surface-2,rgba(128,128,128,.14));border:1px solid var(--dshpc-border,rgba(128,128,128,.28));border-radius:var(--dshpc-radius-md);padding:10px 14px;font-size:var(--dshpc-font-lg);line-height:1.6;word-break:break-word;}
+.dsh-tdt-sv-assistant{align-self:stretch;font-size:var(--dshpc-font-lg);line-height:1.7;word-break:break-word;}
+.dsh-tdt-sv-image{align-self:flex-start;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));border:1px dashed var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-sm);padding:4px 10px;}
 .dsh-tdt-sv-md>*:first-child{margin-top:0;}
 .dsh-tdt-sv-md>*:last-child{margin-bottom:0;}
 .dsh-tdt-sv-md p{margin:.5em 0;}
@@ -49994,89 +49833,89 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-md h3{font-size:1.1em;}
 .dsh-tdt-sv-md ul,.dsh-tdt-sv-md ol{margin:.5em 0;padding-left:1.4em;}
 .dsh-tdt-sv-md li{margin:.2em 0;}
-.dsh-tdt-sv-md code{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:.9em;background:var(--tdt-surface-2,rgba(128,128,128,.14));padding:.1em .35em;border-radius:var(--tdt-radius-xs);}
-.dsh-tdt-sv-md pre{margin:.6em 0;background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.28));border-radius:var(--tdt-radius-sm);padding:10px 12px;overflow:auto;font-size:var(--tdt-font-sm);line-height:1.5;}
+.dsh-tdt-sv-md code{font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:.9em;background:var(--dshpc-surface-2,rgba(128,128,128,.14));padding:.1em .35em;border-radius:var(--dshpc-radius-xs);}
+.dsh-tdt-sv-md pre{margin:.6em 0;background:var(--dshpc-surface-2,rgba(128,128,128,.14));border:1px solid var(--dshpc-border,rgba(128,128,128,.28));border-radius:var(--dshpc-radius-sm);padding:10px 12px;overflow:auto;font-size:var(--dshpc-font-sm);line-height:1.5;}
 .dsh-tdt-sv-md pre code{background:none;padding:0;font-size:inherit;}
-.dsh-tdt-sv-md blockquote{margin:.5em 0;padding:.2em .9em;border-left:3px solid var(--tdt-border,rgba(128,128,128,.35));color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-md a{color:var(--tdt-accent,#2f6feb);text-decoration:none;}
+.dsh-tdt-sv-md blockquote{margin:.5em 0;padding:.2em .9em;border-left:3px solid var(--dshpc-border,rgba(128,128,128,.35));color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-md a{color:var(--dshpc-accent,#2f6feb);text-decoration:none;}
 .dsh-tdt-sv-md a:hover{text-decoration:underline;}
-.dsh-tdt-sv-md table{border-collapse:collapse;font-size:var(--tdt-font-sm);margin:.6em 0;display:block;overflow:auto;}
-.dsh-tdt-sv-md th,.dsh-tdt-sv-md td{border:1px solid var(--tdt-border,rgba(128,128,128,.35));padding:4px 8px;text-align:left;}
-.dsh-tdt-sv-md hr{border:none;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));margin:1em 0;}
+.dsh-tdt-sv-md table{border-collapse:collapse;font-size:var(--dshpc-font-sm);margin:.6em 0;display:block;overflow:auto;}
+.dsh-tdt-sv-md th,.dsh-tdt-sv-md td{border:1px solid var(--dshpc-border,rgba(128,128,128,.35));padding:4px 8px;text-align:left;}
+.dsh-tdt-sv-md hr{border:none;border-top:1px solid var(--dshpc-border,rgba(128,128,128,.35));margin:1em 0;}
 .dsh-tdt-sv-md img{max-width:100%;}
 /* 思考行（ReasoningRow.module.css 照抄：root[row]/leading/chevron/title/separator/summary/thinkBody）。 */
 .dsh-tdt-sv-reasoning{flex-direction:column;display:flex;}
 .dsh-tdt-sv-reasoning:not([data-expanded]){contain:size layout;height:calc(24px + var(--dsh-content-font-delta,0px));}
 .dsh-tdt-sv-reasoning-row{position:relative;overflow:hidden;}
 .dsh-tdt-sv-reasoning-leading{flex-shrink:0;}
-.dsh-tdt-sv-reasoning-chevron{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-reasoning-chevron{color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-reasoning-title{font-weight:400;}
-.dsh-tdt-sv-reasoning-sep{background:var(--tdt-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
-.dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
+.dsh-tdt-sv-reasoning-sep{background:var(--dshpc-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
 .dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
 /* ── 工具卡（官方 ui-tool ToolRow.module.css 兜底镜像，官方类命中时 ocOr 走官方） ──
    官方行外观 = 无边框裸行（root 仅 flex column）；展开体分发链：
    TerminalBlock(∞) → DiffBlock(9) → ReadBlock(8) → ioCard 灰框（输入/分隔/输出）。 */
 .dsh-tdt-sv-tool{flex-direction:column;display:flex;}
-.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-title,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-summary,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-suffix{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-title,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-summary,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-suffix{color:var(--dshpc-fg,#1f2328);}
 .dsh-tdt-sv-tool-title{font-weight:400;transition:color .1s;}
-.dsh-tdt-sv-tool-chevron{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-tool-sep{background:var(--tdt-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
-.dsh-tdt-sv-tool-summary{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:auto;transition:color .1s;overflow:hidden;}
-.dsh-tdt-sv-tool-suffix{white-space:nowrap;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;margin-left:4px;transition:color .1s;}
-.dsh-tdt-sv-tool-diffstat{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 2px);color:var(--tdt-fg-4,rgba(128,128,128,.7));margin-left:10px;transform:translateY(.5px);}
-.dsh-tdt-sv-tool-filelink{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:inherit;text-align:left;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-2,rgba(128,128,128,.95));text-decoration:underline dotted;text-decoration-color:var(--tdt-fg-3,rgba(128,128,128,.8));text-underline-offset:3px;cursor:pointer;background:0 0;border:none;flex:0 auto;margin:0;padding:0;text-decoration-thickness:1px;transition:color .1s;overflow:hidden;}
-.dsh-tdt-sv-tool-filelink:hover{color:var(--tdt-fg,#1f2328);text-decoration-color:currentColor;}
-.dsh-tdt-sv-tool-errmark{color:var(--tdt-danger,#e5484d);}
-.dsh-tdt-sv-tool-stopmark{color:var(--tdt-warning-label,#f5a623);}
+.dsh-tdt-sv-tool-chevron{color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-tool-sep{background:var(--dshpc-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-tool-summary{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dshpc-fg-3,rgba(128,128,128,.8));flex:auto;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-suffix{white-space:nowrap;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dshpc-fg-3,rgba(128,128,128,.8));flex:none;margin-left:4px;transition:color .1s;}
+.dsh-tdt-sv-tool-diffstat{font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 2px);color:var(--dshpc-fg-4,rgba(128,128,128,.7));margin-left:10px;transform:translateY(.5px);}
+.dsh-tdt-sv-tool-filelink{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:inherit;text-align:left;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dshpc-fg-2,rgba(128,128,128,.95));text-decoration:underline dotted;text-decoration-color:var(--dshpc-fg-3,rgba(128,128,128,.8));text-underline-offset:3px;cursor:pointer;background:0 0;border:none;flex:0 auto;margin:0;padding:0;text-decoration-thickness:1px;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-filelink:hover{color:var(--dshpc-fg,#1f2328);text-decoration-color:currentColor;}
+.dsh-tdt-sv-tool-errmark{color:var(--dshpc-danger,#e5484d);}
+.dsh-tdt-sv-tool-stopmark{color:var(--dshpc-warning-label,#f5a623);}
 .dsh-tdt-sv-tool-bodywrap{flex-direction:column;display:flex;}
-.dsh-tdt-sv-io-card{border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-lg,10px);background:var(--tdt-code-surface,rgba(128,128,128,.10));font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));flex-direction:column;margin:4px 0 4px 4px;display:flex;}
+.dsh-tdt-sv-io-card{border:.5px solid var(--dshpc-border-faint,rgba(128,128,128,.24));border-radius:var(--dshpc-radius-lg,10px);background:var(--dshpc-code-surface,rgba(128,128,128,.10));font:var(--dshpc-code-font,12px/18px var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));flex-direction:column;margin:4px 0 4px 4px;display:flex;}
 .dsh-tdt-sv-io-section{grid-template-columns:max-content 1fr;align-items:baseline;column-gap:14px;max-height:150px;padding:12px 16px;display:grid;overflow-y:auto;}
-.dsh-tdt-sv-io-label{color:var(--tdt-fg-4,rgba(128,128,128,.7));align-self:start;position:sticky;top:0;}
-.dsh-tdt-sv-io-divider{background:var(--tdt-border,rgba(128,128,128,.35));flex:none;height:.5px;}
-.dsh-tdt-sv-io-text{white-space:pre-wrap;word-break:break-word;min-width:0;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-io-text[data-error]{color:var(--tdt-danger,#e5484d);}
+.dsh-tdt-sv-io-label{color:var(--dshpc-fg-4,rgba(128,128,128,.7));align-self:start;position:sticky;top:0;}
+.dsh-tdt-sv-io-divider{background:var(--dshpc-border,rgba(128,128,128,.35));flex:none;height:.5px;}
+.dsh-tdt-sv-io-text{white-space:pre-wrap;word-break:break-word;min-width:0;color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-io-text[data-error]{color:var(--dshpc-danger,#e5484d);}
 .dsh-tdt-sv-tool-block{margin:4px 0 4px 4px;}
-.dsh-tdt-sv-tool-terminal{--dsl-terminal-font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));--dsl-terminal-line-height:var(--tdt-line-sm);--dsl-terminal-output-max-height:224px;border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));margin:4px 0 4px 4px;}
+.dsh-tdt-sv-tool-terminal{--dsl-terminal-font:var(--dshpc-code-font,12px/18px var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));--dsl-terminal-line-height:var(--dshpc-line-sm);--dsl-terminal-output-max-height:224px;border:.5px solid var(--dshpc-border-faint,rgba(128,128,128,.24));margin:4px 0 4px 4px;}
 .dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
 .dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
-.dsh-tdt-sv-notice{align-self:center;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));padding:2px 8px;}
-.dsh-tdt-sv-hint{font-size:var(--tdt-font-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
+.dsh-tdt-sv-notice{align-self:center;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));padding:2px 8px;}
+.dsh-tdt-sv-hint{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-2,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
 /* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
 .dsh-tdt-sv-process:disabled{cursor:default;}
-.dsh-tdt-sv-trigger{align-self:stretch;background:var(--tdt-code-surface,rgba(128,128,128,.10));border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-xl,12px);transition:background .1s;}
-.dsh-tdt-sv-trigger:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-trigger{align-self:stretch;background:var(--dshpc-code-surface,rgba(128,128,128,.10));border:.5px solid var(--dshpc-border-faint,rgba(128,128,128,.24));border-radius:var(--dshpc-radius-xl,12px);transition:background .1s;}
+.dsh-tdt-sv-trigger:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-trigger-header{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:0 0;border:none;cursor:pointer;color:inherit;font:inherit;text-align:left;}
-.dsh-tdt-sv-trigger-icon{display:inline-flex;align-items:center;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;}
-.dsh-tdt-sv-trigger-title{font-size:var(--tdt-font-md,13px);color:var(--tdt-fg,#1f2328);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-trigger-time{margin-left:auto;font-size:var(--tdt-font-sm,12px);color:var(--tdt-fg-4,rgba(128,128,128,.7));white-space:nowrap;}
-.dsh-tdt-sv-trigger-chevron{flex:none;color:var(--tdt-fg-4,rgba(128,128,128,.7));transition:transform .1s;}
-.dsh-tdt-sv-trigger-chevron-open{flex:none;color:var(--tdt-fg-4,rgba(128,128,128,.7));transform:rotate(180deg);}
+.dsh-tdt-sv-trigger-icon{display:inline-flex;align-items:center;color:var(--dshpc-fg-3,rgba(128,128,128,.8));flex:none;}
+.dsh-tdt-sv-trigger-title{font-size:var(--dshpc-font-md,13px);color:var(--dshpc-fg,#1f2328);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-trigger-time{margin-left:auto;font-size:var(--dshpc-font-sm,12px);color:var(--dshpc-fg-4,rgba(128,128,128,.7));white-space:nowrap;}
+.dsh-tdt-sv-trigger-chevron{flex:none;color:var(--dshpc-fg-4,rgba(128,128,128,.7));transition:transform .1s;}
+.dsh-tdt-sv-trigger-chevron-open{flex:none;color:var(--dshpc-fg-4,rgba(128,128,128,.7));transform:rotate(180deg);}
 .dsh-tdt-sv-trigger-body{padding:0 16px 12px 40px;}
-.dsh-tdt-sv-trigger-explanation{margin:8px 0 0;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-sv-trigger-content{margin-top:6px;font-size:var(--tdt-font-md);line-height:1.6;color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;}
+.dsh-tdt-sv-trigger-explanation{margin:8px 0 0;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-trigger-content{margin-top:6px;font-size:var(--dshpc-font-md);line-height:1.6;color:var(--dshpc-fg-2,rgba(128,128,128,.95));white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;}
 .dsh-tdt-sv-tail{display:flex;flex-direction:column;gap:16px;}
 .dsh-tdt-sv-tail-actions{margin-top:4px;margin-left:-6px;}
-.dsh-tdt-sv-clock{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));white-space:nowrap;}
+.dsh-tdt-sv-clock{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));white-space:nowrap;}
 .dsh-tdt-sv-endinfo{display:inline-flex;align-items:center;gap:8px;margin-left:8px;}
 .dsh-tdt-sv-usage{display:inline-flex;align-items:center;}
-.dsh-tdt-sv-usage-trigger{display:inline-flex;align-items:center;gap:4px;appearance:none;background:0 0;border:none;cursor:pointer;padding:0 4px;font:inherit;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-sv-usage-trigger:hover{color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-stats{position:fixed;z-index:1200;min-width:200px;max-width:min(440px,calc(100vw - 24px));background:var(--tdt-surface-1,rgba(30,30,30,.98));border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));padding:12px;font-size:var(--tdt-font-sm);color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-usage-trigger{display:inline-flex;align-items:center;gap:4px;appearance:none;background:0 0;border:none;cursor:pointer;padding:0 4px;font:inherit;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-usage-trigger:hover{color:var(--dshpc-fg,#1f2328);}
+.dsh-tdt-sv-stats{position:fixed;z-index:1200;min-width:200px;max-width:min(440px,calc(100vw - 24px));background:var(--dshpc-surface-1,rgba(30,30,30,.98));border:1px solid var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-md);box-shadow:var(--dshpc-shadow-2,0 12px 32px rgba(0,0,0,.4));padding:12px;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg,#1f2328);}
 .dsh-tdt-sv-stats-title{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.dsh-tdt-sv-stats-titlelabel{display:inline-flex;align-items:center;gap:6px;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-stats-titlelabel{display:inline-flex;align-items:center;gap:6px;color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-stats-titlevalue{font-variant-numeric:tabular-nums;}
-.dsh-tdt-sv-stats-rule{height:1px;background:var(--tdt-border,rgba(128,128,128,.35));margin:8px 0;}
+.dsh-tdt-sv-stats-rule{height:1px;background:var(--dshpc-border,rgba(128,128,128,.35));margin:8px 0;}
 .dsh-tdt-sv-stats-details{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;}
-.dsh-tdt-sv-stats-details dt{color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-stats-details dt{color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 .dsh-tdt-sv-stats-details dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;}
 .dsh-tdt-sv-stats-route{word-break:break-all;}
-.dsh-tdt-sv-stats-reasoning{color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-stats-reasoning{color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 /* ── 过程分组（二级收折，ChatGroupSeat.module.css 照抄：root/title/leading/activityIcon/chevron/label/body/content/fade） ── */
 .dsh-tdt-sv-group{min-width:0;}
-.dsh-tdt-sv-group-title{max-width:100%;color:var(--tdt-fg-2,rgba(128,128,128,.95));font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex;}
-.dsh-tdt-sv-group-title:hover{color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-group-leading{width:16px;height:16px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative;}
+.dsh-tdt-sv-group-title{max-width:100%;color:var(--dshpc-fg-2,rgba(128,128,128,.95));font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex;}
+.dsh-tdt-sv-group-title:hover{color:var(--dshpc-fg,#1f2328);}
+.dsh-tdt-sv-group-leading{width:16px;height:16px;color:var(--dshpc-fg-3,rgba(128,128,128,.8));flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative;}
 .dsh-tdt-sv-group-icon,.dsh-tdt-sv-group-chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0;}
 .dsh-tdt-sv-group-icon{opacity:1;}
 .dsh-tdt-sv-group-chevron{opacity:0;}
@@ -50100,28 +49939,28 @@ body[data-ds-dark-theme]{
 /* 官方 Modal 卡片宽（RiskConfirmation 同款 min(440px,100%)；我方样式后注入，同特异性覆盖 .dialog 的 380px）。 */
 .dsh-tdt-sv-forkmodal{width:min(440px,100%);}
 /* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
-.dsh-tdt-sv-forkerr{margin:0;font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);color:var(--tdt-danger,#e5484d);word-break:break-word;}
+.dsh-tdt-sv-forkerr{margin:0;font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);color:var(--dshpc-danger,#e5484d);word-break:break-word;}
 /* ── 重试/轮次失败/限长三件套兜底（官方 MessageItem.module.css 逐值照抄，官方类缺失时生效） ── */
-.dsh-tdt-sv-retry{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));}
-.dsh-tdt-sv-retry-summary{border-radius:var(--tdt-radius-sm,6px);width:fit-content;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex;}
+.dsh-tdt-sv-retry{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));}
+.dsh-tdt-sv-retry-summary{border-radius:var(--dshpc-radius-sm,6px);width:fit-content;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex;}
 .dsh-tdt-sv-retry-summary::-webkit-details-marker{display:none;}
 .dsh-tdt-sv-retry-summary:after{content:"";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg);}
-.dsh-tdt-sv-retry-summary:hover{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-retry-summary:focus-visible{outline:1.5px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-sv-retry-summary:hover{color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-retry-summary:focus-visible{outline:1.5px solid var(--dshpc-focus);outline-offset:2px;}
 .dsh-tdt-sv-retry-text{color:inherit;}
-.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{background:linear-gradient(90deg,var(--tdt-fg-3,rgba(128,128,128,.8)) 0%,var(--tdt-fg-3,rgba(128,128,128,.8)) 40%,var(--tdt-fg-2,rgba(128,128,128,.95)) 50%,var(--tdt-fg-3,rgba(128,128,128,.8)) 60%,var(--tdt-fg-3,rgba(128,128,128,.8)) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite dsh-tdt-retry-shimmer;}
+.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{background:linear-gradient(90deg,var(--dshpc-fg-3,rgba(128,128,128,.8)) 0%,var(--dshpc-fg-3,rgba(128,128,128,.8)) 40%,var(--dshpc-fg-2,rgba(128,128,128,.95)) 50%,var(--dshpc-fg-3,rgba(128,128,128,.8)) 60%,var(--dshpc-fg-3,rgba(128,128,128,.8)) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite dsh-tdt-retry-shimmer;}
 @keyframes dsh-tdt-retry-shimmer{0%{background-position:100%}to{background-position:0}}
 @media (prefers-reduced-motion:reduce){.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{color:inherit;background:0 0;animation:none;}}
 .dsh-tdt-sv-retry[open] .dsh-tdt-sv-retry-summary:after{transform:rotate(45deg);}
 .dsh-tdt-sv-retry-details{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid;}
-.dsh-tdt-sv-retry-label{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-retry-label{color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-turnerr{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid;}
 .dsh-tdt-sv-turnerr-dot{margin-top:5px;}
 .dsh-tdt-sv-turnerr-copy{overflow-wrap:anywhere;min-width:0;}
-.dsh-tdt-sv-turnerr-title{color:var(--tdt-danger,#e5484d);margin-right:6px;font-weight:600;}
-.dsh-tdt-sv-turnerr-msg{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-turnerr-code{color:var(--tdt-fg-3,rgba(128,128,128,.8));font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
-.dsh-tdt-sv-turnerr-warn{color:var(--tdt-warning,#f5a623);margin-right:6px;font-weight:600;}
+.dsh-tdt-sv-turnerr-title{color:var(--dshpc-danger,#e5484d);margin-right:6px;font-weight:600;}
+.dsh-tdt-sv-turnerr-msg{color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-turnerr-code{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font:var(--dshpc-code-font,12px/18px var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
+.dsh-tdt-sv-turnerr-warn{color:var(--dshpc-warning,#f5a623);margin-right:6px;font-weight:600;}
 
 /* ── U11 产出物预览（决策 39）：页面级 dock 预览面（弹窗与整页共用，见上方 dock 规则） ──
    旧「弹窗内右侧分栏」那两条规则已随第三轮上提删除（预览面唯一且页面级）。 */
@@ -50131,16 +49970,16 @@ body[data-ds-dark-theme]{
 /* 拖拽期把 dock 的布局/绘制**隔离**：改宽度不再牵动整页重排（dock 内常驻上万行高亮 DOM，
    不隔离时每帧重排全页 ⇒ 真机 2026-10-04「挪很久才动一下」）。 */
 .dsh-tdt-root.dsh-tdt-resizing .dsh-tdt-sv-preview-dock{contain:layout paint;will-change:width;}
-.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));background:var(--tdt-surface-base,#1a1a1a);}
-.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
-.dsh-tdt-sv-preview-label{flex:none;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));background:var(--dshpc-surface-base,#1a1a1a);}
+.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
+.dsh-tdt-sv-preview-label{flex:none;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 /* 路径 / 文件名：走全站唯一 MarqueeText（ui/MarqueeText.tsx），本类只提供**字体与字色皮肤**
    （挂在 MarqueeText 外层、内层继承）；外层裁剪与滚动由 .dsh-tdt-mq 负责。 */
-.dsh-tdt-sv-preview-title-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
+.dsh-tdt-sv-preview-title-inner{font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
 /* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
 .dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
-.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-head-btn:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);border-radius:var(--dshpc-radius-sm,6px);cursor:pointer;color:var(--dshpc-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--dshpc-dur,.15s) var(--dshpc-ease,ease);}
+.dsh-tdt-sv-head-btn:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:12px 14px;}
 .dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
@@ -50157,97 +49996,97 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-cmviewer{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
 /* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方复制钮交互：仅图标、无中文文案、点击复制全文、
    复制后短暂切勾选图标 + "已复制"提示，title/aria-label 承载本地化文案）。 */
-.dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-surface-1,rgba(30,30,30,.9));color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--tdt-ease,ease),background .12s,color .12s;}
+.dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-sm,6px);background:var(--dshpc-surface-1,rgba(30,30,30,.9));color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--dshpc-ease,ease),background .12s,color .12s;}
 .dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
-.dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-cm-copy:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg,#1f2328);}
 .dsh-tdt-sv-cm-copy svg{width:16px;height:16px;}
 .dsh-tdt-sv-cm-editor{flex:1 1 auto;min-height:0;overflow:hidden;}
 .dsh-tdt-sv-cm-editor .cm-editor{height:100%;}
 .dsh-tdt-sv-cm-editor .cm-scroller{overflow:auto;}
 /* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
-.dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--tdt-font-xs,12px);color:var(--tdt-warning,#f59e0b);background:var(--tdt-surface-1,rgba(255,255,255,.04));}
+.dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--dshpc-font-xs,12px);color:var(--dshpc-warning,#f59e0b);background:var(--dshpc-surface-1,rgba(255,255,255,.04));}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
-.dsh-tdt-sv-preview-md{font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
+.dsh-tdt-sv-preview-md{font-size:var(--dshpc-font-lg);line-height:1.7;word-break:break-word;}
 
 /* CodeMirror 外壳缺失兜底：代码面按容器宽度布局（ocOr 语义见上方说明）。 */
 .dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
 /* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
 /* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
-.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));white-space:nowrap;}
+.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));white-space:nowrap;}
 .dsh-tdt-sv-crumbs-menu-wrap{position:relative;flex:none;display:inline-flex;}
 .dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
 .dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
-.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;display:inline-flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;}
-.dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;min-width:0;}
+.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--dshpc-radius-sm,6px);font:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:pointer;display:inline-flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.dsh-tdt-sv-crumb:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg,#1f2328);}
+.dsh-tdt-sv-crumb-current{cursor:default;color:var(--dshpc-fg,#1f2328);font-weight:600;min-width:0;}
 /* MarqueeText 皮肤：填满 crumb 按钮内容宽、可收缩；字体/字色由按钮继承；截断出「…」时 hover 跑马灯。 */
 .dsh-tdt-sv-crumb-mq{flex:1 1 auto;min-width:0;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
-.dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
+.dsh-tdt-sv-crumb-sep{flex:none;color:var(--dshpc-fg-3,rgba(128,128,128,.7));}
 /* 工作区之外的只读完整路径（用户 2026-10-03）：**不可点**（无导航），但过长仍走
    MarqueeText 跑马灯（用户验收点正：「啪-啪-灯」= 跑马灯）。本类只提供**字体与字色皮肤**，
    裁剪与滚动由 .dsh-tdt-mq 负责。 */
-.dsh-tdt-sv-crumbbar-plain-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;}
+.dsh-tdt-sv-crumbbar-plain-inner{font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-2,rgba(128,128,128,.95));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;}
 .dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
 /* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
 .dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
-.dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--tdt-surface-1);border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
-.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;border-radius:var(--tdt-radius-sm);color:var(--tdt-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-crumbs-menu-empty{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--dshpc-surface-1);border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-sm);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
+.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-md);padding:4px 8px;border-radius:var(--dshpc-radius-sm);color:var(--dshpc-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-crumbs-menu-empty{font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-md);padding:4px 8px;color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 /* 第二排：文件名（跑马灯）+ 操作按钮。 */
-.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
+.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
 .dsh-tdt-sv-tree{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
-.dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;user-select:none;}
-.dsh-tdt-sv-tree-row:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-tree-row:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
-.dsh-tdt-sv-tree-icon{flex:none;display:inline-flex;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--dshpc-radius-sm,6px);cursor:pointer;user-select:none;}
+.dsh-tdt-sv-tree-row:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-tree-row:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px;}
+.dsh-tdt-sv-tree-icon{flex:none;display:inline-flex;color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 /* 下拉选层：每行只显示一个右箭头（画在原第 index 位），行首 (index-1) 个箭头位
    空出但占位（宽度与箭头一致），保持层级缩进（用户 2026-09-29）。 */
-.dsh-tdt-sv-crumbs-chev{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));margin-right:1px;}
+.dsh-tdt-sv-crumbs-chev{flex:none;color:var(--dshpc-fg-3,rgba(128,128,128,.7));margin-right:1px;}
 .dsh-tdt-sv-crumbs-chev-slot{flex:none;width:11px;height:11px;margin-right:1px;}
 .dsh-tdt-sv-crumbs-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* 目录树：行内 ▸ 开关（内联展开/收起），点它只切展开、不导航。 */
-.dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--tdt-dur,.15s) var(--tdt-ease,ease),background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--dshpc-radius-sm,6px);cursor:pointer;color:var(--dshpc-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--dshpc-dur,.15s) var(--dshpc-ease,ease),background var(--dshpc-dur,.15s) var(--dshpc-ease,ease);}
 .dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
 /* 目录树：行尾「选择」按钮（仅选择器形态，用户 2026-10-10）——平时藏起来，悬停或聚焦该行才出现，
    点它才把整个文件夹选为附件；平时隐形但保留尺寸，出现时不会顶动行内布局。 */
-.dsh-tdt-sv-tree-act{flex:none;margin-left:auto;appearance:none;background:0 0;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);padding:2px 8px;font-size:var(--tdt-font-sm);line-height:1.4;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;pointer-events:none;transition:opacity var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-tree-act{flex:none;margin-left:auto;appearance:none;background:0 0;border:1px solid var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-sm,6px);padding:2px 8px;font-size:var(--dshpc-font-sm);line-height:1.4;color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;pointer-events:none;transition:opacity var(--dshpc-dur,.15s) var(--dshpc-ease,ease);}
 .dsh-tdt-sv-tree-row:hover .dsh-tdt-sv-tree-act,.dsh-tdt-sv-tree-act:focus-visible{opacity:1;pointer-events:auto;}
-.dsh-tdt-sv-tree-act:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
+.dsh-tdt-sv-tree-act:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg);}
 /* 内联展开子层：左缩进 + 淡竖线引导层级。 */
-.dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--tdt-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
-.dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-sv-tree-err{color:var(--tdt-danger,#e5484d);}
-.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:var(--tdt-font-sm);line-height:1.6;color:var(--tdt-fg-2,rgba(128,128,128,.95));padding:8px 0;}
+.dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
+.dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-tree-err{color:var(--dshpc-danger,#e5484d);}
+.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:var(--dshpc-font-sm);line-height:1.6;color:var(--dshpc-fg-2,rgba(128,128,128,.95));padding:8px 0;}
 /* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
 /* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
-.dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--tdt-fg-2,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:var(--tdt-font-sm);display:flex;}
+.dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--dshpc-fg-2,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:var(--dshpc-font-sm);display:flex;}
 .dsh-tdt-sv-deliv-rowsummary>:first-child{flex-shrink:0;}
 .dsh-tdt-sv-deliv-rowpaths{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
-.dsh-tdt-sv-deliv-rowoutput{border-radius:var(--tdt-radius-md);background:var(--tdt-surface-1);color:var(--tdt-fg-2);white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;padding:12px;font-size:var(--tdt-font-sm);}
+.dsh-tdt-sv-deliv-rowoutput{border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg-2);white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;padding:12px;font-size:var(--dshpc-font-sm);}
 /* 交付文件卡网格（root 内含 container query：≤620px 单列）。 */
-.dsh-tdt-sv-deliv{--deliverable-fill:var(--tdt-plate);--deliverable-hover:var(--tdt-plate-hover);flex-direction:column;gap:16px;min-width:0;margin-top:4px;display:flex;container-type:inline-size;}
+.dsh-tdt-sv-deliv{--deliverable-fill:var(--dshpc-plate);--deliverable-hover:var(--dshpc-plate-hover);flex-direction:column;gap:16px;min-width:0;margin-top:4px;display:flex;container-type:inline-size;}
 .dsh-tdt-sv-deliv-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;display:grid;}
 .dsh-tdt-sv-deliv-grid[data-single=true]{grid-template-columns:minmax(0,1fr);}
 @container (width<=620px){.dsh-tdt-sv-deliv-grid{grid-template-columns:minmax(0,1fr);}}
-.dsh-tdt-sv-deliv-file{box-sizing:border-box;border:.5px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);background:var(--deliverable-fill);min-width:0;height:60px;color:var(--tdt-fg);align-items:center;gap:10px;padding:8px 10px;transition:background-color .12s;display:flex;position:relative;overflow:hidden;}
+.dsh-tdt-sv-deliv-file{box-sizing:border-box;border:.5px solid var(--dshpc-border-faint);border-radius:var(--dshpc-radius-md);background:var(--deliverable-fill);min-width:0;height:60px;color:var(--dshpc-fg);align-items:center;gap:10px;padding:8px 10px;transition:background-color .12s;display:flex;position:relative;overflow:hidden;}
 .dsh-tdt-sv-deliv-file:hover{background:var(--deliverable-hover);}
 .dsh-tdt-sv-deliv-cardpreview{z-index:1;border-radius:inherit;cursor:pointer;background:0 0;border:0;width:100%;padding:0;position:absolute;inset:0;}
-.dsh-tdt-sv-deliv-cardpreview:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus);outline:none;}
-.dsh-tdt-sv-deliv-icon{z-index:2;box-sizing:border-box;pointer-events:none;border:.5px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);background:var(--tdt-icon-plate);width:40px;height:40px;color:var(--tdt-link);flex:none;place-items:center;display:grid;position:relative;overflow:hidden;}
+.dsh-tdt-sv-deliv-cardpreview:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-focus);outline:none;}
+.dsh-tdt-sv-deliv-icon{z-index:2;box-sizing:border-box;pointer-events:none;border:.5px solid var(--dshpc-border-faint);border-radius:var(--dshpc-radius-md);background:var(--dshpc-icon-plate);width:40px;height:40px;color:var(--dshpc-link);flex:none;place-items:center;display:grid;position:relative;overflow:hidden;}
 .dsh-tdt-sv-deliv-body{z-index:2;pointer-events:none;flex:1;justify-content:space-between;align-items:center;gap:12px;min-width:0;display:flex;position:relative;}
 .dsh-tdt-sv-deliv-details{flex-direction:column;flex:1;justify-content:center;gap:2px;min-width:0;display:flex;}
-.dsh-tdt-sv-deliv-name{text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);overflow:hidden;}
-.dsh-tdt-sv-deliv-desc{color:var(--tdt-fg-3,rgba(128,128,128,.8));text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-xs);font-weight:400;line-height:var(--tdt-line-sm);overflow:hidden;}
+.dsh-tdt-sv-deliv-name{text-overflow:ellipsis;white-space:nowrap;font-size:var(--dshpc-font-md);font-weight:500;line-height:var(--dshpc-line-md);overflow:hidden;}
+.dsh-tdt-sv-deliv-desc{color:var(--dshpc-fg-3,rgba(128,128,128,.8));text-overflow:ellipsis;white-space:nowrap;font-size:var(--dshpc-font-xs);font-weight:400;line-height:var(--dshpc-line-sm);overflow:hidden;}
 .dsh-tdt-sv-deliv-hint,.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-secondary{display:none;}
 .dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-hint{display:inline;}
-.dsh-tdt-sv-deliv-toggle{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
-.dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-deliv-toggle{border-radius:var(--dshpc-radius-sm,6px);min-width:0;color:var(--dshpc-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);display:inline-flex;}
+.dsh-tdt-sv-deliv-toggle:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
    官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
@@ -50275,16 +50114,16 @@ body[data-ds-dark-theme]{
       原 max-height:min(38vh,340px) + overflow-y:auto 全部去掉 ⇒ 全弹窗只有右侧一个滚动条。
    ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
 /* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:0 0 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--dshpc-border-faint,#0000000a);padding:0 0 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
 /* 顶部输入区现在住在 column 里（与会话内容同一个滚动容器）⇒ column 的兄弟间距规则
    会给「紧跟它之后的第一条消息」再加一道 margin-top，而它自己已有 padding-bottom ⇒ 多出一截。
    这里把那一道抵消掉（写在 flow-item 间距规则之后，官方类命中与否都要生效）。 */
 .dsh-tdt-sv-col>.dsh-tdt-sv-tfc~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:0;}
 .dsh-tdt-sv-tfc-group{flex-direction:column;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--tdt-border-faint,#0000000a);padding-top:12px;}
+.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--dshpc-border-faint,#0000000a);padding-top:12px;}
 .dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}
 /* 组标题比内容**高一档**（12px/600/fg-2）⇒ 不靠颜色也分得出层级：标题 > 任务名 > 芯片 > 元信息。 */
-.dsh-tdt-sv-tfc-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:600;line-height:var(--tdt-line-sm);white-space:nowrap;}
+.dsh-tdt-sv-tfc-title{color:var(--dshpc-fg-2,rgba(128,128,128,.95));font-size:var(--dshpc-font-sm);font-weight:600;line-height:var(--dshpc-line-sm);white-space:nowrap;}
 /* 前置任务块 —— 一排两个（窄容器降一列，见下方 @container）。 */
 .dsh-tdt-sv-tfc-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;min-width:0;}
 @container (width<=620px){.dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr);}}
@@ -50294,8 +50133,8 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
 /* 层级：组标题 12/600/fg-2 靠**字重**区分；任务名同 12px 但 500 + 主色 ⇒ 内容更实、标题更轻。 */
-.dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
-.dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:0 1 auto;}
+.dsh-tdt-sv-tfc-name{color:var(--dshpc-fg,#1f2328);font-size:var(--dshpc-font-sm);font-weight:500;line-height:var(--dshpc-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
+.dsh-tdt-sv-tfc-meta{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);white-space:nowrap;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
 /* 文件**横向排**：从左到右、排满换行（用户 2026-10-03 第二次点名）。
    ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
@@ -50304,13 +50143,13 @@ body[data-ds-dark-theme]{
    「4000_Essential_….pdf」就那么宽，不该每个后面都拖一条空白）。
    ⇒ flex:0 0 auto（不 grow、不平分）；**不设最小宽度**（一个叫 a.txt 的就只显示 a.txt）；
    唯一约束是 label 的 max-width（见下）：超长才出省略号。 */
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
+.dsh-tdt-sv-tfc-file{border-radius:var(--dshpc-radius-sm,6px);color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);flex:0 0 auto;display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
-button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
-button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
+button.dsh-tdt-sv-tfc-file:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg);}
+button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-focus,#3b5bdb);outline:none;}
 /* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
 .dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
-.dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
+.dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--dshpc-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
 /* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层）。
    这里给它**唯一的长度约束**：**无最小宽度**（用户 2026-10-03：「只有一个字 a.txt 就只显示 a.txt」），
    **最大 40ch** —— 放宽到「只要不是几百个字符都让它显示」，超出才出省略号 + hover 来回滚动。
@@ -50318,29 +50157,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    ⚠️ ch 按「0」的宽度算，中文文件名实际更宽一点，属可接受偏差。 */
 .dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}
 /* 前置任务序号徽标（用户 2026-10-03 四次点名定稿）：**顶替原来那条 4px 竖线**，
-   宽高**相等**的方块，字号**直接取 var(--tdt-font-sm)** —— 与主界面「基础信息」面板
+   宽高**相等**的方块，字号**直接取 var(--dshpc-font-sm)** —— 与主界面「基础信息」面板
    底部「前置任务」那一行的正文**同一个字号变量**（用户原话：「大小太小了，样式参考主界面
    任务列表展开的基础信息最下面那个前置任务，按那儿的样式大小就行」）。
    方块 16px 容纳 12px 数字 + 一点余量；底色 chip-bg（非纯白、比 plate 亮一档），字色 fg-2。
    align-self:center 让它在 baseline 行里垂直居中，不贴文字基线。 */
-.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:16px;height:16px;padding:0;border-radius:4px;background:var(--tdt-chip-bg,rgba(128,128,128,.12));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);line-height:1;font-variant-numeric:tabular-nums;}
+.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:16px;height:16px;padding:0;border-radius:4px;background:var(--dshpc-chip-bg,rgba(128,128,128,.12));color:var(--dshpc-fg-2,rgba(128,128,128,.95));font-size:var(--dshpc-font-sm);line-height:1;font-variant-numeric:tabular-nums;}
 /* 标记 + 文件名的无缝容器：标记紧贴文件名，右方括号与名字之间**不留间距**
    （用户给的形状就是 [链接]foo.md，中间没有空格）。 */
 .dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
 /* 来源 / 状态标记：方括号**放在文件名前面**（用户 2026-10-03：原来挂最右边、
    被 flex 撑开，越看越像按钮）。与文件名同字号，只靠颜色弱化。 */
-.dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
-.dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
-.dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg-2);}
-.dsh-tdt-sv-tfc-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+.dsh-tdt-sv-tfc-note{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);white-space:nowrap;flex:none;}
+.dsh-tdt-sv-tfc-more{border-radius:var(--dshpc-radius-sm,6px);min-width:0;color:var(--dshpc-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);display:inline-flex;}
+.dsh-tdt-sv-tfc-more:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg-2);}
+.dsh-tdt-sv-tfc-none{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);}
 /* 用户消息里的随附文件卡（官方 MessageItem attachmentRow / fileCard；2026-10-03）：
    气泡**下方**一行，小卡 = 图标 + 文件名 + 大小。引用里没有路径 ⇒ 不可点开，也不伪装成可点。 */
 .dsh-tdt-sv-attrow{flex-wrap:wrap;gap:6px;min-width:0;justify-content:flex-end;display:flex;}
-.dsh-tdt-sv-attcard{box-sizing:border-box;border:.5px solid var(--tdt-border-faint,#0000000a);border-radius:var(--tdt-radius-md);background:var(--tdt-plate,rgba(128,128,128,.08));max-width:100%;height:44px;align-items:center;gap:8px;padding:6px 10px;display:flex;}
-.dsh-tdt-sv-attIcon{width:16px;height:16px;color:var(--tdt-link,#3b5bdb);flex:none;align-items:center;justify-content:center;display:inline-flex;}
+.dsh-tdt-sv-attcard{box-sizing:border-box;border:.5px solid var(--dshpc-border-faint,#0000000a);border-radius:var(--dshpc-radius-md);background:var(--dshpc-plate,rgba(128,128,128,.08));max-width:100%;height:44px;align-items:center;gap:8px;padding:6px 10px;display:flex;}
+.dsh-tdt-sv-attIcon{width:16px;height:16px;color:var(--dshpc-link,#3b5bdb);flex:none;align-items:center;justify-content:center;display:inline-flex;}
 .dsh-tdt-sv-attBody{flex-direction:column;gap:1px;min-width:0;display:flex;}
-.dsh-tdt-sv-attName{color:var(--tdt-fg);text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);overflow:hidden;}
-.dsh-tdt-sv-attMeta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+.dsh-tdt-sv-attName{color:var(--dshpc-fg);text-overflow:ellipsis;white-space:nowrap;font-size:var(--dshpc-font-sm);font-weight:500;line-height:var(--dshpc-line-sm);overflow:hidden;}
+.dsh-tdt-sv-attMeta{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);}
 `;
 		/**
 		* 幂等注入（走 ui/style.ts 单一 <style>）。SSR / 无 document 环境静默跳过。
@@ -50353,20 +50192,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/** 本皮肤所属的样式域（`ui/style.ts` 的域清单里登记）。 */
 		const TASK_INFO_DOMAIN = "domain:task-info";
 		const TASK_INFO_CSS = [
-			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
-			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
-			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
-			".dsh-tdt-info-dep { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; padding: 0; font: inherit; font-size: var(--tdt-font-sm); color: var(--tdt-fg); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-width: 0; text-align: left; transition: color var(--tdt-dur) var(--tdt-ease); }",
-			".dsh-tdt-info-dep:hover { color: var(--tdt-business); }",
+			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--dshpc-fg); transition: color var(--dshpc-dur) var(--dshpc-ease); }",
+			".dsh-tdt-info-session:hover { color: var(--dshpc-business); }",
+			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--dshpc-radius-xs); background: var(--dshpc-chip-bg); color: var(--dshpc-fg-2); }",
+			".dsh-tdt-info-dep { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; padding: 0; font: inherit; font-size: var(--dshpc-font-sm); color: var(--dshpc-fg); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-width: 0; text-align: left; transition: color var(--dshpc-dur) var(--dshpc-ease); }",
+			".dsh-tdt-info-dep:hover { color: var(--dshpc-business); }",
 			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
-			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); line-height: var(--tdt-line-md); }",
+			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }",
 			".dsh-tdt-info-label { padding-right: 12px; }",
 			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }",
-			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
-			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
-			".dsh-tdt-rec-ic-run { color: var(--tdt-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }",
+			".dsh-tdt-rec-ic-ok { color: var(--dshpc-success); }",
+			".dsh-tdt-rec-ic-bad { color: var(--dshpc-danger); }",
+			".dsh-tdt-rec-ic-run { color: var(--dshpc-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }",
 			"@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }",
-			".dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--tdt-border-strong); border-radius: 50%; }",
+			".dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--dshpc-border-strong); border-radius: 50%; }",
 			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }"
 		].join("\n");
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。卡片展开区与查看档渲染前都调用它。 */
@@ -53392,7 +53231,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 			}, headingTask) : headingTask ?? heading, headingTask !== void 0 ? headingRest : ""), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialCount === 0 ? (0, react$1.createElement)("div", {
 				className: "dsh-tdt-sv-sid",
-				style: { color: "var(--tdt-warning, #b7791f)" }
+				style: { color: "var(--dshpc-warning, #b7791f)" }
 			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-headerbtns" }, canFork ? (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
@@ -54045,7 +53884,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				display: "inline-flex",
 				alignItems: "center",
 				flex: "none",
-				color: current ? "var(--tdt-fg)" : "var(--tdt-fg-2)"
+				color: current ? "var(--dshpc-fg)" : "var(--dshpc-fg-2)"
 			} }, (0, react$1.createElement)(current ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 13 })), (0, react$1.createElement)("span", {
 				className: "dsh-tdt-sv-crumbs-menu-label",
 				style: { fontWeight: current ? 600 : 400 }
@@ -54949,8 +54788,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				gap: "8px"
 			} }, props.label === void 0 ? null : (0, react$1.createElement)("span", { style: {
 				flex: "none",
-				fontSize: "var(--tdt-font-md)",
-				color: "var(--tdt-fg)"
+				fontSize: "var(--dshpc-font-md)",
+				color: "var(--dshpc-fg)"
 			} }, props.label), (0, react$1.createElement)(Segmented, {
 				multiple: true,
 				value: props.value.map(String),
@@ -54964,8 +54803,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					props.onChange(next.map(Number).sort((a, b) => a - b));
 				}
 			}), props.value.length === 0 ? (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-dim)"
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-fg-dim)"
 			} }, props.labels.empty) : null);
 		}
 		//#endregion
@@ -54979,44 +54818,44 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    ⚠️ **本条不设 z-index**：1040 是它还是「浮层 + 遮罩」那代的遗留值（见 worklog/editor-split-pane.md），
    改成布局成员后一直没清 ⇒ 会无条件压过宿主 portal 到 body 的弹窗（「系统设置」等）。
    真机 2026-10-05 去掉，交回 DOM 顺序裁决。 */
-.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;width:var(--dsh-tdt-editor-w,520px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
+.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;width:var(--dsh-tdt-editor-w,520px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--dshpc-surface-base,var(--dshpc-surface-1,#fff));color:var(--dshpc-fg,#1f2328);border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));box-shadow:var(--dshpc-shadow-2,0 12px 40px rgba(0,0,0,.32));}
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
    user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
    见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
 /* 左缘拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index。 */
 .dsh-tdt-ed-resizer{z-index:2;}
-.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
-.dsh-tdt-ed-title{font-size:var(--tdt-font-lg);font-weight:600;}
+.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));position:relative;}
+.dsh-tdt-ed-title{font-size:var(--dshpc-font-lg);font-weight:600;}
 /* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */
 .dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
 .dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
-.dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:var(--tdt-font-md);color:var(--tdt-fg,#1f2328);cursor:pointer;}
+.dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:var(--dshpc-font-md);color:var(--dshpc-fg,#1f2328);cursor:pointer;}
 /* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
 .dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
-.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
-.dsh-tdt-ed-label{font-size:var(--tdt-font-sm);font-weight:600;color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-ed-hint{margin:4px 0 0;font-size:var(--tdt-font-sm);line-height:1.5;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--dshpc-border,rgba(128,128,128,.35));position:relative;}
+.dsh-tdt-ed-label{font-size:var(--dshpc-font-sm);font-weight:600;color:var(--dshpc-fg,#1f2328);}
+.dsh-tdt-ed-hint{margin:4px 0 0;font-size:var(--dshpc-font-sm);line-height:1.5;color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
 /* 删除任务：红色危险钮（用户 2026-09-30：放在「保存」旁，醒目但仍是描边形态）。 */
-.dsh-tdt-ed-danger{color:var(--tdt-danger,#e5484d)!important;border-color:var(--tdt-danger,#e5484d)!important;}
-.dsh-tdt-ed-danger:hover{background:var(--tdt-hover,rgba(128,128,128,.16))!important;}
+.dsh-tdt-ed-danger{color:var(--dshpc-danger,#e5484d)!important;border-color:var(--dshpc-danger,#e5484d)!important;}
+.dsh-tdt-ed-danger:hover{background:var(--dshpc-hover,rgba(128,128,128,.16))!important;}
 .dsh-tdt-ed-section{margin-bottom:16px;}
 .dsh-tdt-ed-section:last-child{margin-bottom:0;}
 /* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
-.dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-lg,10px);background:var(--tdt-surface-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
-.dsh-tdt-ed-card:focus-within{border-color:var(--tdt-business,#4d6bfe);}
+.dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-lg,10px);background:var(--dshpc-surface-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
+.dsh-tdt-ed-card:focus-within{border-color:var(--dshpc-business,#4d6bfe);}
 /* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
-.dsh-tdt-ed-card--error{border-color:var(--tdt-danger,#e5484d);background:var(--tdt-danger,rgba(229,72,77,.08));}
+.dsh-tdt-ed-card--error{border-color:var(--dshpc-danger,#e5484d);background:var(--dshpc-danger,rgba(229,72,77,.08));}
 /* 历史版本开关（2026-10-01：已并入统一分段控件 Segmented，根 id=dsh-tdt-ed-histtoggle、multiple 单段做 on/off；
    样式完全走 controls-css.ts 的 .dsh-tdt-seg，这里不再留任何皮肤——旧 .dsh-tdt-ed-histtoggle* 规则已删。 */
 /* 版本条目（用户 2026-09-30 第二轮）：弃卡片背景，改**全宽虚线**分隔（一条虚线拉通整栏、不断在中间）；
    右侧 = 固定宽高槽：常态时间小字、hover 换「使用（药丸）/ 移除（小字）」——槽位尺寸恒定，
    hover 出按钮**绝不撑高行高**（此前按钮把行撑大上下蹦，用户点名）。 */
-.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px dashed var(--tdt-border-strong,rgba(128,128,128,.35));}
+.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px dashed var(--dshpc-border-strong,rgba(128,128,128,.35));}
 .dsh-tdt-ed-ver:last-child{border-bottom:none;}
-.dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:var(--tdt-font-xs);color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-ed-ver-note{display:block;font-size:var(--tdt-font-xs);color:var(--tdt-fg-2,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:var(--dshpc-font-xs);color:var(--dshpc-fg,#1f2328);}
+.dsh-tdt-ed-ver-note{display:block;font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-2,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
@@ -55029,32 +54868,32 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
-.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--tdt-radius-md,8px);background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-md);cursor:pointer;text-align:left;}
+.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--dshpc-radius-md,8px);background:0 0;color:var(--dshpc-fg,#1f2328);font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;text-align:left;}
 /* 展开指示：官方 chevron-down（TurnTriggerNodeView 同款），展开 rotate 180°。 */
-.dsh-tdt-ed-advchevron{flex:none;color:var(--tdt-fg-2,rgba(128,128,128,.95));transition:transform .15s ease;}
+.dsh-tdt-ed-advchevron{flex:none;color:var(--dshpc-fg-2,rgba(128,128,128,.95));transition:transform .15s ease;}
 .dsh-tdt-ed-advchevron-open{transform:rotate(180deg);}
 /* 展开体：每项「控件行 + 说明行」两拍，项与项之间虚线分隔（用户 2026-09-29：别全挤成文字）。 */
 .dsh-tdt-ed-advbody{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
 .dsh-tdt-ed-advitem{padding-top:12px;}
 .dsh-tdt-ed-advitem:first-child{padding-top:0;}
-.dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--tdt-border-strong,rgba(128,128,128,.5));}
+.dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--dshpc-border-strong,rgba(128,128,128,.5));}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
-.dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));}
+.dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
 /* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */
-.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:0;background:0 0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:help;}
+.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:0;background:0 0;color:var(--dshpc-fg-3,rgba(128,128,128,.8));cursor:help;}
 /* 用户 2026-10-01：不要 hover 底色（问号只要一个图标 + 气泡），只做颜色提亮。 */
-.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--tdt-fg,#1f2328);background:0 0;outline:none;}
+.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dshpc-fg,#1f2328);background:0 0;outline:none;}
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
    左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
    官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
    这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
-.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
 /* 附件行（用户 2026-10-06）：背景 / 圆角放这里而不是内联——内联 background 会压过 :hover。
-   整行可点开预览的行给 hover 反馈：背景亮一档（与 chip hover 同档 --tdt-chip-bg-hover）。 */
-.dsh-tdt-ed-attrow{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
+   整行可点开预览的行给 hover 反馈：背景亮一档（与 chip hover 同档 --dshpc-chip-bg-hover）。 */
+.dsh-tdt-ed-attrow{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
 .dsh-tdt-ed-attrow--view{cursor:pointer;}
-.dsh-tdt-ed-attrow--view:hover{background:var(--tdt-chip-bg-hover,rgba(38,49,72,.12));}
+.dsh-tdt-ed-attrow--view:hover{background:var(--dshpc-chip-bg-hover,rgba(38,49,72,.12));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
@@ -55067,25 +54906,25 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 块标题行：默认左对齐（标签 + 内联状态/标记都在左），只有提示词的操作组靠右（margin-left:auto）。 */
 .dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 /* 块标题 = **标签**（图标 + 文字）；竖线已承担视觉分隔，这里去掉灰底只留文字。 */
-.dsh-tdt-ed-view-tag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:0;background:transparent;color:var(--tdt-fg);font-size:var(--tdt-font-xs);font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
+.dsh-tdt-ed-view-tag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:0;background:transparent;color:var(--dshpc-fg);font-size:var(--dshpc-font-xs);font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
 /* 标题前的短竖线标（品牌色，方角）：只修饰 icon，不包整块（用户 2026-10-05 修正：整块长线太丑）。 */
-.dsh-tdt-ed-view-tag::before{content:'';flex:none;width:3px;height:14px;background:var(--tdt-business);border-radius:0;}
+.dsh-tdt-ed-view-tag::before{content:'';flex:none;width:3px;height:14px;background:var(--dshpc-business);border-radius:0;}
 .dsh-tdt-ed-view-block{display:flex;flex-direction:column;min-width:0;}
 .dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
 /* 草稿标记 chip（r13：灰色不明显 ⇒ **警告色**——红太强，用 warning 橙：橙字 + 极浅橙底）。 */
-.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:rgba(240,166,60,.14);color:var(--tdt-warning,#b7791f);font-size:var(--tdt-font-xs);white-space:nowrap;}
+.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--dshpc-radius-xs,4px);background:rgba(240,166,60,.14);color:var(--dshpc-warning,#b7791f);font-size:var(--dshpc-font-xs);white-space:nowrap;}
 /* 提示词操作组（源码 / 预览 + 展开 / 收起）：整组靠右、不折行（仅此一组 margin-left:auto，
    其余块的标题 / 状态 / 「修改没保存」保持居左，2026-10-05 修正 space-between 把它们挤到最右）。 */
 .dsh-tdt-ed-view-head-actions{display:flex;align-items:center;gap:6px;flex:none;margin-left:auto;}
 /* 展开 / 收起 小箭头：复用 chevron-down，收起态翻转 180°（与高级设置收折头同款）。 */
-.dsh-tdt-ed-view-expchevron{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.8));transition:transform .15s ease;}
+.dsh-tdt-ed-view-expchevron{flex:none;color:var(--dshpc-fg-3,rgba(128,128,128,.8));transition:transform .15s ease;}
 .dsh-tdt-ed-view-expchevron-open{transform:rotate(180deg);}
 /* 提示词文档区：极淡底（明暗自适应，约 3% 前景色混合）、无左 / 右框、无圆角，包住整段文档。 */
-.dsh-tdt-ed-view-promptbox{background:color-mix(in srgb,var(--tdt-fg) 3%,transparent);padding:8px 10px;margin-top:8px;}
+.dsh-tdt-ed-view-promptbox{background:color-mix(in srgb,var(--dshpc-fg) 3%,transparent);padding:8px 10px;margin-top:8px;}
 /* 提示词默认**约 5 行**截断（用户 2026-10-05）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
 .dsh-tdt-ed-view-prompt{min-width:0;max-height:100px;overflow:hidden;}
 .dsh-tdt-ed-view-prompt--open{max-height:none;}
-.dsh-tdt-ed-view-empty{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-ed-view-empty{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 `;
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		function ensureTaskEditorStyle() {
@@ -64317,7 +64156,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
    语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
 .dsh-tdt-toast{
-  --tone:var(--tdt-danger,#e5484d);
+  --tone:var(--dshpc-danger,#e5484d);
   position:absolute;
   left:50%;
   bottom:calc(100% + 8px);
@@ -64329,13 +64168,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   box-sizing:border-box;
   margin:0;
   padding:8px 14px;
-  border-radius:var(--tdt-radius-md,8px);
+  border-radius:var(--dshpc-radius-md,8px);
   border:1px solid var(--tone);
   /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
-  background:var(--tdt-surface-1,rgba(128,128,128,.15));
-  background:color-mix(in srgb,var(--tone) 10%,var(--tdt-surface-1,#fff));
-  color:var(--tdt-fg,#1f2328);
-  font-size:var(--tdt-font-sm);
+  background:var(--dshpc-surface-1,rgba(128,128,128,.15));
+  background:color-mix(in srgb,var(--tone) 10%,var(--dshpc-surface-1,#fff));
+  color:var(--dshpc-fg,#1f2328);
+  font-size:var(--dshpc-font-sm);
   line-height:1.6;
   display:flex;
   align-items:flex-start;
@@ -64351,7 +64190,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   background:var(--tone);
   margin:6px 8px 0 0;
 }
-.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--tdt-fg-inverse,#fff);opacity:.65;}
+.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--dshpc-fg-inverse,#fff);opacity:.65;}
 .dsh-tdt-toast-text{
   flex:1 1 auto;min-width:0;
   white-space:pre-line;
@@ -64364,15 +64203,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   100%{opacity:0;transform:translate(-50%,-16px);}
 }
 /* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
-.dsh-tdt-toast--success{--tone:var(--tdt-success,#2f9e44);}
-.dsh-tdt-toast--warning{--tone:var(--tdt-warning,#e6a23c);}
+.dsh-tdt-toast--success{--tone:var(--dshpc-success,#2f9e44);}
+.dsh-tdt-toast--warning{--tone:var(--dshpc-warning,#e6a23c);}
 .dsh-tdt-toast--neutral{
-  --tone:var(--tdt-fg-2,rgba(128,128,128,.95));
-  background:var(--tdt-fg,#1f2328);
-  color:var(--tdt-fg-inverse,#fff);
+  --tone:var(--dshpc-fg-2,rgba(128,128,128,.95));
+  background:var(--dshpc-fg,#1f2328);
+  color:var(--dshpc-fg-inverse,#fff);
   border-color:transparent;
 }
-.dsh-tdt-toast--neutral::before{background:var(--tdt-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--neutral::before{background:var(--dshpc-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 可关闭型（操作类失败）：固定底部中央、不自动消失、可点（关闭钮）。中性档即反色实面，观感与旧自绘一致。 */
 .dsh-tdt-toast--closable{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:max-content;max-width:min(90%,520px);pointer-events:auto;z-index:1020;animation:none;opacity:1;}
@@ -64491,14 +64330,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 无下次执行（停用 / 一次性已收尾）⇒ 显示「无」。先收窄 `next` 为 string 再喂给格式化函数。
 		*/
 		function renderNextExec(next, t) {
-			if (next === null) return (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone"));
+			if (next === null) return (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, t("listNone"));
 			return (0, react$1.createElement)("span", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "8px",
 				minWidth: 0
 			} }, (0, react$1.createElement)(LiveText, { render: (nowMs) => nextExecLabel(next, nowMs, t) }), (0, react$1.createElement)("span", { style: {
-				color: "var(--tdt-fg-3)",
+				color: "var(--dshpc-fg-3)",
 				flex: "none"
 			} }, "│"), (0, react$1.createElement)("span", { style: { fontVariantNumeric: "tabular-nums" } }, formatDateTime(next, {
 				seconds: true,
@@ -64587,29 +64426,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			flex: "none",
 			width: "320px",
 			overflowY: "auto",
-			borderLeft: "1px solid var(--tdt-border-faint)",
+			borderLeft: "1px solid var(--dshpc-border-faint)",
 			paddingLeft: "16px"
 		};
 		/** 栏内小标题（「任务配置」/「上次执行」）；左栏标题在共用 grid 里 ⇒ 横跨标签 / 值两列。 */
 		const infoGroupTitleStyle = {
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)",
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-fg-3)",
 			fontWeight: 600,
 			marginBottom: "6px",
 			letterSpacing: "0.02em",
 			gridColumn: "1 / -1"
 		};
 		const infoGridLabelStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg-2)",
+			fontSize: "var(--dshpc-font-sm)",
+			color: "var(--dshpc-fg-2)",
 			whiteSpace: "nowrap"
 		};
 		const infoGridValueStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg)",
+			fontSize: "var(--dshpc-font-sm)",
+			color: "var(--dshpc-fg)",
 			minWidth: 0,
 			wordBreak: "break-word",
-			lineHeight: "var(--tdt-line-md)"
+			lineHeight: "var(--dshpc-line-md)"
 		};
 		/** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
 		function InfoField(props) {
@@ -64622,7 +64461,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, props.children));
 		}
 		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
-		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
+		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--dshpc-success)" : status === "failed" || status === "skipped" ? "var(--dshpc-danger)" : "var(--dshpc-fg-2)";
 		/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
 		const durationMsOf = (row) => {
 			if (row.dispatched_at === null || row.finished_at === null) return null;
@@ -64683,7 +64522,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					width: "8px",
 					height: "8px",
 					borderRadius: "2px",
-					background: view.enabled ? "var(--tdt-success)" : "var(--tdt-fg-3)"
+					background: view.enabled ? "var(--dshpc-success)" : "var(--dshpc-fg-3)"
 				} }), view.enabled ? t("infoStateEnabled") : t("infoStateDisabled"))
 			}), InfoField({
 				label: t("listFieldSchedule"),
@@ -64705,7 +64544,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				children: windowLabel(view.window, t)
 			}), InfoField({
 				label: t("listSectionAttachments"),
-				children: view.attachments.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
+				children: view.attachments.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
 					display: "flex",
 					flexWrap: "wrap",
 					gap: "2px 10px"
@@ -64744,7 +64583,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}))
 			}), InfoField({
 				label: t("listSectionDepends"),
-				children: view.depends.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
+				children: view.depends.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
 					display: "flex",
 					flexDirection: "column",
 					gap: "4px"
@@ -64758,10 +64597,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						height: "18px",
 						padding: "0 4px",
 						boxSizing: "border-box",
-						borderRadius: "var(--tdt-radius-xs)",
-						background: "var(--tdt-chip-bg)",
-						color: "var(--tdt-fg-2)",
-						fontSize: "var(--tdt-font-xs)",
+						borderRadius: "var(--dshpc-radius-xs)",
+						background: "var(--dshpc-chip-bg)",
+						color: "var(--dshpc-fg-2)",
+						fontSize: "var(--dshpc-font-xs)",
 						fontVariantNumeric: "tabular-nums"
 					} }, String(index + 1));
 					const label = `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`;
@@ -64821,11 +64660,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				boxSizing: "border-box",
 				padding: 0,
 				font: "inherit",
-				fontSize: "var(--tdt-font-sm)",
+				fontSize: "var(--dshpc-font-sm)",
 				textAlign: "left",
 				cursor: canOpenSession ? "pointer" : "default"
 			};
-			const sessionChip = sid === null || sessionName === "" ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "—") : canOpenSession ? (0, react$1.createElement)("button", {
+			const sessionChip = sid === null || sessionName === "" ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, "—") : canOpenSession ? (0, react$1.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-info-session",
 				title: sessionName,
@@ -64866,11 +64705,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				children: (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, tokens)
 			}), note === "" ? null : InfoField({
 				label: t("colNote"),
-				children: (0, react$1.createElement)("span", { style: { color: "var(--tdt-danger)" } }, note)
+				children: (0, react$1.createElement)("span", { style: { color: "var(--dshpc-danger)" } }, note)
 			})), outputs.length === 0 ? null : (0, react$1.createElement)("div", { style: { marginTop: "14px" } }, (0, react$1.createElement)("div", { style: {
 				marginBottom: "6px",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-fg-3)"
 			} }, t("colOutputs")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column"
@@ -65124,7 +64963,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const resolvedByKey = (0, react$1.useMemo)(() => new Map((resolvedAttachments ?? []).map((item) => [`${item.kind}:${item.name}`, item])), [resolvedAttachments]);
 			const view = {
 				enabled: draft.enabled,
-				scheduleLine: renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--tdt-fg)" } }),
+				scheduleLine: renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--dshpc-fg)" } }),
 				nextSlot: renderNextExec(nextExecIso, t),
 				workspace: draft.workspace.trim() === "" ? t("editorViewNotFilled") : draft.workspace,
 				model: draft.model.trim() === "" ? t("listFieldModelDefault") : draft.model,
@@ -65163,12 +65002,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				className: "dsh-tdt-ed-view-badge",
 				style: { background: infoStatusColorOf(last.status) }
 			}), last === null ? null : (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-sm)",
+				fontSize: "var(--dshpc-font-sm)",
 				fontWeight: 600,
 				color: infoStatusColorOf(last.status)
 			} }, statusTextOf(last.status, t))), error !== null ? (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-danger)"
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-danger)"
 			} }, `${t("cardLoadFailed")}：${error}`) : !loaded ? null : taskId === "" ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-empty" }, t("editorViewNoRunDraft")) : last === null ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-empty" }, t("infoNoRun")) : lastRunFields({
 				t,
 				instance: last,
@@ -65733,8 +65572,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				flexDirection: "column",
 				gap: "8px"
 			} }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-md)",
-				color: "var(--tdt-fg)"
+				fontSize: "var(--dshpc-font-md)",
+				color: "var(--dshpc-fg)"
 			} }, t("editorIntervalEvery")), (0, react$1.createElement)(NumberInput, {
 				value: Number.parseInt(draft.intervalStep, 10) || 1,
 				min: 1,
@@ -65754,8 +65593,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				ariaLabel: t("editorIntervalUnit"),
 				width: 96
 			}), (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-md)",
-				color: "var(--tdt-fg)"
+				fontSize: "var(--dshpc-font-md)",
+				color: "var(--dshpc-fg)"
 			} }, t("editorIntervalSuffix"))), (0, react$1.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
@@ -65826,33 +65665,33 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*/
 		const promptEditorTheme = EditorView.theme({
 			"&": {
-				backgroundColor: "var(--tdt-surface-base, #22252a)",
-				color: "var(--tdt-fg)",
+				backgroundColor: "var(--dshpc-surface-base, #22252a)",
+				color: "var(--dshpc-fg)",
 				height: "100%",
 				width: "100%"
 			},
 			".cm-editor": {
 				height: "100%",
 				width: "100%",
-				backgroundColor: "var(--tdt-surface-base, #22252a)"
+				backgroundColor: "var(--dshpc-surface-base, #22252a)"
 			},
 			".cm-scroller": {
 				fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-				fontSize: "var(--tdt-font-md)",
+				fontSize: "var(--dshpc-font-md)",
 				lineHeight: "1.6",
 				overflowX: "hidden"
 			},
 			".cm-content": { width: "100%" },
 			".cm-line": { padding: "0 4px" },
 			".cm-gutters": {
-				backgroundColor: "var(--tdt-surface-1, rgba(128,128,128,0.08))",
-				color: "var(--tdt-fg-2)",
+				backgroundColor: "var(--dshpc-surface-1, rgba(128,128,128,0.08))",
+				color: "var(--dshpc-fg-2)",
 				border: "none"
 			},
-			".cm-activeLine": { backgroundColor: "var(--tdt-hover, rgba(128,128,128,0.16))" },
+			".cm-activeLine": { backgroundColor: "var(--dshpc-hover, rgba(128,128,128,0.16))" },
 			".cm-activeLineGutter": {
 				backgroundColor: "transparent",
-				color: "var(--tdt-fg)"
+				color: "var(--dshpc-fg)"
 			},
 			"&.cm-focused": { outline: "none" }
 		}, { dark: true });
@@ -65873,30 +65712,30 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					alignItems: "center",
 					justifyContent: "center",
 					padding: "24px",
-					background: "var(--tdt-mask, rgba(0,0,0,0.45))"
+					background: "var(--dshpc-mask, rgba(0,0,0,0.45))"
 				},
 				onClick: props.onStay
 			}, (0, react$1.createElement)("div", {
 				style: {
 					width: "min(380px, 100%)",
 					boxSizing: "border-box",
-					background: "var(--tdt-surface-2, #2a2e33)",
-					borderRadius: "var(--tdt-radius-panel, 10px)",
-					boxShadow: "var(--tdt-shadow-2)",
+					background: "var(--dshpc-surface-2, #2a2e33)",
+					borderRadius: "var(--dshpc-radius-panel, 10px)",
+					boxShadow: "var(--dshpc-shadow-2)",
 					padding: "22px 24px",
-					color: "var(--tdt-fg)"
+					color: "var(--dshpc-fg)"
 				},
 				onClick: (event) => {
 					event.stopPropagation();
 				}
 			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-xl)",
+				fontSize: "var(--dshpc-font-xl)",
 				fontWeight: 500,
 				marginBottom: "8px"
 			} }, props.t("editorDiscardTitle")), (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-lg)",
-				lineHeight: "var(--tdt-line-lg)",
-				color: "var(--tdt-fg-2)",
+				fontSize: "var(--dshpc-font-lg)",
+				lineHeight: "var(--dshpc-line-lg)",
+				color: "var(--dshpc-fg-2)",
 				marginBottom: "20px"
 			} }, props.t("editorDiscardDesc")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
@@ -65927,47 +65766,47 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					alignItems: "center",
 					justifyContent: "center",
 					padding: "24px",
-					background: "var(--tdt-mask, rgba(0,0,0,0.45))"
+					background: "var(--dshpc-mask, rgba(0,0,0,0.45))"
 				},
 				onClick: props.onCancel
 			}, (0, react$1.createElement)("div", {
 				style: {
 					width: "min(400px, 100%)",
 					boxSizing: "border-box",
-					background: "var(--tdt-surface-2, #2a2e33)",
-					borderRadius: "var(--tdt-radius-panel, 10px)",
-					boxShadow: "var(--tdt-shadow-2)",
+					background: "var(--dshpc-surface-2, #2a2e33)",
+					borderRadius: "var(--dshpc-radius-panel, 10px)",
+					boxShadow: "var(--dshpc-shadow-2)",
 					padding: "20px 24px 18px",
-					color: "var(--tdt-fg)"
+					color: "var(--dshpc-fg)"
 				},
 				onClick: (event) => {
 					event.stopPropagation();
 				}
 			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-lg)",
+				fontSize: "var(--dshpc-font-lg)",
 				fontWeight: 600,
-				lineHeight: "var(--tdt-line-lg)",
+				lineHeight: "var(--dshpc-line-lg)",
 				marginBottom: "10px",
-				...props.warning === true ? { color: "var(--tdt-warning)" } : {}
+				...props.warning === true ? { color: "var(--dshpc-warning)" } : {}
 			} }, props.title), props.desc !== "" ? (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-md)",
-				lineHeight: "var(--tdt-line-md)",
-				color: "var(--tdt-fg-2)",
+				fontSize: "var(--dshpc-font-md)",
+				lineHeight: "var(--dshpc-line-md)",
+				color: "var(--dshpc-fg-2)",
 				marginBottom: props.bullets !== void 0 ? "8px" : "18px"
 			} }, props.desc) : null, props.bullets !== void 0 && props.bullets.length > 0 ? (0, react$1.createElement)("ul", { style: {
 				listStyle: "none",
 				margin: "0 0 18px",
 				padding: "10px 12px",
-				borderRadius: "var(--tdt-radius-md,8px)",
-				background: "var(--tdt-surface-1,rgba(128,128,128,.08))",
+				borderRadius: "var(--dshpc-radius-md,8px)",
+				background: "var(--dshpc-surface-1,rgba(128,128,128,.08))",
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px"
 			} }, ...props.bullets.map((b) => (0, react$1.createElement)("li", {
 				key: b,
 				style: {
-					fontSize: "var(--tdt-font-md)",
-					lineHeight: "var(--tdt-line-md)",
+					fontSize: "var(--dshpc-font-md)",
+					lineHeight: "var(--dshpc-line-md)",
 					display: "flex",
 					gap: "8px"
 				}
@@ -65976,14 +65815,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				width: "5px",
 				height: "5px",
 				borderRadius: "50%",
-				background: "var(--tdt-fg-3,rgba(128,128,128,.8))",
+				background: "var(--dshpc-fg-3,rgba(128,128,128,.8))",
 				margin: "7px 0 0"
 			} }), (0, react$1.createElement)("span", null, b)))) : null, needAck ? (0, react$1.createElement)("label", { style: {
 				display: "flex",
 				alignItems: "flex-start",
 				gap: "8px",
-				fontSize: "var(--tdt-font-md)",
-				lineHeight: "var(--tdt-line-md)",
+				fontSize: "var(--dshpc-font-md)",
+				lineHeight: "var(--dshpc-line-md)",
 				cursor: "pointer",
 				marginBottom: "16px"
 			} }, (0, react$1.createElement)("input", {
@@ -65995,7 +65834,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				style: {
 					flex: "none",
 					margin: "2px 0 0",
-					accentColor: "var(--tdt-warning)",
+					accentColor: "var(--dshpc-warning)",
 					width: "14px",
 					height: "14px",
 					cursor: "pointer"
@@ -66034,8 +65873,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0,
-				background: "var(--tdt-surface-base, #22252a)",
-				color: "var(--tdt-fg)",
+				background: "var(--dshpc-surface-base, #22252a)",
+				color: "var(--dshpc-fg)",
 				overflow: "hidden",
 				position: "relative"
 			} }, (0, react$1.createElement)("div", { style: {
@@ -66044,9 +65883,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				justifyContent: "space-between",
 				gap: "12px",
 				padding: "10px 14px",
-				borderBottom: `1px solid var(--tdt-border)`
+				borderBottom: `1px solid var(--dshpc-border)`
 			} }, (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-lg)",
+				fontSize: "var(--dshpc-font-lg)",
 				fontWeight: 600
 			} }, t("editorPromptEditorTitle")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
@@ -66125,19 +65964,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				labels: MD_LABELS
 			})), showVersions ? (0, react$1.createElement)("div", { style: {
 				flex: "0 0 232px",
-				borderLeft: `1px solid var(--tdt-border-heavy)`,
+				borderLeft: `1px solid var(--dshpc-border-heavy)`,
 				display: "flex",
 				flexDirection: "column",
 				minHeight: 0
 			} }, (0, react$1.createElement)("div", { style: {
 				padding: "10px 12px",
-				borderBottom: `1px solid var(--tdt-border-heavy)`,
-				fontSize: "var(--tdt-font-md)",
+				borderBottom: `1px solid var(--dshpc-border-heavy)`,
+				fontSize: "var(--dshpc-font-md)",
 				fontWeight: 600
 			} }, versionTitle), editorMode === "create" ? (0, react$1.createElement)("div", { style: {
 				padding: "16px 12px",
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2)",
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-fg-2)",
 				lineHeight: "1.6"
 			} }, t("editorNewTaskNoVersions")) : (0, react$1.createElement)("div", { style: {
 				display: "flex",
@@ -66146,8 +65985,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				overflow: "auto"
 			} }, versions.length === 0 ? (0, react$1.createElement)("p", { style: {
 				padding: "0 12px",
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2)"
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-fg-2)"
 			} }, t("editorNoVersions")) : (0, react$1.createElement)("ul", { style: {
 				listStyle: "none",
 				margin: 0,
@@ -66217,8 +66056,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0,
-				background: "var(--tdt-surface-base, #22252a)",
-				color: "var(--tdt-fg)",
+				background: "var(--dshpc-surface-base, #22252a)",
+				color: "var(--dshpc-fg)",
 				overflow: "hidden",
 				position: "relative"
 			} }, (0, react$1.createElement)("div", { style: {
@@ -66227,9 +66066,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				justifyContent: "space-between",
 				gap: "12px",
 				padding: "10px 14px",
-				borderBottom: `1px solid var(--tdt-border)`
+				borderBottom: `1px solid var(--dshpc-border)`
 			} }, (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-lg)",
+				fontSize: "var(--dshpc-font-lg)",
 				fontWeight: 600
 			} }, t("editorPreview")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
@@ -66758,17 +66597,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					style: {
 						flex: "1 1 auto",
 						minWidth: 0,
-						fontSize: "var(--tdt-font-md)"
+						fontSize: "var(--dshpc-font-md)"
 					}
 				}, att.name), (0, react$1.createElement)("span", {
 					title: att.ref,
 					style: {
 						flex: "none",
-						fontSize: "var(--tdt-font-xs)",
-						color: "var(--tdt-fg-2)",
-						borderRadius: "var(--tdt-radius-xs)",
+						fontSize: "var(--dshpc-font-xs)",
+						color: "var(--dshpc-fg-2)",
+						borderRadius: "var(--dshpc-radius-xs)",
 						padding: "1px 6px",
-						background: "var(--tdt-hover,rgba(38,49,72,.06))"
+						background: "var(--dshpc-hover,rgba(38,49,72,.06))"
 					}
 				}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 					variant: "ghost",
@@ -66796,12 +66635,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("div", {
 				style: {
 					flex: "1 1 auto",
-					border: `1px dashed var(--tdt-border-heavy)`,
-					borderRadius: "var(--tdt-radius-md)",
+					border: `1px dashed var(--dshpc-border-heavy)`,
+					borderRadius: "var(--dshpc-radius-md)",
 					padding: "16px 12px",
 					textAlign: "center",
 					cursor: uploading ? "default" : "pointer",
-					background: "var(--tdt-surface-1)"
+					background: "var(--dshpc-surface-1)"
 				},
 				onClick: () => {
 					if (!uploading) fileInputRef.current?.click();
@@ -66814,11 +66653,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (!uploading && event.dataTransfer?.files !== void 0) uploadFiles(event.dataTransfer.files);
 				}
 			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-md)",
-				color: "var(--tdt-fg)"
+				fontSize: "var(--dshpc-font-md)",
+				color: "var(--dshpc-fg)"
 			} }, uploading ? t("editorUploading") : t("editorDropZoneHint")), uploading ? null : (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-2)",
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-fg-2)",
 				marginTop: "4px"
 			} }, t("editorDropZoneFormats"))), (0, react$1.createElement)("div", { style: {
 				flex: "none",
@@ -66844,14 +66683,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					gap: "6px",
 					width: "92px",
 					padding: "8px",
-					border: `1px dashed var(--tdt-border-heavy)`,
-					borderRadius: "var(--tdt-radius-md)",
-					background: "var(--tdt-surface-1)",
+					border: `1px dashed var(--dshpc-border-heavy)`,
+					borderRadius: "var(--dshpc-radius-md)",
+					background: "var(--dshpc-surface-1)",
 					cursor: "pointer",
-					color: "var(--tdt-fg)"
+					color: "var(--dshpc-fg)"
 				}
 			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 20 }), (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-sm)",
+				fontSize: "var(--dshpc-font-sm)",
 				lineHeight: 1.2
 			} }, t("editorPickWorkspaceFileShort"))))), (0, react$1.createElement)("input", {
 				ref: fileInputRef,
@@ -66942,17 +66781,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				calendarLabels,
 				timeLabels
 			})), (0, react$1.createElement)("div", { style: { marginTop: "14px" } }, (0, react$1.createElement)("div", { style: {
-				borderTop: `1px dashed var(--tdt-border)`,
+				borderTop: `1px dashed var(--dshpc-border)`,
 				paddingTop: "10px",
-				fontSize: "var(--tdt-font-sm)",
+				fontSize: "var(--dshpc-font-sm)",
 				lineHeight: "1.6",
-				color: "var(--tdt-fg-2)"
+				color: "var(--dshpc-fg-2)"
 			} }, (0, react$1.createElement)("span", { style: {
-				color: "var(--tdt-fg)",
+				color: "var(--dshpc-fg)",
 				fontWeight: 600,
 				marginRight: "4px"
-			} }, t("editorSchedForecast") + "："), renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--tdt-fg)" } })), (0, react$1.createElement)("div", { style: {
-				borderTop: `1px dashed var(--tdt-border)`,
+			} }, t("editorSchedForecast") + "："), renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--dshpc-fg)" } })), (0, react$1.createElement)("div", { style: {
+				borderTop: `1px dashed var(--dshpc-border)`,
 				marginTop: "10px"
 			} })), (0, react$1.createElement)("div", {
 				className: "dsh-tdt-ed-schedfoot",
@@ -66972,8 +66811,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("span", { style: {
 				flex: "none",
 				whiteSpace: "nowrap",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg)"
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-fg)"
 			} }, t("editorTaskStart")), (0, react$1.createElement)("span", { style: {
 				flex: "none",
 				display: "inline-flex"
@@ -67013,8 +66852,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("span", { style: {
 				flex: "none",
 				whiteSpace: "nowrap",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-2)"
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-fg-2)"
 			} }, t("editorWindow")), (0, react$1.createElement)("span", { style: {
 				flex: "none",
 				display: "inline-flex"
@@ -67062,14 +66901,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				hint: t("editorDepsHint"),
 				maxWidth: 320
 			}))), (0, react$1.createElement)("div", { style: { marginBottom: "10px" } }, draft.deps.length === 0 ? (0, react$1.createElement)("div", { style: {
-				border: `1px dashed var(--tdt-border-heavy)`,
-				borderRadius: "var(--tdt-radius-md)",
+				border: `1px dashed var(--dshpc-border-heavy)`,
+				borderRadius: "var(--dshpc-radius-md)",
 				padding: "16px 12px",
 				textAlign: "center",
-				background: "var(--tdt-surface-1)"
-			} }, (0, react$1.createElement)("div", { style: { fontSize: "var(--tdt-font-md)" } }, t("editorDepEmpty")), (0, react$1.createElement)("div", { style: {
-				color: "var(--tdt-fg-2)",
-				fontSize: "var(--tdt-font-sm)",
+				background: "var(--dshpc-surface-1)"
+			} }, (0, react$1.createElement)("div", { style: { fontSize: "var(--dshpc-font-md)" } }, t("editorDepEmpty")), (0, react$1.createElement)("div", { style: {
+				color: "var(--dshpc-fg-2)",
+				fontSize: "var(--dshpc-font-sm)",
 				marginTop: "4px"
 			} }, t("editorDepEmptyHint"))) : (0, react$1.createElement)("div", { style: {
 				display: "flex",
@@ -67084,13 +66923,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}, (0, react$1.createElement)("span", { style: {
 					display: "inline-flex",
 					flex: "none",
-					color: "var(--tdt-fg-3)"
+					color: "var(--dshpc-fg-3)"
 				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), onViewTask === void 0 ? (0, react$1.createElement)(MarqueeText, {
 					text: known?.label ?? dep.task,
 					style: {
 						flex: "1 1 auto",
 						minWidth: 0,
-						fontSize: "var(--tdt-font-md)"
+						fontSize: "var(--dshpc-font-md)"
 					}
 				}) : (0, react$1.createElement)("button", {
 					type: "button",
@@ -67099,7 +66938,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					style: {
 						flex: "1 1 auto",
 						minWidth: 0,
-						fontSize: "var(--tdt-font-md)",
+						fontSize: "var(--dshpc-font-md)",
 						textAlign: "left"
 					},
 					onClick: () => {
@@ -67109,8 +66948,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					text: ws,
 					style: {
 						flex: "0 0 72px",
-						color: "var(--tdt-fg-2)",
-						fontSize: "var(--tdt-font-xs)"
+						color: "var(--dshpc-fg-2)",
+						fontSize: "var(--dshpc-font-xs)"
 					}
 				}), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 					variant: "ghost",
@@ -67152,7 +66991,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: addDep,
 				style: {
 					flex: "0 0 72px",
-					height: "var(--tdt-control-h-lg)",
+					height: "var(--dshpc-control-h-lg)",
 					justifyContent: "center"
 				}
 			}, t("editorDepAdd"))));
@@ -67211,7 +67050,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				label: t("editorGoal")
 			}), (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-md)",
+				fontSize: "var(--dshpc-font-md)",
 				fontWeight: 600
 			} }, t("editorGoal"))), (0, react$1.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorGoalHint"))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: draft.agentTeam,
@@ -67220,7 +67059,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				label: t("editorAgentTeam")
 			}), (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-md)",
+				fontSize: "var(--dshpc-font-md)",
 				fontWeight: 600
 			} }, t("editorAgentTeam"))), (0, react$1.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAgentTeamHint"))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
@@ -67295,8 +67134,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				label: t("editorEnabled"),
 				title: draft.enabled ? t("editorEnabledOn") : t("editorEnabledOff")
 			}), (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2,rgba(128,128,128,.95))"
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-fg-2,rgba(128,128,128,.95))"
 			} }, draft.enabled ? t("editorEnabledStateOn") : t("editorEnabledStateOff"))), (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
@@ -67513,10 +67352,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						bottom: Math.max(12, window.innerHeight - rect.bottom),
 						width: "min(480px, calc(100vw - 24px))",
 						height: Math.min(660, Math.max(240, rect.top - 12)),
-						background: "var(--tdt-surface-2, #2a2e33)",
-						border: `1px solid var(--tdt-border)`,
-						borderRadius: "var(--tdt-radius-md)",
-						boxShadow: "var(--tdt-shadow-2)"
+						background: "var(--dshpc-surface-2, #2a2e33)",
+						border: `1px solid var(--dshpc-border)`,
+						borderRadius: "var(--dshpc-radius-md)",
+						boxShadow: "var(--dshpc-shadow-2)"
 					};
 				})()
 			}, (() => {
@@ -67563,8 +67402,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					justifyContent: "center",
 					padding: "24px",
 					textAlign: "center",
-					color: "var(--tdt-fg-2)",
-					fontSize: "var(--tdt-font-md)"
+					color: "var(--dshpc-fg-2)",
+					fontSize: "var(--dshpc-font-md)"
 				} }, t("editorPickerNoSession"));
 			})()), document.body) : null);
 		}
@@ -67636,17 +67475,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const RECORDS_CSS = `
 /* ── 执行记录流水账（**无容器**）───────────────────────────────────────────
    没有外框、没有贯穿竖轴：整页铺在宿主面板底上，节奏靠「日期小字行 + 一条条自带底色的独立块」建立。 */
-.dsh-tdt-rec-group{margin-top:var(--tdt-space-2);}
+.dsh-tdt-rec-group{margin-top:var(--dshpc-space-2);}
 /* 日期小字行：时钟图标 + 日期 · 星期 · N 条（**不吸顶**——撤掉外框后底是透明的，
    吸顶必须给不透明底色，怕与宿主底色差出一条横带）。 */
 .dsh-tdt-rec-dayrow{display:flex;align-items:center;gap:6px;flex:none;
-  padding:var(--tdt-space-3) 0 var(--tdt-space-2);
-  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-dayrow>svg{flex:none;color:var(--tdt-fg-3);}
-.dsh-tdt-rec-daylabel{font-weight:500;color:var(--tdt-fg-2);}
-.dsh-tdt-rec-daycount{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
-/* 块之间 **4px**（用户指定；--tdt-space-1 正好 = 4px） */
-.dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+  padding:var(--dshpc-space-3) 0 var(--dshpc-space-2);
+  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-dayrow>svg{flex:none;color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-daylabel{font-weight:500;color:var(--dshpc-fg-2);}
+.dsh-tdt-rec-daycount{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3);}
+/* 块之间 **4px**（用户指定；--dshpc-space-1 正好 = 4px） */
+.dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--dshpc-space-1);}
 /* 条目块 = **容器**（自带状态色浅底；底色由色调类给的局部变量驱动，见下）。
    ⚠️ 三层结构照任务卡片（用户 2026-10-04：「参考前面配置任务的展开」）：
      容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
@@ -67656,23 +67495,23 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    （用户 2026-10-05：左边距应该从竖条的**右边缘**开始算，不是从块的左边缘）⇒ 见 .dsh-tdt-rec-main / -exp。 */
 .dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;--rec-bar-w:5px;box-sizing:border-box;
   border:1px solid transparent;
-  background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
-  animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
-/* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
-   token 只在 tokens.ts 定义；块底那条「状态色浅底」的 token 就在那里）。 */
-.dsh-tdt-rec-tone--ok{--rec-tone:var(--tdt-success);--rec-tone-soft:var(--tdt-success-soft);}
-.dsh-tdt-rec-tone--bad{--rec-tone:var(--tdt-danger);--rec-tone-soft:var(--tdt-danger-soft);}
-.dsh-tdt-rec-tone--warn{--rec-tone:var(--tdt-warning);--rec-tone-soft:var(--tdt-warning-soft);}
-.dsh-tdt-rec-tone--busy{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);}
+  background:var(--rec-tone-soft,transparent);color:var(--dshpc-fg);font:inherit;text-align:left;
+  animation:dsh-tdt-rec-in var(--dshpc-dur-fast) var(--dshpc-ease);}
+/* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --dshpc-* token ——
+   token 只在核心 token 层（dsh-plugin-core/design）定义；块底那条「状态色浅底」的 token 就在那里）。 */
+.dsh-tdt-rec-tone--ok{--rec-tone:var(--dshpc-success);--rec-tone-soft:var(--dshpc-success-soft);}
+.dsh-tdt-rec-tone--bad{--rec-tone:var(--dshpc-danger);--rec-tone-soft:var(--dshpc-danger-soft);}
+.dsh-tdt-rec-tone--warn{--rec-tone:var(--dshpc-warning);--rec-tone-soft:var(--dshpc-warning-soft);}
+.dsh-tdt-rec-tone--busy{--rec-tone:var(--dshpc-business);--rec-tone-soft:var(--dshpc-business-soft);}
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
-.dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
+.dsh-tdt-rec-tone--mute{--rec-tone:var(--dshpc-fg-3);--rec-tone-soft:var(--dshpc-chip-bg);}
 /* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。
-   用户 2026-10-06：虚线与竖条都走**同一支正蓝**（--tdt-business），不要调暗、更不要灰。
+   用户 2026-10-06：虚线与竖条都走**同一支正蓝**（--dshpc-business），不要调暗、更不要灰。
    用户 2026-10-06 续：虚线**只包上/右/下**，左边不包——左缘是那条实心蓝竖条（--rec-bar-w），虚线从它右边起到最右；蓝色调淡一点。 */
-.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:color-mix(in srgb,var(--tdt-business) 50%,transparent);border-left:0;}
+.dsh-tdt-rec-tone--planned{--rec-tone:var(--dshpc-business);--rec-tone-soft:var(--dshpc-business-soft);border-style:dashed;border-color:color-mix(in srgb,var(--dshpc-business) 50%,transparent);border-left:0;}
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
-.dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
+.dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--dshpc-fg-3));}
 /* 运行中脉动走统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse）：条子直接挂 RUN_PULSE_CLASS，不再另写一份动画。 */
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
@@ -67683,45 +67522,45 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    **只有鼠标悬停**才叠一层中性半透明（不盖掉块底的状态色浅底）。
    ⚠️ 2026-10-04 第七轮：删掉「展开态常亮」——用户原话「如果我鼠标不移到这一块，它是不变色的，
    还是没展开时的颜色呀。只是鼠标移到这一块，它才换一个颜色」；展开与否**不再影响**头部底色。 */
-/* 左内边距 = --tdt-space-4 **+ 竖条宽度**（从竖条右缘起算，不与条子叠在一起）。 */
-.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;
-  padding:var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-3) calc(var(--tdt-space-4) + var(--rec-bar-w,5px));}
+/* 左内边距 = --dshpc-space-4 **+ 竖条宽度**（从竖条右缘起算，不与条子叠在一起）。 */
+.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;
+  padding:var(--dshpc-space-3) var(--dshpc-space-3) var(--dshpc-space-3) calc(var(--dshpc-space-4) + var(--rec-bar-w,5px));}
 .dsh-tdt-rec-head{cursor:pointer;}
-.dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
-.dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
-.dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
+.dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--dshpc-hover),var(--dshpc-hover));}
+.dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--dshpc-space-1);flex:1 1 auto;min-width:0;}
+.dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;}
 /* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
-   字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --tdt-on-signal，一眼就是个带色的牌子。
+   字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --dshpc-on-signal，一眼就是个带色的牌子。
    ⚠️ 高度 / 圆角**跟着右列「查看会话」按钮走同一档令牌**，但**总高度比按钮矮 2px**（用户 2026-10-05 续：
      不要和按钮一模一样，总高 -2 ⇒ 24-2=22px，用固定的 height 减 2，padding / 圆角 / 字号**其他不变**）——
-     高度 height:calc(var(--tdt-control-h-sm) - 2px)（border-box ⇒ 含边框在内 22）、
-     圆角 border-radius:var(--tdt-radius-md)（按钮是 --md，不是 --sm）。
+     高度 height:calc(var(--dshpc-control-h-sm) - 2px)（border-box ⇒ 含边框在内 22）、
+     圆角 border-radius:var(--dshpc-radius-md)（按钮是 --md，不是 --sm）。
    ⚠️ 宽度仍**自适应**（不写 min-width，字多就长、字少就短）：padding 上下 3px / 左右 8px。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  height:calc(var(--tdt-control-h-sm) - 2px);padding:3px 8px;border-radius:var(--tdt-radius-md);
-  background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
-  font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
+  height:calc(var(--dshpc-control-h-sm) - 2px);padding:3px 8px;border-radius:var(--dshpc-radius-md);
+  background:var(--rec-tone,var(--dshpc-fg-3));color:var(--dshpc-on-signal);
+  font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);white-space:nowrap;}
 /* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
-.dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed color-mix(in srgb,var(--tdt-business) 50%,transparent);}
-.dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
-.dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
+.dsh-tdt-rec-tag--planned{background:transparent;color:var(--dshpc-business);border:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);}
+.dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;}
+.dsh-tdt-rec-title{font-size:var(--dshpc-font-lg);font-weight:600;line-height:var(--dshpc-line-md);}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
    最窄也要能放下「工作区 · 计划 · 实际 · 时长 · Token」的一部分，永不换行、永不横向滚动。 */
 .dsh-tdt-rec-r2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);min-width:0;}
+  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3);min-width:0;}
 /* 信息行里的一段（「图标 + 标签 + 值」）；段与段之间的「·」由 ::before 自动补，不用手写分隔节点。 */
 .dsh-tdt-rec-field{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;}
-.dsh-tdt-rec-field+.dsh-tdt-rec-field::before{content:'·';margin:0 var(--tdt-space-1);color:var(--tdt-border-heavy);}
-/* 字段小图标**统一 12px**（= --tdt-font-sm；用户 2026-10-04：几个图标一大一小、都缩小一号）
+.dsh-tdt-rec-field+.dsh-tdt-rec-field::before{content:'·';margin:0 var(--dshpc-space-1);color:var(--dshpc-border-heavy);}
+/* 字段小图标**统一 12px**（= --dshpc-font-sm；用户 2026-10-04：几个图标一大一小、都缩小一号）
    —— 这里再兜一道：将来漏传 size 也不会又变大。 */
-.dsh-tdt-rec-field>svg{flex:none;width:var(--tdt-font-sm);height:var(--tdt-font-sm);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-sep{color:var(--tdt-border-heavy);}
-.dsh-tdt-rec-num{font-variant-numeric:tabular-nums;font-family:var(--tdt-font-mono);}
+.dsh-tdt-rec-field>svg{flex:none;width:var(--dshpc-font-sm);height:var(--dshpc-font-sm);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-sep{color:var(--dshpc-border-heavy);}
+.dsh-tdt-rec-num{font-variant-numeric:tabular-nums;font-family:var(--dshpc-font-mono);}
 .dsh-tdt-rec-chiprow{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;}
 /* 展开箭头**不再自绘**：用基础层 IconButton（与任务配置卡片的箭头同一份实现，
    hover 底色 / 尺寸 / 翻转都一致）—— 2026-10-04 第五轮收编。 */
 /* 折叠态：名字后面的**前置圈码**（有几个 = 本次执行实际用到了几个上游） */
-.dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:var(--tdt-space-1);flex:none;}
+.dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:var(--dshpc-space-1);flex:none;}
 /* 前置圈码 = **自绘正圆徽标**（2026-10-04 第八轮定稿：浅色实心、无描边、**固定正圆**）。
    ⚠️ 复盘：上一版写成 min-width:18px + padding:0 3px + border-radius:999px ⇒ 一位数恰好是圆，
       两位数字会把圆**撑成胶囊**（用户 2026-10-04：「一定要是个圆的」「你要确定两位能显示成圆的」
@@ -67729,88 +67568,88 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    📏 尺寸依据（**实测**，非估计）：用容器里最宽的常见 UI 字体 DejaVu Sans 渲染，11px 下两位数字
       宽 15px，**20px 圆尚余 5px**；宿主界面字体（本插件**未引入任何外部字体**，文字继承宿主）比它更窄。
       另加 min-width / min-height / aspect-ratio 三道兜底 ⇒ 不论父级怎么排，它都是正圆。
-   🎨 底色走 --tdt-chip-bg（暗色主题自动换成白色 8%，与产出物 chip 同源）；悬停**只加深底色**、
+   🎨 底色走 --dshpc-chip-bg（暗色主题自动换成白色 8%，与产出物 chip 同源）；悬停**只加深底色**、
       不再动描边（用户明确「不要描边，就要浅色实心圆」）。提示走官方 Tooltip（见折叠态渲染处）。 */
 .dsh-tdt-rec-depmark{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
   width:20px;height:20px;min-width:20px;min-height:20px;aspect-ratio:1/1;padding:0;border:none;border-radius:50%;
-  background:var(--tdt-chip-bg);
-  color:var(--tdt-fg-2);font-size:var(--tdt-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
-  transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
-.dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);color:var(--tdt-fg);}
+  background:var(--dshpc-chip-bg);
+  color:var(--dshpc-fg-2);font-size:var(--dshpc-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
+.dsh-tdt-rec-depmark:hover{background:var(--dshpc-chip-bg-hover);color:var(--dshpc-fg);}
 /* 折叠态前置圈码可点（开任务查看档）：清掉按钮默认外壳 + 手指（用户 2026-10-05）。
    ⚠️ 只继承 font-family、**不要 font:inherit**：font:inherit 会把数字字号拉成父级头部字号，
    使折叠态圈码比展开态（同款 class、固定 11px）数字大一圈——用户 2026-10-05 指出两处「1、2」大小不一致。 */
 .dsh-tdt-rec-depmark--btn{appearance:none;-webkit-appearance:none;cursor:pointer;font-family:inherit;}
 /* 展开态前置格整块可点：手指提示（只有接了 onViewTask 才挂这个类）。 */
 .dsh-tdt-rec-dep--click{cursor:pointer;}
-/* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --tdt-hover）；框内任务名 hover **不变色**
+/* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --dshpc-hover）；框内任务名 hover **不变色**
    （整框已给反馈，名字再变蓝是多余——用户 2026-10-05；只在此作用域关掉 .dsh-tdt-info-dep 的 hover 蓝）。 */
-.dsh-tdt-rec-dep--click:hover{background:var(--tdt-chip-bg-hover);}
-.dsh-tdt-rec-dep .dsh-tdt-info-dep:hover{color:var(--tdt-fg);}
+.dsh-tdt-rec-dep--click:hover{background:var(--dshpc-chip-bg-hover);}
+.dsh-tdt-rec-dep .dsh-tdt-info-dep:hover{color:var(--dshpc-fg);}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
 .dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
-.dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
+.dsh-tdt-rec-note{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3);}
 /* ── 展开区（点头部就地展开；手风琴，同时只开一条）───────────────────────
    ⚠️ **不可点、无 cursor**：展开出来的内容（产出物 / 前置 / 日志）要能直接拖选复制
       （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 /* 展开区同样从竖条右缘起算 ⇒ 展开后的内容与头部标题**左对齐**（条子是通高的，也压在展开区上）。 */
-.dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--tdt-space-2);
-  padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3) calc(var(--tdt-space-4) + var(--rec-bar-w,5px));
-  border-top:1px solid var(--tdt-border-faint);}
+.dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--dshpc-space-2);
+  padding:var(--dshpc-space-2) var(--dshpc-space-3) var(--dshpc-space-3) calc(var(--dshpc-space-4) + var(--rec-bar-w,5px));
+  border-top:1px solid var(--dshpc-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
 .dsh-tdt-rec-expouts{display:flex;flex-wrap:wrap;gap:2px 10px;min-width:0;}
 /* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
-.dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--tdt-font-xs);font-weight:500;color:var(--tdt-fg-3);}
+.dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--dshpc-font-xs);font-weight:500;color:var(--dshpc-fg-3);}
 /* 前置任务（展开区**第二排**）：**一排两个**（用户 2026-10-04），每格「左列两行 + 右列按钮」——
    左列：圈码 + 任务名 ／「执行于 2026-10-03 23:50:12」；右列：「查看会话」链接型小按钮（靠右 + 上下居中）。
    格子本身不可点（只有里面那个按钮可点）。
    ⚠️ 2026-10-04 第七轮三处返工：① 时间改**书面表达 + 全量长格式**（用户否掉「本次取自…」那种说法）；
    ② 按钮从信息行里挪出来落右列（无边框链接型）——顺带治好「两行中间被 24px 按钮撑高」的挤；
    ③ 留白与圆角整体放大到约 1.5~2 倍（用户：「看着就是贴边，很挤」「完全看不出来圆角」）。 */
-.dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--tdt-space-2);min-width:0;}
-.dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--tdt-space-2) var(--tdt-space-3);}
+.dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--dshpc-space-2);min-width:0;}
+.dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2) var(--dshpc-space-3);}
 .dsh-tdt-rec-dep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
-  column-gap:var(--tdt-space-3);min-width:0;
-  padding:var(--tdt-space-2) var(--tdt-space-3);border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);}
-.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;overflow:hidden;}
+  column-gap:var(--dshpc-space-3);min-width:0;
+  padding:var(--dshpc-space-2) var(--dshpc-space-3);border-radius:var(--dshpc-radius-sm);background:var(--dshpc-chip-bg);}
+.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--dshpc-space-1);min-width:0;overflow:hidden;}
 /* 前置格**右列**：产出物图标 → 查看会话。**整列不折行**（用户 2026-10-04：页面拉伸时不要把内容
    压成折行）⇒ 挤的时候先让左列的名字 / 时间省略，右列控件始终完整可见。 */
-.dsh-tdt-rec-depright{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;white-space:nowrap;}
-.dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
-  font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
-.dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
-  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-ev{font-family:var(--tdt-font-mono);font-size:var(--tdt-font-xs);
-  line-height:var(--tdt-line-md);color:var(--tdt-fg-2);}
+.dsh-tdt-rec-depright{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;white-space:nowrap;}
+.dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;
+  font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-2);}
+.dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;
+  font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-ev{font-family:var(--dshpc-font-mono);font-size:var(--dshpc-font-xs);
+  line-height:var(--dshpc-line-md);color:var(--dshpc-fg-2);}
 .dsh-tdt-rec-evrow{margin-bottom:6px;word-break:break-all;}
-.dsh-tdt-rec-evempty{font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-foot{display:flex;align-items:center;justify-content:center;gap:var(--tdt-space-2);
-  padding:var(--tdt-space-3) 0 var(--tdt-space-1);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-err{color:var(--tdt-danger);}
+.dsh-tdt-rec-evempty{font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-foot{display:flex;align-items:center;justify-content:center;gap:var(--dshpc-space-2);
+  padding:var(--dshpc-space-3) 0 var(--dshpc-space-1);font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
+.dsh-tdt-rec-err{color:var(--dshpc-danger);}
 `;
 		const RECORDS_DOMAIN = "domain:records";
 		const filterRowStyle$1 = {
 			display: "flex",
 			alignItems: "center",
-			gap: "var(--tdt-space-2)",
+			gap: "var(--dshpc-space-2)",
 			flexWrap: "wrap",
-			marginBottom: "var(--tdt-space-3)"
+			marginBottom: "var(--dshpc-space-3)"
 		};
 		const filterRightStyle = {
 			display: "flex",
 			alignItems: "center",
-			gap: "var(--tdt-space-2)",
+			gap: "var(--dshpc-space-2)",
 			marginLeft: "auto",
 			flexWrap: "wrap"
 		};
 		const emptyStyle = {
 			padding: "40px 0",
 			textAlign: "center",
-			fontSize: "var(--tdt-font-md)",
-			color: "var(--tdt-fg-3)"
+			fontSize: "var(--dshpc-font-md)",
+			color: "var(--dshpc-fg-3)"
 		};
 		/** 本地日历日的 key（`YYYY-MM-DD`）。 */
 		function ymdOfDate(d) {
@@ -67870,7 +67709,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return date === null || formatter === null ? "" : formatter.format(date);
 		}
 		/**
-		* 语义色调 → 块的色调类名（色值本身全在 CSS 里读 --tdt-* / --tdt-*-soft，
+		* 语义色调 → 块的色调类名（色值本身全在 CSS 里读 --dshpc-* / --dshpc-*-soft，
 		* 业务侧只做「哪一档」的映射；档位由 `status-text.ts` 的 `statusToneOf` 单源决定）。
 		*/
 		function toneClassOf(tone) {
@@ -68174,7 +68013,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? null : events === null ? null : events.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
 				key: event.seq,
 				className: "dsh-tdt-rec-evrow"
-			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${stampOf(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null);
+			}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${stampOf(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, event.detail ?? ""))))) : null);
 		});
 		/**
 		* 执行记录条目块的样式注入（**幂等**，2026-10-06）：本域 `.dsh-tdt-rec-*` + 条目块依赖的共享域
@@ -68592,14 +68431,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		//#region src/client/task-calendar.tsx
 		const CALENDAR_CSS = `
 /* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
-.dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
+.dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--dshpc-space-2);margin-bottom:var(--dshpc-space-3);}
 /* 月份标题：纯文本（无框、不可点）；左右单箭头走月、双箭头走年，不再用日期选择器弹层。
    固定宽度 + 居中（用户 2026-10-06：年 4 位 + 月 2 位，内容定长，但数字字形不等宽会带着箭头晃；
    定宽盒 + 文字居中 ⇒ 左右箭头不再跳动）。 */
-.dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);
+.dsh-tdt-cal-title{font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);font-weight:600;color:var(--dshpc-fg);
   flex:none;width:6em;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;}
 
-.dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
+.dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--dshpc-space-2);margin-left:auto;}
 
 /* 网格（用户 2026-10-06 定死的三条）：① 格子是**纯粹的正方形**、**不要圆角**；
    ② 格子之间只留 **1px 间隔**（容器底色从缝里透出来当分隔线）；③ 格子**不描边**，
@@ -68608,109 +68447,109 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    做法 = 与网格同材质：外圈与列间 1px 全走「容器底色透出」（padding + background），无独立边框；
    表头格底色与本月格一致（淡蓝），整表上下一个颜色。 */
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
-  background:var(--tdt-border);padding:1px 1px 0;}
-.dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);
+  background:var(--dshpc-border);padding:1px 1px 0;}
+.dsh-tdt-cal-head>div{text-align:center;font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);
   /* 表头字：加粗 + 提亮（用户 2026-10-06：比格内浅灰字更醒目；续：700 偏粗，回调到 650）。 */
-  font-weight:650;color:var(--tdt-fg);
+  font-weight:650;color:var(--dshpc-fg);
   /* 表头底：比本月格更深的蓝（business 14% vs 格 8%），和下面可选块形成对比（用户 2026-10-06）。 */
-  background:color-mix(in srgb,var(--tdt-business) 14%,var(--tdt-surface-1));padding:8px 0;}
-/* 「选中 / 展开」的底色走 **token 层的 --tdt-selected-bg**（主题特判只许在 token 层）：
+  background:color-mix(in srgb,var(--dshpc-business) 14%,var(--dshpc-surface-1));padding:8px 0;}
+/* 「选中 / 展开」的底色走 **token 层的 --dshpc-selected-bg**（主题特判只许在 token 层）：
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
-   别用 --tdt-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);padding:1px;}
+   别用 --dshpc-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--dshpc-border);padding:1px;}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
    下面空间是够的（104 - 12 - 6 = 86px，够 1 行日期 + 3 行标签的 80px）⇒ 所有格子统一留白、对齐一致。 */
 .dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:6px;
-  overflow:hidden;background:var(--tdt-cal-cell-bg);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
-  transition:background var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-cal-cell:hover{background:var(--tdt-cal-cell-hover);}
+  overflow:hidden;background:var(--dshpc-cal-cell-bg);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
+  transition:background var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-cal-cell:hover{background:var(--dshpc-cal-cell-hover);}
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */
-.dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);cursor:default;}
-.dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);}
+.dsh-tdt-cal-cell--out{background:var(--dshpc-surface-2);cursor:default;}
+.dsh-tdt-cal-cell--out:hover{background:var(--dshpc-surface-2);}
 /* 选中格（**点开的那一块**）= 顶部一条 4px 蓝胶囊线（离边 4px）；**底色与其它格子完全相同**
    （surface-1）。⚠️ 底色**不许叠淡蓝**：那层半透明蓝压在格内的状态色标签上 ⇒ 深色主题下发灰、
    浅色主题下发暗，把原本的绿色/红色全带脏了（用户 2026-10-06）。「选中」只由那条线表达。
    ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。
-   ⚠️ 底色（2026-10-06 续2 定稿）：**与拉开区同色** = --tdt-cal-panel-bg（浅色近白、深色近背景），
+   ⚠️ 底色（2026-10-06 续2 定稿）：**与拉开区同色** = --dshpc-cal-panel-bg（浅色近白、深色近背景），
    手风琴拉开时选中格与拉开区连成一体；「选中」由那条蓝胶囊线 + 与未选中格（淡蓝）的色差表达。
    **不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-cal-panel-bg);outline:0;padding-top:12px;
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--dshpc-cal-panel-bg);outline:0;padding-top:12px;
   /* 手风琴拉开时：脚下那道 1px 网格缝用 box-shadow 盖掉（只盖选中格自己一段），
      同行**未选中**格子的下边线保留（用户 2026-10-06）。选中格底色 = 拉开区同色 ⇒ 连成一体。 */
-  box-shadow:0 1px 0 var(--tdt-cal-panel-bg);}
-.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-cal-panel-bg);}
+  box-shadow:0 1px 0 var(--dshpc-cal-panel-bg);}
+.dsh-tdt-cal-cell--sel:hover{background:var(--dshpc-cal-panel-bg);}
 /* 线在格子**顶部**（不是底部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）；
-   稍亮的品牌蓝（--tdt-business），明确标出「这是当前选中那天」（用户 2026-10-06：用蓝表示选中）。 */
+   稍亮的品牌蓝（--dshpc-business），明确标出「这是当前选中那天」（用户 2026-10-06：用蓝表示选中）。 */
 .dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
-  border-radius:999px;background:var(--tdt-business);}
+  border-radius:999px;background:var(--dshpc-business);}
 /* 日期数字：左对齐、去掉 5px 内缩与胶囊框（用户 2026-10-06：左边距要和顶间距一致，之前太长） */
 .dsh-tdt-cal-daterow{display:flex;align-items:baseline;gap:4px;padding-left:6px;}
-.dsh-tdt-cal-num{font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);font-weight:600;}
-.dsh-tdt-cal-num--today{color:var(--tdt-business);font-weight:600;}
-.dsh-tdt-cal-today{color:var(--tdt-business);font-weight:600;font-size:var(--tdt-font-xs);}
-.dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
+.dsh-tdt-cal-num{font-size:var(--dshpc-font-sm);line-height:18px;color:var(--dshpc-fg-2);font-weight:600;}
+.dsh-tdt-cal-num--today{color:var(--dshpc-business);font-weight:600;}
+.dsh-tdt-cal-today{color:var(--dshpc-business);font-weight:600;font-size:var(--dshpc-font-xs);}
+.dsh-tdt-cal-num--out{color:var(--dshpc-fg-4);}
 /* 格内条目 = **方形小标签**（用户 2026-10-06：不要圆点、**不要任何圆角**）：
    标签前 3px 状态色竖线 + 同色系底 + 时刻；时刻位数固定 ⇒ 标签宽度固定；
    一行 3 个、共 3 行（第 9 个位子留给「…N」）；文字在**竖线后面的底色里居中**。 */
 .dsh-tdt-cal-tags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;overflow:hidden;}
 .dsh-tdt-cal-tag{display:flex;align-items:stretch;min-width:0;height:18px;border-radius:0;overflow:hidden;box-sizing:border-box;
   background:var(--cal-soft,transparent);}
-.dsh-tdt-cal-tag::before{content:'';flex:none;width:3px;background:var(--cal-tone,var(--tdt-fg-4));}
+.dsh-tdt-cal-tag::before{content:'';flex:none;width:3px;background:var(--cal-tone,var(--dshpc-fg-4));}
 .dsh-tdt-cal-tag>span{flex:1 1 auto;min-width:0;padding:0 2px;overflow:hidden;text-align:center;
   display:flex;align-items:center;justify-content:center;
-  font-size:var(--tdt-font-xs);line-height:18px;color:var(--tdt-fg);font-variant-numeric:tabular-nums;}
+  font-size:var(--dshpc-font-xs);line-height:18px;color:var(--dshpc-fg);font-variant-numeric:tabular-nums;}
 /* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开）；左侧竖线**实心**、整体走蓝
    （用户 2026-10-06：虚线与竖线都是蓝色、不要灰——与执行记录「预计执行」块同一支蓝）。
    用户 2026-10-06 续：虚线**只包上/右/下**，左边不包——左缘是那条实心蓝竖条，虚线从它右边起到最右；蓝色调淡一点。 */
-.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed color-mix(in srgb,var(--tdt-business) 50%,transparent);border-left:0;}
-.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px solid var(--tdt-business);}
-.dsh-tdt-cal-tag--plan>span{color:var(--tdt-fg-3);}
+.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);border-left:0;}
+.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px solid var(--dshpc-business);}
+.dsh-tdt-cal-tag--plan>span{color:var(--dshpc-fg-3);}
 /* 「还有 N 条」：占第 9 个位子，点了 = 拉开当天看全部 */
-.dsh-tdt-cal-tag--more{background:var(--tdt-chip-bg);}
-.dsh-tdt-cal-tag--more::before{background:var(--tdt-fg-4);}
-.dsh-tdt-cal-tag--more>span{color:var(--tdt-fg-3);}
+.dsh-tdt-cal-tag--more{background:var(--dshpc-chip-bg);}
+.dsh-tdt-cal-tag--more::before{background:var(--dshpc-fg-4);}
+.dsh-tdt-cal-tag--more>span{color:var(--dshpc-fg-3);}
 /* 语义色调 → 本域局部变量。底色取 **24%**（基础层 -soft 只有 8%，用户说「太浅看不出来」⇒ 这里调深；
-   只在本域局部变量上调深，不动 ui/tokens.ts 里的 token）。 */
-.dsh-tdt-cal-t--ok{--cal-tone:var(--tdt-success);--cal-soft:color-mix(in srgb,var(--tdt-success) 24%,transparent);}
-.dsh-tdt-cal-t--bad{--cal-tone:var(--tdt-danger);--cal-soft:color-mix(in srgb,var(--tdt-danger) 24%,transparent);}
-.dsh-tdt-cal-t--warn{--cal-tone:var(--tdt-warning);--cal-soft:color-mix(in srgb,var(--tdt-warning) 24%,transparent);}
-.dsh-tdt-cal-t--busy{--cal-tone:var(--tdt-business);--cal-soft:color-mix(in srgb,var(--tdt-business) 24%,transparent);}
-.dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
+   只在本域局部变量上调深，不动核心 token 层里的 token）。 */
+.dsh-tdt-cal-t--ok{--cal-tone:var(--dshpc-success);--cal-soft:color-mix(in srgb,var(--dshpc-success) 24%,transparent);}
+.dsh-tdt-cal-t--bad{--cal-tone:var(--dshpc-danger);--cal-soft:color-mix(in srgb,var(--dshpc-danger) 24%,transparent);}
+.dsh-tdt-cal-t--warn{--cal-tone:var(--dshpc-warning);--cal-soft:color-mix(in srgb,var(--dshpc-warning) 24%,transparent);}
+.dsh-tdt-cal-t--busy{--cal-tone:var(--dshpc-business);--cal-soft:color-mix(in srgb,var(--dshpc-business) 24%,transparent);}
+.dsh-tdt-cal-t--neutral{--cal-tone:var(--dshpc-fg-4);--cal-soft:var(--dshpc-chip-bg);}
 /* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-/* 拉开区与选中格**同色**（--tdt-cal-panel-bg，浅色近白/深色近背景）⇒ 视觉一体。
+/* 拉开区与选中格**同色**（--dshpc-cal-panel-bg，浅色近白/深色近背景）⇒ 视觉一体。
    margin-top 不再上提：与上一行之间保留那道 1px 网格缝——同行**未选中**格子的下边线要保留；
    选中格脚下那一段由 --sel 的 box-shadow 盖掉（用户 2026-10-06）。 */
-.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-cal-panel-bg);border:0;border-radius:0;
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--dshpc-cal-panel-bg);border:0;border-radius:0;
   /* 下内边距 = 左内边距（用户 2026-10-06：拉开区底部留白要跟左右一模一样，都是 16px）。 */
-  padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-4);
-  overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
+  padding:calc(var(--dshpc-space-4) + 6px) var(--dshpc-space-4) var(--dshpc-space-4);
+  overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--dshpc-ease);}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
 
-.dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
-  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
-.dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+.dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--dshpc-space-2);margin-bottom:var(--dshpc-space-2);
+  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);font-weight:500;}
+.dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--dshpc-space-1);}
 /* 拉开区里的**计划**条目（没有执行记录 ⇒ 不可展开）：虚线框一行，内容可折行 */
-.dsh-tdt-cal-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--tdt-space-1) var(--tdt-space-2);padding:7px 10px;
-  border-radius:0;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
+.dsh-tdt-cal-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--dshpc-space-1) var(--dshpc-space-2);padding:7px 10px;
+  border-radius:0;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);
   background:var(--cal-soft,transparent);}
 
 .dsh-tdt-cal-time{font-variant-numeric:tabular-nums;}
 /* 拉开区里可点的名字（任务名 / 前置任务名）：链接色 + hover 下划线，与执行记录页「任务名可点」同观感 */
-.dsh-tdt-cal-link{border:0;background:none;padding:0;font:inherit;color:var(--tdt-business);cursor:pointer;text-align:left;}
+.dsh-tdt-cal-link{border:0;background:none;padding:0;font:inherit;color:var(--dshpc-business);cursor:pointer;text-align:left;}
 .dsh-tdt-cal-link:hover{text-decoration:underline;}
 /* 拉开区里的小字标注（「计划」/ 条数）—— 与格内标签类重名会互相打架，故单独命名 */
-.dsh-tdt-cal-mini{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+.dsh-tdt-cal-mini{flex:none;font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
 /* 面板头里的日期小字行：时钟图标 + 日期 · 星期 · N 条（与执行记录页同款）。 */
-.dsh-tdt-cal-clock{flex:none;color:var(--tdt-fg-3);}
-.dsh-tdt-cal-sep{color:var(--tdt-border-heavy);}
-.dsh-tdt-cal-date{font-weight:500;color:var(--tdt-fg-2);}
-.dsh-tdt-cal-weekday{color:var(--tdt-fg-2);}
-.dsh-tdt-cal-hint{margin-top:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-danger);}
-.dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
+.dsh-tdt-cal-clock{flex:none;color:var(--dshpc-fg-3);}
+.dsh-tdt-cal-sep{color:var(--dshpc-border-heavy);}
+.dsh-tdt-cal-date{font-weight:500;color:var(--dshpc-fg-2);}
+.dsh-tdt-cal-weekday{color:var(--dshpc-fg-2);}
+.dsh-tdt-cal-hint{margin-top:var(--dshpc-space-2);font-size:var(--dshpc-font-xs);color:var(--dshpc-danger);}
+.dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--dshpc-font-md);color:var(--dshpc-fg-3);}
 `;
 		const CALENDAR_DOMAIN = "domain:calendar";
 		/** `HH:mm`（格子只到分钟：计划时刻本来就没有秒的意义）。 */
@@ -69241,21 +69080,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		//#endregion
 		//#region src/client/task-list.tsx
 		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
-		const monoFont$1 = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		const monoFont$1 = "var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
 		*  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
-		const CONTROL_H = "var(--tdt-control-h-md)";
+		const CONTROL_H = "var(--dshpc-control-h-md)";
 		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
 		const WS_WIDTH = 180;
 		const TASK_LIST_CSS = [
 			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; }`,
 			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
-			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
-			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }",
-			".dsh-tdt-card { background: var(--tdt-surface-1); }",
-			".dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }",
-			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
-			".dsh-tdt-rec-alt { background: var(--tdt-plate); }"
+			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--dshpc-font-sm); }`,
+			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--dshpc-head-bg); }",
+			".dsh-tdt-card { background: var(--dshpc-surface-1); }",
+			".dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }",
+			".dsh-tdt-rec-row:hover { background: var(--dshpc-plate-hover); }",
+			".dsh-tdt-rec-alt { background: var(--dshpc-plate); }"
 		].join("\n");
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。设置页的数据表复用本域的 `.dsh-tdt-rec-*` 表格皮肤
@@ -69284,7 +69123,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 				const frame = requestAnimationFrame(() => {
 					for (const [el] of moved) {
-						el.style.transition = `transform 260ms var(--tdt-ease)`;
+						el.style.transition = `transform 260ms var(--dshpc-ease)`;
 						el.style.transform = "";
 					}
 					window.setTimeout(() => {
@@ -69322,7 +69161,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					width: `${RAIL_W}px`,
 					height: `${RAIL_H}px`,
 					flex: "none",
-					borderRadius: "var(--tdt-radius-xs)",
+					borderRadius: "var(--dshpc-radius-xs)",
 					background: RUNNING_TONE
 				}
 			});
@@ -69330,7 +69169,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		function StatusRail(props) {
 			const { row, t } = props;
 			if (row.running) return (0, react$1.createElement)(RunningRail, {});
-			const color = !row.enabled ? "var(--tdt-fg-3)" : row.lastStatus === "failed" || row.lastStatus === "skipped" ? "var(--tdt-danger)" : "var(--tdt-success)";
+			const color = !row.enabled ? "var(--dshpc-fg-3)" : row.lastStatus === "failed" || row.lastStatus === "skipped" ? "var(--dshpc-danger)" : "var(--dshpc-success)";
 			const hint = !row.enabled ? t("statusRailOff") : row.lastStatus === "failed" ? t("statusRailLastFailed") : row.lastStatus === "skipped" ? t("statusRailLastSkipped") : t("statusRailRunning");
 			return (0, react$1.createElement)("span", {
 				title: hint,
@@ -69339,9 +69178,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					width: `${RAIL_W}px`,
 					height: `${RAIL_H}px`,
 					flex: "none",
-					borderRadius: "var(--tdt-radius-xs)",
+					borderRadius: "var(--dshpc-radius-xs)",
 					background: color,
-					transition: `background var(--tdt-dur) var(--tdt-ease)`
+					transition: `background var(--dshpc-dur) var(--dshpc-ease)`
 				}
 			});
 		}
@@ -69362,9 +69201,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			alignItems: "stretch",
 			flex: "none",
 			height: "20px",
-			borderRadius: "var(--tdt-radius-sm)",
+			borderRadius: "var(--dshpc-radius-sm)",
 			overflow: "hidden",
-			border: `1px solid var(--tdt-border)`
+			border: `1px solid var(--dshpc-border)`
 		};
 		/** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
 		const pillIconCell = (bg, fg) => ({
@@ -69380,10 +69219,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			display: "inline-flex",
 			alignItems: "center",
 			padding: "0 8px",
-			background: "var(--tdt-surface-1)",
-			color: "var(--tdt-fg)",
-			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-xs)",
+			background: "var(--dshpc-surface-1)",
+			color: "var(--dshpc-fg)",
+			fontSize: "var(--dshpc-font-xs)",
+			lineHeight: "var(--dshpc-line-xs)",
 			whiteSpace: "nowrap",
 			fontVariantNumeric: "tabular-nums",
 			fontFamily: monoFont$1
@@ -69393,12 +69232,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const { row, t, tt } = props;
 			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
 			const colored = has && row.lastStatus !== null && row.lastStatus !== "unknown";
-			const bg = !has || row.lastStatus === "unknown" ? "var(--tdt-surface-3)" : row.lastStatus === "succeeded" ? "var(--tdt-success)" : "var(--tdt-danger)";
+			const bg = !has || row.lastStatus === "unknown" ? "var(--dshpc-surface-3)" : row.lastStatus === "succeeded" ? "var(--dshpc-success)" : "var(--dshpc-danger)";
 			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
 			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(bg, colored ? "var(--tdt-on-signal)" : "var(--tdt-fg-2)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(bg, colored ? "var(--dshpc-on-signal)" : "var(--dshpc-fg-2)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
 					if (!has) return "--";
@@ -69423,7 +69262,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listRunning"),
 				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(RUNNING_TONE, "var(--tdt-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(RUNNING_TONE, "var(--dshpc-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
 				...pillTimeCell,
 				color: RUNNING_TONE
 			} }, (0, react$1.createElement)(RunningBlocks, {}))));
@@ -69433,7 +69272,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--tdt-surface-3)", "var(--tdt-fg)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--dshpc-surface-3)", "var(--dshpc-fg)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
 					if (row.nextSlotAt === null) return "--";
@@ -69459,26 +69298,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			boxSizing: "border-box",
 			textAlign: "left",
 			marginBottom: "10px",
-			borderRadius: "var(--tdt-radius-sm)",
-			border: `1px solid var(--tdt-border)`,
-			color: "var(--tdt-fg)",
-			transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`
+			borderRadius: "var(--dshpc-radius-sm)",
+			border: `1px solid var(--dshpc-border)`,
+			color: "var(--dshpc-fg)",
+			transition: `border-color var(--dshpc-dur) var(--dshpc-ease), background var(--dshpc-dur) var(--dshpc-ease)`
 		};
 		const titleStyle = {
-			fontSize: "var(--tdt-font-lg)",
+			fontSize: "var(--dshpc-font-lg)",
 			fontWeight: 600,
-			lineHeight: "var(--tdt-line-md)"
+			lineHeight: "var(--dshpc-line-md)"
 		};
 		const metaStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg-2)",
-			lineHeight: "var(--tdt-line-sm)",
+			fontSize: "var(--dshpc-font-sm)",
+			color: "var(--dshpc-fg-2)",
+			lineHeight: "var(--dshpc-line-sm)",
 			marginTop: "2px"
 		};
 		const faintStyle = {
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)",
-			lineHeight: "var(--tdt-line-sm)",
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-fg-3)",
+			lineHeight: "var(--dshpc-line-sm)",
 			marginTop: "2px"
 		};
 		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
@@ -69529,7 +69368,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			overflowY: "auto"
 		};
 		const panelWrapStyle = {
-			borderTop: `1px dashed var(--tdt-border)`,
+			borderTop: `1px dashed var(--dshpc-border)`,
 			paddingTop: "10px",
 			paddingLeft: "14px",
 			paddingRight: "14px",
@@ -69537,7 +69376,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		};
 		const panelBarStyle = {
 			paddingTop: "10px",
-			borderTop: `1px dashed var(--tdt-border)`,
+			borderTop: `1px dashed var(--dshpc-border)`,
 			display: "flex",
 			alignItems: "center",
 			gap: "8px"
@@ -69545,14 +69384,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const miniTableStyle = {
 			width: "100%",
 			borderCollapse: "collapse",
-			fontSize: "var(--tdt-font-sm)"
+			fontSize: "var(--dshpc-font-sm)"
 		};
 		const miniCellStyle = {
 			padding: "9px 10px",
 			textAlign: "left",
-			color: "var(--tdt-fg)",
+			color: "var(--dshpc-fg)",
 			whiteSpace: "nowrap",
-			fontSize: "var(--tdt-font-sm)"
+			fontSize: "var(--dshpc-font-sm)"
 		};
 		const miniCellWrapStyle = {
 			...miniCellStyle,
@@ -69566,17 +69405,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		};
 		/**
 		* 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
-		* 上沿一条线（与执行记录表头上沿线同色 `--tdt-border`），从这条线到下方虚线**整块铺底色**，
+		* 上沿一条线（与执行记录表头上沿线同色 `--dshpc-border`），从这条线到下方虚线**整块铺底色**，
 		* 日志直接铺在里面。等宽字体跟环境风格走。
 		*/
 		const logAreaStyle = {
 			...panelScrollFillStyle,
-			borderTop: `1px solid var(--tdt-border)`,
-			background: "var(--tdt-surface-1)",
+			borderTop: `1px solid var(--dshpc-border)`,
+			background: "var(--dshpc-surface-1)",
 			padding: "10px 0",
 			fontFamily: monoFont$1,
-			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-sm)"
+			fontSize: "var(--dshpc-font-xs)",
+			lineHeight: "var(--dshpc-line-sm)"
 		};
 		/** 日志行：行间距拉开一点（用户 2026-10-03）。 */
 		const logRowStyle = {
@@ -69586,8 +69425,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const overlayStyle = {
 			position: "fixed",
 			inset: 0,
-			zIndex: "var(--tdt-z-modal)",
-			background: "var(--tdt-mask)",
+			zIndex: "var(--dshpc-z-modal)",
+			background: "var(--dshpc-mask)",
 			display: "flex",
 			alignItems: "center",
 			justifyContent: "center"
@@ -69596,12 +69435,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			width: "360px",
 			maxWidth: "calc(100vw - 48px)",
 			boxSizing: "border-box",
-			background: "var(--tdt-surface-base, #fff)",
-			color: "var(--tdt-fg)",
-			border: `1px solid var(--tdt-border)`,
-			borderRadius: "var(--tdt-radius-md)",
+			background: "var(--dshpc-surface-base, #fff)",
+			color: "var(--dshpc-fg)",
+			border: `1px solid var(--dshpc-border)`,
+			borderRadius: "var(--dshpc-radius-md)",
 			padding: "18px",
-			boxShadow: "var(--tdt-shadow-2, 0 12px 32px rgba(0,0,0,0.4))"
+			boxShadow: "var(--dshpc-shadow-2, 0 12px 32px rgba(0,0,0,0.4))"
 		};
 		/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
 		const formatStamp = (iso) => iso === null ? "—" : formatDateTime(iso, {
@@ -69629,8 +69468,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			alignItems: "center",
 			gap: "4px",
 			marginLeft: "auto",
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)"
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-fg-3)"
 		};
 		/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
 		const recHeadStyle = {
@@ -69638,13 +69477,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			padding: "11px 10px",
 			textAlign: "center",
 			fontWeight: 600,
-			color: "var(--tdt-fg-2)",
-			background: "var(--tdt-head-bg)",
-			boxShadow: "inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)"
+			color: "var(--dshpc-fg-2)",
+			background: "var(--dshpc-head-bg)",
+			boxShadow: "inset 0 1px 0 var(--dshpc-border), inset 0 -1px 0 var(--dshpc-border)"
 		};
 		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
-			color: "var(--tdt-danger)",
+			color: "var(--dshpc-danger)",
 			fontWeight: 600
 		} : void 0;
 		/**
@@ -69931,11 +69770,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					onOpenFile,
 					onViewTask
 				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-danger)"
+					fontSize: "var(--dshpc-font-xs)",
+					color: "var(--dshpc-danger)"
 				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, {}) : infoLast === null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-3)"
+					fontSize: "var(--dshpc-font-xs)",
+					color: "var(--dshpc-fg-3)"
 				} }, t("infoNoRun")) : lastRunFields({
 					t,
 					instance: infoLast,
@@ -69998,8 +69837,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				size: "md",
 				width: 70
 			}), t("limitSuffix")), recError !== null ? (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-danger)"
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-danger)"
 			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react$1.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, recStatus !== "" && recStatus !== "all" || recRange.from !== "" || recRange.to !== "" ? t("cardRecordsEmptyFiltered") : t("cardRecordsEmpty")) : (0, react$1.createElement)("table", { style: {
 				...miniTableStyle,
 				tableLayout: "fixed"
@@ -70038,7 +69877,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					className: ["dsh-tdt-rec-row", open || index % 2 === 0 ? "" : "dsh-tdt-rec-alt"].join(" ").trim(),
 					style: {
 						cursor: "pointer",
-						...open ? { background: "var(--tdt-open-bg)" } : {}
+						...open ? { background: "var(--dshpc-open-bg)" } : {}
 					},
 					onClick: () => {
 						setOpenInstance(open ? null : instance.id);
@@ -70048,7 +69887,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					alignItems: "center",
 					justifyContent: "center",
 					gap: "6px"
-				} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), (0, react$1.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, formatDurationHms(durMs)), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react$1.createElement)("td", { style: {
+				} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), (0, react$1.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--dshpc-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, formatDurationHms(durMs)), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, "-") : (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react$1.createElement)("td", { style: {
 					...miniCellStyle,
 					maxWidth: 0
 				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react$1.createElement)("span", {
@@ -70056,7 +69895,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					className: "dsh-tdt-ellipsis",
 					style: {
 						display: "block",
-						color: "var(--tdt-fg-3)"
+						color: "var(--dshpc-fg-3)"
 					}
 				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					key: output,
@@ -70093,21 +69932,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					style: {
 						...miniCellWrapStyle,
 						padding: "18px 20px",
-						background: "var(--tdt-open-bg-soft)"
+						background: "var(--dshpc-open-bg-soft)"
 					}
 				}, eventsError !== null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-danger)"
+					fontSize: "var(--dshpc-font-xs)",
+					color: "var(--dshpc-danger)"
 				} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-3)"
+					fontSize: "var(--dshpc-font-xs)",
+					color: "var(--dshpc-fg-3)"
 				} }, t("cardEventsEmpty")) : events.map((event) => (0, react$1.createElement)("div", {
 					key: event.seq,
 					style: {
 						marginBottom: "7px",
-						lineHeight: "var(--tdt-line-md)"
+						lineHeight: "var(--dshpc-line-md)"
 					}
-				}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null];
+				}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, event.detail ?? ""))))) : null];
 			})))));
 			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Input$1, {
 				value: logKeyword,
@@ -70142,15 +69981,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				size: "md",
 				width: 70
 			}), t("limitSuffix")), logError !== null ? (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-danger)"
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-danger)"
 			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react$1.createElement)("div", { style: logAreaStyle }, logs === null ? null : logs.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : logs.map((row) => (0, react$1.createElement)("div", {
 				key: row.seq,
 				style: logRowStyle
-			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react$1.createElement)("span", { style: {
-				color: row.level === "error" ? "var(--tdt-danger)" : row.level === "warn" ? "var(--tdt-accent)" : "var(--tdt-fg-3)",
+			}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react$1.createElement)("span", { style: {
+				color: row.level === "error" ? "var(--dshpc-danger)" : row.level === "warn" ? "var(--dshpc-accent)" : "var(--dshpc-fg-3)",
 				fontWeight: row.level === "error" ? 600 : 400
-			} }, `[${row.level}]`), " ", (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${row.kind}: `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, row.message)))));
+			} }, `[${row.level}]`), " ", (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, `${row.kind}: `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, row.message)))));
 			/** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
 			const renderConfirm = () => (0, react$1.createElement)("div", {
 				style: overlayStyle,
@@ -70163,13 +70002,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					event.stopPropagation();
 				}
 			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-lg)",
+				fontSize: "var(--dshpc-font-lg)",
 				fontWeight: 600,
 				marginBottom: "8px"
 			} }, t("cardDeleteTitle")), (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2)",
-				lineHeight: "var(--tdt-line-sm)",
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-fg-2)",
+				lineHeight: "var(--dshpc-line-sm)",
 				marginBottom: "14px"
 			} }, t("cardDeleteDesc")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
@@ -70206,13 +70045,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					event.stopPropagation();
 				}
 			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-lg)",
+				fontSize: "var(--dshpc-font-lg)",
 				fontWeight: 600,
 				marginBottom: "8px"
 			} }, t("cardRunNowTitle")), (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2)",
-				lineHeight: "var(--tdt-line-sm)",
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-fg-2)",
+				lineHeight: "var(--dshpc-line-sm)",
 				marginBottom: "14px"
 			} }, t("cardRunNowDesc")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
@@ -70515,19 +70354,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				margin: "24px auto 0",
 				padding: "48px 32px",
 				textAlign: "center",
-				border: "1px dashed var(--tdt-border-heavy)",
-				borderRadius: "var(--tdt-radius-md)",
-				background: "var(--tdt-surface-1)"
-			} }, (0, react$1.createElement)("div", { style: { color: "var(--tdt-fg-3)" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 40 })), (0, react$1.createElement)("div", { style: {
+				border: "1px dashed var(--dshpc-border-heavy)",
+				borderRadius: "var(--dshpc-radius-md)",
+				background: "var(--dshpc-surface-1)"
+			} }, (0, react$1.createElement)("div", { style: { color: "var(--dshpc-fg-3)" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 40 })), (0, react$1.createElement)("div", { style: {
 				marginTop: "12px",
-				fontSize: "var(--tdt-font-lg)",
+				fontSize: "var(--dshpc-font-lg)",
 				fontWeight: 600
 			} }, t("listEmptyTitle")), (0, react$1.createElement)("div", { style: {
 				marginTop: "6px",
 				maxWidth: "360px",
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2)",
-				lineHeight: "var(--tdt-line-sm)"
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-fg-2)",
+				lineHeight: "var(--dshpc-line-sm)"
 			} }, t("listEmptyHint")), (0, react$1.createElement)(Button$2, {
 				variant: "primary",
 				size: "md",
@@ -70581,8 +70420,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				padding: "4px 2px",
 				maxWidth: "640px"
 			} }, (0, react$1.createElement)("p", { style: {
-				fontSize: "var(--tdt-font-md)",
-				color: "var(--tdt-fg,#1f2328)",
+				fontSize: "var(--dshpc-font-md)",
+				color: "var(--dshpc-fg,#1f2328)",
 				lineHeight: 1.6,
 				margin: 0,
 				whiteSpace: "pre-wrap"
@@ -70757,37 +70596,37 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const gridStyle = {
 			display: "grid",
 			gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-			gap: "var(--tdt-space-4)"
+			gap: "var(--dshpc-space-4)"
 		};
 		const headStyle = {
 			display: "flex",
 			alignItems: "center",
-			gap: "var(--tdt-space-1)",
-			marginBottom: "var(--tdt-space-2)"
+			gap: "var(--dshpc-space-1)",
+			marginBottom: "var(--dshpc-space-2)"
 		};
 		const labelStyle = {
-			fontSize: "var(--tdt-font-md)",
+			fontSize: "var(--dshpc-font-md)",
 			fontWeight: 600,
 			minWidth: 0
 		};
 		const badgesStyle = {
 			display: "inline-flex",
 			alignItems: "center",
-			gap: "var(--tdt-space-2)",
+			gap: "var(--dshpc-space-2)",
 			marginLeft: "auto",
 			flex: "none"
 		};
 		const customStyle = {
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-business)"
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-business)"
 		};
 		const resetStyle = {
 			background: "none",
 			border: "none",
 			padding: 0,
 			font: "inherit",
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-2)",
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-fg-2)",
 			cursor: "pointer"
 		};
 		function SettingsConfigBlock({ t }) {
@@ -71024,7 +70863,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					control = (0, react$1.createElement)("div", { style: {
 						display: "grid",
 						gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-						gap: "var(--tdt-space-2)"
+						gap: "var(--dshpc-space-2)"
 					} }, (0, react$1.createElement)(SelectField, {
 						value: String(form.defaultProvider),
 						options: providerOptions(),
@@ -71069,23 +70908,23 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						resetField(f);
 					}
 				}, t("settingsResetDefault"))) : null), control, f.hintKey === void 0 ? null : (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-sm)",
-					color: "var(--tdt-fg-3)",
-					marginTop: "var(--tdt-space-2)",
-					lineHeight: "var(--tdt-line-sm)"
+					fontSize: "var(--dshpc-font-sm)",
+					color: "var(--dshpc-fg-3)",
+					marginTop: "var(--dshpc-space-2)",
+					lineHeight: "var(--dshpc-line-sm)"
 				} }, t(f.hintKey)));
 			};
 			if (form === null || defaults === null || baseline === null) return (0, react$1.createElement)("div", { style: {
-				color: "var(--tdt-fg-3)",
-				fontSize: "var(--tdt-font-sm)"
+				color: "var(--dshpc-fg-3)",
+				fontSize: "var(--dshpc-font-sm)"
 			} }, t("loading"));
 			return (0, react$1.createElement)("div", null, (0, react$1.createElement)(SectionHead, {
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCordisPluginOutlineRegular, { size: 16 }),
 				title: t("settingsConfigTitle")
 			}), (0, react$1.createElement)("div", { style: gridStyle }, ...FIELDS.map(renderField)), (0, react$1.createElement)("div", { style: {
-				marginTop: "var(--tdt-space-4)",
+				marginTop: "var(--dshpc-space-4)",
 				display: "flex",
-				gap: "var(--tdt-space-2)",
+				gap: "var(--dshpc-space-2)",
 				alignItems: "center",
 				flexWrap: "wrap",
 				position: "relative"
@@ -71095,8 +70934,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: () => void save(),
 				disabled: saving || !dirty
 			}, saving ? t("saving") : t("save")), dirty ? (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-warning)"
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-warning)"
 			} }, t("settingsUnsaved")) : null, toast === null ? null : (0, react$1.createElement)(FloatingToast, {
 				seq: toast.seq,
 				tone: toast.tone,
@@ -71141,24 +70980,24 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		};
 		/** 等级配色：error 红 / warn 黄 / info 不着色。 */
 		const levelStyleOf = (level) => level === "error" ? {
-			color: "var(--tdt-danger)",
+			color: "var(--dshpc-danger)",
 			fontWeight: 600
 		} : level === "warn" ? {
-			color: "var(--tdt-warning)",
+			color: "var(--dshpc-warning)",
 			fontWeight: 600
 		} : void 0;
 		const tableStyle = {
 			width: "100%",
 			tableLayout: "fixed",
 			borderCollapse: "collapse",
-			fontSize: "var(--tdt-font-sm)"
+			fontSize: "var(--dshpc-font-sm)"
 		};
 		const thStyle = {
 			padding: "11px 10px",
 			textAlign: "left",
 			fontWeight: 600,
-			color: "var(--tdt-fg-2)",
-			background: "var(--tdt-head-bg)",
+			color: "var(--dshpc-fg-2)",
+			background: "var(--dshpc-head-bg)",
 			whiteSpace: "nowrap",
 			overflow: "hidden",
 			textOverflow: "ellipsis"
@@ -71167,8 +71006,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const tdStyle = {
 			padding: "9px 10px",
 			textAlign: "left",
-			color: "var(--tdt-fg)",
-			fontSize: "var(--tdt-font-sm)",
+			color: "var(--dshpc-fg)",
+			fontSize: "var(--dshpc-font-sm)",
 			wordBreak: "break-word",
 			verticalAlign: "top",
 			overflow: "hidden"
@@ -71178,8 +71017,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const rows = table?.rows ?? [];
 			const columns = table?.columns ?? [];
 			if (rows.length === 0) return (0, react$1.createElement)("p", { style: {
-				color: "var(--tdt-fg-3)",
-				fontSize: "var(--tdt-font-sm)",
+				color: "var(--dshpc-fg-3)",
+				fontSize: "var(--dshpc-font-sm)",
 				margin: 0
 			} }, emptyText);
 			const widthOf = (col) => COL_WIDTH[col] === void 0 ? {} : { width: COL_WIDTH[col] };
@@ -71233,8 +71072,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			alignItems: "center",
 			gap: "4px",
 			marginLeft: "auto",
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)"
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-fg-3)"
 		};
 		function SettingsLogBlock({ t, style }) {
 			const [result, setResult] = (0, react$1.useState)(null);
@@ -71285,7 +71124,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				right: (0, react$1.createElement)("div", { style: {
 					display: "flex",
 					alignItems: "center",
-					gap: "var(--tdt-space-2)",
+					gap: "var(--dshpc-space-2)",
 					flexWrap: "wrap"
 				} }, (0, react$1.createElement)(Checkbox, {
 					checked: auto,
@@ -71312,9 +71151,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					width: 70
 				}), t("limitSuffix")))
 			}), error !== null ? (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-danger)",
-				marginBottom: "var(--tdt-space-2)"
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-danger)",
+				marginBottom: "var(--dshpc-space-2)"
 			} }, error) : null, (0, react$1.createElement)(DbTable, {
 				table: result,
 				t,
@@ -71335,15 +71174,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*   把三块清晰隔开。三块共用同一份框样式。
 		*/
 		/** 模块之间的纵向间距（唯一一份，三块共用）。 */
-		const SECTION_GAP = { marginTop: "var(--tdt-space-4)" };
+		const SECTION_GAP = { marginTop: "var(--dshpc-space-4)" };
 		applyStyle("domain:settings", `
 .dsh-tdt-settings-card{
   box-sizing:border-box;
   border:none;
   border-radius:0;
-  border-left:4px solid color-mix(in srgb,var(--tdt-fg) 14%,transparent);
-  background:color-mix(in srgb,var(--tdt-fg) 3%,transparent);
-  padding:var(--tdt-space-4);
+  border-left:4px solid color-mix(in srgb,var(--dshpc-fg) 14%,transparent);
+  background:color-mix(in srgb,var(--dshpc-fg) 3%,transparent);
+  padding:var(--dshpc-space-4);
 }
 `);
 		function SettingsPage({ t }) {
@@ -71369,11 +71208,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const PANEL_ID = SETTINGS_NS;
 		/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 		let runtimeT = (key) => key;
-		const monoFont = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
-		const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease)`;
+		const monoFont = "var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		const transition = `background var(--dshpc-dur) var(--dshpc-ease), color var(--dshpc-dur) var(--dshpc-ease), border-color var(--dshpc-dur) var(--dshpc-ease)`;
 		const hintStyle = {
-			color: "var(--tdt-fg-2)",
-			fontSize: "var(--tdt-font-sm)",
+			color: "var(--dshpc-fg-2)",
+			fontSize: "var(--dshpc-font-sm)",
 			margin: "4px 0 8px"
 		};
 		const cardStyle = {
@@ -71382,28 +71221,28 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			justifyContent: "space-between",
 			gap: "12px",
 			padding: "12px 14px",
-			border: `1px solid var(--tdt-border)`,
-			borderRadius: "var(--tdt-radius-sm)",
+			border: `1px solid var(--dshpc-border)`,
+			borderRadius: "var(--dshpc-radius-sm)",
 			cursor: "pointer",
 			width: "100%",
 			boxSizing: "border-box",
 			background: "transparent",
 			textAlign: "left",
-			color: "var(--tdt-fg)",
+			color: "var(--dshpc-fg)",
 			transition
 		};
 		const cardTitleStyle = {
-			fontSize: "var(--tdt-font-lg)",
+			fontSize: "var(--dshpc-font-lg)",
 			fontWeight: 600,
-			color: "var(--tdt-fg)"
+			color: "var(--dshpc-fg)"
 		};
 		const cardDescStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg-2)",
+			fontSize: "var(--dshpc-font-sm)",
+			color: "var(--dshpc-fg-2)",
 			marginTop: "2px"
 		};
 		const chevronStyle = {
-			color: "var(--tdt-fg-3)",
+			color: "var(--dshpc-fg-3)",
 			display: "flex",
 			alignItems: "center"
 		};
@@ -71414,7 +71253,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			boxSizing: "border-box",
 			overflow: "auto",
 			padding: "27px 22px",
-			color: "var(--tdt-fg)",
+			color: "var(--dshpc-fg)",
 			background: "transparent"
 		};
 		/** 抬头的三块：标题在左，右依次是「分组标签 · 关闭」。 */
@@ -71432,23 +71271,23 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			gap: "8px"
 		};
 		const panelTitleStyle = {
-			fontSize: "var(--tdt-font-xl)",
+			fontSize: "var(--dshpc-font-xl)",
 			fontWeight: 600,
-			color: "var(--tdt-fg)"
+			color: "var(--dshpc-fg)"
 		};
 		const preStyle = {
 			fontFamily: monoFont,
-			fontSize: "var(--tdt-font-sm)",
+			fontSize: "var(--dshpc-font-sm)",
 			lineHeight: 1.5,
 			margin: "4px 0",
 			whiteSpace: "pre-wrap",
 			wordBreak: "break-all",
 			maxHeight: "12em",
 			overflow: "auto",
-			background: "var(--tdt-surface-2)",
-			color: "var(--tdt-fg)",
+			background: "var(--dshpc-surface-2)",
+			color: "var(--dshpc-fg)",
 			padding: "8px",
-			borderRadius: "var(--tdt-radius-sm)"
+			borderRadius: "var(--dshpc-radius-sm)"
 		};
 		/**
 		* 侧栏 / 面板图标（2026-10-08 重绘）：构图取自用户给的 iconfont「计划」稿（`assets/计划.svg`，

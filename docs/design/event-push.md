@@ -309,7 +309,7 @@ export function useResync(handler: () => void): void   // 重连成功时触发�
 
 - **JS 语法/API**：全仓 client 未使用任何超出 **chrome99** 的 API（`Array.at` / `findLast` / `Object.hasOwn` / `structuredClone` / `AbortSignal.any` 均未用或刻意避开，后者有注释点名）。`tsconfig.client.json` 的类型层**不拦**新 API（唯一防线是注释 + review）—— 新增 API 前先查 chrome99 支持表。
 - **CSS 基线已明写 + 能无损做的回退已补**（2026-10-07 处理）：
-  - `ui/tokens.ts` 顶部写清 **两条基线别混**：JS 语法 = chrome99（构建 target），**CSS = Chrome 111**（`color-mix()`）。样式是 TS 模板字符串、**不经过任何 CSS 工具链** ⇒ 没有自动降级，要回退只能手写。
+  - 原 `ui/tokens.ts` 顶部写清 **两条基线别混**：JS 语法 = chrome99（构建 target），**CSS = Chrome 111**（`color-mix()`）。样式是 TS 模板字符串、**不经过任何 CSS 工具链** ⇒ 没有自动降级，要回退只能手写。（2026-11-05 该文件移交 `dsh-plugin-core/design`；核心 `tokens.css` 尚未明写这两条基线，待上游补文档。）
   - **固定中性面**的 6 个 token（`icon-plate` / `chip-bg` / `chip-bg-hover` × 浅深两段）已补明文 `rgba()` 回退 —— 它们的语义本就是「固定中性面」，不靠跟随宿主主题色 ⇒ 无损。
   - **语义色浅底**（`*-soft` / `selected-bg` / `cal-cell-*`）**保持 `color-mix` 现算**：那正是为了**跟随宿主 alias**（主题一换浅底自动成立），写成死 `rgba()` 会丢掉这个性质（原注释已写明这个取舍）。⇒ 这不是「漏了回退」，是设计取舍；代价已在文件头写明（11x 之前旧内核上这些声明会整条丢弃 ⇒ 底色透明、**不破布局**）。
   - **要支持更旧内核时的配方**（写在文件头）：给每条 `color-mix` token 先写一条 `rgba(...)` 明文回退，浅/深两段各写一份，代价是浅底不再跟随宿主主题色。

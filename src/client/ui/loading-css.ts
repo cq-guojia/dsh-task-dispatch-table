@@ -5,7 +5,7 @@
  * - 浮动 Loading pill（`<Loading />`）
  * - 运行中 / loading 三个脉动小方块（`.dsh-tdt-run-blocks`）
  *
- * 消费 token：`--tdt-*`（颜色 / 尺寸 / 层级全部来自 tokens.ts）。
+ * 消费 token：`--dshpc-*`（颜色 / 尺寸 / 层级全部来自核心 token 层 `dsh-plugin-core/design`）。
  */
 import { applyStyle } from './style'
 

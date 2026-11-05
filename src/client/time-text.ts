@@ -98,10 +98,10 @@ export function clockOf(iso: string): string {
  * 无下次执行（停用 / 一次性已收尾）⇒ 显示「无」。先收窄 `next` 为 string 再喂给格式化函数。
  */
 export function renderNextExec(next: string | null, t: Translate): ReactNode {
-  if (next === null) return h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
+  if (next === null) return h('span', { style: { color: 'var(--dshpc-fg-3)' } }, t('listNone'))
   return h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 } },
     h(LiveText, { render: (nowMs: number) => nextExecLabel(next, nowMs, t) }),
-    h('span', { style: { color: 'var(--tdt-fg-3)', flex: 'none' } }, '│'),
+    h('span', { style: { color: 'var(--dshpc-fg-3)', flex: 'none' } }, '│'),
     h('span', { style: { fontVariantNumeric: 'tabular-nums' } }, formatDateTime(next, { seconds: true, fallback: NO_TIME })),
   )
 }

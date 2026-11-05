@@ -22,7 +22,6 @@ export const PANEL_CONTENT_STYLE: CSSProperties = {
   width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box',
 }
 
-export { UI_TOKENS_CSS } from './tokens'
 export { UI_STYLE_ID, TOKENS_DOMAIN, registerStyle, applyStyle, ensureUiStyles, ensureUiBase } from './style'
 export { CONTROLS_DOMAIN, SEGMENTED_CSS, BUTTON_CSS, FIELD_CSS, DATETIME_CSS, SELECT_CSS, PROCESS_FILES_CSS, ensureControlsStyle } from './controls-css'
 export { Segmented, type SegmentedItem, type SegmentedProps } from './Segmented'

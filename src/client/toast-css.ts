@@ -14,7 +14,7 @@ export const TOAST_CSS = `
    形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
    语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
 .dsh-tdt-toast{
-  --tone:var(--tdt-danger,#e5484d);
+  --tone:var(--dshpc-danger,#e5484d);
   position:absolute;
   left:50%;
   bottom:calc(100% + 8px);
@@ -26,13 +26,13 @@ export const TOAST_CSS = `
   box-sizing:border-box;
   margin:0;
   padding:8px 14px;
-  border-radius:var(--tdt-radius-md,8px);
+  border-radius:var(--dshpc-radius-md,8px);
   border:1px solid var(--tone);
   /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
-  background:var(--tdt-surface-1,rgba(128,128,128,.15));
-  background:color-mix(in srgb,var(--tone) 10%,var(--tdt-surface-1,#fff));
-  color:var(--tdt-fg,#1f2328);
-  font-size:var(--tdt-font-sm);
+  background:var(--dshpc-surface-1,rgba(128,128,128,.15));
+  background:color-mix(in srgb,var(--tone) 10%,var(--dshpc-surface-1,#fff));
+  color:var(--dshpc-fg,#1f2328);
+  font-size:var(--dshpc-font-sm);
   line-height:1.6;
   display:flex;
   align-items:flex-start;
@@ -48,7 +48,7 @@ export const TOAST_CSS = `
   background:var(--tone);
   margin:6px 8px 0 0;
 }
-.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--tdt-fg-inverse,#fff);opacity:.65;}
+.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--dshpc-fg-inverse,#fff);opacity:.65;}
 .dsh-tdt-toast-text{
   flex:1 1 auto;min-width:0;
   white-space:pre-line;
@@ -61,15 +61,15 @@ export const TOAST_CSS = `
   100%{opacity:0;transform:translate(-50%,-16px);}
 }
 /* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
-.dsh-tdt-toast--success{--tone:var(--tdt-success,#2f9e44);}
-.dsh-tdt-toast--warning{--tone:var(--tdt-warning,#e6a23c);}
+.dsh-tdt-toast--success{--tone:var(--dshpc-success,#2f9e44);}
+.dsh-tdt-toast--warning{--tone:var(--dshpc-warning,#e6a23c);}
 .dsh-tdt-toast--neutral{
-  --tone:var(--tdt-fg-2,rgba(128,128,128,.95));
-  background:var(--tdt-fg,#1f2328);
-  color:var(--tdt-fg-inverse,#fff);
+  --tone:var(--dshpc-fg-2,rgba(128,128,128,.95));
+  background:var(--dshpc-fg,#1f2328);
+  color:var(--dshpc-fg-inverse,#fff);
   border-color:transparent;
 }
-.dsh-tdt-toast--neutral::before{background:var(--tdt-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--neutral::before{background:var(--dshpc-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 可关闭型（操作类失败）：固定底部中央、不自动消失、可点（关闭钮）。中性档即反色实面，观感与旧自绘一致。 */
 .dsh-tdt-toast--closable{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:max-content;max-width:min(90%,520px);pointer-events:auto;z-index:1020;animation:none;opacity:1;}

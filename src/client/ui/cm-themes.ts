@@ -1,7 +1,7 @@
 /**
  * CodeMirror 6 主题（移植自 DSH-better-sidebar 的 cm-themes.ts，token 名换成
- * 本仓的 --tdt-*）。提供：
- *  - cmSurfaceTheme：透明底 + 13px + 等宽字体 + 行号槽用 --tdt-fg-3，随宿主滚动；
+ * 本仓的 --dshpc-*）。提供：
+ *  - cmSurfaceTheme：透明底 + 13px + 等宽字体 + 行号槽用 --dshpc-fg-3，随宿主滚动；
  *  - codeMirrorTheme(dark)：表面主题 + 选区/激活行微调 + one-dark/one-light 语法色。
  * 主矛盾是“不卡”，配色/字号顺带对齐到用户认可的 one-dark 13px 观感。
  *
@@ -27,24 +27,24 @@ const ONE_LIGHT = {
   magenta: '#a626a4', cyan: '#0997b3', orange: '#986801', link: '#4078f2',
 } as const
 
-// 表面层：透明底、13px、等宽字体、行号槽取 --tdt-fg-3；不抢背景，叠在宿主面板上。
+// 表面层：透明底、13px、等宽字体、行号槽取 --dshpc-fg-3；不抢背景，叠在宿主面板上。
 export const cmSurfaceTheme = EditorView.theme({
   '&': {
     height: '100%',
     fontSize: '13px',
     backgroundColor: 'transparent',
-    color: 'var(--tdt-fg, #1f2328)',
+    color: 'var(--dshpc-fg, #1f2328)',
   },
   '.cm-scroller': {
     overflow: 'auto',
-    fontFamily: 'var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)',
+    fontFamily: 'var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)',
   },
   '.cm-content': {
-    caretColor: 'var(--tdt-fg, #1f2328)',
+    caretColor: 'var(--dshpc-fg, #1f2328)',
   },
   '.cm-gutters': {
     backgroundColor: 'transparent',
-    color: 'var(--tdt-fg-3, rgba(128,128,128,0.8))',
+    color: 'var(--dshpc-fg-3, rgba(128,128,128,0.8))',
     border: 'none',
   },
   '.cm-activeLine': {

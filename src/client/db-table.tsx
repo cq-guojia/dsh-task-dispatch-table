@@ -33,20 +33,20 @@ const shortTs = (iso: string): string => {
 
 /** 等级配色：error 红 / warn 黄 / info 不着色。 */
 const levelStyleOf = (level: string): CSSProperties | undefined =>
-  level === 'error' ? { color: 'var(--tdt-danger)', fontWeight: 600 }
-    : level === 'warn' ? { color: 'var(--tdt-warning)', fontWeight: 600 }
+  level === 'error' ? { color: 'var(--dshpc-danger)', fontWeight: 600 }
+    : level === 'warn' ? { color: 'var(--dshpc-warning)', fontWeight: 600 }
       : undefined
 
 const tableStyle: CSSProperties = {
-  width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 'var(--tdt-font-sm)',
+  width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 'var(--dshpc-font-sm)',
 }
 const thStyle: CSSProperties = {
-  padding: '11px 10px', textAlign: 'left', fontWeight: 600, color: 'var(--tdt-fg-2)',
-  background: 'var(--tdt-head-bg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+  padding: '11px 10px', textAlign: 'left', fontWeight: 600, color: 'var(--dshpc-fg-2)',
+  background: 'var(--dshpc-head-bg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
 }
 /** 数据格：与执行记录 `miniCellStyle` 同度量；**不用实线分隔**，行与行靠斑马纹区分。 */
 const tdStyle: CSSProperties = {
-  padding: '9px 10px', textAlign: 'left', color: 'var(--tdt-fg)', fontSize: 'var(--tdt-font-sm)',
+  padding: '9px 10px', textAlign: 'left', color: 'var(--dshpc-fg)', fontSize: 'var(--dshpc-font-sm)',
   wordBreak: 'break-word', verticalAlign: 'top', overflow: 'hidden',
 }
 
@@ -55,7 +55,7 @@ export function DbTable({ table, t, emptyText }: { table: SettingsTableQueryResu
   const rows = table?.rows ?? []
   const columns = table?.columns ?? []
   if (rows.length === 0) {
-    return h('p', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)', margin: 0 } }, emptyText)
+    return h('p', { style: { color: 'var(--dshpc-fg-3)', fontSize: 'var(--dshpc-font-sm)', margin: 0 } }, emptyText)
   }
   const widthOf = (col: string): CSSProperties => (COL_WIDTH[col] === undefined ? {} : { width: COL_WIDTH[col] })
   return h('table', { style: tableStyle },

@@ -53,7 +53,7 @@ export interface TimeRangeProps {
 
 const labelStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', gap: '4px',
-  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', flex: 'none',
+  fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)', flex: 'none',
 }
 
 /** 本机今天（`YYYY-MM-DD`）—— 分钟档里只选了时刻、没选日期时补的默认日期。 */

@@ -22,12 +22,12 @@ import { ensureLoadingStyle } from './loading-css'
 const pillStyle: Record<string, string | number> = {
   position: 'fixed',
   bottom: '16px',
-  zIndex: 'var(--tdt-z-dock)',
+  zIndex: 'var(--dshpc-z-dock)',
   display: 'inline-flex', alignItems: 'center', gap: '6px',
-  padding: '5px 10px', borderRadius: 'var(--tdt-radius-md)',
-  background: 'var(--tdt-surface-1)', border: '1px solid var(--tdt-border)',
-  boxShadow: 'var(--tdt-shadow-1, 0 2px 8px rgba(0,0,0,.12))',
-  color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-sm)',
+  padding: '5px 10px', borderRadius: 'var(--dshpc-radius-md)',
+  background: 'var(--dshpc-surface-1)', border: '1px solid var(--dshpc-border)',
+  boxShadow: 'var(--dshpc-shadow-1, 0 2px 8px rgba(0,0,0,.12))',
+  color: 'var(--dshpc-fg-2)', fontSize: 'var(--dshpc-font-xs)', lineHeight: 'var(--dshpc-line-sm)',
   // 纯提示，不吃鼠标事件（别挡住底下的内容）。
   pointerEvents: 'none',
 }

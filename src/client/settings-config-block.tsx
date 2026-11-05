@@ -52,15 +52,15 @@ const FIELDS: FieldDef[] = [
 
 /** 字段栅格：**一行两个**（供应商 + 模型那一格内部也是一行两个）。 */
 const gridStyle: CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--tdt-space-4)',
+  display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--dshpc-space-4)',
 }
-const headStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-1)', marginBottom: 'var(--tdt-space-2)' }
-const labelStyle: CSSProperties = { fontSize: 'var(--tdt-font-md)', fontWeight: 600, minWidth: 0 }
-const badgesStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 'var(--tdt-space-2)', marginLeft: 'auto', flex: 'none' }
-const customStyle: CSSProperties = { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-business)' }
+const headStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 'var(--dshpc-space-1)', marginBottom: 'var(--dshpc-space-2)' }
+const labelStyle: CSSProperties = { fontSize: 'var(--dshpc-font-md)', fontWeight: 600, minWidth: 0 }
+const badgesStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 'var(--dshpc-space-2)', marginLeft: 'auto', flex: 'none' }
+const customStyle: CSSProperties = { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-business)' }
 const resetStyle: CSSProperties = {
   background: 'none', border: 'none', padding: 0, font: 'inherit',
-  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', cursor: 'pointer',
+  fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-2)', cursor: 'pointer',
 }
 
 interface FieldProblem {
@@ -257,7 +257,7 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
       })
     } else {
       const opts = modelOptions()
-      control = h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--tdt-space-2)' } },
+      control = h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--dshpc-space-2)' } },
         h(SelectField, {
           value: String(form!.defaultProvider), options: providerOptions(), block: true, size: 'md',
           error: invalid,
@@ -290,21 +290,21 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
       control,
       f.hintKey === undefined
         ? null
-        : h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-3)', marginTop: 'var(--tdt-space-2)', lineHeight: 'var(--tdt-line-sm)' } }, t(f.hintKey)),
+        : h('div', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-3)', marginTop: 'var(--dshpc-space-2)', lineHeight: 'var(--dshpc-line-sm)' } }, t(f.hintKey)),
     )
   }
 
   if (form === null || defaults === null || baseline === null) {
-    return h('div', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)' } }, t('loading'))
+    return h('div', { style: { color: 'var(--dshpc-fg-3)', fontSize: 'var(--dshpc-font-sm)' } }, t('loading'))
   }
 
   return h('div', null,
     h(SectionHead, { icon: h(IconCordisPluginOutlineRegular, { size: 16 }), title: t('settingsConfigTitle') }),
     h('div', { style: gridStyle }, ...FIELDS.map(renderField)),
-    h('div', { style: { marginTop: 'var(--tdt-space-4)', display: 'flex', gap: 'var(--tdt-space-2)', alignItems: 'center', flexWrap: 'wrap', position: 'relative' } },
+    h('div', { style: { marginTop: 'var(--dshpc-space-4)', display: 'flex', gap: 'var(--dshpc-space-2)', alignItems: 'center', flexWrap: 'wrap', position: 'relative' } },
       // 没有任何改动 ⇒ 保存灰着（照参考插件：没改就没什么可存的）。
       h(Button, { variant: 'primary', size: 'lg', onClick: () => void save(), disabled: saving || !dirty }, saving ? t('saving') : t('save')),
-      dirty ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-warning)' } }, t('settingsUnsaved')) : null,
+      dirty ? h('span', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-warning)' } }, t('settingsUnsaved')) : null,
       // 提示**全部**收编统一 Toast（与「新增 / 修改任务」同款）：校验问题 / 保存失败 = 红，保存成功 = 绿。
       toast === null
         ? null

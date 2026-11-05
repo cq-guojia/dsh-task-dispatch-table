@@ -82,7 +82,7 @@ export function WeekdayPicker(props: {
   return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } },
     props.label === undefined
       ? null
-      : h('span', { style: { flex: 'none', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' } }, props.label),
+      : h('span', { style: { flex: 'none', fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg)' } }, props.label),
     // 多选；放在间隔卡里 ⇒ variant="inset"；星期多选做成「正方形 + 蓝选中」的特殊化变体
     // （用户 2026-10-01：原 WeekdayPicker 即蓝底方块，统一到 Segmented 后由 .dsh-tdt-seg--weekday 补回）。
     h(Segmented, {
@@ -97,7 +97,7 @@ export function WeekdayPicker(props: {
       onChange: (next: string[]) => { props.onChange(next.map(Number).sort((a, b) => a - b)) },
     }),
     props.value.length === 0
-      ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-dim)' } }, props.labels.empty)
+      ? h('span', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-dim)' } }, props.labels.empty)
       : null,
   )
 }

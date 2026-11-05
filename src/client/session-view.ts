@@ -1392,7 +1392,7 @@ export function SessionViewModal(props: {
             officialCount === 0
               ? h('div', {
                   className: 'dsh-tdt-sv-sid',
-                  style: { color: 'var(--tdt-warning, #b7791f)' },
+                  style: { color: 'var(--dshpc-warning, #b7791f)' },
                 }, '⚠ 官方样式未命中（当前为自绘回退）')
               : null,
           ),
@@ -1461,11 +1461,11 @@ export function SessionViewModal(props: {
 
 /** 供执行记录页复用的链接文案样式（行内文字按钮，与主面板 linkStyle 同形）。 */
 export const sessionLinkStyle: Record<string, string | number> = {
-  color: 'var(--tdt-accent, #2f6feb)',
+  color: 'var(--dshpc-accent, #2f6feb)',
   cursor: 'pointer',
   background: 'none',
   border: 'none',
   padding: 0,
   font: 'inherit',
-  fontSize: 'var(--tdt-font-sm)',
+  fontSize: 'var(--dshpc-font-sm)',
 }

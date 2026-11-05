@@ -96,7 +96,7 @@ function crumbsMenuEntries(params: {
     // 当前工作区也可点（用户 2026-10-10）：点它 = 回到该工作区根目录（浏览深处时唯一的「回根」入口）。
     onClick: () => { if (current) onLoadDir(''); else onPickWorkspace?.(ws) },
   },
-    h('span', { style: { display: 'inline-flex', alignItems: 'center', flex: 'none', color: current ? 'var(--tdt-fg)' : 'var(--tdt-fg-2)' } },
+    h('span', { style: { display: 'inline-flex', alignItems: 'center', flex: 'none', color: current ? 'var(--dshpc-fg)' : 'var(--dshpc-fg-2)' } },
       h(current ? IconFolderOpenOutlineRegular : IconFolderCloseRegular, { size: 13 })),
     h('span', { className: 'dsh-tdt-sv-crumbs-menu-label', style: { fontWeight: current ? 600 : 400 } }, ws),
   )
