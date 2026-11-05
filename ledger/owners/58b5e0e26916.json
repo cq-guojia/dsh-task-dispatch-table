@@ -1,7 +1,6 @@
 {
   "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
   "tasks": {
-    "20261008-0000-插件配置改存自有状态库-meta-pluginconfig-a071": {"category": "建设", "created": "2026-10-08 00:00:00", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-10-08 00:00:00", "status": "doing", "tags": ["meta", "插件", "状态"], "title": "插件配置改存自有状态库 meta.pluginConfig", "updated": "2026-11-05 12:53:49", "worklog": "worklog/202610/08-0000-插件配置改存自有状态库-meta-pluginconfig-a071.md"},
     "20261105-1252-6f7c-样式改接-dsh-plugin-core": {"category": "改造", "created": "2026-11-05 12:52:17", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-05 12:52:17", "status": "doing", "tags": ["样式", "组件复用", "插件核心", "DSH"], "title": "样式改接 dsh-plugin-core", "updated": "2026-11-05 12:52:51", "worklog": "worklog/202611/05-1252-6f7c-样式改接-dsh-plugin-core.md"}
   },
   "version": "20261022000000"
