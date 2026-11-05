@@ -1,8 +1,9 @@
 # 20261013-0934-对话式创建-修改任务-agent-以-skill-形式引导填写-c1e9: 对话式创建/修改任务（Agent 以 skill 形式引导填写）
 
 - **Tags**: 建设, 修改任务, skill, agent, 任务
-- **Status**: open · 2026-10-13 09:34:51
+- **Status**: deleted · 2026-11-05 12:40:42 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-10-13 09:34:51 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Sealed**: 2026-11-05 12:40:42 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
      The `- **Tags**: …` line is inserted at the top by new --tags; omitted when there are no tags
@@ -37,3 +38,4 @@
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
      Backfill with: progress log --id <id> --note "...". -->
+- 2026-11-05 12:40:42 · delete · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · deleted
