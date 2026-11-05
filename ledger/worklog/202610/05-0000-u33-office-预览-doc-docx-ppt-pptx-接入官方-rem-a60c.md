@@ -1,21 +1,28 @@
-# 20261005-0000-u33-office-预览-doc-docx-ppt-pptx-接入官方-rem-a60c：U33 Office 预览（doc/docx/ppt/pptx）接入官方 remote.officeToPdf
+# 20261005-0000-u33-office-预览-doc-docx-ppt-pptx-接入官方-rem-a60c: U33 Office 预览（doc/docx/ppt/pptx）接入官方 remote.officeToPdf
 
-> **创建**：2026-10-05 00:00:00（@cqguojia@hotmail.com）
-> **分类**：运维 ｜ **标签**：u33、office、接入、预览、任务
+- **Tags**: 运维, u33, office, 接入, 预览, 任务
+- **Status**: deleted · 2026-11-05 12:40:23 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Created**: 2026-10-05 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Sealed**: 2026-11-05 12:40:23 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
-## 背景
+<!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
+     The `- **Tags**: …` line is inserted at the top by new --tags; omitted when there are no tags
+     (category goes to the ledger and history only, never into this document).
+     The `- **Sealed**: …` line is appended on close. -->
+
+## Background
 
 （在办任务，内容见过程）
 
-## 待办
+## To Do
 
 无（已结案）
 
-## 下一步
+## Next
 
 无（已结案）
 
-## 过程
+## Process
 
 # Office 预览接入官方 `remote.officeToPdf`（doc/docx/ppt/pptx）
 
@@ -74,11 +81,13 @@
 - **Excel 路线待用户定**：走 officeToPdf 转 PDF（零依赖、不可编辑）还是自引 `@fortune-sheet`（可编辑、破「不引第三方包」原则）。本轮按拍板未动。
 - **linux-x64 原生包缺口**：属宿主侧，前端无解；若真机 Linux 上报「不可用」，先查宿主是否就位，再查 `libreoffice-kit` 的 linux 原生包。
 
-## 结论
+## Conclusion
 
 （在办，尚未结案）
 
-## 执行记录
+## Execution Log
 
-<!-- 本节由脚本维护：new / claim / set / release / log / close 自动追加，请勿手改。
-     补记用 progress.py log --id <任务号> --note "一句话"。 -->
+<!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
+     Backfill with: progress log --id <id> --note "...". -->
+- 2026-10-26 16:55:46 · release · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · released to pool
+- 2026-11-05 12:40:23 · delete · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · deleted
