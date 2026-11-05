@@ -40,7 +40,7 @@
 - [x] 出一张逐项映射表：本项目样式 → 核心对应物 → 结论（可替换 / 核心缺失 / 核心不足）
 - [x] 出「核心缺失」清单，交用户判断归属（本项目自研 or 核心新增）
 - [x] 出「核心不足 / 不规范」清单（含问题、证据行号、建议），交用户判断归属
-- [ ] **用户逐条拍板**（当前阻塞点）：① hover/active 观感变重是否接受；② 暗色 `business` 固定 `#4c6bd8` 是否本仓覆盖；③ TaskPicker 归本仓自研还是核心扩；④ TimeRange 预设归本仓组合还是核心扩
+- [x] **用户逐条拍板**（2026-11-05 完成）：TaskPicker（核心扩 `limit` + `keywords`，「全部」作首项、核心零改）· TimeRange（核心扩 `presets` + `width`）· token 基线（跟核心、不覆盖）
 - [ ] P1 基础控件替换：Button/IconButton、Checkbox、Segmented、Textarea、Input/PrefixedInput/NumberInput、LiveText、MarqueeText、SectionHead、Loading、BackToTop、DateTime、CodeViewer → 核心同名件
 - [ ] P2 反馈层：自绘 toast → 核心 notify/Toast；Modal/Confirm/Alert → 核心 `skin`
 - [ ] P3 文件浏览 / 预览：`file-browser.tsx` / `file-preview.tsx` → `dsh-plugin-core/adv/explorer`
@@ -54,6 +54,40 @@
 P1 起步：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/IconButton 为第一项，改调 `dsh-plugin-core/ui` 的 `Button` / `IconButton`（先核对 variant/size 映射与 `controls-css` 的 15 套皮肤），完成后立即跑一次独立专家复核；后面按列表逐项推进。
 
 ## Process
+
+### 决策方式（用户 2026-11-05 明确纠正）
+
+- **不再使用弹框式提问**（AskUserQuestion）；待拍板项一**条一条放在对话框里**，说清现状 / 缺口 / 每个选项的代码代价，用户看完在对话里回。
+- 每确认一项，立刻记进本节「已确认决定」；未确认项不自行拍板、不动代码。
+
+### 已确认决定
+
+| # | 事项 | 结论 | 日期 |
+|---|---|---|---|
+| — | 任务立项 | 建任务并认领；需求 1–6 条 + 待办顺序（见 Background / To Do） | 2026-11-05 |
+| — | P0 地基范围 | 接核心依赖、token 移交核心、注入器薄壳化；已提交推送 `b7102ac` | 2026-11-05 |
+| 1a | 核心 `Picker` 增加可选 `limit` 分页 | 不传 = 全量显示；传了 = 首屏 N 条 + 「显示更多」每点一次追加 N 条；**搜索结果同样按 limit 分页**（搜索不特殊对待，用户 2026-11-05 明确）。归**核心扩**（需改上游仓库，待用户下达执行指令） | 2026-11-05 |
+| 1b | 核心 `Picker` 增加可选 `keywords` | `label` = 显示字段（已有，默认搜索字段）；`keywords?: string` = **单个字符串**（调用方自行拼，逗号/空格分隔均可），仅参与搜索、不显示；匹配 = 把 label 与 keywords 合起来做大小写不敏感子串匹配。归**核心扩** | 2026-11-05 |
+| 1c | 「全部任务」= 列表第一项 | 传 `{ value: '', label: '全部任务' }` 到 options 首位；**不开 `clearable`**；选中态用核心 `--active` 底色（`--dshpc-open-bg` + 品牌色字），**不用勾**；**搜索时随关键词被过滤掉是期望行为**（用户 2026-11-05 明确：都搜索了就没必要再选「全部」）。核心零改动 | 2026-11-05 |
+| 2 | TimeRange 快捷预设归属 | 走 **A**：核心扩 `DateTimePicker`（可选 `presets` + `width`），本仓删 `TimeRange`；控件形态随核心「一个整条 + 弹层 + 确定」 | 2026-11-05 |
+| 3 | token 基线（hover / active / 暗色 `business`） | **跟着核心走**：接受核心基线（`hover/active` 略重、暗色 `business` 固定 `#4c6bd8`）；本仓**不做覆盖**，也**不推核心改** | 2026-11-05 |
+
+### 交核心的改动清单（累积中；讨论结束后整篇发给核心）
+
+> 基线 `dsh-plugin-core@0.33.3`（npm latest，2026-11-05 核）。全部是**可选参数**扩展：不传 = 现有行为完全不变。
+
+| # | 控件 | 新增 | 语义 | 为什么 |
+|---|---|---|---|---|
+| C1 | `Picker` | `limit?: number` | 不传 = 全量显示；传了 = 首屏 `limit` 条，底部「显示更多」每次再追加 `limit` 条；**搜索结果同样按 limit 分页**（搜索不特殊对待） | 候选上百条时全量列出太长 |
+| C2 | `Picker` | `keywords?: string` | **单个字符串**，调用方自己拼（逗号/空格分隔均可）；只参与搜索、不渲染；匹配 = 把 `label` 与 `keywords` 合起来做大小写不敏感子串匹配 | 任务 UUID 这类「能贴、不该显示」的搜索词 |
+| C3 | `DateTimePicker` | `presets` | range 模式下可选预设档：选预设 ⇒ 填入起止；手改起止 ⇒ 自动落「自定义」（仅此时出现）；支持「全部/清空」档；不传 = 无预设入口（现状） | 执行记录 / 日志筛选要「今天 / 昨天 / 本周 / 上周 / 本月 / 上月」 |
+| C4 | `DateTimePicker` | `width?: number \| string` | **触发器总宽**（单值与 range 模式都作用于整个触发器）：数字按 px、字符串按 CSS 长度原样；直接覆盖按 precision 的默认宽；**核心不做换算、不自行计算**；过窄时内容省略、不溢出 | 要与筛选行其他控件严格对齐（默认宽度按精度写死，无法精确指定） |
+
+**不需要核心改**：`Picker` 的「全部」行（作为第一个普通选项传入，选中态用 `--active` 底色，搜索时随关键词过滤）；选项尾标（拼进 `label`）。
+
+### 待用户确认
+
+（无 —— 2026-11-05 全部讨论完毕，拍板结果见上表）
 
 ### 2026-11-05 · P0 样式地基改接（已完成）
 
