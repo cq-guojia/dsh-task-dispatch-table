@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-05 14:25:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-05 23:29:55 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -41,6 +41,7 @@
 - [x] 出「核心缺失」清单，交用户判断归属（本项目自研 or 核心新增）
 - [x] 出「核心不足 / 不规范」清单（含问题、证据行号、建议），交用户判断归属
 - [x] **用户逐条拍板**（2026-11-05 完成）：TaskPicker（核心扩 `limit` + `keywords`，「全部」作首项、核心零改）· TimeRange（核心扩 `presets` + `width`）· token 基线（跟核心、不覆盖）
+- [x] **首批改接（2026-11-06）**：核心 `0.34.0` 交付 C1–C4 后，`ui/TaskPicker.tsx` → 核心 `Picker`、`ui/TimeRange.tsx` → 核心 `DateTimePicker`（均为薄包装），见「2026-11-06 · P1 首批改接」
 - [ ] P1 基础控件替换：Button/IconButton、Checkbox、Segmented、Textarea、Input/PrefixedInput/NumberInput、LiveText、MarqueeText、SectionHead、Loading、BackToTop、DateTime、CodeViewer → 核心同名件
 - [ ] P2 反馈层：自绘 toast → 核心 notify/Toast；Modal/Confirm/Alert → 核心 `skin`
 - [ ] P3 文件浏览 / 预览：`file-browser.tsx` / `file-preview.tsx` → `dsh-plugin-core/adv/explorer`
@@ -51,7 +52,7 @@
 
 ## Next
 
-P1 起步：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/IconButton 为第一项，改调 `dsh-plugin-core/ui` 的 `Button` / `IconButton`（先核对 variant/size 映射与 `controls-css` 的 15 套皮肤），完成后立即跑一次独立专家复核；后面按列表逐项推进。
+P1 第二项：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/IconButton 为下一项，改调 `dsh-plugin-core/ui` 的 `Button` / `IconButton`（先核对 variant/size 映射与 `controls-css` 的皮肤），完成后立即跑一次独立专家复核；后面按列表逐项推进。
 
 ## Process
 
@@ -111,8 +112,8 @@ P1 起步：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/IconBu
 | `ui/Field.tsx`（Input/PrefixedInput/NumberInput） | `Input` / `PrefixedInput` / `NumberInput` / `FieldHint` | 可替换 |
 | `ui/Checkbox` / `Segmented` / `Textarea` / `LiveText` / `MarqueeText` / `SectionHead` / `Loading` / `BackToTop` / `DateTime` | 同名件 / `Loader` / `QuickToolbar` / `DateTimePicker` | 可替换 |
 | `ui/CodeViewer.tsx`（12 个 CodeMirror 依赖） | `dsh-plugin-core/ui/code-viewer` | 可替换（可去依赖） |
-| `ui/TaskPicker.tsx` | `Picker`（`PickerOption` 只有 value/label/icon/disabled） | **核心不足**：无副标题 / 停用标签 / 作用域外提示 / 「更多·收起」 |
-| `ui/TimeRange.tsx`（预设 + 自定义区间） | `DateTimePicker mode="range"` | **核心不足**：无快捷预设；可由 `Picker` + `DateTimePicker` 本仓组合 |
+| `ui/TaskPicker.tsx` | `Picker` + `limit` + `keywords`（**0.34.0 已交付 C1–C4**） | ✅ **已替换**（2026-11-06，薄包装）：作用域过滤 / `excludeIds` / 「全部任务」作首项 / 停用尾标留在本仓，浮层与 CSS 全删 |
+| `ui/TimeRange.tsx`（预设 + 自定义区间） | `DateTimePicker mode="range"` + `presets`（+ `width` 备用） | ✅ **已替换**（2026-11-06，薄包装）：预设走核心 date-math，宽度按 precision 由核心定死；值语义与半开区间边界不变 |
 | `file-browser.tsx` / `file-preview.tsx` | `adv/explorer`：`FileBrowser` / `FilePreview` / `openFilePreview` / `pickWorkspaceFile` / `connectFs` | 可替换 |
 | `session-view.ts` + `mirror/*`（13 文件） | `adv/session`：`openSessionView` + `SessionViewModal` | 可替换；本仓只留业务接线 |
 | `archive-session-css.ts` / `toast-css.ts` / `loading-css.ts` | 核心 feedback / explorer / session 自带样式 | 可删 |
@@ -124,6 +125,36 @@ P1 起步：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/IconBu
 - 暗色 `business`：核心固定 `#4c6bd8`，不跟随宿主品牌色。
 - 以上均属核心基线取舍，本仓未做局部覆盖；如需回退，先拍板（本仓覆盖 or 推动核心改）。
 
+### 2026-11-06 · P1 首批改接（TaskPicker / TimeRange，已完成，待提交）
+
+**核心侧交付**：`dsh-plugin-core@0.34.0`（`npm install dsh-plugin-core@latest --save`）已实现 C1–C4 —— `Picker.limit`、`PickerOption.keywords`（单个字符串）、`DateTimePicker.presets`（`{label, expr}`，`expr:null` = 清空）、`DateTimePicker.width`。
+
+**本仓改动**：
+
+- `src/client/ui/TaskPicker.tsx` → 核心 `Picker` 薄包装（约 60 行逻辑）：作用域过滤（`scope` + 任务 `workspace`）、`excludeIds`、`allOption` 作首项、停用任务尾标拼进 `label`；`recentLimit` 映射 `limit`，任务 id 挂 `keywords`；作用域外当前值只看工作区才回插（不被 `excludeIds` 误伤）并挂 `icon:'!'`。**删除** `TASKPICKER_CSS`（15 条规则）/ `TASKPICKER_DOMAIN` / `ensureTaskPickerStyle`。
+- `src/client/ui/TimeRange.tsx` → 核心 `DateTimePicker` 薄包装：`mode:'range'` + `presets`（today=`now/d`、yesterday=`now-1d/d`、thisWeek=`now/w`、lastWeek=`now-1w/w`、thisMonth=`now/M`、lastMonth=`now-1M/M`，「全部」用 `expr:null`）；不传 `width`（用核心按 precision 的默认）；值语义不变（`YYYY-MM-DD` / `YYYY-MM-DD HH:mm`，空串=不过滤）。
+- `src/client/ui/time-range.ts`：删 `presetRange` 及 `ymd` / `ymdhm` / `startOfDay` / `startOfWeek` / `pad2`，只留 `ALL_TIME_PRESETS` / `rangeToQuery` / 类型。
+- `src/client/ui/index.ts`：barrel 去 `presetRange`；`TaskPicker` 导出收紧为 `TaskPicker` + `TaskOption` + `TaskPickerProps`。
+- 消费方：`task-list.tsx` 删 `calendarLabelsOf` / `timeLabelsOf` 与两个 memo、两处 `TimeRange` 去 `calendarLabels/timeLabels`；`records-timeline.tsx` / `task-calendar.tsx` 删 `collapseLabel`；`locales.ts` 删 `recordsCollapse` / `trCustom`（union + zh + en）。
+- `scripts/smoke.mjs`：新增 `stripComments()`（去注释后再断言，防注释骗过）；重写 TaskPicker / TimeRange 断言为核心薄包装 + 反向断言（无 `dsh-tdt-tp-row` / `TASKPICKER_CSS` / 三框 / 写死宽度）；预设档断言改为 date-math 整档；token 白名单改为递归扫描核心 `dist` 下所有 `*css.generated.js`，并补核心 `MarqueeText` 内联的 `--dshpc-mq-*`。
+
+**验证**：`npm run build` 成功；`npm run typecheck` 通过；`npm run smoke` **751 项 / 0 失败**；`koc-codelint` 32 条全为 B 类（biome 存量告警 + Markdown 存量表格格式，无 L0 语法 / L5 密钥），按 skill 记账交付。
+
+**独立专家复核（6 项）**：
+
+1. ✅ 已修：minute 精度下手选结束日不填时分 ⇒ 结束落 `00:00`、漏当天数据 ⇒ `toIso` 按端兜底 `end?'23:59':'00:00'`。
+2. ✅ 已登记：核心 range **两端齐全才可提交**（不能再只设一端）—— 理论边界，值语义未变。
+3. ✅ 已确认：`onChange` 单值返回 **string**（非数组），包装层做了 `Array.isArray` 兼容。
+4. ✅ 已修：out-of-scope 判定误伤 `excludeIds`（被排除的当前值又被插回并打 `!`）⇒ 改为只看 `scope` / `workspace`。
+5. ✅ 已修：文档仍描述旧实现 ⇒ ui-foundation §5.4、ui-style-guide（4 处）、execution-timeline（3 处）、dsh-capabilities「Menu 落地于 TaskPicker」均已回写。
+6. ✅ 已修：`trCustom` 已无消费方 ⇒ 删 locale 键并改反向断言。
+
+**已知限制（写进文档，不返工）**：搜索时「全部任务」会被关键词过滤（用户 2026-11-05 已认可）；核心「显示更多」没有「收起」（核心现状，非 bug）。
+
+**文档回写坐标**：`docs/design/ui-foundation.md` §5.4 / §十「字段宽度」；`docs/design/ui-style-guide.md` §二 TaskPicker / TimeRange 行、已知例外表（删 `dsh-tdt-tp-list`）、§五日期框例外注记；`docs/design/features/execution-timeline.md` §三表格 / §3.2 / §六第 25 条。
+
+**提交状态**：本轮改动（代码 + 文档 + 本 worklog）尚未 commit / push，等用户确认。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -132,3 +163,4 @@ P1 起步：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/IconBu
 - 2026-11-05 12:52:51 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 建任务并认领；需求三条与待办步骤写入 worklog（Background 引原话，To Do 列 3 硬要求 + 6 步）；未开始代码改动
 - 2026-11-05 13:22:50 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P0 地基完成：接入 dsh-plugin-core@0.33.3、删除 ui/tokens.ts、--tdt-→--dshpc-（35 文件 1333 处）、style.ts 改核心 kit 薄壳、冒烟 +token 白名单守卫；两轮专家复核 9 项返工全部闭环；typecheck/build/smoke 751/0
 - 2026-11-05 14:25:17 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 讨论完毕并拍板：Picker 加 limit（搜索同样分页）+ keywords（单个字符串）；DateTimePicker 加 presets + width（触发器总宽）；「全部任务」作普通首项（核心零改）；token 基线跟随核心。交核心清单 C1–C4 定稿，worklog 提交推送 b9dae9e；TaskPicker/TimeRange 等核心新版发布后再接。
+- 2026-11-05 23:29:55 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 核心 0.34.0 交付 C1–C4；TaskPicker/TimeRange 改接核心薄包装完成（src/client/ui/TaskPicker.tsx、ui/TimeRange.tsx），删自绘浮层与 15 条 CSS，typecheck/build/smoke 751/0；专家复核 6 项闭环、文档 4 篇已回写；改动待提交
