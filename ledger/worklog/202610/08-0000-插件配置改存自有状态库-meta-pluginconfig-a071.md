@@ -1,7 +1,7 @@
 # 20261008-0000-插件配置改存自有状态库-meta-pluginconfig-a071: 插件配置改存自有状态库 meta.pluginConfig
 
 - **Tags**: 建设, meta, 插件, 状态
-- **Status**: open · 2026-10-26 08:55:46
+- **Status**: doing · 2026-11-05 12:53:49 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-10-08 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -34,3 +34,4 @@
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
      Backfill with: progress log --id <id> --note "...". -->
 - 2026-10-26 16:55:46 · release · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · released to pool
+- 2026-11-05 12:53:49 · claim · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · claimed → doing
