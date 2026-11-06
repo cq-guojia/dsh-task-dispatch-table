@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 12:14:13 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 12:41:50 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -562,6 +562,20 @@ h(ChatViewFrame, {
 
 **文档**：[`external/plugin-core-controls.md`](../../docs/design/external/plugin-core-controls.md) §四更正 `FieldHint` 必须注入 + 新增 §十（Segmented / Table / 确认框）；[`ui-style-guide.md`](../../docs/design/ui-style-guide.md) §二更新 Segmented 行 + 新增 Table / 确认框两行。
 
+## P4f（2026-11-06）模型框字号 / 展开内容对齐 / 图标钮 / 工作区校验
+
+| 问题 | 结论与处理 |
+|---|---|
+| 设置页 cascade 第一个下拉仍小号 | **核心 bug**：`ModelPicker.js:73-83` 的供应商 `Picker` 漏传 `size`，只有模型框传（`:95`）。本仓已传 `size:'lg'`，不补 CSS；登记给核心（何心） |
+| 执行记录展开内容居中 | 本仓 bug：展开格用 `colSpan:8` 后仍继承首列 `align:'center'` ⇒ 显式 `align:'left'`（`task-list.tsx`） |
+| 产出物图标圆角不对 | 手搓 `.dsh-tdt-chip`（28×28、`radius-sm`）⇒ 改核心 `IconButton`（`plain` + `md` + `icon/label`，`title:''` 压掉原生 title，气泡仍走核心 Tooltip）；文本 `+N` / `…` 保留 `dsh-tdt-chip--label` |
+| 工作区校验 | 保存前按**当前 registry 真实列表**校验（id 或 title 命中）：客户端 `validateTaskDraft` 第三参、服务端 `validateDefinitionForSave` 第三参；registry 未就绪时跳过（降级不误杀），新增文案 `vWorkspaceUnknown` |
+| 执行时工作区 | 已核实**不会**拿「未知工作区」跑：`resolveWorkspace` 匹配不到即抛错（`dispatch.ts:34-43`），Loop A 前置检查、Loop B 调度、手动立即执行都拦；任务判失败 / 不记录 |
+
+**工作区身份现状**：`target.workspace` 存的是**工作区标题**（下拉 `value = title`）。DSH registry 的 `list()` 有 `id` / `title` / `path`；改名后 title 变、id 不变 ⇒ 存 title 的旧任务解析不到（本次用户遇到的就是这个）。`resolveWorkspace` 已是「title 优先、id 兜底」。**是否改为存 id（改名仍可用）待用户拍板**，涉及下拉值口径与旧数据兼容。
+
+**验证**：`typecheck` ✅ · `build` ✅ · `smoke` 741 / 11（11 项均为既有失败）· `koc-codelint` 16 条（均落在未改动行，无本轮新增）。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -578,3 +592,4 @@ h(ChatViewFrame, {
 - 2026-11-06 07:38:40 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4b 编辑分栏改接核心 PanelDock 完成：index.ts 用 createPanelDock+PanelDock/DockPanel（同页双分栏），删自绘面板/拖拽条/宽度记忆与 --dsh-tdt-editor-w；task-editor 只留内容本体；typecheck/build 通过，smoke 738/14（14 项均为既有断言失配）；新增 external/plugin-core-dock.md
 - 2026-11-06 09:08:45 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4d 控件/卡片再对齐：ModelPicker(grouped/cascade)、Card/StripCard、InputGroup 全部改接核心；工作区下拉补 searchable；模型宽定 140/设置页两列等宽；typecheck/build 通过，smoke 738/14（既有），codelint 12 条（无新增）；文档 2 篇回写
 - 2026-11-06 12:14:13 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4e 完成：注入 setTooltipRenderer 修问号无气泡；执行记录/设置日志表改核心 Table；滑轨统一 bordered:false+tone:business；确认框走核心 confirmModal/Modal；设置模型选择统一 lg；typecheck/build/smoke 740/12（12 项既有）、codelint 12（无新增）；文档 2 篇回写
+- 2026-11-06 12:41:50 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4f：展开内容改居左、产出物图标改核心 IconButton、保存前后端校验工作区存在性；设置页 cascade 供应商框小一档=核心 ModelPicker 漏传 size（已登记给核心）；执行路径已核实不会用未知工作区跑
