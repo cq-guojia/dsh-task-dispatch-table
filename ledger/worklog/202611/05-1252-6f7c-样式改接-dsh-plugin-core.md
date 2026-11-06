@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 12:41:50 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 13:13:11 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -593,3 +593,4 @@ h(ChatViewFrame, {
 - 2026-11-06 09:08:45 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4d 控件/卡片再对齐：ModelPicker(grouped/cascade)、Card/StripCard、InputGroup 全部改接核心；工作区下拉补 searchable；模型宽定 140/设置页两列等宽；typecheck/build 通过，smoke 738/14（既有），codelint 12 条（无新增）；文档 2 篇回写
 - 2026-11-06 12:14:13 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4e 完成：注入 setTooltipRenderer 修问号无气泡；执行记录/设置日志表改核心 Table；滑轨统一 bordered:false+tone:business；确认框走核心 confirmModal/Modal；设置模型选择统一 lg；typecheck/build/smoke 740/12（12 项既有）、codelint 12（无新增）；文档 2 篇回写
 - 2026-11-06 12:41:50 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4f：展开内容改居左、产出物图标改核心 IconButton、保存前后端校验工作区存在性；设置页 cascade 供应商框小一档=核心 ModelPicker 漏传 size（已登记给核心）；执行路径已核实不会用未知工作区跑
+- 2026-11-06 13:13:11 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P5 工作区身份改存 id（向下兼容）：① 新增 tasks.migrateWorkspaceIds / setWorkspaceDefinitionInline；② 启动迁移 + 单条保存 + 整批 tasksInline 保存统一改存 workspace.id 并校验真实存在；③ 调度 Loop A / 手动执行按标题解析成功后就地写回 id；④ client 下拉 value=id、显示走 workspaceLabelOf、TaskPicker/日历/列表筛选归一；⑤ 新增 external/dsh-workspace-identity.md（id=randomUUID，rename 不变，删除重建换 id）。验证：typecheck/build 通过，smoke 741/752（11 条既有失败）。
