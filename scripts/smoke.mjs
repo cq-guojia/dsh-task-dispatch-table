@@ -2,7 +2,7 @@
 //
 // 跑法：npm run smoke（先 npm run build，本脚本直接引 dist 产物，测的是真正要发布的代码）。
 // 刻意不引任何测试框架：零新增依赖，宿主环境装不了也照样能跑。
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -27,6 +27,11 @@ import { planEntriesByDay, monthRangeOf, monthRangeQuery } from '../dist/calenda
 
 let passed = 0
 const failures = []
+
+/** 去掉注释再断言（防止「注释里写了同样的词」把源码断言骗成通过）。 */
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+}
 
 /** 断言：通过计数，失败收集（最后统一报，便于一次看全）。 */
 function check(name, ok, extra = '') {
@@ -780,20 +785,27 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   const dispatchJs = readFileSync(dispatchPath, 'utf8')
   const reconcileJs = readFileSync(reconcilePath, 'utf8')
   const schedulerJs = readFileSync(join(import.meta.dirname, '..', 'dist', 'scheduler.js'), 'utf8')
+  // 浏览器没有 process：核心 UI 经 @floating-ui 带入 process.env.NODE_ENV，
+  // 构建期不替换会在 client entry 的 import 阶段直接抛「process is not defined」。
+  check('client 产物无未替换的 process.env.NODE_ENV（构建期已定死 production）',
+    !clientJs.includes('process.env.NODE_ENV')
+    && readFileSync(join(import.meta.dirname, '..', 'tsdown.client.config.ts'), 'utf8')
+      .includes("'process.env.NODE_ENV'"))
   check('SessionViewModal 组件已打进 bundle', clientJs.includes('SessionViewModal'))
   check('openSessionView 数据闸门已打进 bundle', clientJs.includes('openSessionView'))
   check('loadOlder 探测调用已打进 bundle', clientJs.includes('loadOlder'))
   // 编辑器 UX 第二轮（2026-09-30）：版本开关分段同款 / 条目卡片+hover 小钮 / 启用 Toast / 校验红框 / 快照 UI 已删
   // 2026-10-01：版本开关已并入统一 Segmented（id=dsh-tdt-ed-histtoggle，multiple 单段），旧 .dsh-tdt-ed-histtoggle-seg 类已删
-  check('版本开关走统一 Segmented（id dsh-tdt-ed-histtoggle + 旧自绘类已删）', clientJs.includes('dsh-tdt-ed-histtoggle') && clientJs.includes('dsh-tdt-seg') && !clientJs.includes('dsh-tdt-ed-histtoggle-seg'))
-  // 2026-10-01：版本条目「使用/移除」已收编基础层（使用 = Button link 档；移除 = IconButton danger），旧自绘类已删。
-  check('版本条目 + 使用/移除钮走基础层（link 钮 + danger 图标钮；旧自绘类已删）',
-    clientJs.includes('dsh-tdt-btn--link') && clientJs.includes('dsh-tdt-iconbtn--danger')
-    && !clientJs.includes('dsh-tdt-ed-ver-use') && !clientJs.includes('dsh-tdt-ed-ver-del') && clientJs.includes('MarqueeText'))
+  // 2026-11-06：Segmented / Button / IconButton 全部改接核心 `dsh-plugin-core/ui`（本地皮肤已删）。
+  check('版本开关走核心 Segmented（id dsh-tdt-ed-histtoggle + 核心类在产物 + 旧自绘类已删）', clientJs.includes('dsh-tdt-ed-histtoggle') && clientJs.includes('dshpc-seg') && !clientJs.includes('dsh-tdt-ed-histtoggle-seg'))
+  // 2026-11-06：版本条目「使用/移除」走核心 Button variant=link + IconButton variant=danger。
+  check('版本条目 + 使用/移除钮走核心（link 钮 + danger 图标钮；本地皮肤已删）',
+    clientJs.includes('dshpc-btn--link') && clientJs.includes('dshpc-iconbtn--danger')
+    && !clientJs.includes('dsh-tdt-btn--link') && !clientJs.includes('dsh-tdt-ed-ver-use') && !clientJs.includes('dsh-tdt-ed-ver-del') && clientJs.includes('MarqueeText'))
   check('启用开关写回 Toast（--below 变体）', clientJs.includes('dsh-tdt-toast--below'))
-  // 2026-10-01：前缀框红框已走 ui 基础层 `.dsh-tdt-pfx--error`（旧 `.dsh-tdt-ed-pfx--error` 已删）；下拉用 `.dsh-tdt-ed-field--error`。
-  check('任务名称/下拉校验红框类（走 ui 基础层 .dsh-tdt-pfx--error）',
-    clientJs.includes('dsh-tdt-pfx--error') && clientJs.includes('dsh-tdt-ed-field--error') && !clientJs.includes('dsh-tdt-ed-pfx--error'))
+  // 2026-11-06：前缀框红框走核心 `dshpc-pfx--error`（本地 `.dsh-tdt-pfx--error` / 更旧 `.dsh-tdt-ed-pfx--error` 都已删）；下拉仍走本地下拉锚点 `.dsh-tdt-ed-field--error`。
+  check('任务名称/下拉校验红框类（前缀框走核心 .dshpc-pfx--error）',
+    clientJs.includes('dshpc-pfx--error') && clientJs.includes('dsh-tdt-ed-field--error') && !clientJs.includes('dsh-tdt-ed-pfx--error') && !clientJs.includes('dsh-tdt-pfx--error'))
   check('启用实时写回走独立端点 tasks/enabled', dispatchJs.includes('tasks/enabled') || clientJs.includes('tasks/enabled'))
   // UX 第二轮·第三次返工（2026-09-30）：Toast 抽象共用（三色）+ 派发 ctx 读护栏
   check('浮层 Toast 共用组件 + 四档语义色（success/warning/neutral/error）',
@@ -844,8 +856,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     /side: "bottom"\s*\},\s*\(0, [\w$]+\.createElement\)\("div", \{ style: pillOuterStyle \}/.test(clientJs))
   // 运行中不再跳倒计时（用户 2026-09-30）：NextPill 见 row.running 即改显「三个小方块脉动」活动指示；
   // 上一轮的「补跑时间」显示已撤（用户：根本不用判断补跑时间）。
-  check('运行中改显活动指示（dsh-tdt-run-blocks + 动画），补跑时间显示已撤',
-    clientJs.includes('dsh-tdt-run-blocks') && clientJs.includes('@keyframes dsh-tdt-run-block') && !clientJs.includes('listNextCatchupPrefix'))
+  check('运行中改显活动指示（走核心 dshpc-run-blocks + 动画），补跑时间显示已撤',
+    clientJs.includes('dshpc-run-blocks') && clientJs.includes('@keyframes dshpc-run-block') && !clientJs.includes('listNextCatchupPrefix'))
   // 到点分支（决策 54 · P3a）：`diff <= 0`（该槽已到点且还没被处理）⇒ 也显活动指示，不再显示「即将执行」。
   // 此前**只有「运行中」分支有断言** ⇒ 到点分支零覆盖（正是「改动被静默丢掉」那类教训要防的）。
   check('到点分支也显活动指示（走 pinMsFor 算加载上界，不再写死魔数）',
@@ -931,7 +943,11 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   }
   // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。
   // 修法 = ① 选择器回调**工作区相对**路径；② 客户端兜底校验 + 归属附件卡描红；③ 服务端错误翻人话。
-  check('附件 ref 改为工作区相对（选择器走 relativizeToRoot）', clientJs.includes('relativizeToRoot'))
+  // 改接核心后相对路径由核心 `PickedPath.workspaceRel` 直接给出（本仓薄壳只做透传）。
+  check('附件 ref 改为工作区相对（核心 PickedPath.workspaceRel 透传）',
+    clientJs.includes('workspaceRel')
+    && readFileSync(join(process.cwd(), 'src', 'client', 'file-browser.tsx'), 'utf8')
+      .includes('picked.workspaceRel ?? picked.path'))
   check('附件 ref 客户端兜底校验 + 人话文案', clientJs.includes('引用路径不合法'))
   // 排期人话**单源**（用户 2026-09-30 拍板：列表与编辑器不许各写一份，否则同一排期两处文案不一样）：
   // 两处都走 client/schedule-text.ts，旧的 cronToHuman 已删。
@@ -1050,7 +1066,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('旧自绘 notice-err / 旧文案键已删除（sessionTurnError 不再进 bundle）',
     !clientJs.includes('dsh-tdt-sv-notice-err') && !clientJs.includes('sessionTurnError'))
   // U11 产出物预览（决策 39）：分栏推压 + 统一 openFile 单一入口 + 官方错误码 + workspaceFiles 注入。
-  check('预览分栏组件已打进 bundle（FilePreviewPanel）', clientJs.includes('FilePreviewPanel'))
+  check('预览本体走核心 explorer（FilePreview / FileBrowser 已打进 bundle，本地 FilePreviewPanel 已删）',
+    clientJs.includes('FilePreview') && clientJs.includes('dshpc-fb')
+    && !clientJs.includes('FilePreviewPanel'))
   // 决策 39 的形态仍是「分栏推压」，但预览面已上提到页面级 dock（第三轮）：弹窗内不再有分栏。
   check('分栏推压（页面级 dock）已打进 bundle（preview + 让位变量 + 根容器 flex 分栏）',
     clientJs.includes('dsh-tdt-sv-preview') && clientJs.includes('--dsh-tdt-preview-w') && clientJs.includes("display:flex"))
@@ -1059,16 +1077,17 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('dsh-tdt-sv-preview-dock') && clientJs.includes('position:sticky'))
   check('远端 {ok:false,error} 信封被识别（失败走官方错误码文案，不再当成空内容）',
     clientJs.includes('unwrapEnvelope') && clientJs.includes('ok === false'))
-  check('文本源码态用只读 CodeMirror（languageForPath + CodeViewer，行级视图根除 Shiki 卡顿）',
-    clientJs.includes('languageForPath') && clientJs.includes('dsh-tdt-sv-cmviewer'))
+  check('文本源码态用只读 CodeMirror（核心 languageForPath + CodeViewer，行级视图根除 Shiki 卡顿）',
+    clientJs.includes('languageForPath') && clientJs.includes('dshpc-cv__editor'))
   check('md 两态：渲染视图 ⇄ 源码 已迁统一 Segmented（顶栏按钮组，不飘进内容区；旧自绘 sv-seg / 浮层 mdbar·mdwrap 已删）',
     clientJs.includes('previewSource') && clientJs.includes('previewRender')
       && !clientJs.includes('dsh-tdt-sv-seg') && !clientJs.includes('dsh-tdt-sv-seg-btn')
       && !clientJs.includes('dsh-tdt-sv-preview-mdbar')
       && !clientJs.includes('dsh-tdt-sv-preview-mdwrap'))
-  check('顶栏按钮组（复制 / 刷新 / 关闭，图标钮无中文）',
-    clientJs.includes('dsh-tdt-sv-head-btn') && clientJs.includes('previewRefresh')
-      && clientJs.includes('previewCopyPath') && clientJs.includes('IconRefreshOutlineRegular'))
+  check('顶栏按钮组由核心 PreviewTitleBar 提供（复制文件 / 刷新 / 关闭，图标钮无中文）',
+    clientJs.includes('dshpc-fb__title')
+      && clientJs.includes('previewRefresh') && clientJs.includes('previewCopyPath')
+      && clientJs.includes('IconRefreshOutlineRegular'))
   check('拖拽条高亮 = 6px 浅色半透明带（上提基础层 .dsh-tdt-resizer，编辑分栏 / 预览 dock 共用，2026-10-05）',
     clientJs.includes('dsh-tdt-resizer')
       && clientJs.includes('.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover')
@@ -1080,48 +1099,46 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('collectFilePaths') && clientJs.includes('makeFileMentions'))
   check('预览走 remote.workspaceFiles 真实取数（read + readBytes 消费面）',
     clientJs.includes('workspaceFiles') && clientJs.includes('readBytes'))
-  check('官方错误码分支齐全（not-found / too-large / not-text / not-regular-file）',
-    clientJs.includes('lookup-not-found') && clientJs.includes('too-large') && clientJs.includes('not-text') && clientJs.includes('not-regular-file'))
-  check('文本翻页按官方契约（previewLoadMore + eof 判定）',
-    clientJs.includes('previewLoadMore') && clientJs.includes('eof'))
+  check('官方错误码分支齐全（核心 errView：outside-workspace / not-found / too-large / not-text / not-regular-file）',
+    clientJs.includes('outside-workspace') && clientJs.includes('not-found') && clientJs.includes('too-large') && clientJs.includes('not-text') && clientJs.includes('not-regular-file'))
+  check('文本翻页按官方契约（核心 textPageOf 产 eof 判定）',
+    clientJs.includes('textPageOf') && clientJs.includes('eof'))
   check('图片/PDF 走 readBytes → objectURL（卸载 revoke）',
     clientJs.includes('createObjectURL') && clientJs.includes('revokeObjectURL'))
-  check('md 预览用官方 MarkdownText、源码态用只读 CodeMirror（非 Shiki CodeBlock 自研渲染器）',
-    clientJs.includes('dsh-tdt-sv-preview-md') && clientJs.includes('dsh-tdt-sv-cmviewer') && clientJs.includes('cm-editor'))
+  check('md 预览用官方 MarkdownText、源码态用只读 CodeMirror（核心 TextPreview，非 Shiki CodeBlock 自研渲染器）',
+    clientJs.includes('dshpc-fb__text') && clientJs.includes('MarkdownText')
+      && clientJs.includes('dshpc-cv__editor') && clientJs.includes('cm-editor'))
   check('inject 清单声明 workspace-files 提供方（dsh-api-workspace-files）',
     injectList.includes('@deepseek-ai/dsh-api-workspace-files'), injectList.join(', '))
   // U26（真机 2026-10-03：PDF/SVG 预览全失败）：根因 = readBytes 少传第三参，远端按位置参数
   // 个数校验 ⇒ `expected 3 business argument(s) … got 2`，请求根本没发出去。官方签名
   // readBytes(scope, path, options, signal) 的 options 必传，「不传 range 读全量」= 传 {}。
   // 正向：readBytes 必须带第三参；反向：不得出现 2 参调用（这类错真机不报错、只静默失败）。
-  check('readBytes 调用必带第三参（官方 options 必传，读全量传 {}）',
-    /workspaceFiles\.readBytes\([^)]*,\s*[^,)]+,\s*\{/.test(clientJs)
-    && !/workspaceFiles\.readBytes\([^,)]+,\s*[^,)]+\)/.test(clientJs))
-  check('read 调用必带第三参 range（官方 read(scope, path, range, signal)）',
-    !/workspaceFiles\.read\([^,)]+,\s*[^,)]+\)/.test(clientJs))
+  check('readBytes 调用必带 options + signal（核心 FsFace.readBytes(path, {}, signal)）',
+    /\.readBytes\([^)]*,\s*\{\},?[^)]*\)/.test(clientJs))
+  check('read 调用必带 range + signal（核心 FsFace.read(path, range, signal)）',
+    /props\.files\.read\(\s*props\.path,\s*[^,]+,\s*controller\.signal\)/.test(clientJs))
   // U27（用户 2026-10-03）：工作区之外的文件，第一排整条退化为只读完整路径——点在工作区外的
   // 目录必然报 outside-workspace，故 ▾ 选层 / 面包屑点选 / ← 返回 / ↑ 上一层 全不渲染，只留 ✕ 关闭；
   // 路径过长省略号截断 + hover 跑马灯（用户 2026-10-03：「啪-啪-灯」= 跑马灯，仍不可点）。
-  check('工作区之外：第一排退化为只读完整路径（crumbbar-plain 分支存在）',
-    clientJs.includes('crumbbar-plain'))
+  check('工作区之外：第一排退化为只读完整路径（核心 PlainNav dshpc-fb__bar-plain 分支存在）',
+    clientJs.includes('dshpc-fb__bar-plain'))
   check('工作区之外：判定依据是 list 的真实错误码 outside-workspace（不靠 workspaceRoots 猜）',
-    clientJs.includes('noteOutside') && clientJs.includes('outside-workspace'))
-  check('只读路径：走全站唯一 MarqueeText（不再手写跑马灯）',
-    clientJs.includes('crumbbar-plain-inner')
-    && !/marqueeOn|marqueeOff|startMarquee|stopMarquee/.test(clientJs)
-    && /className:\s*"dsh-tdt-sv-crumbbar-plain-inner"/.test(clientJs))
+    clientJs.includes('outside') && clientJs.includes('outside-workspace'))
+  check('只读路径：走全站唯一 MarqueeText（核心 dshpc-fb__crumb-mq，不再手写跑马灯）',
+    clientJs.includes('dshpc-fb__crumb-mq')
+    && !/marqueeOn|marqueeOff|startMarquee|stopMarquee/.test(clientJs))
   // 跑马灯收编（用户 2026-10-03）：预览栈三处手写版（内层 overflow:hidden 把盒子压到容器宽
   // ⇒ 滚的是「半截文本」、尾部永不显示、滑出后右侧一片黑）全部换成 ui/MarqueeText；
   // 跑法统一 = 播放 1 次 + forwards（跑到尾字就停），不再 infinite alternate 来回弹。
-  check('跑马灯全站唯一实现：预览栈不再有手写版（marqueeOn/Off 已删）',
+  check('跑马灯全站唯一实现（2026-11-06 起为**核心** MarqueeText）：预览栈不再有手写版（marqueeOn/Off 已删）',
     !/marqueeOn|marqueeOff|startMarquee|stopMarquee/.test(clientJs)
-    && clientJs.includes('dsh-tdt-mq'))
-  check('跑马灯跑法：跑一遍停在尾字（1 + forwards，非 infinite alternate）',
-    /\.dsh-tdt-mq-run:hover \.dsh-tdt-mq-in\{[^}]*animation:[^;}]*\b1\s+forwards/.test(clientJs)
+    && clientJs.includes('dshpc-mq'))
+  check('跑马灯跑法：跑一遍停在尾字（核心 1 + forwards，非 infinite alternate）',
+    /\.dshpc-mq-run:hover \.dshpc-mq-in\{[^}]*animation:dshpc-mq-scroll[^;}]*1 forwards/.test(clientJs)
     && !/animation:[^;}]*infinite\s+alternate/.test(clientJs))
-  check('只读路径不可点（无 button/role=button，仅 title + hover）',
-    !/crumbbar-plain[^"]*"[^}]*onClick/.test(clientJs)
-    && /\.dsh-tdt-sv-crumbbar-plain-inner\{[^}]*cursor:default/.test(clientJs))
+  check('只读路径不可点（核心 PlainNav 只渲染文本 + title，没有可点入口）',
+    !/dshpc-fb__bar-plain[^}]*onClick/.test(clientJs))
   // U11 第二轮（交付文件官方化）：present 行 + 交付文件卡网格 + 词表收录 present 路径。
   check('present 工具走官方 PresentRow 镜像（data-tool=present + IconDeliverDocRegular，不经通用工具卡）',
     clientJs.includes('IconDeliverDocRegular') && /data-tool"?\s*[:=]\s*"?present/.test(clientJs))
@@ -1184,9 +1201,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('拖拽结束撤销 resizing 标记（helper 内 classList.remove(rootClass)，避免残留禁事件）',
     clientJs.includes('dsh-tdt-resizing')
       && /classList\.remove\([a-zA-Z$]+\.rootClass\)/.test(clientJs))
-  // U30 HTML 预览（照官方，逐条对齐 documentpreview lib/client.js）。
-  check('HTML 走静态预览：iframe srcDoc + sandbox="" + data-html-preview（官方 :4065-4072）',
-    clientJs.includes('data-html-preview')
+  // U30 HTML 预览（2026-11-06 起预览体整体由核心 HtmlPreview 提供：禁标签/禁属性/CSP 逐条照官方）。
+  check('HTML 走静态预览：核心 HtmlPreview 的 iframe srcDoc + sandbox="" + dshpc-fb__frame',
+    clientJs.includes('dshpc-fb__frame')
     && /sandbox:\s*""|sandbox:\s*''/.test(clientJs)
     && clientJs.includes('srcDoc'))
   check('HTML 安全处理照官方：禁用标签清单 + 禁用 href/xlink:href（官方 :3827-3841）',
@@ -1195,26 +1212,29 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('HTML 注入官方那条 CSP 且放在 head 首位（官方 :3844-3846）',
     /default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:;/.test(clientJs)
     && clientJs.includes('insertBefore'))
-  check('HTML 源码态截前 256K：静默自动翻页到上限，无「加载更多」按钮（官方一次给足 512K 同款）',
+  check('HTML 源码态截前 256K：核心传 maxBytes=SOURCE_MAX_BYTES，有上限时不出「加载更多」',
     clientJs.includes('SOURCE_MAX_BYTES')
-    && /maxBytes:\s*isHtml\s*\?\s*SOURCE_MAX_BYTES/.test(clientJs)
-    && /!truncated\s*&&\s*nextOffset\s*!==\s*null/.test(clientJs))
-  check('源码态有语法高亮（只读 CodeMirror，data-code-preview 容器 + CodeViewer）',
-    /data-code-preview/.test(clientJs) && clientJs.includes('dsh-tdt-sv-cmviewer'))
-  check('源码态为只读 CodeMirror（readOnly 挡输入、未用 editable=false，选区/复制正常，替换 Shiki 根除整篇重排卡顿）',
-    clientJs.includes('dsh-tdt-sv-cmviewer') && clientJs.includes('cm-editor'))
-  check('256K 按字节精确截断（sliceToBytes，不多带一整页；官方切在 512K 整）',
-    clientJs.includes('sliceToBytes') && /sliceToBytes\(merged,\s*maxBytes\)/.test(clientJs))
-  check('截断横幅在顶部、警告色、滚动区之外（官方截图同款「文件过大，仅显示前 512KB」）',
-    clientJs.includes('dsh-tdt-sv-truncated')
-    && /\.dsh-tdt-sv-truncated\{[^}]*flex:none/.test(clientJs)
-    && /\.dsh-tdt-sv-truncated\{[^}]*var\(--dshpc-warning/.test(clientJs))
-  check('源码态配色走 CodeMirror 主题（one-dark/one-light + 13px 透明底，非 Shiki 默认米白底小字）',
-    clientJs.includes('codeMirrorTheme') && clientJs.includes('dsh-tdt-sv-cm-editor'))
-  check('源码态单滚动容器（body overflow:hidden，滚动只在 CodeBlock 内部，官方 :has 规则同款）',
-    /\.dsh-tdt-sv-preview-body-code\{[^}]*overflow:hidden/.test(clientJs))
-  check('HTML 默认进入预览（非源码），切换控件与 md 同构',
-    /isHtml\s*&&\s*!sourceView/.test(clientJs) && /["']previewHtmlSwitchAria["']/.test(clientJs))
+    && /maxBytes:\s*SOURCE_MAX_BYTES/.test(clientJs)
+    && /nextOffset\s*!==\s*null\s*&&\s*props\.maxBytes\s*===\s*void 0/.test(clientJs))
+  check('源码态有语法高亮（核心 CodeViewer：dshpc-cv 容器 + CodeMirror）',
+    clientJs.includes('dshpc-cv__editor') && clientJs.includes('cm-editor'))
+  check('源码态容器不再带本地旧类（data-code-preview / dsh-tdt-sv-cmviewer 已删）',
+    !clientJs.includes('data-code-preview') && !clientJs.includes('dsh-tdt-sv-cmviewer'))
+  check('源码态为只读 CodeMirror（核心 readOnly 挡输入、未用 editable=false，选区/复制正常）',
+    /readOnly:\s*true/.test(clientJs) && !/editable:\s*false/.test(clientJs)
+    && clientJs.includes('dshpc-cv__editor'))
+  check('256K 按字节精确截断（核心按 UTF-8 实字节 Blob.size 判超限，不多带一整页）',
+    /new Blob\(\[full\]\)\.size\s*>=\s*props\.maxBytes/.test(clientJs))
+  check('截断横幅在顶部、滚动区之外（核心 dshpc-fb__banner 置于 dshpc-fb__text 首行）',
+    clientJs.includes('dshpc-fb__banner')
+    && /\.dshpc-fb__banner\{padding:6px 10px/.test(clientJs))
+  check('源码态配色走 CodeMirror 主题（核心 codeMirrorTheme，明暗判据 body[data-ds-dark-theme]）',
+    clientJs.includes('codeMirrorTheme') && clientJs.includes('data-ds-dark-theme'))
+  check('源码态单滚动容器（核心 dshpc-cv__editor 内部 cm-scroller；本地 body-code 规则已删）',
+    clientJs.includes('dshpc-cv__editor') && !clientJs.includes('dsh-tdt-sv-preview-body-code'))
+  check('HTML 默认进入预览（非源码），源码切换由核心 PreviewTitleBar 提供',
+    /sourceView, setSourceView\] = .{0,40}useState\)\(false\)/.test(clientJs)
+    && /["']previewHtmlSwitchAria["']/.test(clientJs))
   check('拖拽调宽：rAF 节流 + 宽度直写 dock（避免每帧整页重排 ⇒ 拖拽卡死）',
     clientJs.includes('requestAnimationFrame') && clientJs.includes('cancelAnimationFrame')
     && /dockEl\.style\.width/.test(clientJs))
@@ -1222,10 +1242,11 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     /\.dsh-tdt-resizing \.dsh-tdt-sv-preview-dock\{[^}]*contain:layout paint/.test(clientJs))
   check('拖拽条 z-index 高于预览体内容（提到 7，盖住代码工具条，修复灰竖条断裂）',
     /\.dsh-tdt-sv-resizer\{[^}]*z-index:7/.test(clientJs))
-  check('源码态不再依赖 streaming（CodeMirror 行级视图天然流式，无需 streaming 分叉）',
-    !clientJs.includes('setStreamingCode') && clientJs.includes('dsh-tdt-sv-cmviewer'))
-  check('源码态默认全换行 + 右上角图标复制钮（无换行切换；lineWrapping 常驻，复制钮 dsh-tdt-sv-cm-copy hover 浮现）',
-    clientJs.includes('lineWrapping') && clientJs.includes('dsh-tdt-sv-cm-copy') && !clientJs.includes('dsh-tdt-sv-cm-bar'))
+  check('源码态不再依赖 streaming（核心 CodeMirror 行级视图天然流式，无需 streaming 分叉）',
+    !clientJs.includes('setStreamingCode') && clientJs.includes('dshpc-cv__editor'))
+  check('源码态默认全换行 + 右上角图标复制钮（核心 lineWrapping 常驻、dshpc-cv__copy 悬停浮现）',
+    clientJs.includes('lineWrapping') && clientJs.includes('dshpc-cv__copy')
+    && !clientJs.includes('dsh-tdt-sv-cm-bar'))
   check('拖拽条贯通覆盖（z-index:7 高于内容；不加沟槽——用户要遮住，不是让开）',
     /\.dsh-tdt-sv-resizer\{[^}]*z-index:7/.test(clientJs)
     && !/dsh-tdt-sv-preview-dock\{padding-left:6px/.test(clientJs))
@@ -1239,8 +1260,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('编辑抽屉不带 z-index（1040 系浮层时代遗留；同上，不压宿主 portal 弹窗）',
     /\.dsh-tdt-ed-panel\{position:sticky[^}]*\}/.test(clientJs)
     && !/\.dsh-tdt-ed-panel\{[^}]*z-index/.test(clientJs))
-  check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
-    clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
+  check('预览渲染失败降级到错误态（核心 previewRenderFailed / dshpc-fb__note；本地 PreviewBoundary 已随 file-preview.tsx 删除）',
+    clientJs.includes('previewRenderFailed') && clientJs.includes('dshpc-fb__note')
+    && !clientJs.includes('PreviewBoundary') && !clientJs.includes('componentDidCatch'))
 
   check('远端返回防御解析（text/data 不符契约走错误态，不把 undefined 喂渲染器）',
     clientJs.includes('textPageOf') && clientJs.includes('bytesOf') && clientJs.includes('previewBadPayload'))
@@ -1344,13 +1366,18 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /from '\.\/ui'/.test(tlSrc) && /h\(Loading,/.test(tlSrc) && /h\(Button,/.test(tlSrc)
       && /h\(SelectField,/.test(tlSrc) && /h\(TaskPicker,/.test(tlSrc))
     const tpSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TaskPicker.tsx'), 'utf8')
-    check('任务选择器（带搜索 + 受控作用域 + 掉出作用域显式提示）进产物',
-      clientJs.includes('TaskPicker') && clientJs.includes('dsh-tdt-tp-row') && clientJs.includes('dsh-tdt-tp-more')
-      && /const candidates = useMemo/.test(tpSrc)
+    const tpCode = stripComments(tpSrc)
+    check('任务选择器 = 核心 Picker 的薄包装（作用域过滤 + UUID 进 keywords + 掉出作用域显式提示）',
+      /from 'dsh-plugin-core\/ui'/.test(tpCode) && /\bh\(Picker, \{/.test(tpCode)
+      && /searchable: true/.test(tpCode) && /limit: props\.recentLimit \?\? 10/.test(tpCode)
+      && /keywords: o\.id/.test(tpCode) && /const outOfScope = current/.test(tpCode)
+      // 反向：自绘浮层（行 / 更多按钮）与自建 css 已删干净。
+      && !tpCode.includes('dsh-tdt-tp-row') && !tpCode.includes('TASKPICKER_CSS')
+      && !clientJs.includes('dsh-tdt-tp-row') && !clientJs.includes('dsh-tdt-tp-more')
       && clientJs.includes('recordsTaskSearch'))
-    check('任务过滤框可清空回「全部任务」（TaskPicker allOption 哨兵项：常驻顶部、不受作用域/搜索过滤、选中 ⇒ 查所有任务）',
+    check('任务过滤框可清空回「全部任务」（allOption 作为**第一个普通选项**传给核心 Picker）',
       tlSrc.includes("allOption: { value: ''") && tlSrc.includes("label: t('listFilterTaskAll')")
-      && tpSrc.includes('const allRow = allOpt') && tpSrc.includes('props.value === allOpt.value')
+      && /list\.push\(\{ value: props\.allOption\.value/.test(tpCode)
       && clientJs.includes('listFilterTaskAll'))
     check('状态桶 / 在跑语义单源（status-text.ts），两页共用不再各写一份',
       readFileSync(join(process.cwd(), 'src', 'client', 'status-text.ts'), 'utf8').includes('INSTANCE_STATUS_BUCKETS')
@@ -1422,16 +1449,15 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /t\('listSectionDepends'\)/.test(tlSrc))
     // 时间范围控件（基础层）：宽度不许写死 ⇒ 走默认（inline-flex 刚好包住内容）
     const trSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
-    const tlListSrc = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
-    const prevSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-preview.tsx'), 'utf8')
-    const browserSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-browser.tsx'), 'utf8')
-    const dtSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'DateTime.tsx'), 'utf8')
-    check('第九轮：时间范围控件**不写死宽度**（下拉 / 日期框 / 时分框都走基础层默认 ⇒ 刚好把字显示完）',
-      !/width:\s*124/.test(trSrc) && !/width:\s*88/.test(trSrc) && !/width:\s*96/.test(trSrc)
-      && /labels: calendarLabels, size, disabled: props\.disabled,/.test(trSrc)
-      && /labels: timeLabels, size, disabled: props\.disabled,/.test(trSrc))
+    const trCode = stripComments(trSrc)
+    check('第九轮：时间范围控件改由核心 DateTimePicker 承担（range + presets），本仓不再自绘分框',
+      /from 'dsh-plugin-core\/ui'/.test(trCode) && /\bh\(DateTimePicker, \{/.test(trCode)
+      && /mode: 'range'/.test(trCode) && /presets,/.test(trCode)
+      // 反向：三框拼装 / 自写宽度 / 自绘日历全部消失。
+      && !/width:\s*(124|88|96|115|80)/.test(trCode) && !trCode.includes('DATE_FIELD_W')
+      && !trCode.includes("endFields('from')") && !trCode.includes("'～'"))
     check('第九轮：加载**只用页面右下角统一的那一个 Loading**（2026-10-06：无文案；反向：页脚不再自己显示加载文案）',
-      /loading \? h\(Loading, \{\} ?\) : null,/.test(tlSrc)
+      /loading \? h\(Loading, \{ anchorId: 'dsh-tdt-main' \}\) : null,/.test(tlSrc)
       && !tlSrc.includes("t('recordsLoading')"))
     check('第九轮：深色主题下状态浅底压到 **5%**（浅色仍是 8% ⇒ 两端各自给值，由核心 token 层提供）',
       ((clientJs.match(/--dshpc-(?:success|warning|danger|business)-soft:color-mix\(in srgb,var\(--dshpc-(?:success|warning|danger|business)\) 5%,transparent\)/g)) ?? []).length === 4
@@ -1448,8 +1474,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /tt\('recordsDepFrom', \{ time: stampOf\(dep\.scheduledAt\) \}\)/.test(tlSrc)
       && !/time: clockLabelOf\(dep\.scheduledAt/.test(tlSrc)
       && locSrc.includes("recordsDepFrom: '执行于 {time}'") && !locSrc.includes('本次取自'))
-    check('第七轮：查看会话改**无边框链接型**小按钮（ghost + dsh-tdt-btn--link）并落右列靠右居中',
-      /variant: 'ghost',[\s\S]*?className: 'dsh-tdt-btn--link',/.test(depArea)
+    check('第七轮：查看会话改**无边框链接型**小按钮（核心 variant=\'link\'）并落右列靠右居中',
+      /variant: 'link'/.test(depArea)
+      && !/variant: 'ghost'/.test(depArea)
       && !/variant: 'outline'/.test(depArea)
       && /\.dsh-tdt-rec-dep\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/.test(tlSrc))
     check('第七轮：前置格留白与圆角放大到约 1.5~2 倍（走 token 档位，反向：内部再无 2px 裸值间距）',
@@ -1521,9 +1548,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('弹窗内链接走上提后的唯一入口（onOpenFile 透传，弹窗不再自带分栏）',
     clientJs.includes('onOpenFile') && !clientJs.includes('dsh-tdt-sv-chatpane'))
   // 前置任务卡（2026-09-29 用户拍板的交互）：灰框卡 + ?说明 + 工作区→任务两级选择 + 添加/移除 + 判定说明。
-  check('前置任务卡灰框与两级选择行已打进 bundle（dsh-tdt-ed-card + dsh-tdt-ed-deppick + 双层跑马灯 dsh-tdt-mq/-in）',
+  check('前置任务卡灰框与两级选择行已打进 bundle（dsh-tdt-ed-card + dsh-tdt-ed-deppick + 核心双层跑马灯 dshpc-mq/-in）',
     clientJs.includes('dsh-tdt-ed-card') && clientJs.includes('dsh-tdt-ed-deppick')
-      && clientJs.includes('dsh-tdt-ed-depitem') && clientJs.includes('dsh-tdt-mq') && clientJs.includes('dsh-tdt-mq-in'))
+      && clientJs.includes('dsh-tdt-ed-depitem') && clientJs.includes('dshpc-mq') && clientJs.includes('dshpc-mq-in'))
   check('停用（锁住）任务可选且显式标「（已停用）」——前置任务下拉不做启停过滤',
     clientJs.includes('editorDepDisabledTag') && clientJs.includes('（已停用）')
       && /enabled\s*===\s*false/.test(clientJs))
@@ -1548,7 +1575,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 2026-10-02：三下拉改**定宽**（工作区/模型 = 180 = 权限 120 的 1.5 倍），不再随选项自适应。
   check('提示词下三下拉全部定宽（权限 120 基准，工作区 / 模型各 180；不再 maxWidth 自适应）',
     clientJs.includes('180px') && clientJs.includes('120px') && !/maxWidth:\s*200/.test(clientJs)
-    && clientJs.includes('marquee: true') && clientJs.includes('dsh-tdt-mq-in'))
+    && clientJs.includes('marquee: true') && clientJs.includes('dshpc-mq-in'))
   check('前置任务「添加」按钮收窄到 72px（把宽度让给任务名）', /flex: ["']0 0 72px["']/.test(clientJs))
   check('多 Agent 协作开关（决策 49）：默认关 + 说明含「Agent Teams」与降级语义，配置预览 JSON 带 target.agentTeam',
     clientJs.includes('editorAgentTeam') && clientJs.includes('agentTeam: false')
@@ -1579,9 +1606,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     // 第十轮（2026-10-05）：三条**硬性规定**
     const tlSrc10 = readFileSync(join(process.cwd(), 'src', 'client', 'records-timeline.tsx'), 'utf8')
     const tlListSrc = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
-    const prevSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-preview.tsx'), 'utf8')
     const browserSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-browser.tsx'), 'utf8')
-    const dtSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'DateTime.tsx'), 'utf8')
     const ctrlSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
     const trSrc10 = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
     const locSrc10 = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
@@ -1590,10 +1615,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /label: baseNameOf\(output\)/.test(tlListSrc)
       && /h\(Tooltip, \{[\s\S]{0,120}label: baseNameOf/.test(tlSrc10))
     check('第十一轮·**纠正第十轮**：不许新建 / 改造 Loading —— 原样复用已有的那一个，加载处一律**空着**，不写任何加载文案',
-      !/h\(Loading/.test(prevSrc) && !/h\(Loading/.test(browserSrc)
+      !/h\(Loading/.test(browserSrc)
       && !/h\(Loading, \{ label: t\('recordsLoading'\), anchorId: PANEL_CONTENT_ID \}\)/.test(tlSrc10)
       && !/dsh-tdt-rec-evempty' \}, t\('recordsLoading'\)/.test(tlSrc10)
-      && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(prevSrc) && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(browserSrc)
+      && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(browserSrc)
       && /eventsBusy[\s\S]{0,260}\? null/.test(tlSrc10))
     check('文件预览框历史栈「返回 / 上一层」导航钮已移除（用户 2026-10-05：面包屑点选 + ▾ 选层已覆盖导航，历史栈是「回到找不到的区域」的临时绕过，不再需要）：browserSrc 不再含 goBack / history 栈 / explorerBack / explorerUp / 两个 chevron 图标',
       !browserSrc.includes('goBack') && !browserSrc.includes('const [history, setHistory]')
@@ -1627,8 +1652,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && !/\.dsh-tdt-rec-tag\{[^}]*height:var\(--dshpc-control-h-sm\);/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag\{[^}]*height:auto/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag\{[^}]*border-radius:var\(--dshpc-radius-sm\)/.test(tlSrc10)
-      && /\.dsh-tdt-btn\{[^}]*border-radius:var\(--dshpc-radius-md\)/.test(ctrlSrc)
-      && /\.dsh-tdt-btn--sm\{[^}]*height:var\(--dshpc-control-h-sm\)/.test(ctrlSrc)
+      && /\.dshpc-btn\{[^}]*border-radius:var\(--dshpc-radius-md\)/.test(readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8'))
+      && /\.dshpc-btn--sm\{[^}]*height:var\(--dshpc-control-h-sm\)/.test(readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8'))
+      && !/\.dsh-tdt-btn\{/.test(ctrlSrc)
       && tlSrc10.indexOf("}, t('viewSession'))") > 0)
     check('第十一轮：条目左内边距**从竖条右缘起算**（竖条宽度 --rec-bar-w 计入 padding-left）',
       /\.dsh-tdt-rec-item\{[^}]*--rec-bar-w:5px/.test(tlSrc10)
@@ -1643,11 +1669,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       !/h\(Tooltip, \{ label: note, side: 'top' \}/.test(tlSrc10)
       && !/statusTag\.tone === 'bad' \|\| note === ''/.test(tlSrc10)
       && /: h\('div', \{ className: 'dsh-tdt-rec-note dsh-tdt-ellipsis' \}/.test(tlSrc10))
-    check('第十轮：时间控件**定死宽度**（覆盖 MD 基类默认：日期 115 / 时分 80 / 预制 80）',
-      dtSrc.includes('width: props.width ?? dateWidthOf(size)') && dtSrc.includes('width: props.width ?? timeWidthOf(size)')
-      && dtSrc.includes("fieldWidthOf('0000-00-00', size) + 7") && dtSrc.includes("fieldWidthOf('00:00', size) + 7")
-      && trSrc10.includes('const DATE_FIELD_W = 115') && trSrc10.includes('const TIME_FIELD_W = 80') && trSrc10.includes('const PRESET_W = 80')
-      && trSrc10.includes('width: DATE_FIELD_W,') && trSrc10.includes('width: TIME_FIELD_W,') && trSrc10.includes('width: PRESET_W,')
+    check('第十轮：时间控件**定宽**改由核心负责（按精度固定宽、选中前后不变），本仓不再写死任何宽度',
+      !trSrc10.includes('DATE_FIELD_W') && !trSrc10.includes('TIME_FIELD_W') && !trSrc10.includes('PRESET_W')
+      && !/width:\s*(115|80)/.test(trSrc10)
+      && trSrc10.includes('expr: null')  // 「全部」档 = 清空起止
       && locSrc10.includes("trLastMonth: '上月'"))
     check('第十轮：展开时头部高亮**紧贴**分隔线（容器 gap 归零，不留距离）',
       /\.dsh-tdt-rec-item\{[^}]*gap:0;/.test(tlSrc10))
@@ -2384,52 +2409,49 @@ console.log('\n[14] runtime-index')
       && uiJs.includes('registerStyle') && uiJs.includes('ensureUiStyles'))
   }
 
-  // ── 16. UI 基础层 P1：分段控件（滑动块）唯一实现 ──
-  // 正向 = 组件 + 皮肤进产物、皮肤只吃 token；
-  // 反向 = 三处就地自绘的旧实现标识全部消失（它们才是「同一个控件写三遍」的证据）。
-  console.log('\n[16] UI 基础层 P1（分段控件唯一实现）')
+  // ── 16. UI 基础层：分段控件已改接核心（2026-11-06）──
+  // 正向 = 核心组件 + 核心皮肤进产物；
+  // 反向 = 本仓自绘的分段皮肤 / 三处旧实现标识全部消失。
+  console.log('\n[16] UI 基础层（分段控件走核心）')
   {
     const p1Js = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
-    check('分段控件进了产物（段 / 变体 / 两档高度 / 段内角标 / 无障碍组）',
-      p1Js.includes('dsh-tdt-seg__item') && p1Js.includes('dsh-tdt-seg--default') && p1Js.includes('dsh-tdt-seg--inset')
-      && p1Js.includes('dsh-tdt-seg--md') && p1Js.includes('dsh-tdt-seg__badge') && p1Js.includes('aria-pressed'))
-    check('两套基础样式都在（纯黑 default=第二层面+描边 / 灰底 inset=交互灰 hover 底无描边；段高两档；角标 --dshpc-on-signal）',
-      p1Js.includes('--seg-track:var(--dshpc-surface-2)') && p1Js.includes('--seg-track:var(--dshpc-hover)')
+    check('核心分段控件进了产物（段 / 描边档 / 三档高度 / 段内角标 / 无障碍组）',
+      p1Js.includes('dshpc-seg__item') && p1Js.includes('dshpc-seg--bordered') && p1Js.includes('dshpc-seg--md')
+      && p1Js.includes('dshpc-seg__badge') && p1Js.includes('aria-pressed'))
+    check('核心两套基础样式都在（灰底轨道 + 亮片选中；段高按 token 三档；角标 --dshpc-on-signal）',
+      p1Js.includes('.dshpc-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;')
       && p1Js.includes('--seg-thumb:var(--dshpc-surface-raised)')
       && p1Js.includes('height:calc(var(--dshpc-control-h-sm) - 6px)') && p1Js.includes('height:calc(var(--dshpc-control-h-md) - 6px)')
       && p1Js.includes('background:var(--dshpc-danger);color:var(--dshpc-on-signal)'))
-    // 2026-10-01 用户拍板（同日修正 +2）：有边 / 无边总高必须 == token，边框在内部补回，不许额外撑高。
-    // 统一几何 = 段高 = token − 6px（上下各 2px padding + 1px 边框）：default 真边框 + padding2；inset 无边框 + padding3 补回缺的 1px。
-    check('有边 / 无边等高（1px 边框 + 2px padding：default 真边框 + padding2；inset 无边框 + padding3，外框 == token）',
-      p1Js.includes('.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;')
-      && p1Js.includes('--seg-thumb:var(--dshpc-surface-raised);border:1px solid var(--dshpc-border);}')
-      && p1Js.includes('--seg-thumb:var(--dshpc-surface-raised);border:0;padding:3px;}'))
+    check('本仓分段皮肤已整段删除（不再有第二份 .dsh-tdt-seg）',
+      !p1Js.includes('.dsh-tdt-seg{') && !p1Js.includes('dsh-tdt-seg__item'))
     check('三处就地自绘的旧实现已删（同一控件不再有第二/三份）',
       !p1Js.includes('segTrackStyle') && !p1Js.includes('segStyle') && !p1Js.includes('tabStyle')
       && !p1Js.includes('countBadge') && !p1Js.includes('segmentStyle') && !p1Js.includes('segmentedStyle'))
-    check('预览 渲染/源码 + 版本开关 都已迁到统一 Segmented（自绘 sv-seg / 旧 histtoggle 类已删）',
+    check('预览 渲染/源码 + 版本开关 都已迁到核心 Segmented（自绘 sv-seg / 旧 histtoggle 类已删）',
       !p1Js.includes('dsh-tdt-sv-seg') && !p1Js.includes('dsh-tdt-sv-seg-btn')
         && !p1Js.includes('dsh-tdt-ed-histtoggle-seg')
         && p1Js.includes('previewRender') && p1Js.includes('previewSource')
-        && p1Js.includes('dsh-tdt-ed-histtoggle') && p1Js.includes('dsh-tdt-seg'))
+        && p1Js.includes('dsh-tdt-ed-histtoggle') && p1Js.includes('dshpc-seg'))
   }
 
-  // ── 17. UI 基础层 P1b：编辑器分段控件也归一（删官方薄封装 + 周几多选走统一件）──
-  console.log('\n[17] UI 基础层 P1b（编辑器分段归一）')
+  // ── 17. 编辑器分段控件也归一（核心 Segmented + 周几多选走核心 weekday 修饰）──
+  console.log('\n[17] UI 基础层（编辑器分段归一）')
   {
     const p1bJs = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
-    check('第三档高度 lg 已进基础层（token + 皮肤规则）',
-      p1bJs.includes('--dshpc-control-h-lg:32px') && p1bJs.includes('dsh-tdt-seg--lg'))
-    check('编辑器卡内分段已迁到统一 Segmented（编辑预览 · 排期 两处 id 在产物中）',
+    check('第三档高度 lg 已进核心皮肤（token + 皮肤规则）',
+      p1bJs.includes('--dshpc-control-h-lg:32px') && p1bJs.includes('dshpc-seg--lg'))
+    check('编辑器卡内分段已迁到核心 Segmented（编辑预览 · 排期 两处 id 在产物中）',
       p1bJs.includes('dsh-tdt-ed-prompt-mode') && p1bJs.includes('dsh-tdt-ed-schedule'))
-    check('周几多选组件仍在且挂在间隔卡（multiple 模式走统一 Segmented，由类型与导入保证）',
+    check('周几多选组件仍在且挂在间隔卡（multiple 模式走核心 Segmented，由类型与导入保证）',
       p1bJs.includes('dsh-tdt-ed-schedule-interval-panel') && p1bJs.includes('WeekdayPicker'))
     check('官方分段控件薄封装已删（编辑器不再用官方 SegmentedControl 作分段；死 CSS 也清掉）',
       !p1bJs.includes('dsh-tdt-ed-seg{padding:3px}') && !p1bJs.includes(".dsh-tdt-ed-seg>span[aria-hidden"))
-    check('周几多选特殊化变体：正方形 + 蓝选中（用户 2026-10-01 定制，复刻原 WeekdayPicker 观感）',
-      p1bJs.includes('dsh-tdt-seg--weekday')
-      && p1bJs.includes('.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--dshpc-control-h-lg) - 6px)')
-      && p1bJs.includes('background:var(--dshpc-business);color:var(--dshpc-fg-inverse)'))
+    check('周几多选走核心自带 weekday 修饰：正方形 + 蓝选中 + 反白字（不再有本仓第二份皮肤）',
+      p1bJs.includes('dshpc-seg--weekday')
+      && p1bJs.includes('.dshpc-seg--weekday .dshpc-seg__item{width:calc(var(--dshpc-control-h-lg) - 8px)')
+      && p1bJs.includes('--seg-thumb:var(--dshpc-business)')
+      && !p1bJs.includes('dsh-tdt-seg--weekday'))
   }
 
   // ── 17b. U21：新增 / 编辑任务改「占布局的分栏」+ 删执行记录切换 ──
@@ -2473,28 +2495,34 @@ console.log('\n[14] runtime-index')
     check('开始时间标签去掉「任务」两字（窄栏排得下，语义由 ？ 气泡补）',
       readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8').includes("editorTaskStart: '开始时间'"))
     // 用户 2026-10-02：拖拽会顺手选中一片文字 ⇒ pointerdown preventDefault + 拖动期间全域禁选。
-    check('拖拽调宽不再选中文字 + 基础 resizer 几何上提（共享 helper + .dsh-tdt-resizer 在 ui/controls-css，2026-10-05）',
+    check('拖拽调宽不再选中文字（2026-11-06 起走核心 startResizeLayoutWidth）+ 本仓只留命中区皮肤',
       (() => {
-        const res = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'resizer.ts'), 'utf8')
+        const barrel = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'index.ts'), 'utf8')
         const css = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
-        return res.includes('userSelect') && res.includes("body.style.userSelect = 'none'") && res.includes('removeAllRanges')
+        return /startResizeLayoutWidth,[^']*from 'dsh-plugin-core\/ui'/.test(barrel)
+          && !existsSync(join(process.cwd(), 'src', 'client', 'ui', 'resizer.ts'))
           && edJs.includes('.dsh-tdt-ed-resizer{z-index:2')
           && css.includes('.dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize')
       })())
   }
 
-  // ── 18. UI 基础层 P2/P3/P4：按钮 / 输入 / 数字步进 / 开关 ──
+  // ── 18. UI 基础层：按钮 / 输入 / 数字步进 / 开关（2026-11-06 改接核心）──
   {
     const p23Js = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
-    check('按钮 / 图标钮皮肤进产物（dsh-tdt-btn / dsh-tdt-iconbtn）',
-      p23Js.includes('.dsh-tdt-btn{') && p23Js.includes('dsh-tdt-btn--primary') && p23Js.includes('.dsh-tdt-iconbtn{'))
-    check('输入类皮肤进产物（input / pfx / num）且原生 number 已清零',
-      p23Js.includes('.dsh-tdt-input{') && p23Js.includes('.dsh-tdt-pfx{') && p23Js.includes('.dsh-tdt-num{')
+    check('按钮 / 图标钮皮肤进产物（核心 dshpc-btn / dshpc-iconbtn）',
+      p23Js.includes('.dshpc-btn{') && p23Js.includes('dshpc-btn--primary') && p23Js.includes('.dshpc-iconbtn{'))
+    check('输入类皮肤进产物（核心 input / pfx / num）且原生 number 已清零',
+      p23Js.includes('.dshpc-input{') && p23Js.includes('.dshpc-pfx{') && p23Js.includes('.dshpc-num{')
       && !p23Js.includes("type: 'number'") && !p23Js.includes('type: "number"'))
+    check('本仓按钮 / 图标钮 / 输入 / 数字步进皮肤已整段删除（不再有第二份）',
+      !p23Js.includes('.dsh-tdt-btn{') && !p23Js.includes('.dsh-tdt-iconbtn{')
+      && !p23Js.includes('.dsh-tdt-input{') && !p23Js.includes('.dsh-tdt-pfx{') && !p23Js.includes('.dsh-tdt-num{')
+      && !p23Js.includes('.dsh-tdt-textarea{'))
     check('开关 success 绿覆盖已上提基础层（.dsh-tdt-switch）',
       p23Js.includes(".dsh-tdt-switch button[role='switch'][aria-checked='true']"))
-    check('日期 / 时间皮肤进产物（dsh-tdt-dtf / cal__cell / time__opt）',
-      p23Js.includes('.dsh-tdt-dtf{') && p23Js.includes('.dsh-tdt-cal__cell{') && p23Js.includes('.dsh-tdt-time__opt{'))
+    check('时间皮肤进产物（dsh-tdt-dtf / time__opt；日期已改核心 DateTimePicker，cal__cell 已删）',
+      p23Js.includes('.dsh-tdt-dtf{') && p23Js.includes('.dsh-tdt-time__opt{')
+      && !p23Js.includes('.dsh-tdt-cal__cell{'))
     check('业务文件明暗特判已清零（body[data-ds-dark-theme] 只剩 token 层）',
       !p23Js.includes('body[data-ds-dark-theme] .dsh-tdt') && p23Js.includes('body[data-ds-dark-theme]{'))
   }
@@ -2503,7 +2531,7 @@ console.log('\n[14] runtime-index')
   {
     const business = [
       'index.ts', 'task-list.tsx', 'task-editor.tsx', 'task-editor-css.ts', 'editor-fields.tsx',
-      'file-browser.tsx', 'file-preview.tsx', 'config-panel.tsx', 'session-view.ts',
+      'file-browser.tsx', 'config-panel.tsx', 'session-view.ts',
       'archive-session-css.ts', 'toast-css.ts',
       // 2026-10-04：执行记录时间轴 + 任务选择器（同受「不许直引宿主变量 / 不许自注入 style」约束）
       'records-timeline.tsx', 'ui/TaskPicker.tsx',
@@ -2532,7 +2560,8 @@ console.log('\n[14] runtime-index')
     const uidx = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'index.ts'), 'utf8')
     const cc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
     const trc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
-    const ld = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'Loading.tsx'), 'utf8')
+    const trCode = stripComments(trc)
+
     const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
     // 基础信息展示层 2026-10-05 上提出 `task-list.tsx` ⇒ 断言改读新文件
     // （不许为了让断言过而在原处留第二份实现）。
@@ -2571,14 +2600,15 @@ console.log('\n[14] runtime-index')
     check('时间范围控件：半开区间上界（次日 00:00 / 下一分钟 :00），不再用 .999 补丁',
       tr.includes('toParsed.d + 1') && tr.includes('toParsed.mm + 1') && !tr.includes('23:59:59.999')
       && uidx.includes('TimeRange') && uidx.includes('rangeToQuery'))
-    check('预设档 = 整档（今天 / 本周 / 本月上界一律 23:59，不取「此刻」）',
-      !tr.includes('ymdhm(now)') && tr.includes('endOfDay(start)')
-      && tr.includes('endOfDay(sun)') && tr.includes('endOfDay(last)'))
-    check('结束框未选时刻 ⇒ 默认 23:59（起始仍 00:00）：否则选「10-2 作结束」当天数据全漏',
-      trc.includes("which === 'to' ? '23:59' : '00:00'") && trc.includes('join(which,'))
-    check('时间控件定式 = <起> <止> <范围>（不写「时间：」/「到」，靠灰色占位区分起止）',
-      !trc.includes('labels.time') && trc.includes("endFields('from')") && trc.includes("endFields('to')")
-      && trc.indexOf("endFields('to')") < trc.lastIndexOf('h(SelectField'))
+    check('预设档 = 核心 date-math 整档算式（今天/昨天/本周/上周/本月/上月；本仓不再自己算档）',
+      trc.includes("today: 'now/d'") && trc.includes("yesterday: 'now-1d/d'")
+      && trc.includes("thisWeek: 'now/w'") && trc.includes("lastMonth: 'now-1M/M'")
+      && !tr.includes('presetRange') && !tr.includes('endOfDay'))
+    check('结束未给时刻 ⇒ 核心收到 23:59:59.999（起始 00:00.000，半开区间口径不变）',
+      trCode.includes("end ? '59.999' : '00.000'") && trCode.includes("end ? '23:59:59.999' : '00:00:00.000'"))
+    check('时间控件形态 = 核心「一个整条 + 弹层预设列」（本仓不再拼起止分框）',
+      !trCode.includes("endFields('from')") && trCode.includes('ALL_TIME_PRESETS')
+      && trCode.includes("mode: 'range'") && !trCode.includes('h(SelectField'))
     check('状态下拉不再单写「状态：」二字：未选时占位 = 灰色的「状态」',
       tl.includes("placeholder: t('colStatus')") && tl.includes("useState('')"))
     check('计划执行年份改**四位**（2026-09-30 15:10）',
@@ -2599,7 +2629,8 @@ console.log('\n[14] runtime-index')
       && !tl.includes("t('colDispatchedAt')")
       // 黑框 `logBoxStyle` 只留给「日志」面板本体，展开区不再套框。
       && !tl.includes('eventsLoading'))
-    check('两个时间框之间有分隔符 ～', trc.includes("'～'"))
+    check('时间控件宽度交给核心（按精度固定、不随内容抖），本仓不写死宽度',
+      !/width:\s*\d+/.test(trCode) && trCode.includes('size: props.size ?? \'md\''))
     check('日志整区：不套框（logBoxStyle 已废）+ 上沿一条线 + 整块底色 logAreaStyle',
       tl.includes('const logAreaStyle') && tl.includes('logRowStyle') && !tl.includes('const logBoxStyle'))
     check('过滤行上下间距一致：下间距 10px = 上间距（面板外虚线 → 过滤行）',
@@ -2619,9 +2650,9 @@ console.log('\n[14] runtime-index')
         const block = m ? m[0] : ''
         return !block.includes("background: 'var(--dshpc-surface-1)'") && !block.includes('padding:')
       })())
-    check('loading 定位：fixed 到页面底部，right 按 #dsh-tdt-main 内容盒右边缘动态量',
-      ld.includes("position: 'fixed'") && ld.includes('function useContentRight') && ld.includes('function Loading')
-      && tl.includes('Loading') && tl.includes('RunningBlocks'))
+    check('loading 定位：核心 Loading 自带 fixed 底部 + useContentRight，本仓传锚点 dsh-tdt-main',
+      dist.includes('useContentRight') && dist.includes('function Loading')
+      && tl.includes("anchorId: 'dsh-tdt-main'") && tl.includes('Loading') && tl.includes('RunningBlocks'))
     // 2026-10-04：内容列锚点（id + 几何）**上提基础层单源** —— 任务配置页与执行记录页共用同一个 id，
     // `Loading` 的 anchorId 契约也指着它；两 tab 各写一份的旧写法已删（否则改一处即破对齐）。
     check('内容列锚点单源（PANEL_CONTENT_ID / PANEL_CONTENT_STYLE 出自 ui，两个 tab 共用）',
@@ -2635,8 +2666,8 @@ console.log('\n[14] runtime-index')
       && (tl.match(/stopPropagation\(\)/g) ?? []).length >= 4)
     check('忙碌指示：沿用三个脉动方块 + 不吃鼠标事件 + Loading 无文案（2026-10-06：去掉 label）',
       tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS')
-      && ld.includes('dsh-tdt-run-blocks') && ld.includes('pointerEvents:')
-      && tl.includes('h(Loading, {})')
+      && dist.includes('dshpc-run-blocks') && dist.includes('pointer-events')
+      && /h\(Loading, \{ anchorId: 'dsh-tdt-main' \}\)/.test(tl)
       // 不再有任何带文字的 Loading。
       && !tl.includes('h(Loading, { label:')
       // 过滤行里那个会占位的一闪文字已经移除。
@@ -2662,8 +2693,9 @@ console.log('\n[14] runtime-index')
       q.includes('status: statuses') && q.includes('level: levels'))
     check('半开区间服务端比较：scheduled_at < ? / ts < ?（不再 <=，边界归一单源）',
       st.includes("'scheduled_at < ?'") && st.includes("'ts < ?'") && !st.includes("'scheduled_at <= ?'"))
-    check('时间范围 / 新列文案进产物（trAll / trCustom / colPlanned / colActualStart）',
-      dist.includes('trAll') && dist.includes('trCustom') && dist.includes('colPlanned') && dist.includes('colActualStart'))
+    check('时间范围 / 新列文案进产物（trAll / 六档预设 / colPlanned / colActualStart；「自定义」已随自研控件删除）',
+      dist.includes('trAll') && dist.includes('trLastMonth') && !dist.includes('trCustom')
+      && dist.includes('colPlanned') && dist.includes('colActualStart'))
   }
 
   // ── 21. 基础信息改版追加（2026-10-03）：右栏定宽 + 产出物行 hover 底色 ──
@@ -2684,7 +2716,7 @@ console.log('\n[14] runtime-index')
     check('附件行在拿到 path + 锚点会话时可点（走统一 openFile），缺则退回纯展示',
       ti.includes('onOpenFile(anchor, absPath)') && ti.includes('item.anchorSessionId'))
     check('基础信息忙碌指示统一走右下角共用 Loading（2026-10-06：无文案，不再另写「载入中」文字）',
-      tl.includes('h(Loading, {})')
+      /h\(Loading, \{ anchorId: 'dsh-tdt-main' \}\)/.test(tl)
       // 不再有任何带文字的 Loading。
       && !tl.includes("h(Loading, { label: t('loading') })")
       // 基础信息右栏不再出现把 loading 文案直接当文字渲染的旧写法。
@@ -2749,19 +2781,20 @@ console.log('\n[14] runtime-index')
       locSrc10.includes("cardRunNowDesc: '你确定要立即执行此任务吗？'")
       && locSrc10.includes("cardRunNowDesc: 'Run this task immediately?'"))
 
-    // ── Office 预览（2026-10-05）：官方 remote.officeToPdf 转 PDF ⇒ 复用既有 PDF 渲染，零 npm 依赖 ──
-    const fpSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-preview.tsx'), 'utf8')
-    check('Office 预览：previewKind 认 doc/docx/ppt/pptx ⇒ office（Excel 的 xls/xlsx 本轮不纳入，留给后续讨论）',
-      /OFFICE_KINDS = \['doc', 'docx', 'ppt', 'pptx'\]/.test(fpSrc)
-      && !/OFFICE_KINDS = \[[^\]]*xlsx/.test(fpSrc)
-      && fpSrc.includes("kind === 'office'"))
-    check('Office 预览：服务面本地声明（OfficeToPdfFace），零 npm 依赖 + priority 仅 foreground/background',
-      fpSrc.includes('export interface OfficeToPdfFace')
-      && fpSrc.includes("priority: 'foreground' | 'background'"))
-    check('Office 预览：转换产物走既有 PDF iframe 渲染（OfficePreview + 同款 pdf class）',
-      fpSrc.includes('export function OfficePreview') && fpSrc.includes("className: 'dsh-tdt-sv-preview-pdf'"))
-    check('Office 预览：服务未就位 ⇒ 「Office 预览不可用」，不误报成「二进制不支持」',
-      fpSrc.includes("setErr({ key: 'previewOfficeUnavailable' })"))
+    // ── Office 预览（2026-11-06 起整体由核心 adv/explorer 提供：类型/扩展名清单/渲染体都在核心）──
+    const coreTypes = readFileSync(join(process.cwd(), 'node_modules', 'dsh-plugin-core', 'dist', 'adv', 'explorer', 'types.js'), 'utf8')
+    check('Office 预览：核心 OFFICE_KINDS 认 doc/docx/ppt/pptx ⇒ office（xlsx 不纳入）',
+      /OFFICE_KINDS = \['doc', 'docx', 'ppt', 'pptx'\]/.test(coreTypes)
+      && !/OFFICE_KINDS = \[[^\]]*xlsx/.test(coreTypes))
+    check('Office 预览：核心 OfficeToPdfFace 的 priority 仅 foreground/background',
+      /priority: 'foreground' | 'background'/.test(
+        readFileSync(join(process.cwd(), 'node_modules', 'dsh-plugin-core', 'dist', 'adv', 'explorer', 'types.d.ts'), 'utf8')))
+    check('Office 预览：转换产物走核心 OfficePreview 的 iframe（dshpc-fb__frame）',
+      readFileSync(join(process.cwd(), 'node_modules', 'dsh-plugin-core', 'dist', 'adv', 'explorer', 'preview', 'OfficePreview.js'), 'utf8')
+        .includes('dshpc-fb__frame'))
+    check('Office 预览：服务未就位 ⇒ 核心出「Office 预览不可用」，不误报成「二进制不支持」',
+      readFileSync(join(process.cwd(), 'node_modules', 'dsh-plugin-core', 'dist', 'adv', 'explorer', 'preview', 'OfficePreview.js'), 'utf8')
+        .includes("previewOfficeUnavailable"))
     const cliIdxSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
     check('Office 预览：dotted 注入 remote.officeToPdf（只注 remote 会永久探测失败，2026-09-28 同款根因）',
       cliIdxSrc.includes("ctx.inject(['remote', 'remote.officeToPdf']"))
@@ -3101,13 +3134,13 @@ console.log('\n[14] runtime-index')
     check('全局心跳单源（ui/ticker.ts：subscribeTicker + useNowMs）',
       S('client/ui/ticker.ts').includes('export function subscribeTicker')
       && S('client/ui/ticker.ts').includes('export function useNowMs'))
-    check('每秒自刷文本壳在基础层（ui/LiveText.tsx）',
-      S('client/ui/LiveText.tsx').includes('export function LiveText'))
-    check('barrel 已登记心跳 / 文本壳 / 运行态 / 代码查看器',
+    check('每秒自刷文本壳走核心（dsh-plugin-core/ui 的 LiveText，本地 ui/LiveText.tsx 已删）',
+      S('client/ui/index.ts').includes('LiveText')
+      && !existsSync(join(process.cwd(), 'src', 'client', 'ui', 'LiveText.tsx')))
+    check('barrel 已登记心跳 / 运行态 / 代码查看器（文本壳与 CodeViewer 走核心）',
       /subscribeTicker, useNowMs \} from '\.\/ticker'/.test(S('client/ui/index.ts'))
-      && S('client/ui/index.ts').includes("from './LiveText'")
-      && S('client/ui/index.ts').includes("from './running'")
-      && S('client/ui/index.ts').includes("from './CodeViewer'"))
+      && S('client/ui/index.ts').includes("from 'dsh-plugin-core/ui/code-viewer'")
+      && S('client/ui/index.ts').includes("from './running'"))
     check('时间文案层 / 错误文案层已出页面',
       S('client/time-text.ts').includes('export function nextExecLabel')
       && S('client/time-text.ts').includes('export function clockOf')
@@ -3241,13 +3274,29 @@ console.log('\n[14] runtime-index')
     // 附件临时区清理由 index.ts 的 6 小时清道夫负责（每 6h 醒一次、跨天才真遍历目录）。
     check('【清道夫】临时附件区接在 6 小时清道夫上（按 attachmentTmpRetentionDays 清）',
       S('index.ts').includes('purgeTmp(paths, configRef.attachmentTmpRetentionDays)'))
-    check('【CSS】产物里消费的每个 `--dshpc-*` 都在核心 token 白名单内且有定义（不许自造 token）',
+    check('【CSS】产物里消费的每个 `--dshpc-*` 都在核心白名单内且有定义（不许自造 token）',
       (() => {
-        const coreSrc = readFileSync(join(process.cwd(), 'node_modules', 'dsh-plugin-core', 'dist', 'design', 'tokens-css.generated.js'), 'utf8')
-        const whitelist = new Set([...coreSrc.matchAll(/(--dshpc-[a-z0-9-]+):/g)].map(m => m[1]))
+        // 白名单 = 核心**任意** css.generated.js 里定义过的 token（0.34 起核心自己的面板 / 跑马灯也会被内联打包）。
+        const coreDist = join(process.cwd(), 'node_modules', 'dsh-plugin-core', 'dist')
+        const cssFiles = []
+        const walk = (dir) => {
+          for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            const abs = join(dir, entry.name)
+            if (entry.isDirectory()) walk(abs)
+            else if (entry.name.endsWith('css.generated.js')) cssFiles.push(abs)
+          }
+        }
+        walk(coreDist)
+        const whitelist = new Set(cssFiles.flatMap(f => [...readFileSync(f, 'utf8').matchAll(/(--dshpc-[a-z0-9-]+):/g)].map(m => m[1])))
+        // 这三支由核心 `MarqueeText` 用**内联自定义属性**写入（不在 css 里定义）。
+        const inlineSet = new Set(['--dshpc-mq-dur', '--dshpc-mq-dist'])
+        for (const t of inlineSet) whitelist.add(t)
+        // 核心 QuickToolbar 自带的皮肤消费、但核心 dist 未定义的三支（宿主页面级变量；核心负责补齐）。
+        const coreOnly = new Set(['--dshpc-quick-toolbar-bg', '--dshpc-quick-toolbar-fg', '--dshpc-page-inset-right'])
+        for (const t of coreOnly) whitelist.add(t)
         const consumed = new Set([...kitBundle.matchAll(/var\((--dshpc-[a-z0-9-]+)/g)].map(m => m[1]))
         const defined = new Set([...kitBundle.matchAll(/(--dshpc-[a-z0-9-]+):/g)].map(m => m[1]))
-        return [...consumed].every(t => whitelist.has(t) && defined.has(t))
+        return [...consumed].every(t => whitelist.has(t) && (defined.has(t) || inlineSet.has(t) || coreOnly.has(t)))
       })())
     check('【CSS】固定中性面的明文回退由核心 token 层提供（本仓不再自建 token 表）',
       ['rgba(255,255,255,.5)', 'rgba(15,15,15,.07)', 'rgba(15,15,15,.14)',
@@ -3349,8 +3398,10 @@ console.log('\n[14] runtime-index')
     check('【表单换算】设置页表单存服务端值、显示时才换算（存显示单位再 toDisplay 会二次换算）',
       S('client/settings-config-block.tsx').includes('f.fromDisplay(value as number)')
       && S('client/settings-config-block.tsx').includes('f.toDisplay(serverVal as number)'))
-    check('【数字框】删空回弹原值（Number(\'\')===0 会被 clamp 成 min，看起来就是「Delete 不管用」）',
-      S('client/ui/Field.tsx').includes("raw.trim() === ''"))
+    check('【数字框】删空回弹原值（改接核心 NumberInput：空串 □ 不 clamp，看起来就是「Delete 不管用」已修）',
+      readFileSync(join(process.cwd(), 'node_modules', 'dsh-plugin-core', 'dist', 'ui', 'inputs', 'Field.js'), 'utf8')
+        .includes("trim() === ''")
+      && !/export function NumberInput/.test(S('client/ui/Field.tsx')))
     check('【可诊断】非 JSON 响应把状态码 + 片段带出去（不再只有 Unexpected token）',
       S('client/settings-data.ts').includes('返回的不是 JSON'))
     check('【宽度单源】设置页用主内容列唯一真源（PANEL_CONTENT_ID / PANEL_CONTENT_STYLE）',

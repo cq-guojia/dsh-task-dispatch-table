@@ -17,6 +17,7 @@ import {
   IconChevronDownOutlineRegular, IconClockOutlineRegular, IconPlanOutlineRegular, IconThinkOutlineRegular, MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
+import { t as coreT } from 'dsh-plugin-core/utils'
 import { MD_LABELS } from './md-labels'
 import { renderNextExec } from './time-text'
 import { nextSlotForDraft, renderSchedule, scheduleSpecFromDraft } from './schedule-text'
@@ -247,7 +248,7 @@ export function TaskViewPanel(props: {
         ? h('div', { className: 'dsh-tdt-ed-view-promptbox' },
           h('div', { className: `dsh-tdt-ed-view-prompt${promptOpen || isShort ? ' dsh-tdt-ed-view-prompt--open' : ''}` },
             promptMode === 'source'
-              ? h(CodeViewer, { text: draft.prompt, path: 'prompt.md', t })
+              ? h(CodeViewer, { text: draft.prompt, path: 'prompt.md', t: coreT })
               : h(MarkdownText, { text: draft.prompt, labels: MD_LABELS })))
         : h('div', { className: 'dsh-tdt-ed-view-empty' }, t('editorViewPromptEmpty')),
     ),

@@ -11,15 +11,15 @@
 // **即时性**：拨片（启用 / 停用）走「本地乐观更新 + 立刻重新拉一次」，不等任何周期
 // ——服务端在写库成功后会同步任务表快照，所以重新拉的这一次就能拿到新值。
 //
-// 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
+// 官方组件：Switch / 图标 一律取 primitives，表单控件统一走 `./ui` 的核心薄包装（能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
-import { createElement as h, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { baseNameOf, formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, formatYmd, pad2 } from './format'
+import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { baseNameOf, formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, formatYmd } from './format'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular,
   IconClockOutlineRegular, IconEditOutlineRegular,
   IconFolderCloseRegular, IconPlayOutlineRegular, IconSearchOutlineRegular,
-  Input, Menu, Switch, Tooltip,
+  Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 // 任务信息展示层（2026-10-05 上提为共享件）：基础信息纸表格 / 上次执行明细 / 状态图标 / 人话转换。
 // ⚠️ **与右侧栏「查看档」共用同一份实现** —— 要改字段怎么翻译、怎么渲染，去 `task-info.tsx`，不许在本文件再抄一份。
@@ -38,22 +38,19 @@ import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
 // 三面板数据通道（决策 55）：执行记录 / 日志 / 事件时间线，与未来总查询页共用同一套 fetch。
 import { fetchEvents, fetchInstances, fetchLogs, outputsOf, type EventRow, type InstanceRow, type LogRow } from './query'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
-import { INSTANCE_STATUSES, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
+import { statusesOfBucket, statusTextOf } from './status-text'
 // 排序键（`sortRows`）；`justCrossedSlot` 随「到点钳位」整套删除（决策 54：抖动由**服务端**冻结
 // 未处理刻度解决，客户端不再有任何本地派生排序状态）。
 import { sortRows } from '../task-sort.js'
 // 取数层（2026-10-06 从本页面文件归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
-import { debugLogOrder, dueLoadingMs, useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
-import { calendarLabelsOf, timeLabelsOf } from './editor-fields'
+import { debugLogOrder, dueLoadingMs, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // 浮层结果提示（立即执行成功 / 被拒）：全站唯一实现，不许各处手写。
 import { FloatingToast, ensureToastStyle } from './toast-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, ensureRunningStyle, IconButton, Input as TdtInput, LiveText, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TimeRangeLabels, type TimeRangeValue } from './ui'
-
+import { applyStyle, Button, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
-const transition = `background var(--dshpc-dur) var(--dshpc-ease), color var(--dshpc-dur) var(--dshpc-ease), border-color var(--dshpc-dur) var(--dshpc-ease)`
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
 const monoFont = 'var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
 // `NO_TIME` 占位与「时间社交化表达 / 秒级心跳 / LiveText / renderNextExec」已于 2026-10-05
@@ -471,12 +468,6 @@ const formatStamp = (iso: string | null): string =>
 // ⚠️ 2026-10-04 评审：桶定义**上提到 `status-text.ts` 单源**（`statusesOfBucket`）—— 此前本页与
 // 执行记录总查询页各写一份，且 running 的成员还不一样（一个含 pending/unknown，一个不含）⇒ 同一个
 // 档位两页筛出不同结果。这里改成薄封装，只保留「值传后端」这一层。
-/** 产出物 / 会话列的裸图标按钮（无边框、无底色；用户 2026-10-02 第四轮：图标化）。 */
-const plainIconBtnStyle: Record<string, string | number> = {
-  appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: '20px', height: '20px', padding: 0, border: 'none', background: 'transparent',
-  color: 'var(--dshpc-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit', transition,
-}
 /** 产出物图标格（最多 3 个 +「…」更多）。 */
 const outputCellStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', gap: '2px', flexWrap: 'nowrap',
@@ -487,10 +478,6 @@ const filterRowStyle: Record<string, string | number> = {
   // 下间距必须 == 上间距（用户 2026-10-03）：上间距是「面板外虚线 → 过滤行」= `panelWrapStyle.paddingTop` 10px，
   // 所以这里也用 10px —— 原来 6px，上下明显不一样。
   marginBottom: '10px',
-}
-/** 过滤行里的字段名（「状态：」等）。 */
-const filterLabelStyle: Record<string, string | number> = {
-  fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)', flex: 'none',
 }
 /** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
 const limitRowStyle: Record<string, string | number> = {
@@ -582,12 +569,9 @@ function TaskExpandPanel(props: {
   const [infoLoading, setInfoLoading] = useState(false)
   const [infoError, setInfoError] = useState<string | null>(null)
   const [infoLoaded, setInfoLoaded] = useState(false)
-  // 日历 / 时分文案**单源**（与任务编辑器同一份：editor-fields.calendarLabelsOf / timeLabelsOf）。
-  const calendarLabels = useMemo(() => calendarLabelsOf(t), [t])
-  const timeLabels = useMemo(() => timeLabelsOf(t), [t])
-  // 时间范围控件文案（records / logs 共用一份）。
+  // 时间范围控件文案（records / logs 共用一份；日历 / 时分文案由核心组件自带）。
   const timeRangeLabels: TimeRangeLabels = useMemo(() => ({
-    all: t('trAll'), custom: t('trCustom'), from: t('cardFrom'), to: t('cardTo'),
+    all: t('trAll'),
     presets: {
       today: t('trToday'), yesterday: t('trYesterday'), thisWeek: t('trThisWeek'),
       lastWeek: t('trLastWeek'), thisMonth: t('trThisMonth'), lastMonth: t('trLastMonth'),
@@ -788,7 +772,7 @@ function TaskExpandPanel(props: {
             ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
             : infoLoading && !infoLoaded
               // 忙碌指示**统一走右下角那个共用 Loading**（用户铁律：全站只有一个 loading，不在这里另写文字）。
-              ? h(Loading, {})
+              ? h(Loading, { anchorId: 'dsh-tdt-main' })
               : infoLast === null
                 ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('infoNoRun'))
                 : lastRunFields({ t, instance: infoLast, onOpenSession, onOpenFile }),
@@ -799,7 +783,7 @@ function TaskExpandPanel(props: {
 
   const renderRecords = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
     // 浮动忙碌指示：fixed 到主内容盒右下角 ⇒ **不占布局空间**，不再把筛选行挤过去又挤回来。
-    recBusy ? h(Loading, {}) : null,
+    recBusy ? h(Loading, { anchorId: 'dsh-tdt-main' }) : null,
     // 过滤行固定在定高盒外（不随内容滚）：状态三档 + 工作区。
     h('div', { style: filterRowStyle },
       // 不再单写「状态：」二字（用户 2026-10-02）：**未选时占位就是灰色的「状态」**，
@@ -824,7 +808,7 @@ function TaskExpandPanel(props: {
       }),
       h(TimeRange, {
         value: recRange, onChange: setRecRange,
-        labels: timeRangeLabels, calendarLabels, timeLabels,
+        labels: timeRangeLabels,
         precision: 'day', size: 'md',
       }),
       // 条数过滤：**统一放最右边**，定式 `显示 <N> 条`（用户 2026-10-02）。
@@ -1006,7 +990,7 @@ function TaskExpandPanel(props: {
 
   const renderLogs = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
     // 同执行记录面板：浮动忙碌指示，fixed 到主内容盒右下角。
-    logBusy ? h(Loading, {}) : null,
+    logBusy ? h(Loading, { anchorId: 'dsh-tdt-main' }) : null,
     // 过滤行固定在定高盒外（与执行记录面板同口径）：关键字 + 条数。
     h('div', { style: filterRowStyle },
       h(TdtInput, {
@@ -1018,7 +1002,7 @@ function TaskExpandPanel(props: {
       }),
       h(TimeRange, {
         value: logRange, onChange: setLogRange,
-        labels: timeRangeLabels, calendarLabels, timeLabels,
+        labels: timeRangeLabels,
         precision: 'minute', size: 'md',
       }),
       // 条数过滤：**居右**，定式 `显示 <N> 条`（与执行记录面板同一件、同一位置）。
@@ -1125,7 +1109,7 @@ function TaskExpandPanel(props: {
         h(Segmented<'info' | 'records' | 'logs'>, {
           value: tab,
           size: 'md',
-          variant: 'inset',
+          bordered: false,
           items: [
             { value: 'info', label: t('cardTabInfo') },
             { value: 'records', label: t('cardTabRecords') },
@@ -1136,7 +1120,7 @@ function TaskExpandPanel(props: {
         h('span', { style: { flex: '1 1 auto' } }),
         // 高度跟同排三滑块一样走 md(28)（用户 2026-10-01：此前 sm=24 比滑块矮 4px）。
         h(Button, {
-          variant: 'outline', size: 'md', className: 'dsh-tdt-btn--danger-ink',
+          variant: 'danger-outline', size: 'md',
           onClick: () => { setConfirmDelete(true) },
         }, t('cardDelete')),
         // 立即执行（用户 2026-10-03）：插在删除与编辑**中间**；点了弹确认框，确认后提前触发一次调度。
@@ -1391,11 +1375,13 @@ export function TaskListView(props: {
         h('span', { style: { flex: '1 1 auto' } }),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
           h(Input, {
+            // 与右侧工作区下拉同高（md=28）；核心 Input 默认 sm(24)，必须显式指定。
+            size: 'md',
             className: 'dsh-tdt-tl-input',
             icon: h(IconSearchOutlineRegular, { size: 14 }),
             value: query,
             placeholder: t('listSearchPlaceholder'),
-            onChange: (event: { target: { value: string } }) => { setQuery(event.target.value) },
+            onChange: (value: string) => { setQuery(value) },
           }),
           // 工作区下拉走 UI 基础层唯一实现（2026-10-04 收编）：此前这里是全站最后一个绕过基础层
           // 手搓的官方 `Menu` + 自绘锚点（自管 `menuOpen`、自带 `.dsh-tdt-tl-ws` 样式）⇒ 已删。

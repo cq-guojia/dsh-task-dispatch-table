@@ -43,6 +43,10 @@ export default defineConfig({
   dts: false,
   clean: false,
   sourcemap: true,
+  // 浏览器里没有 Node 的 process。核心 UI（DateTimePicker / Picker）经 @floating-ui
+  // 带来 `process.env.NODE_ENV` 的模块级判断，不替换会在 import 阶段直接抛
+  // 「process is not defined」，整个 client entry 激活失败。
+  define: { 'process.env.NODE_ENV': '"production"' },
   deps: {
     // 模块表请求保留为 require；其余全部内联 —— 模块表回答不了的
     // require() 在运行时必然抛。

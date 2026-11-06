@@ -145,7 +145,7 @@ export type LocaleKey =
   // 执行记录总查询页（时间轴，2026-10-04 落码）：`localeTag` 供 `Intl` 按当前语言排版日期（天标签）。
   | 'localeTag' | 'recordsEmpty' | 'recordsEmptyFiltered' | 'recordsLoadMore' | 'recordsNoMore'
   | 'recordsLimitHint' | 'recordsLoadFail' | 'recordsRetry' | 'recordsDayCount' | 'recordsTaskPh'
-  | 'recordsTaskSearch' | 'recordsMore' | 'recordsCollapse' | 'recordsOutOfScope' | 'recPlan' | 'recActual'
+  | 'recordsTaskSearch' | 'recordsMore' | 'recordsOutOfScope' | 'recPlan' | 'recActual'
   // 2026-10-04 第四轮：跨天时刻前缀（前一天 / 次日）+ 展开区「执行日志」小标题
   | 'recPrevDay' | 'recNextDay' | 'recEventsTitle'
   // 2026-10-04 第五轮：信息行 Token 段的悬停提示（「32K」得说清是什么）
@@ -197,7 +197,7 @@ export type LocaleKey =
   // —— 执行记录行（用户 2026-10-02 示意改版）：时长列 / 派发·结束时刻 / 时长句式 ——
   | 'colDuration' | 'colPlanned' | 'colActualStart' | 'colView' | 'colNote' | 'filterRunning'
   // —— 时间范围控件（ui/TimeRange，全站复用）：预设档 + 清除 ——
-  | 'trAll' | 'trCustom' | 'trToday' | 'trYesterday' | 'trThisWeek' | 'trLastWeek' | 'trThisMonth' | 'trLastMonth'
+  | 'trAll' | 'trToday' | 'trYesterday' | 'trThisWeek' | 'trLastWeek' | 'trThisMonth' | 'trLastMonth'
   | 'schedCustom'
   // —— 插件设置页（plugins.bundle.config 详情页表单）——
   | 'settingsBasic' | 'settingsTitleFormat' | 'settingsDesc' | 'settingsLang' | 'settingsLangValue'
@@ -689,7 +689,6 @@ export const zh: Record<LocaleKey, string> = {
   recordsTaskPh: '任务',
   recordsTaskSearch: '搜索任务名或 ID',
   recordsMore: '更多',
-  recordsCollapse: '收起',
   recordsOutOfScope: '所选任务不在当前工作区',
   // 条目第 2 行的紧凑标签（2026-10-04 版式返工；状态下拉已取消，其键一并删除）
   recPlan: '计划',
@@ -843,7 +842,6 @@ export const zh: Record<LocaleKey, string> = {
   // 过滤档「运行中」：下拉**不必**守表格的两字规矩（用户 2026-10-02：两字只为表格对齐好看）。
   filterRunning: '运行中',
   trAll: '全部',
-  trCustom: '自定义',
   trToday: '今天',
   trYesterday: '昨天',
   trThisWeek: '本周',
@@ -1382,7 +1380,6 @@ export const en: Record<LocaleKey, string> = {
   recordsTaskPh: 'Task',
   recordsTaskSearch: 'Search by name or ID',
   recordsMore: 'More',
-  recordsCollapse: 'Collapse',
   recordsOutOfScope: 'The selected task is not in this workspace',
   recPlan: 'Plan',
   recActual: 'Actual',
@@ -1533,7 +1530,6 @@ export const en: Record<LocaleKey, string> = {
   colNote: 'Note',
   filterRunning: 'Running',
   trAll: 'All',
-  trCustom: 'Custom',
   trToday: 'Today',
   trYesterday: 'Yesterday',
   trThisWeek: 'This week',

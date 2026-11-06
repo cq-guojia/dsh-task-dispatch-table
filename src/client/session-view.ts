@@ -43,7 +43,7 @@ import { ProcessFiles } from './process-files'
 import type { ChatNodeFace, ChatNodeStoreFace, NodeRenderer, TurnProcessHandle, TurnLocationFace } from './mirror/ChatNodeSeat'
 import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
-import type { WorkspaceFilesFace } from './file-preview'
+import type { WorkspaceFilesFace } from 'dsh-plugin-core/adv/explorer'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03）。
 import { TaskFileContextPanel, type AttachedFileView, type UpstreamInputView } from './task-file-context'

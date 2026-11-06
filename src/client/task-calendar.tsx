@@ -623,7 +623,6 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
             ariaLabel: t('recordsTaskPh'),
             searchPlaceholder: t('recordsTaskSearch'),
             moreLabel: t('recordsMore'),
-            collapseLabel: t('recordsCollapse'),
             outOfScopeHint: t('recordsOutOfScope'),
             size: 'md',
             width: 150,
@@ -632,7 +631,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       ),
 
       // 加载走页面右下角统一的那个 Loading（与执行记录页同一条规矩）。
-      loading ? h(Loading, {}) : null,
+      loading ? h(Loading, { anchorId: 'dsh-tdt-main' }) : null,
       error !== null
         ? h('div', { className: 'dsh-tdt-cal-hint' },
             `${t('calLoadFail')}：${error}`,
@@ -669,8 +668,8 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
               },
             },
               h('span', { className: 'dsh-tdt-cal-daterow' },
-                h('span', { className: `dsh-tdt-cal-num${cell.isToday ? ' dsh-tdt-cal-num--today' : ''}` }, String(cell.day)),
-                cell.isToday ? h('span', { className: 'dsh-tdt-cal-today' }, ` · ${t('calToday')}`) : null,
+                h('span', { className: `dsh-tdt-cal-num${cell.iso === today ? ' dsh-tdt-cal-num--today' : ''}` }, String(cell.day)),
+                cell.iso === today ? h('span', { className: 'dsh-tdt-cal-today' }, ` · ${t('calToday')}`) : null,
               ),
               // 方形小标签：3 列 × 3 行 = 9 个位子，前 8 位放时刻，第 9 位放「还有 N 条」。
               // 悬停提示走 DSH 原生 Tooltip（用户 2026-10-06：原生 title 反应太慢），不是手搓。

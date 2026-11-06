@@ -264,15 +264,17 @@ body[data-ds-dark-theme]{
 
 它不是「又一个下拉」，而是**候选集会随外部作用域变化、且需要搜索**的一类选择控件；全仓目前**没有**任何 combobox / autocomplete / 命令面板（2026-10-03 全仓扫描结论；官方 primitives 也无）⇒ 新建，落在 `ui/TaskPicker.tsx`。
 
+> ✅ **2026-11-06 改接核心**：`ui/TaskPicker.tsx` 已改为 `dsh-plugin-core/ui` 的 `Picker` **薄包装**（核心 0.34.0 新增 `limit` 分页与 `keywords` 搜索字段）。本仓只保留四件业务事：作用域过滤、`excludeIds` 排除、「全部任务」作首项、停用任务尾标拼接；自绘浮层与 15 条 CSS 已删。
+
 **与 `SelectField` 的分工**（不许彼此越界）：
 
 | | `SelectField` | `TaskPicker` |
 |---|---|---|
 | 候选规模 | 少（十几个以内） | 多（几十上百，需要搜索） |
-| 搜索 | 无 | 有（按 `label` / `id`） |
-| 折叠 | 全列 | 默认最近 `recentLimit` 条 +「更多」展开全部 |
+| 搜索 | 无 | 有（核心按 `label` + `keywords` 子串；任务 UUID 走 `keywords`，只搜不显示） |
+| 折叠 | 全列 | 核心 `limit`：首屏 `recentLimit` 条 +「显示更多」每次追加同量（搜索同样分页） |
 | 作用域 | 无 | **受控入参 `scope`**（外部改 ⇒ 候选实时重算） |
-| 底层 | 官方 `Menu` | 官方 `Input` + 官方 `Menu`（复用，不自绘浮层） |
+| 底层 | 官方 `Menu` | **核心 `Picker`**（浮层 / 键盘 / 空态 / 明暗全交给上游） |
 
 **最小必要接口**（从实际调用点反推，见 [`../worklog/execution-timeline.md`](../worklog/execution-timeline.md) §四）：
 
@@ -284,11 +286,12 @@ options: readonly TaskOption[]      // 候选全量（带 workspace / enabled）
 scope?: string                      // 外部受控工作区；'' | undefined = 不限；变化 ⇒ 候选重算
 excludeIds?: readonly string[]      // 排除项（已选前置 + 当前任务自己）
 allOption?: { value: string; label: string }
-                                    // [2026-10-05] 顶部常驻「全部」哨兵（value 通常 ''）：不受作用域与搜索过滤，
-                                    // 选中 ⇒ onChange(allOption.value)；执行记录页用它把任务过滤清回「查所有任务」
-recentLimit?: number                // 默认 10
+                                    // [2026-11-06 修订] 作为**第一个普通选项**（value 通常 ''）传给核心 Picker，
+                                    // 选中 ⇒ onChange(allOption.value)；执行记录页用它把任务过滤清回「查所有任务」。
+                                    // ⚠️ 已废「常驻、不受搜索过滤」：它现在和其它选项一样参与搜索（用户 2026-11-05 拍板）
+recentLimit?: number                // 默认 10 ⇒ 核心 `limit`（首屏 N 条 +「显示更多」）
 placeholder / emptyLabel / ariaLabel / searchPlaceholder: string
-disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 'start' | 'end'
+disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string
 ```
 
 **两条硬规则**：
@@ -395,7 +398,7 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 | **焦点** | 所有可交互元素必须可键盘聚焦且有可见焦点环（用 `--dshpc-focus`，走 `:focus-visible`）；**不许 `outline:none` 而不给替代** |
 | **图标** | 一律用官方 `Icon*` 组件；尺寸只取 **14 / 16 / 18 / 20** 四档；纯图标按钮**必须**有可读标签（官方 `Tooltip` + `aria-label`）—— ⚠️ Tooltip 的子元素必须是**真 DOM**（裸函数组件 ref 挂不上、提示静默失效）。**图标 / 徽标这类「只有形状没有文字」的元素，悬停提示用官方 `Tooltip`，不用原生 `title`**（原生提示延迟约 1 秒，用户 2026-10-04 明确「太慢」；执行记录页折叠态的圈码即按此从原生 `title` 改成官方 `Tooltip`）。⚠️ **一律用官方 `Tooltip`，不许用原生 `title`**（含被省略号截断的任务名 / 备注 / 完整时刻 —— 用户 2026-10-05：原生提示延迟约 1 秒，太慢） |
 | **加载指示** | **全站只有页面右下角那一个**（基础层 `Loading`，锚在 `PANEL_CONTENT_ID`）：首屏 / 下拉续拉都走它；任何页面、子面板**不许另建**加载点，也**不许显示任何加载文案**（「加载中」「Loading」这类字都不要）—— 还在加载就让它**空着**（用户 2026-10-05 定为硬性规定）。⚠️ **2026-10-06 起 `Loading` 已移除 `label` 属性**，从类型上杜绝加字，抽象本身只渲染 3 个脉动方块 + 框。「已加载完 / 到上限」这类**结果提示**不算加载点，可就地显示 |
-| **字段宽度** | 调用点**不许写死** `width`：下拉 / 日期框 / 时分框都走基础层默认（`inline-flex` ⇒ **刚好把内容显示完**，「不要长也不要短」）；确需定长就在基础层一处定（用户 2026-10-04）。⚠️ 旧「执行记录页 `TimeRange` 三框定宽例外」已于 **2026-10-06 失效**——执行记录页时间过滤已整体移除，仅 `task-calendar` 仍用 `TimeRange` 且一律走基础层默认宽，**不得照抄旧定宽到别处**（过程见 [`../worklog/execution-timeline.md`](../worklog/execution-timeline.md) §18.1） |
+| **字段宽度** | 调用点**不许写死** `width`：下拉 / 日期框 / 时分框都走基础层默认（`inline-flex` ⇒ **刚好把内容显示完**，「不要长也不要短」）；确需定长就在基础层一处定（用户 2026-10-04）。⚠️ 旧「执行记录页 `TimeRange` 三框定宽例外」已失效；⚠️ **2026-11-06 起 `TimeRange` 改接核心 `DateTimePicker`**，区间是**整条一个触发器**、宽度由核心按 `precision` 定死（day 269 / minute 341.4 / second 377.6），调用点不传 `width`。当前消费方 = 任务列表卡片「执行记录」面板（`precision:'day'`）与「日志」面板（`precision:'minute'`）（`task-list.tsx:821` / `:1015`） |
 | **文件显示（硬性规定）** | 任何**只显示图标、没显示文件名**的地方（附件 / 产出物 / 交付物 …），悬停**必须**把**文件名（含后缀）**显示出来，提示走官方 `Tooltip`；打不开时图标也不可点（不给假入口）（用户 2026-10-05 定为硬性规定） |
 | **动效** | 时长 / 缓动走 `--dshpc-dur` / `--dshpc-ease`；**必须尊重 `prefers-reduced-motion: reduce`**（关掉位移 / 脉动类动画） |
 | **运行态视觉（单源）** | 「运行中」的颜色与脉动**只有一份实现**：`src/client/ui/running.ts`（`RUNNING_TONE` 蓝 + `RUN_PULSE_CLASS` + keyframe `dsh-tdt-run-pulse`）——任务配置竖条 / 执行记录状态条 / NextPill 全部引用它，改一处即全局生效；**业务层不许再写自己的脉动 keyframe 或另配运行色**（2026-10-06 用户拍板「不是保持统一，是用同一个东西」）。客户端数据轮询同样单源 = `src/client/instances-poll.ts`（机制全貌见 [client-refresh.md](client-refresh.md)） |

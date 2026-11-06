@@ -26,7 +26,8 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ocOr } from '../official-classes'
 import type { LocaleKey, Translate } from '../locales'
-import { CodeViewer } from '../ui/CodeViewer'
+import { t as coreT } from 'dsh-plugin-core/utils'
+import { CodeViewer } from 'dsh-plugin-core/ui/code-viewer'
 
 type ToolState = 'preparing' | 'running' | 'ok' | 'error' | 'stopped'
 type Variant = 'bash' | 'read' | 'search' | 'write' | 'edit' | 'code' | 'others'
@@ -538,7 +539,7 @@ export function GenericCommandCard(props: {
                     h(CodeViewer, {
                       text: bodyText,
                       path: 'tool-code.ts',
-                      t,
+                      t: coreT,
                       className: ocOr('ToolRow', 'codeBody', 'dsh-tdt-sv-tool-block'),
                       height: 'auto',
                       style: { height: 'auto' },

@@ -66,7 +66,7 @@ export const TASK_EDITOR_CSS = `
    官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 提示词大输入框皮肤已上提基础层 .dsh-tdt-textarea（ui/controls-css.ts，U20 #6，2026-10-05）；此处不再自写。 */
+/* 提示词大输入框已改接核心 Textarea（dsh-plugin-core/ui，2026-11-06）；本地皮肤整段删除，此处不再自写。 */
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */

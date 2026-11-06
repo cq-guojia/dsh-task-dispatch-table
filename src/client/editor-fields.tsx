@@ -4,7 +4,7 @@
 // （Field.tsx / MarqueeText.tsx / DateTime.tsx，唯一实现 + 皮肤在 controls-css.ts）。
 // 本文件只保留两样东西：
 //   1. `calendarLabelsOf` / `timeLabelsOf`——日历与时间文案**单源**（决策 55，跨页面共用）；
-//   2. `WeekdayPicker`——周几多选（Segmented multiple + `.dsh-tdt-seg--weekday` 特殊化变体）。
+//   2. `WeekdayPicker`——周几多选（核心 Segmented multiple + 核心自带 `.dshpc-seg--weekday` 修饰）。
 // ⚠️ 2026-10-06：**不再二次再导出 `ui/` 的控件**（design/client-refresh-disposition.md §四 W6）——
 // 同一控件曾有两条 import 路径。要 `SelectField` / `MarqueeText` / `DateField` / `TimeField` 请走 `./ui`。
 
@@ -62,7 +62,7 @@ export interface WeekdayLabels {
 /**
  * 周几多选 = 全站统一分段控件 `Segmented`（multiple 模式），不再自绘一套
  * （2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
- * 唯二差异走「特殊化变体」`.dsh-tdt-seg--weekday`（用户 2026-10-01 明确要求，复刻原 WeekdayPicker 观感）：
+ * 唯二差异走核心自带修饰类 `.dshpc-seg--weekday`（用户 2026-10-01 明确要求，复刻原 WeekdayPicker 观感）：
  *   - 每格正方形（宽 = 段高）；
  *   - 选中态品牌蓝 + 反白字（原自绘即蓝底）。
  * 皮肤集中在 `controls-css.ts`、不内联，调用点只挂一个修饰类。一个都不选 = 每天（间隔档语义）。
@@ -84,14 +84,14 @@ export function WeekdayPicker(props: {
       ? null
       : h('span', { style: { flex: 'none', fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg)' } }, props.label),
     // 多选；放在间隔卡里 ⇒ variant="inset"；星期多选做成「正方形 + 蓝选中」的特殊化变体
-    // （用户 2026-10-01：原 WeekdayPicker 即蓝底方块，统一到 Segmented 后由 .dsh-tdt-seg--weekday 补回）。
+    // （用户 2026-10-01：原 WeekdayPicker 即蓝底方块，改接核心后由 .dshpc-seg--weekday 补回）。
     h(Segmented, {
       multiple: true,
       value: props.value.map(String),
       items,
       size: 'lg',
-      variant: 'inset',
-      className: 'dsh-tdt-seg--weekday',
+      bordered: false,
+      className: 'dshpc-seg--weekday',
       label: props.label,
       disabled: props.disabled,
       onChange: (next: string[]) => { props.onChange(next.map(Number).sort((a, b) => a - b)) },

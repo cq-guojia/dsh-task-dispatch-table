@@ -242,6 +242,8 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
     if (f.kind === 'number') {
       const displayVal = f.toDisplay !== undefined ? f.toDisplay(serverVal as number) : serverVal as number
       control = h(Input, {
+        // 核心默认 sm(24)，这里沿用原基础层默认 lg(32) 的表单行观感。
+        size: 'lg',
         value: draft[f.key] ?? String(displayVal),
         // ⚠️ **不用原生 `type="number"`**（基础层守卫：原生数字框会带出各浏览器样式不一的 spinner）。
         // 数字框**只吃数字**：非数字字符在 onChange 里直接滤掉 ⇒ 用户根本输不进 "AA"。

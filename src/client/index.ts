@@ -28,7 +28,7 @@ import { fetchWithTimeout } from './http'
 import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 import { FileBrowser } from './file-browser'
-import { type OfficeToPdfFace, type WorkspaceFilesFace } from './file-preview'
+import type { OfficeToPdfFace, WorkspaceFilesFace } from 'dsh-plugin-core/adv/explorer'
 import {
   clampEditorWidth, definitionToDraft, draftToDefinitionJson, emptyTaskDraft, PAGE_MIN_WIDTH,
   readEditorWidth, TaskEditorDrawer, writeEditorWidth,
@@ -36,7 +36,10 @@ import {
   type TaskEditorDraft,
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
-import { Button, IconButton, Segmented, BackToTop, ensureUiBase, startResizeLayoutWidth, type TaskOption } from './ui'
+import { Button, Segmented, QuickToolbar, ensureUiBase, startResizeLayoutWidth, type TaskOption } from './ui'
+import { connectFs } from 'dsh-plugin-core/adv/explorer'
+import { connectHost } from 'dsh-plugin-core/ui'
+import { FS_ROUTE } from '../fs-route.js'
 import { RecordsTimelineView } from './records-timeline'
 import { TaskCalendarView } from './task-calendar'
 // 错误码 → 人话（2026-10-06 从 task-editor.tsx 归位：纯文案工具不该寄居编辑器页，disposition §四 W3）。
@@ -1402,8 +1405,8 @@ function TaskPage(props: {
             )
 
           : null,
-      // 统一的「回到顶部」悬浮钮：挂在 page 滚动容器里一次，覆盖全部 tab（config / records / calendar / debug）。
-      h(BackToTop, null),
+      // 统一的「回到顶部」悬浮钮：核心 QuickToolbar（锚主内容列右缘外侧、滚过 320 才显形）挂一次覆盖全部 tab。
+      h(QuickToolbar, { anchorId: 'dsh-tdt-main' }),
     ),
     // 只读会话弹窗（决策 28）：叠在整页之上（z-index 1010）。挂在与整页并列的独立子树，
     // 其遮罩点击不会冒泡出去、误关整页。
@@ -1527,7 +1530,6 @@ function TaskPage(props: {
     preview !== null && workspaceFiles !== null
       ? h(FileBrowser, {
           key: `${preview.sessionId}:${preview.path}:${preview.seq}`,
-          workspaceFiles,
           officeToPdf,
           sessionId: preview.sessionId,
           path: preview.path,
@@ -1835,6 +1837,10 @@ function TaskPageHost(props: {
  * @param ctx - 浏览器插件上下文。
  */
 export function apply(ctx: ClientContext): void {
+  // 文件浏览 / 预览改接核心 `adv/explorer`：接上宿主 fs 面 + 官方工作区快照源。
+  connectFs({ path: FS_ROUTE })
+  connectHost(ctx as unknown as Parameters<typeof connectHost>[0])
+
   // 词典注册要等 locale 服务；绝不能写进模块级注入声明（组合缺服务会 pending 卡死）。
   ctx.inject(['locale'], (localeCtx) => {
     ctx.effect(() => localeCtx.locale.register(LOCALE_NS, { zh, en }))

@@ -30,6 +30,9 @@ import type { RuntimeIndex, TaskOverviewRow } from './runtime-index.js'
 import { createEventBus } from './event-bus.js'
 import type { EventBus } from './event-bus.js'
 import { EventType, HEARTBEAT_TYPE, runEventTypeOf } from './event-catalog.js'
+// 核心 explorer 的文件系统路由（宿主侧注册；客户端用同一条常量 connectFs）。
+import { serveFsRoute } from 'dsh-plugin-core/host'
+import { FS_ROUTE } from './fs-route.js'
 
 export const name = 'dsh-task-dispatch-table'
 
@@ -1369,6 +1372,9 @@ function fallbackScope(
 const DEBUG_EVENT_LIMIT = 200
 
 export function apply(ctx: HostContext, config: unknown): void {
+  // 文件浏览 / 预览改接核心 `adv/explorer`：宿主提供 fs 路由（只读、绝对路径口径）。
+  serveFsRoute(ctx as unknown as Parameters<typeof serveFsRoute>[0], { path: FS_ROUTE })
+
   // rc.1 兼容：本插件早前版本把 volatile 字段经 settings.update 提交，Loader 把 volatile 默认按
   // `{}` 写进了 profile；重装后 z.number()/z.string() 校验 `{}` 会失败导致 entry 不激活。本插件
   // 配置全是 number/string，不可能有合法的空对象，故把入参里残留的 `{}` 剥掉，让默认值生效。

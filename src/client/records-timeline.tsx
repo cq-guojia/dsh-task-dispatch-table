@@ -782,13 +782,12 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                       ),
                     // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。有会话才落右列：
                     // 靠右 + 上下居中，且不再把左列那两行撑高。
-                    // 外观走基础层官方配方「链接型文字钮」（ghost + dsh-tdt-btn--link：无边框、链接色、
+                    // 外观走基础层官方配方「链接型文字钮」（核心 Button variant='link'：无边框、链接色、
                     // hover 下划线）—— 用户 2026-10-04：「不要边框，不要黑、不要灰」。
                     depHasSid
                       ? h(Button, {
-                        variant: 'ghost',
                         size: 'sm',
-                        className: 'dsh-tdt-btn--link',
+                        variant: 'link',
                         onClick: (event: { stopPropagation: () => void }) => {
                           event.stopPropagation()
                           openSession(depSid as string)
@@ -1125,7 +1124,6 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
             ariaLabel: t('recordsTaskPh'),
             searchPlaceholder: t('recordsTaskSearch'),
             moreLabel: t('recordsMore'),
-            collapseLabel: t('recordsCollapse'),
             outOfScopeHint: t('recordsOutOfScope'),
             size: 'md',
             width: 150,
@@ -1136,7 +1134,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
       // 加载（**首屏 + 下拉续拉**）一律走**页面右下角统一的那一个** Loading
       // （用户 2026-10-04：没有我的特殊认可，不许在任何其他地方再建 Loading 点）
       // ⇒ 页脚不再自己显示「加载中」；「已加载完 / 到上限」这类**结果提示**照旧在页脚显示。
-      loading ? h(Loading, {}) : null,
+      loading ? h(Loading, { anchorId: 'dsh-tdt-main' }) : null,
 
       // ── 流水账：**没有外框**，内容直接铺在页面底上（空态 / 加载 / 失败态同样不带框）──
       rows.length === 0

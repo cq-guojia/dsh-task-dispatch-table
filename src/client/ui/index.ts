@@ -23,53 +23,57 @@ export const PANEL_CONTENT_STYLE: CSSProperties = {
 }
 
 export { UI_STYLE_ID, TOKENS_DOMAIN, registerStyle, applyStyle, ensureUiStyles, ensureUiBase } from './style'
-export { CONTROLS_DOMAIN, SEGMENTED_CSS, BUTTON_CSS, FIELD_CSS, DATETIME_CSS, SELECT_CSS, PROCESS_FILES_CSS, ensureControlsStyle } from './controls-css'
-export { Segmented, type SegmentedItem, type SegmentedProps } from './Segmented'
+export { CONTROLS_DOMAIN, BUTTON_CSS, FIELD_CSS, DATETIME_CSS, SELECT_CSS, PROCESS_FILES_CSS, ensureControlsStyle } from './controls-css'
 export {
+  Segmented,
   Button,
   IconButton,
+  Input,
+  PrefixedInput,
+  NumberInput,
+  MarqueeText,
+  SectionHead,
+  LiveText,
+  Textarea,
+  Checkbox,
+  Loading,
+  RunningBlocks,
+  FIELD_ANCHOR_STYLE,
+  FIELD_LABEL_STYLE,
+  fieldMetricsOf,
+  buildMonthCells,
+  type SegmentedProps,
+  type SegmentedTone,
   type ButtonProps,
   type ButtonVariant,
   type ButtonSize,
   type IconButtonProps,
-} from './Button'
-export {
-  Input,
-  PrefixedInput,
-  NumberInput,
-  SelectField,
   type InputProps,
   type PrefixedInputProps,
   type NumberInputProps,
-  type SelectFieldProps,
   type EditorOption,
   type FieldSize,
-} from './Field'
-export { MarqueeText } from './MarqueeText'
-export {
-  FIELD_ANCHOR_STYLE,
-  FIELD_LABEL_STYLE,
-  fieldMetricsOf,
-} from './Field'
-export {
-  TaskPicker,
-  TASKPICKER_DOMAIN,
-  TASKPICKER_CSS,
-  ensureTaskPickerStyle,
-  type TaskOption,
-  type TaskPickerProps,
-} from './TaskPicker'
+  type LoadingProps,
+  type TextareaProps,
+  type CheckboxProps,
+  type SectionHeadProps,
+  type DayCell,
+} from 'dsh-plugin-core/ui'
+export type { DayCell as CalendarCell } from 'dsh-plugin-core/ui'
+export { CodeViewer } from 'dsh-plugin-core/ui/code-viewer'
+import type { SegmentedProps } from 'dsh-plugin-core/ui'
+/** 段定义单项（核心 `Segmented` 的 items 元素；核心未单独导出该类型）。 */
+export type SegmentedItem<T extends string = string> = SegmentedProps<T>['items'][number]
+export { SelectField, type SelectFieldProps } from './Field'
+export { TaskPicker, type TaskOption, type TaskPickerProps } from './TaskPicker'
 export {
   DateField,
   TimeField,
-  buildMonthCells,
-  type CalendarCell,
   type CalendarLabels,
   type TimeLabels,
 } from './DateTime'
 export { TimeRange, type TimeRangeProps, type TimeRangeLabels, type TimePresetLabels } from './TimeRange'
 export {
-  presetRange,
   rangeToQuery,
   ALL_TIME_PRESETS,
   type TimePrecision,
@@ -77,18 +81,9 @@ export {
   type TimeRangeValue,
   type TimeQuery,
 } from './time-range'
-export { Loading, RunningBlocks, type LoadingProps } from './Loading'
-export { LOADING_DOMAIN, LOADING_CSS, ensureLoadingStyle } from './loading-css'
-export { Textarea, type TextareaProps } from './Textarea'
-export { Checkbox, type CheckboxProps } from './Checkbox'
-export { BackToTop, type BackToTopProps } from './BackToTop'
-// 模块标题行（icon + 标题 + 右侧控件）：设置页三块共用（2026-10-08）。
-export { SectionHead } from './SectionHead'
-export { startResizeLayoutWidth, type ResizeOptions } from './resizer'
+export { QuickToolbar } from 'dsh-plugin-core/ui'
+export { startResizeLayoutWidth, type ResizeOptions } from 'dsh-plugin-core/ui'
 // 全局秒级心跳 + 每秒自刷新文本（2026-10-06 从 task-info.tsx 归位；见 design/client-refresh-disposition.md §三 A1/A2）。
 export { subscribeTicker, useNowMs } from './ticker'
-export { LiveText } from './LiveText'
-// 运行态视觉（色/类名/注入器）与只读代码查看器：此前业务文件直连 `ui/running` / `ui/CodeViewer`
-// 绕过本 barrel（2026-10-06 补登记，design/client-refresh-disposition.md §四 W7）。
+// 运行态视觉（色/类名/注入器）。
 export { RUNNING_TONE, RUN_PULSE_CLASS, ensureRunningStyle } from './running'
-export { CodeViewer } from './CodeViewer'

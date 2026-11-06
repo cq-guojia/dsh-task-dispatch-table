@@ -12,6 +12,15 @@ window.__ModuleLoader__.load({
 		var __getProtoOf = Object.getPrototypeOf;
 		var __hasOwnProp = Object.prototype.hasOwnProperty;
 		var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+		var __exportAll = (all, no_symbols) => {
+			let target = {};
+			for (var name in all) __defProp(target, name, {
+				get: all[name],
+				enumerable: true
+			});
+			if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+			return target;
+		};
 		var __copyProps = (to, from, except, desc) => {
 			if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
 				key = keys[i];
@@ -22,6 +31,7 @@ window.__ModuleLoader__.load({
 			}
 			return to;
 		};
+		var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
 		var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
 			value: mod,
 			enumerable: true
@@ -31,11 +41,14 @@ window.__ModuleLoader__.load({
 		let react$1 = __toESM(react, 1);
 		react = __toESM(react);
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
+		_deepseek_ai_dsh_client_ui_primitives = __toESM(_deepseek_ai_dsh_client_ui_primitives, 1);
 		let react_jsx_runtime = require("react/jsx-runtime");
 		let react_dom = require("react-dom");
+		react_dom = __toESM(react_dom, 1);
+		require("react-dom/client");
 		//#region src/client/format.ts
 		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
-		function pad2$1(value) {
+		function pad2$2(value) {
 			return String(value).padStart(2, "0");
 		}
 		/**
@@ -43,7 +56,7 @@ window.__ModuleLoader__.load({
 		* 体积的地方都走这里（此前无此需求，故没有第二份实现可收敛）。
 		* 0 与负数 ⇒ `—`（不显示「0 B」这种假精确）。
 		*/
-		function formatBytes(bytes) {
+		function formatBytes$1(bytes) {
 			if (!Number.isFinite(bytes) || bytes <= 0) return "—";
 			if (bytes < 1024) return `${bytes} B`;
 			const units = [
@@ -80,8 +93,8 @@ window.__ModuleLoader__.load({
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return opts?.fallback ?? iso;
 			const d = new Date(ms);
-			const base = `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
-			return opts?.seconds === true ? `${base}:${pad2$1(d.getSeconds())}` : base;
+			const base = `${d.getFullYear()}-${pad2$2(d.getMonth() + 1)}-${pad2$2(d.getDate())} ${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
+			return opts?.seconds === true ? `${base}:${pad2$2(d.getSeconds())}` : base;
 		}
 		/**
 		* 四位年日期（用户 2026-10-03：卡片标题后的创建时间标签 `[2026-10-03 创建]`）：`YYYY-MM-DD`。
@@ -91,14 +104,14 @@ window.__ModuleLoader__.load({
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "—";
 			const d = new Date(ms);
-			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`;
+			return `${d.getFullYear()}-${pad2$2(d.getMonth() + 1)}-${pad2$2(d.getDate())}`;
 		}
 		/** 计划执行列（用户 2026-10-02 改**四位年**：形如 `2026-09-30 15:10`）：`YYYY-MM-DD HH:mm`。 */
 		function formatPlanStamp(iso) {
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "-";
 			const d = new Date(ms);
-			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			return `${d.getFullYear()}-${pad2$2(d.getMonth() + 1)}-${pad2$2(d.getDate())} ${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
 		}
 		/** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */
 		function formatClock(iso) {
@@ -106,7 +119,7 @@ window.__ModuleLoader__.load({
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "-";
 			const d = new Date(ms);
-			return `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}:${pad2$1(d.getSeconds())}`;
+			return `${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}:${pad2$2(d.getSeconds())}`;
 		}
 		/**
 		* 执行时长列（用户 2026-10-02 第四轮）：有小时 ⇒ `H:MM:SS`（如 `1:15:30`）；
@@ -118,7 +131,7 @@ window.__ModuleLoader__.load({
 			const h = Math.floor(totalSec / 3600);
 			const m = Math.floor(totalSec % 3600 / 60);
 			const s = totalSec % 60;
-			return h > 0 ? `${h}:${pad2$1(m)}:${pad2$1(s)}` : `${pad2$1(m)}:${pad2$1(s)}`;
+			return h > 0 ? `${h}:${pad2$2(m)}:${pad2$2(s)}` : `${pad2$2(m)}:${pad2$2(s)}`;
 		}
 		/** token / 计数的大众格式（用户 2026-10-02：别写上千的数字）：≥1K 用 K、≥1M 用 M（1234→1.2K、12345→12.3K、123456→123K）。 */
 		function formatTokenCount(n) {
@@ -718,7 +731,6 @@ window.__ModuleLoader__.load({
 			recordsTaskPh: "任务",
 			recordsTaskSearch: "搜索任务名或 ID",
 			recordsMore: "更多",
-			recordsCollapse: "收起",
 			recordsOutOfScope: "所选任务不在当前工作区",
 			recPlan: "计划",
 			recActual: "实际",
@@ -862,7 +874,6 @@ window.__ModuleLoader__.load({
 			colNote: "备注",
 			filterRunning: "运行中",
 			trAll: "全部",
-			trCustom: "自定义",
 			trToday: "今天",
 			trYesterday: "昨天",
 			trThisWeek: "本周",
@@ -1387,7 +1398,6 @@ window.__ModuleLoader__.load({
 			recordsTaskPh: "Task",
 			recordsTaskSearch: "Search by name or ID",
 			recordsMore: "More",
-			recordsCollapse: "Collapse",
 			recordsOutOfScope: "The selected task is not in this workspace",
 			recPlan: "Plan",
 			recActual: "Actual",
@@ -1531,7 +1541,6 @@ window.__ModuleLoader__.load({
 			colNote: "Note",
 			filterRunning: "Running",
 			trAll: "All",
-			trCustom: "Custom",
 			trToday: "Today",
 			trYesterday: "Yesterday",
 			trThisWeek: "This week",
@@ -1701,483 +1710,3479 @@ window.__ModuleLoader__.load({
 		* 模块级变量天然按插件隔离（不像共享运行时那样会互相踩）。
 		* 插件启动时 `setStyleKit(createStyleKit({ id }))` 一次即可；不设就走默认 kit。
 		*/
-		let current = createStyleKit({ id: "dsh-plugin-core-ui" });
+		let current$1 = createStyleKit({ id: "dsh-plugin-core-ui" });
 		function setStyleKit(kit) {
-			current = kit;
+			current$1 = kit;
 		}
 		function getStyleKit() {
-			return current;
+			return current$1;
+		}
+		/**
+		* 只登记 token 变量（幂等；不挂载 `<style>`）。
+		*
+		* 插件启动时调一次做预热是安全的，但**不是必需的** —— 任何控件首次渲染时
+		* 也会自行登记 token（见 {@link ensureComponentStyles}）。token 域始终排在所有控件域之前
+		* （`style-kit.ts` 的 composeCss 强制），所以颜色 / 变量引用链不受拆分影响。
+		*/
+		function ensureControls(kit = current$1) {
+			kit.registerStyle("tokens", kit.tokensCss);
+		}
+		/**
+		* 确保某个控件自己的样式已登记、且 `<style>` 已挂载（幂等，可直接在 render 里调）。
+		*
+		* 每个控件**只传自己那份 CSS**：把它依赖的那 1~2 份传进来即可，绝不能顺手把别人的拼上去
+		* （一拼就又退化成全量，包体省不下来）。同理，若是某份 CSS 里带上下文限定的修饰
+		* （如 `.dshpc-split .dshpc-seg`），那份由提供上下文的控件自己负责，消费者不用管。
+		*
+		* @param domain 本控件的样式域，repo 内唯一。
+		* @param css 该控件自己的 CSS 文本。
+		* @param kit 样式设施（默认取当前插件的 kit）。
+		*/
+		function ensureComponentStyles(domain, css, kit = current$1) {
+			kit.registerStyle("tokens", kit.tokensCss);
+			kit.applyStyle(domain, css);
 		}
 		//#endregion
-		//#region src/client/ui/style.ts
+		//#region node_modules/dsh-plugin-core/dist/utils/i18n.js
 		/**
-		* 样式注入器（薄壳）：实现全部交给 `dsh-plugin-core` 的 style kit。
+		* utils 自带的最小多语言。
 		*
-		* 保留本文件只为两件事：
-		*  ① 固定本插件的 `<style>` id（多插件同页互不覆盖）；
-		*  ② 给历史调用点（`ensureXxxStyle()` / `applyStyle`）一个过渡入口。
-		* 注入机制、域排序、token 表都不再在本仓实现 —— 真源是
-		* `dsh-plugin-core/design`（`createStyleKit` + `tokens.css`）。
-		*
-		* 规矩：全站仍然只有**一处**注入器（kit 的标签），业务文件不许自己
-		* `document.createElement('style')`，也不许再定义 `--dshpc-*`。
+		* 原则（需求文档 §5.4）：**核心提供什么，核心就负责它的多语言** —— utils 里要吐文案的函数
+		* （如相对时间）自带中英字典；插件**自己界面**的文案仍由插件自己管，这里不提供插件级 i18n 框架。
+		* 需要覆盖时传自己的 `t` 进来即可。
 		*/
-		/** 本插件的样式标签 id（改名 = 大范围回归，不要动）。 */
-		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
-		/** token 域固定名（kit 内 `tokens` 恒排最前）。 */
-		const TOKENS_DOMAIN = "tokens";
-		setStyleKit(createStyleKit({ id: UI_STYLE_ID }));
-		const active = getStyleKit();
-		/** 登记一个域的样式（同名重复登记 = 覆盖）。 */
-		function registerStyle(domain, css) {
-			active.registerStyle(domain, css);
+		const DICT = {
+			zh: {
+				sessionLoading: "加载会话…",
+				sessionFailed: "会话加载失败",
+				sessionEmpty: "该会话暂无内容",
+				explorerLoading: "加载中…",
+				loadingDefault: "数据加载中",
+				explorerFailed: "加载失败",
+				explorerRoot: "工作区",
+				explorerTruncated: "条目过多，已截断",
+				explorerEmptyDir: "空目录",
+				explorerLevels: "选择层级",
+				explorerExpand: "展开",
+				explorerCollapse: "收起",
+				explorerEnter: "进入",
+				explorerRootDir: "根目录",
+				explorerRootName: "（工作区根目录）",
+				explorerCrumbsAria: "目录路径",
+				explorerPickFile: "选择此文件",
+				explorerPickDir: "选择",
+				explorerPickDirAria: "选择此目录（连带其下所有文件）",
+				previewClose: "关闭",
+				previewCopyPath: "复制路径",
+				previewRefresh: "刷新",
+				previewRender: "预览",
+				previewSource: "源码",
+				previewMdSwitchAria: "切换渲染或源码",
+				previewHtmlSwitchAria: "切换渲染或源码",
+				previewLoadMore: "加载更多",
+				previewTruncated: "内容过大，仅显示前 {n}",
+				previewOfficeUnavailable: "Office 预览不可用",
+				previewOfficeNoSession: "Office 预览不可用（还没有任何会话）",
+				previewRenderFailed: "预览渲染失败",
+				previewBadPayload: "返回数据不符合预期",
+				previewOutside: "路径在工作区之外",
+				previewNotFound: "文件不存在",
+				previewNotDirectory: "不是文件夹",
+				previewNotFile: "暂不支持此类型文件的预览",
+				previewTooLarge: "文件过大，无法预览",
+				previewNotText: "暂不支持此类型文件的预览",
+				previewFailedCode: "加载失败（{code}）",
+				mdCopy: "复制",
+				mdCopied: "已复制",
+				mdCode: "代码",
+				mdWrap: "换行",
+				mdUnwrap: "取消换行",
+				mdFootnotes: "脚注",
+				cardToggle: "展开/收起",
+				tableEmpty: "暂无数据",
+				tableLoading: "正在加载…",
+				tableLoadingMore: "加载中…",
+				tableNoMore: "没有更多数据",
+				paginationAria: "分页",
+				paginationPrev: "上一页",
+				paginationNext: "下一页",
+				paginationPage: "第 {n} 页",
+				paginationTotal: "第 {from}-{to} 条，共 {total} 条",
+				paginationTotalZero: "共 0 条",
+				paginationPageSizeOption: "{n} 条/页",
+				paginationPageSizeAria: "每页条数",
+				modalClose: "关闭",
+				dockClose: "关闭面板",
+				dockResize: "拖动调整宽度",
+				dockCollapse: "收起面板",
+				dockExpand: "展开面板",
+				backToTop: "回到顶部",
+				quickToolbarAria: "快捷工具栏",
+				errorRetry: "重试",
+				confirm: "确定",
+				cancel: "取消",
+				dialogOk: "知道了",
+				pickerPlaceholder: "请选择",
+				pickerClear: "不选",
+				pickerEmpty: "暂无可选",
+				pickerNoMatch: "无匹配项",
+				pickerSearch: "搜索…",
+				pickerSelected: "已选 {n} 项",
+				pickerMaxReached: "最多选 {n} 项",
+				pickerDegraded: "候选可能不完整",
+				pickerMore: "显示更多",
+				modelProvider: "供应商",
+				modelModel: "模型",
+				modelDefault: "默认模型",
+				workspaceAll: "所有工作区",
+				relNow: "刚刚",
+				relInJustNow: "即将",
+				relInMinutes: "{n} 分钟后",
+				relInHours: "{n} 小时后",
+				relInDays: "{n} 天后",
+				relInMonths: "{n} 个月后",
+				relInYears: "{n} 年后",
+				relJustNow: "刚刚",
+				relMinutesAgo: "{n} 分钟前",
+				relHoursAgo: "{n} 小时前",
+				relDaysAgo: "{n} 天前",
+				relWeeksAgo: "{n} 周前",
+				relMonthsAgo: "{n} 个月前",
+				relYearsAgo: "{n} 年前",
+				codeCopy: "复制",
+				codeCopied: "已复制",
+				sessionUnknownKind: "未支持的节点类型：",
+				sessionLoadOlder: "加载更早记录",
+				sessionProcess: "过程",
+				triggerRequest: "收到执行请求",
+				triggerGoal: "继续执行目标",
+				triggerAgent: "收到任务消息",
+				triggerTeam: "收到团队消息",
+				triggerSubagent: "子任务状态更新",
+				triggerGithub: "收到 GitHub 事件",
+				triggerWebhook: "收到外部事件",
+				triggerSchedule: "定时任务",
+				triggerJob: "后台任务状态更新",
+				triggerPlugin: "插件状态更新",
+				triggerExplanation: "这条通知触发了本轮回复。",
+				turnProcessTook: "已完成，用时 ",
+				turnProcessWorked: "已完成",
+				turnProcessFailed: "处理失败",
+				turnStopped: "已停止",
+				chatDeepDiving: "深度求索中",
+				chatDeepDivingFor: "深度求索中，用时 {duration} ···",
+				reasoningRunning: "运行中",
+				jsonTruncated: "… 已截断，共 {total} 字符",
+				referenceSummary: "引用会话 · {labels}",
+				referenceSeparator: "、",
+				thinkLabel: "思考",
+				durationSecondUnit: "秒",
+				durationMinuteUnit: "分",
+				durationHourUnit: "小时",
+				durationMilliseconds: "{milliseconds}毫秒",
+				retryActive: "正在重试模型请求",
+				retryCancelled: "模型请求重试已取消",
+				retryStarted: "已重试模型请求",
+				retryScheduled: "等待重试模型请求",
+				retryStatus: "{label}（{retry}/{maximum}） · {seconds}s",
+				retryDelay: "重试延迟：",
+				retryFailure: "失败原因：",
+				turnErrorTitle: "本轮运行失败",
+				accountStopped: "任务已停止",
+				maxTokensTitle: "已达到输出 token 上限",
+				maxTokensHint: "回答被截断，已有输出保留在对话中。发送“继续”可让模型接着输出。",
+				failureInterrupted: "DSH 进程在本轮完成前退出（例如被强制结束、崩溃或关闭超时），重新启动后本轮已中止。未完成的工具调用结果未知。",
+				failureAuth: "API 密钥无效",
+				failureQuota: "当前请求的额度已用尽",
+				failureAccountSignedOut: "任务已因退出 DeepSeek 登录而停止。",
+				failureAccountSignInRequired: "请先登录 DeepSeek，并确认请求地址支持账号认证。",
+				clockDate: "{m}月{d}日",
+				clockDateYear: "{y}年{m}月{d}日",
+				copyLabel: "复制",
+				copiedLabel: "已复制",
+				branchLabel: "在新对话中分支",
+				branchUnavailableLabel: "只读会话记录不可分支",
+				turnUsageTitle: "本轮用量",
+				turnUsageModel: "提供方 / 模型",
+				turnUsageCacheHit: "缓存命中",
+				turnUsageInput: "未缓存输入",
+				turnUsageCacheRead: "缓存读取",
+				turnUsageCacheWrite: "缓存写入",
+				turnUsageOutput: "输出",
+				turnUsageReasoning: "（其中推理 {tokens}）",
+				turnUsageConsumed: "用量 {total}",
+				turnUsageCount: "{count} tok",
+				numberThousand: "{value}K",
+				numberMillion: "{value}M",
+				numberGroupSeparator: ",",
+				stepProcessDoneThinking: "已完成分析",
+				stepProcessDoneRead: "已读取文件",
+				stepProcessDoneReadImage: "已读取图片",
+				stepProcessDoneWrite: "已写入文件",
+				stepProcessDoneSearch: "已搜索代码",
+				stepProcessDoneEdit: "修改了文件",
+				stepProcessDoneCommands: "执行了命令",
+				stepProcessDoneCode: "运行了代码",
+				stepProcessDoneWebSearch: "已搜索网页",
+				stepProcessDoneWebFetch: "已访问网页",
+				stepProcessDoneSubagents: "已协调子智能体",
+				stepProcessDonePlan: "更新了计划",
+				stepProcessDoneQuestions: "向用户提出了问题",
+				stepProcessDoneTools: "已调用工具",
+				stepProcessJoinTwo: "{first}并{second}",
+				stepProcessComma: "，",
+				stepProcessSharedPrefix: "已",
+				stepProcessMore: "{title}等",
+				toolTitleRead: "读取",
+				toolTitleReadImage: "读取图片",
+				toolTitleGrep: "搜索文件内容",
+				toolTitleGlob: "查找文件",
+				toolTitleBash: "运行命令",
+				toolTitleWrite: "写入",
+				toolTitleEdit: "编辑",
+				toolTitleCode: "代码",
+				toolTitleWebSearch: "网页搜索",
+				toolTitleWebFetch: "网页获取",
+				toolTitleGeneric: "工具调用",
+				toolTitleSearch: "搜索",
+				skillRowTitle: "加载技能",
+				skillRowPreparing: "准备加载技能",
+				skillRowRunning: "正在加载 skill",
+				skillRowFailed: "skill 加载失败",
+				skillRowStopped: "skill 加载已中止",
+				skillRowInstructions: "说明",
+				toolInputLabel: "输入",
+				toolPreparingContent: "{kilobytes} KB",
+				compactionTitle: "上下文已压缩",
+				toolTitleTodo: "更新任务清单",
+				toolTitlePwsh: "运行命令",
+				toolTitleAsk: "提问",
+				askAnswered: "{answered}/{total} 已回答",
+				askSkipped: "未回答",
+				askCancelled: "已取消",
+				askCancelledDetail: "本轮已取消，未提交回答",
+				askInterrupted: "已中断",
+				askInterruptedDetail: "本轮已中断，未提交回答",
+				askWaiting: "等待回答",
+				detailState: "状态",
+				detailGoalEmpty: "没有目标",
+				detailGoalDisarmed: "等待继续",
+				detailGoalActive: "进行中",
+				detailGoalPaused: "已暂停",
+				detailGoalBlocked: "受阻",
+				detailGoalComplete: "已完成",
+				detailGoalRounds: "执行轮次",
+				detailGoalReason: "受阻原因",
+				detailScheduleCount: "{count} 个定时任务",
+				detailScheduleEmpty: "没有定时任务",
+				detailScheduleDeleted: "已删除",
+				detailScheduleOnce: "单次",
+				detailScheduleEvery: "每 {interval}",
+				detailDays: "{count} 天",
+				detailHours: "{count} 小时",
+				detailMinutes: "{count} 分钟",
+				detailSeconds: "{count} 秒",
+				detailScheduleDaily: "每天 {time}（{zone}）",
+				detailScheduleWeekly: "每周 {days} {time}（{zone}）",
+				detailScheduleCron: "Cron {expression}（{zone}）",
+				detailScheduleWhen: "计划时间",
+				detailScheduleFrequency: "重复",
+				detailScheduleScheduled: "等待触发",
+				detailScheduleOverdue: "已到期，等待会话恢复",
+				detailWeekdayJoin: "、",
+				detailWeekday1: "周一",
+				detailWeekday2: "周二",
+				detailWeekday3: "周三",
+				detailWeekday4: "周四",
+				detailWeekday5: "周五",
+				detailWeekday6: "周六",
+				detailWeekday7: "周日",
+				detailAgentReply: "智能体回复",
+				detailAgentsCount: "{count} 个智能体",
+				detailEmpty: "暂无结果",
+				detailEventNeighbors: "前后事件",
+				detailFieldAgent: "智能体 ID",
+				detailFieldAgents: "启动智能体数",
+				detailFieldAvailability: "可用状态",
+				detailFieldBestMatch: "最相关事件",
+				detailFieldCallId: "调用 ID",
+				detailFieldContent: "内容",
+				detailFieldContext: "上下文",
+				detailFieldCurrentPackage: "当前包",
+				detailFieldData: "数据",
+				detailFieldDependencies: "前置任务",
+				detailFieldDepth: "层级",
+				detailFieldDiagnostics: "诊断",
+				detailFieldExitCode: "退出码",
+				detailFieldId: "ID",
+				detailFieldInputSchema: "输入 Schema",
+				detailFieldJob: "任务 ID",
+				detailFieldLatestRun: "最近运行",
+				detailFieldMessage: "消息",
+				detailFieldMessageId: "消息 ID",
+				detailFieldMethods: "方法",
+				detailFieldModel: "模型",
+				detailFieldNextPackage: "待运行的包",
+				detailFieldOutputSchema: "输出 Schema",
+				detailFieldOwner: "负责人",
+				detailFieldPackages: "版本包",
+				detailFieldParent: "父级",
+				detailFieldPid: "进程 ID",
+				detailFieldPlatform: "平台",
+				detailFieldPreviousStatus: "中断前状态",
+				detailFieldProcessGroup: "进程组",
+				detailFieldProps: "属性",
+				detailFieldProvider: "提供方",
+				detailFieldReady: "可开始",
+				detailFieldRegistrations: "注册项",
+				detailFieldResult: "结果",
+				detailFieldRevision: "版本",
+				detailFieldRole: "角色",
+				detailFieldRoot: "根节点",
+				detailFieldSeq: "事件序号",
+				detailFieldSignal: "信号",
+				detailFieldSource: "来源",
+				detailFieldStep: "步骤",
+				detailFieldSurface: "记录状态",
+				detailFieldTarget: "目标事件",
+				detailFieldTask: "任务内容",
+				detailFieldTime: "时间",
+				detailFieldTurn: "轮次",
+				detailFieldType: "类型",
+				detailFieldWarnings: "提示",
+				detailFieldWriteScopes: "文件范围",
+				detailJobsCount: "{count} 个后台任务",
+				detailLocation: "第 {line} 行，第 {column} 列",
+				detailLocationsCount: "{count} 个位置",
+				detailMatchesCapped: "已达到结果上限，可缩小搜索范围",
+				detailMatchesCount: "{count} 条匹配",
+				detailModelsTitle: "可用模型",
+				detailMoreInInspect: "另有 {count} 项，可在「查看」中读取",
+				detailNo: "否",
+				detailNone: "无",
+				detailOutputLines: "第 {begin}–{end} 行，共 {total} 行",
+				detailOutputTruncated: "输出已截断",
+				detailPluginsCount: "{count} 个动态插件",
+				detailProvidersCount: "{count} 个检查提供方",
+				detailRalphLimit: "已达到轮次上限",
+				detailRalphReportedBlocker: "智能体报告受阻",
+				detailRalphReportedComplete: "智能体报告完成",
+				detailReceiptAlreadyFinished: "任务已结束",
+				detailReceiptCancel: "已请求取消",
+				detailReceiptClosed: "已关闭",
+				detailReceiptClosing: "关闭中",
+				detailReceiptDelivered: "消息已送达",
+				detailReceiptInterrupt: "已请求中断",
+				detailReceiptSignal: "信号已发送",
+				detailReceiptStarted: "已启动",
+				detailRecordedResult: "调用结果",
+				detailReportNextSteps: "待完成事项",
+				detailStatusAccepted: "已接收",
+				detailStatusCompleted: "已完成",
+				detailStatusDeleted: "已删除",
+				detailStatusExited: "已退出",
+				detailStatusFailed: "失败",
+				detailStatusIdle: "空闲",
+				detailStatusInactive: "未运行",
+				detailStatusKilled: "已取消",
+				detailStatusProvisioning: "准备中",
+				detailStatusQueued: "已入队",
+				detailStatusReady: "就绪",
+				detailStatusRunning: "运行中",
+				detailTasksCount: "{count} 个团队任务",
+				detailTasksNextPage: "后面还有任务；下一页位置为 {cursor}",
+				detailTerminalsCount: "{count} 个终端",
+				detailTodoCompleted: "已完成",
+				detailTodoEmpty: "任务清单为空",
+				detailTodoInProgress: "进行中",
+				detailTodoPending: "待处理",
+				detailTraceAncestors: "祖先会话",
+				detailTraceDerived: "派生事件",
+				detailTraceDescendants: "后代会话",
+				detailTraceReplacedBy: "被替换为",
+				detailTraceReplacementChain: "替换链",
+				detailTraceReplaces: "替换的事件",
+				detailTraceSources: "引用来源",
+				detailWaitChanged: "检测到变化",
+				detailWaitNoProgress: "没有正在运行的子智能体",
+				detailWaitTimeout: "等待超时",
+				detailWaitTitle: "子智能体状态",
+				detailWorkflowScript: "工作流脚本",
+				detailYes: "是",
+				toolTitleInspect: "查询 Cordis 环境",
+				toolTitleRunCordis: "运行 Cordis 插件",
+				toolTitleStopCordis: "停止 Cordis 插件",
+				toolTitleRemoveCordis: "移除 Cordis 插件",
+				toolTitleInspectProviders: "检查提供方",
+				toolTitleQueryRuntime: "查询运行时",
+				toolTitleInspectPlugins: "检查动态插件",
+				toolTitleCreateGoal: "创建目标",
+				toolTitleGetGoal: "查看目标",
+				toolTitleUpdateGoal: "更新目标",
+				toolTitleCreateSchedule: "创建定时任务",
+				toolTitleListSchedules: "查看定时任务",
+				toolTitleDeleteSchedule: "删除定时任务",
+				toolTitleUpdateSchedule: "修改定时任务",
+				toolTitleWorkflow: "运行工作流",
+				toolTitleRalph: "运行循环工作流",
+				toolTitleReadEvent: "读取事件",
+				toolTitleSearchEvents: "搜索事件",
+				toolTitleTraceEvent: "追踪事件",
+				toolTitleSearchSessions: "搜索会话",
+				toolTitleTraceSession: "追踪会话",
+				toolTitleListModels: "查看可用模型",
+				toolTitleSubagent: "创建子智能体",
+				toolTitleListAgents: "查看子智能体",
+				toolTitleSendMessage: "发送消息",
+				toolTitleInterruptAgent: "中断智能体",
+				toolTitleListJobs: "查看后台任务",
+				toolTitleReadJob: "读取任务输出",
+				toolTitleKillJob: "取消后台任务",
+				toolTitleOpenTerminal: "创建终端",
+				toolTitleReadTerminal: "读取终端",
+				toolTitleListTerminals: "查看终端",
+				toolTitleSignalTerminal: "发送终端信号",
+				toolTitleCloseTerminal: "关闭终端",
+				toolTitleLsp: "查询代码符号",
+				toolTitleSpawnTeammate: "创建队友",
+				toolTitleCreateTeamTask: "创建团队任务",
+				toolTitleGetTeamTask: "读取团队任务",
+				toolTitleUpdateTeamTask: "更新团队任务",
+				toolTitleListTeamTasks: "查看团队任务",
+				toolTitleWaitAgent: "等待子智能体",
+				todoCompleted: "已完成 {done}/{total}",
+				skillSummary: "技能 · {names}",
+				skillSeparator: "、",
+				compactionCompleted: "已压缩 {items} 条历史记录（约 {tokens} tokens）",
+				compactionExpand: "点击查看压缩摘要",
+				compactionUnavailable: "压缩摘要不可用",
+				contextInjection: "上下文注入",
+				contextRecall: "跨会话召回",
+				toolOutputLabel: "输出",
+				rowPreparing: "正在准备调用",
+				rowRunning: "运行中",
+				rowFailed: "失败",
+				rowStopped: "已停止",
+				commandRunning: "执行中…",
+				commandFailed: "指令失败",
+				commandDone: "已完成",
+				commandTitle: "指令",
+				collapseLabel: "收起",
+				readWindow: "显示 {shown} / {total} 行",
+				readCollapseAria: "收起内容",
+				readExpandAria: "展开其余 {count} 行",
+				readExpandRest: "… 其余 {count} 行",
+				searchPaths: "{shown} 个路径",
+				searchPathsTruncated: "显示 {shown} / 共 {total} 个路径",
+				searchMatches: "{shown} 处匹配 · {files} 个文件",
+				searchMatchesTruncated: "显示 {shown} / 共 {total} 处匹配 · {files} 个文件",
+				searchNoResults: "无结果",
+				searchCollapseAria: "收起结果",
+				searchExpandAria: "展开其余 {count} 行结果",
+				searchExpandRest: "… 其余 {count} 行",
+				webNoResults: "未找到结果",
+				webSourcesTruncated: "来源列表已截断",
+				webHttp: "HTTP",
+				webContentTruncated: "内容已截断",
+				terminalSignal: "信号 {signal}",
+				terminalExitCode: "退出码 {code}",
+				terminalNoExitCode: "未正常退出",
+				terminalRunning: "运行中",
+				terminalFailed: "失败",
+				terminalDone: "已完成",
+				terminalNoOutput: "无输出",
+				terminalCollapseAria: "收起输出",
+				terminalExpandAria: "展开其余 {n} 行输出",
+				terminalExpandRest: "… 其余 {n} 行",
+				terminalCommandLine: "第 {n} 行",
+				terminalSendInput: "（发送输入）",
+				terminalSession: "终端 {sessionId}",
+				codeBlockLabel: "代码块",
+				diffWrapLabel: "自动换行",
+				diffUnwrapLabel: "取消换行",
+				diffCollapseAria: "收起差异",
+				diffExpandAria: "展开其余 {count} 行差异",
+				diffExpandRest: "… 其余 {count} 行",
+				sessionArchived: "已归档",
+				sessionHeading: "会话预览",
+				changesSingle: "已编辑 {name}",
+				changesMulti: "已编辑 {count} 个文件",
+				changesBinary: "二进制文件",
+				changesAll: "全部 {count} 个文件",
+				changesCollapse: "收起",
+				changesOversized: "文件过大",
+				diffLoading: "正在读取改动…",
+				diffMissing: "这轮改动的内容已不可用",
+				diffError: "无法读取改动",
+				diffBinary: "二进制文件，无法显示改动",
+				diffOversized: "文件过大，无法显示改动",
+				diffCreated: "本轮新建的文件",
+				diffDeleted: "本轮删除的文件",
+				diffUnchanged: "两侧内容相同",
+				diffCoarse: "逐行对比超时，按整个文件替换显示",
+				diffTruncated: "只显示前 {count} 行",
+				diffWrap: "自动换行",
+				diffNowrap: "取消换行",
+				continueBranch: "继续对话",
+				forkConfirmTitle: "开分支继续对话",
+				forkConfirmText: "是否需要基于此会话开一个新分支继续对话？原会话保持只读留档，新分支复制本会话内容并可继续对话。",
+				forkConfirmAccept: "开分支并跳转",
+				forkWorking: "正在开分支…",
+				forkFailed: "开分支失败：{error}",
+				forkUnavailable: "开分支能力未就位：调用方没有提供 forkSession，无法继续对话。",
+				deliverRowTitle: "交付文件",
+				deliverRowPreparing: "准备交付",
+				deliverRowRunning: "正在交付",
+				deliverRowOk: "已交付",
+				deliverRowError: "交付失败",
+				deliverRowStopped: "已中断",
+				deliverFileLabel: "文件",
+				deliverPreviewHint: "预览",
+				deliverReveal: "在文件夹中显示",
+				deliverPreviewCard: "预览 {name}",
+				deliverAll: "全部 {count} 个文件",
+				deliverCollapse: "收起",
+				deliverExpandAria: "展开全部 {count} 个交付文件",
+				deliverCollapseAria: "收起交付文件列表",
+				composerPlaceholder: "继续说点什么…",
+				composerHint: "点「确定」后基于本会话开分支，并在官方会话中开始这轮对话",
+				dtPlaceholder: "请选择日期时间",
+				dtStart: "开始",
+				dtEnd: "结束",
+				dtToday: "今天",
+				dtNow: "现在",
+				dtClear: "清除",
+				dtHour: "时",
+				dtMinute: "分",
+				dtSecond: "秒",
+				dtPrevYear: "上一年",
+				dtPrevMonth: "上一月",
+				dtNextMonth: "下一月",
+				dtNextYear: "下一年",
+				dtInvalidRange: "结束时间早于开始时间",
+				fieldClear: "清空",
+				fieldDecrease: "减少",
+				fieldIncrease: "增加",
+				inputUndo: "撤销",
+				inputAction: "操作",
+				sessionImage: "[图片]",
+				sessionProbeStyle: "官方样式未命中（当前为自绘回退）"
+			},
+			en: {
+				sessionLoading: "Loading session…",
+				sessionFailed: "Failed to load session",
+				sessionEmpty: "No content in this session",
+				explorerLoading: "Loading…",
+				loadingDefault: "Loading",
+				explorerFailed: "Failed to load",
+				explorerRoot: "Workspace",
+				explorerTruncated: "Too many entries, truncated",
+				explorerEmptyDir: "Empty folder",
+				explorerLevels: "Jump to level",
+				explorerExpand: "Expand",
+				explorerCollapse: "Collapse",
+				explorerEnter: "Open",
+				explorerRootDir: "Root",
+				explorerRootName: "(workspace root)",
+				explorerCrumbsAria: "Breadcrumb",
+				explorerPickFile: "Pick this file",
+				explorerPickDir: "Select",
+				explorerPickDirAria: "Pick this folder (with everything under it)",
+				previewClose: "Close",
+				previewCopyPath: "Copy path",
+				previewRefresh: "Refresh",
+				previewRender: "Preview",
+				previewSource: "Source",
+				previewMdSwitchAria: "Toggle render or source",
+				previewHtmlSwitchAria: "Toggle render or source",
+				previewLoadMore: "Load more",
+				previewTruncated: "Content too large, showing first {n}",
+				previewOfficeUnavailable: "Office preview unavailable",
+				previewOfficeNoSession: "Office preview unavailable (no session yet)",
+				previewRenderFailed: "Failed to render preview",
+				previewBadPayload: "Unexpected response payload",
+				previewOutside: "Path is outside the workspace",
+				previewNotFound: "File not found",
+				previewNotDirectory: "Not a folder",
+				previewNotFile: "Preview not supported for this file type",
+				previewTooLarge: "File too large to preview",
+				previewNotText: "Preview not supported for this file type",
+				previewFailedCode: "Failed to load ({code})",
+				mdCopy: "Copy",
+				mdCopied: "Copied",
+				mdCode: "Code",
+				mdWrap: "Wrap",
+				mdUnwrap: "Unwrap",
+				mdFootnotes: "Footnotes",
+				cardToggle: "Expand/Collapse",
+				tableEmpty: "No data",
+				tableLoading: "Loading…",
+				tableLoadingMore: "Loading more…",
+				tableNoMore: "No more data",
+				paginationAria: "Pagination",
+				paginationPrev: "Previous",
+				paginationNext: "Next",
+				paginationPage: "Page {n}",
+				paginationTotal: "{from}-{to} of {total}",
+				paginationTotalZero: "0 items",
+				paginationPageSizeOption: "{n} / page",
+				paginationPageSizeAria: "Rows per page",
+				modalClose: "Close",
+				dockClose: "Close panel",
+				dockResize: "Drag to resize",
+				dockCollapse: "Collapse panel",
+				dockExpand: "Expand panel",
+				backToTop: "Back to top",
+				quickToolbarAria: "Quick toolbar",
+				errorRetry: "Retry",
+				confirm: "Confirm",
+				cancel: "Cancel",
+				dialogOk: "OK",
+				pickerPlaceholder: "Select…",
+				pickerClear: "None",
+				pickerEmpty: "No options",
+				pickerNoMatch: "No match",
+				pickerSearch: "Search…",
+				pickerSelected: "{n} selected",
+				pickerMaxReached: "Up to {n}",
+				pickerDegraded: "List may be incomplete",
+				pickerMore: "Show more",
+				modelProvider: "Provider",
+				modelModel: "Model",
+				modelDefault: "Default model",
+				workspaceAll: "All workspaces",
+				relNow: "just now",
+				relInJustNow: "soon",
+				relInMinutes: "in {n}m",
+				relInHours: "in {n}h",
+				relInDays: "in {n}d",
+				relInMonths: "in {n}mo",
+				relInYears: "in {n}y",
+				relJustNow: "just now",
+				relMinutesAgo: "{n}m ago",
+				relHoursAgo: "{n}h ago",
+				relDaysAgo: "{n}d ago",
+				relWeeksAgo: "{n}w ago",
+				relMonthsAgo: "{n}mo ago",
+				relYearsAgo: "{n}y ago",
+				codeCopy: "Copy",
+				codeCopied: "Copied",
+				sessionUnknownKind: "Unsupported node kind: ",
+				sessionLoadOlder: "Load earlier messages",
+				sessionProcess: "Process",
+				triggerRequest: "Execution request received",
+				triggerGoal: "Continuing the goal",
+				triggerAgent: "Task message received",
+				triggerTeam: "Team message received",
+				triggerSubagent: "Subagent status update",
+				triggerGithub: "GitHub event received",
+				triggerWebhook: "External event received",
+				triggerSchedule: "Scheduled task",
+				triggerJob: "Background task status update",
+				triggerPlugin: "Plugin status update",
+				triggerExplanation: "This notification triggered the reply below.",
+				turnProcessTook: "Completed in ",
+				turnProcessWorked: "Completed",
+				turnProcessFailed: "Failed",
+				turnStopped: "Stopped",
+				chatDeepDiving: "Thinking",
+				chatDeepDivingFor: "Deep diving for {duration} ···",
+				reasoningRunning: "Running",
+				jsonTruncated: "… truncated, {total} characters total",
+				referenceSummary: "Referenced session · {labels}",
+				referenceSeparator: ", ",
+				thinkLabel: "Think",
+				durationSecondUnit: "s",
+				durationMinuteUnit: "m ",
+				durationHourUnit: "h ",
+				durationMilliseconds: "{milliseconds}ms",
+				retryActive: "Retrying model request",
+				retryCancelled: "Model request retry cancelled",
+				retryStarted: "Retried model request",
+				retryScheduled: "Waiting to retry model request",
+				retryStatus: "{label} ({retry}/{maximum}) · {seconds}s",
+				retryDelay: "Retry delay: ",
+				retryFailure: "Failure reason: ",
+				turnErrorTitle: "This turn failed",
+				accountStopped: "Task stopped",
+				maxTokensTitle: "Output token limit reached",
+				maxTokensHint: "The reply was cut off; earlier output is preserved in the conversation. Send \"continue\" to let the model resume.",
+				failureInterrupted: "The DSH process exited before this turn finished (for example, it was killed, crashed, or timed out while shutting down), so the turn was closed when DSH restarted. Unfinished tool calls have unknown outcomes.",
+				failureAuth: "API key is invalid",
+				failureQuota: "Request quota exhausted.",
+				failureAccountSignedOut: "Stopped because you signed out of DeepSeek.",
+				failureAccountSignInRequired: "Sign in to DeepSeek and ensure the request destination supports account authentication.",
+				clockDate: "{m}/{d}",
+				clockDateYear: "{y}/{m}/{d}",
+				copyLabel: "Copy",
+				copiedLabel: "Copied",
+				branchLabel: "Branch into a new conversation",
+				branchUnavailableLabel: "A read-only transcript cannot be branched",
+				turnUsageTitle: "Turn usage",
+				turnUsageModel: "Provider / model",
+				turnUsageCacheHit: "Cache hit",
+				turnUsageInput: "Uncached input",
+				turnUsageCacheRead: "Cached input",
+				turnUsageCacheWrite: "Cache write",
+				turnUsageOutput: "Output",
+				turnUsageReasoning: " ({tokens} reasoning)",
+				turnUsageConsumed: "Usage {total}",
+				turnUsageCount: "{count} tok",
+				numberThousand: "{value}K",
+				numberMillion: "{value}M",
+				numberGroupSeparator: ",",
+				stepProcessDoneThinking: "Analysis completed",
+				stepProcessDoneRead: "Read files",
+				stepProcessDoneReadImage: "Read images",
+				stepProcessDoneWrite: "Wrote files",
+				stepProcessDoneSearch: "Searched code",
+				stepProcessDoneEdit: "Edited files",
+				stepProcessDoneCommands: "Ran commands",
+				stepProcessDoneCode: "Ran code",
+				stepProcessDoneWebSearch: "Searched the web",
+				stepProcessDoneWebFetch: "Fetched web pages",
+				stepProcessDoneSubagents: "Coordinated subagents",
+				stepProcessDonePlan: "Updated the plan",
+				stepProcessDoneQuestions: "Asked you questions",
+				stepProcessDoneTools: "Called tools",
+				stepProcessJoinTwo: "{first} and {second}",
+				stepProcessComma: ", ",
+				stepProcessSharedPrefix: "",
+				stepProcessMore: "{title}, etc.",
+				toolTitleRead: "Read",
+				toolTitleReadImage: "Read image",
+				toolTitleGrep: "Grep",
+				toolTitleGlob: "Glob",
+				toolTitleBash: "Bash",
+				toolTitleWrite: "Write",
+				toolTitleEdit: "Edit",
+				toolTitleCode: "Code",
+				toolTitleWebSearch: "Search",
+				toolTitleWebFetch: "Fetch",
+				toolTitleGeneric: "Tool call",
+				toolTitleSearch: "Search",
+				skillRowTitle: "Skill",
+				skillRowPreparing: "Preparing to load a skill",
+				skillRowRunning: "Loading skill",
+				skillRowFailed: "Skill load failed",
+				skillRowStopped: "Skill load stopped",
+				skillRowInstructions: "Instructions",
+				toolInputLabel: "IN",
+				toolPreparingContent: "{kilobytes} KB",
+				compactionTitle: "Context compacted",
+				toolTitleTodo: "Update to-do list",
+				toolTitlePwsh: "Pwsh",
+				toolTitleAsk: "Ask question",
+				askAnswered: "{answered}/{total} answered",
+				askSkipped: "Not answered",
+				askCancelled: "cancelled",
+				askCancelledDetail: "This question set was cancelled before answers were submitted.",
+				askInterrupted: "interrupted",
+				askInterruptedDetail: "This question set was interrupted before answers were submitted.",
+				askWaiting: "waiting",
+				detailState: "Status",
+				detailGoalEmpty: "No goal",
+				detailGoalDisarmed: "Awaiting continuation",
+				detailGoalActive: "Active",
+				detailGoalPaused: "Paused",
+				detailGoalBlocked: "Blocked",
+				detailGoalComplete: "Completed",
+				detailGoalRounds: "Rounds",
+				detailGoalReason: "Blocker",
+				detailScheduleCount: "{count} reminders",
+				detailScheduleEmpty: "No reminders",
+				detailScheduleDeleted: "Deleted",
+				detailScheduleOnce: "Once",
+				detailScheduleEvery: "Every {interval}",
+				detailDays: "{count} d",
+				detailHours: "{count} h",
+				detailMinutes: "{count} min",
+				detailSeconds: "{count} s",
+				detailScheduleDaily: "Every day at {time} ({zone})",
+				detailScheduleWeekly: "Weekly on {days} at {time} ({zone})",
+				detailScheduleCron: "Cron {expression} ({zone})",
+				detailScheduleWhen: "Scheduled for",
+				detailScheduleFrequency: "Repeat",
+				detailScheduleScheduled: "Scheduled",
+				detailScheduleOverdue: "Overdue, awaiting session resume",
+				detailWeekdayJoin: ",",
+				detailWeekday1: "Mon",
+				detailWeekday2: "Tue",
+				detailWeekday3: "Wed",
+				detailWeekday4: "Thu",
+				detailWeekday5: "Fri",
+				detailWeekday6: "Sat",
+				detailWeekday7: "Sun",
+				detailAgentReply: "Agent response",
+				detailAgentsCount: "{count} agents",
+				detailEmpty: "No results",
+				detailEventNeighbors: "Surrounding events",
+				detailFieldAgent: "Agent ID",
+				detailFieldAgents: "Agents started",
+				detailFieldAvailability: "Availability",
+				detailFieldBestMatch: "Best match",
+				detailFieldCallId: "Call ID",
+				detailFieldContent: "Content",
+				detailFieldContext: "Context",
+				detailFieldCurrentPackage: "Current package",
+				detailFieldData: "Data",
+				detailFieldDependencies: "Dependencies",
+				detailFieldDepth: "Depth",
+				detailFieldDiagnostics: "Diagnostics",
+				detailFieldExitCode: "Exit code",
+				detailFieldId: "ID",
+				detailFieldInputSchema: "Input schema",
+				detailFieldJob: "Job ID",
+				detailFieldLatestRun: "Latest run",
+				detailFieldMessage: "Message",
+				detailFieldMessageId: "Message ID",
+				detailFieldMethods: "Methods",
+				detailFieldModel: "Model",
+				detailFieldNextPackage: "Next package",
+				detailFieldOutputSchema: "Output schema",
+				detailFieldOwner: "Owner",
+				detailFieldPackages: "Packages",
+				detailFieldParent: "Parent",
+				detailFieldPid: "Process ID",
+				detailFieldPlatform: "Platform",
+				detailFieldPreviousStatus: "Previous status",
+				detailFieldProcessGroup: "Process group",
+				detailFieldProps: "Props",
+				detailFieldProvider: "Provider",
+				detailFieldReady: "Ready",
+				detailFieldRegistrations: "Registrations",
+				detailFieldResult: "Result",
+				detailFieldRevision: "Revision",
+				detailFieldRole: "Role",
+				detailFieldRoot: "Root",
+				detailFieldSeq: "Event sequence",
+				detailFieldSignal: "Signal",
+				detailFieldSource: "Source",
+				detailFieldStep: "Step",
+				detailFieldSurface: "Record status",
+				detailFieldTarget: "Target event",
+				detailFieldTask: "Task",
+				detailFieldTime: "Time",
+				detailFieldTurn: "Turn",
+				detailFieldType: "Type",
+				detailFieldWarnings: "Warnings",
+				detailFieldWriteScopes: "Write scopes",
+				detailJobsCount: "{count} background jobs",
+				detailLocation: "Line {line}, column {column}",
+				detailLocationsCount: "{count} locations",
+				detailMatchesCapped: "Result limit reached; narrow the search for more",
+				detailMatchesCount: "{count} matches",
+				detailModelsTitle: "Available models",
+				detailMoreInInspect: "{count} more items available in Inspect",
+				detailNo: "No",
+				detailNone: "None",
+				detailOutputLines: "Lines {begin}–{end} of {total}",
+				detailOutputTruncated: "Output truncated",
+				detailPluginsCount: "{count} dynamic plugins",
+				detailProvidersCount: "{count} inspect providers",
+				detailRalphLimit: "Round limit reached",
+				detailRalphReportedBlocker: "Worker reported a blocker",
+				detailRalphReportedComplete: "Worker reported completion",
+				detailReceiptAlreadyFinished: "Already finished",
+				detailReceiptCancel: "Cancellation requested",
+				detailReceiptClosed: "Closed",
+				detailReceiptClosing: "Closing",
+				detailReceiptDelivered: "Message delivered",
+				detailReceiptInterrupt: "Interrupt requested",
+				detailReceiptSignal: "Signal delivered",
+				detailReceiptStarted: "Started",
+				detailRecordedResult: "Recorded result",
+				detailReportNextSteps: "Remaining work",
+				detailStatusAccepted: "Accepted",
+				detailStatusCompleted: "Completed",
+				detailStatusDeleted: "Deleted",
+				detailStatusExited: "Exited",
+				detailStatusFailed: "Failed",
+				detailStatusIdle: "Idle",
+				detailStatusInactive: "Inactive",
+				detailStatusKilled: "Cancelled",
+				detailStatusProvisioning: "Provisioning",
+				detailStatusQueued: "Queued",
+				detailStatusReady: "Ready",
+				detailStatusRunning: "Running",
+				detailTasksCount: "{count} team tasks",
+				detailTasksNextPage: "More tasks available; next cursor is {cursor}",
+				detailTerminalsCount: "{count} terminals",
+				detailTodoCompleted: "Completed",
+				detailTodoEmpty: "The to-do list is empty",
+				detailTodoInProgress: "In progress",
+				detailTodoPending: "Pending",
+				detailTraceAncestors: "Ancestor sessions",
+				detailTraceDerived: "Derived events",
+				detailTraceDescendants: "Descendant sessions",
+				detailTraceReplacedBy: "Replaced by",
+				detailTraceReplacementChain: "Replacement chain",
+				detailTraceReplaces: "Replaced events",
+				detailTraceSources: "Source events",
+				detailWaitChanged: "Change detected",
+				detailWaitNoProgress: "No active subagents",
+				detailWaitTimeout: "Wait timed out",
+				detailWaitTitle: "Subagent activity",
+				detailWorkflowScript: "Workflow script",
+				detailYes: "Yes",
+				toolTitleInspect: "Query Cordis environment",
+				toolTitleRunCordis: "Run Cordis Plugin",
+				toolTitleStopCordis: "Stop Cordis Plugin",
+				toolTitleRemoveCordis: "Remove Cordis Plugin",
+				toolTitleInspectProviders: "Inspect providers",
+				toolTitleQueryRuntime: "Query runtime",
+				toolTitleInspectPlugins: "Inspect plugins",
+				toolTitleCreateGoal: "Create goal",
+				toolTitleGetGoal: "View goal",
+				toolTitleUpdateGoal: "Update goal",
+				toolTitleCreateSchedule: "Create reminder",
+				toolTitleListSchedules: "List reminders",
+				toolTitleDeleteSchedule: "Delete reminder",
+				toolTitleUpdateSchedule: "Update reminder",
+				toolTitleWorkflow: "Run workflow",
+				toolTitleRalph: "Run ralph loop",
+				toolTitleReadEvent: "Read event",
+				toolTitleSearchEvents: "Search events",
+				toolTitleTraceEvent: "Trace event",
+				toolTitleSearchSessions: "Search sessions",
+				toolTitleTraceSession: "Trace session",
+				toolTitleListModels: "List models",
+				toolTitleSubagent: "Create subagent",
+				toolTitleListAgents: "List subagents",
+				toolTitleSendMessage: "Send message",
+				toolTitleInterruptAgent: "Interrupt agent",
+				toolTitleListJobs: "List background jobs",
+				toolTitleReadJob: "Read job output",
+				toolTitleKillJob: "Cancel background job",
+				toolTitleOpenTerminal: "Open terminal",
+				toolTitleReadTerminal: "Read terminal",
+				toolTitleListTerminals: "List terminals",
+				toolTitleSignalTerminal: "Signal terminal",
+				toolTitleCloseTerminal: "Close terminal",
+				toolTitleLsp: "Query code symbols",
+				toolTitleSpawnTeammate: "Create teammate",
+				toolTitleCreateTeamTask: "Create team task",
+				toolTitleGetTeamTask: "Read team task",
+				toolTitleUpdateTeamTask: "Update team task",
+				toolTitleListTeamTasks: "List team tasks",
+				toolTitleWaitAgent: "Wait for subagent",
+				todoCompleted: "{done}/{total} done",
+				skillSummary: "Skills · {names}",
+				skillSeparator: ", ",
+				compactionCompleted: "Compacted {items} history items (~{tokens} tokens)",
+				compactionExpand: "Click to view the compaction summary",
+				compactionUnavailable: "Compaction summary unavailable",
+				contextInjection: "Context injection",
+				contextRecall: "Cross-session recall",
+				toolOutputLabel: "OUT",
+				rowPreparing: "Preparing tool call",
+				rowRunning: "Running",
+				rowFailed: "Failed",
+				rowStopped: "Stopped",
+				commandRunning: "Running…",
+				commandFailed: "Command failed",
+				commandDone: "Completed",
+				commandTitle: "Command",
+				collapseLabel: "Collapse",
+				readWindow: "Showing {shown} of {total} lines",
+				readCollapseAria: "Collapse content",
+				readExpandAria: "Expand {count} more lines",
+				readExpandRest: "… {count} more lines",
+				searchPaths: "{shown} paths",
+				searchPathsTruncated: "Showing {shown} of {total} paths",
+				searchMatches: "{shown} matches · {files} files",
+				searchMatchesTruncated: "Showing {shown} of {total} matches · {files} files",
+				searchNoResults: "No results",
+				searchCollapseAria: "Collapse results",
+				searchExpandAria: "Expand {count} more result lines",
+				searchExpandRest: "… {count} more lines",
+				webNoResults: "No results found",
+				webSourcesTruncated: "Source list truncated",
+				webHttp: "HTTP",
+				webContentTruncated: "Content truncated",
+				terminalSignal: "signal {signal}",
+				terminalExitCode: "exit code {code}",
+				terminalNoExitCode: "no exit code",
+				terminalRunning: "Running",
+				terminalFailed: "Failed",
+				terminalDone: "Done",
+				terminalNoOutput: "No output",
+				terminalCollapseAria: "Collapse output",
+				terminalExpandAria: "Expand the remaining {n} output lines",
+				terminalExpandRest: "… {n} more lines",
+				terminalCommandLine: "line {n}",
+				terminalSendInput: "(send input)",
+				terminalSession: "Terminal {sessionId}",
+				codeBlockLabel: "Code",
+				diffWrapLabel: "Wrap lines",
+				diffUnwrapLabel: "Unwrap lines",
+				diffCollapseAria: "Collapse diff",
+				diffExpandAria: "Expand {count} more diff lines",
+				diffExpandRest: "… {count} more lines",
+				sessionArchived: "Archived",
+				sessionHeading: "Session preview",
+				changesSingle: "Edited {name}",
+				changesMulti: "Edited {count} files",
+				changesBinary: "Binary file",
+				changesAll: "All {count} files",
+				changesCollapse: "Collapse",
+				changesOversized: "File too large",
+				diffLoading: "Reading changes…",
+				diffMissing: "The contents of this turn’s changes are no longer available",
+				diffError: "Could not read the changes",
+				diffBinary: "Binary file; changes cannot be shown",
+				diffOversized: "File too large; changes cannot be shown",
+				diffCreated: "Created in this turn",
+				diffDeleted: "Deleted in this turn",
+				diffUnchanged: "Both sides hold the same lines",
+				diffCoarse: "Line comparison timed out; shown as a whole-file replacement",
+				diffTruncated: "Showing the first {count} lines",
+				diffWrap: "Wrap lines",
+				diffNowrap: "No wrap",
+				continueBranch: "Continue conversation",
+				forkConfirmTitle: "Fork to continue",
+				forkConfirmText: "Start a new branch from this session to continue the conversation? The original stays read-only; the branch copies this conversation and can continue.",
+				forkConfirmAccept: "Fork & open",
+				forkWorking: "Forking…",
+				forkFailed: "Fork failed: {error}",
+				forkUnavailable: "Fork capability unavailable: the caller did not provide forkSession, so this conversation cannot be continued.",
+				deliverRowTitle: "Present files",
+				deliverRowPreparing: "Preparing deliverables",
+				deliverRowRunning: "Delivering",
+				deliverRowOk: "Delivered",
+				deliverRowError: "Delivery failed",
+				deliverRowStopped: "Interrupted",
+				deliverFileLabel: "File",
+				deliverPreviewHint: "Preview",
+				deliverReveal: "Show in folder",
+				deliverPreviewCard: "Preview {name}",
+				deliverAll: "All {count} files",
+				deliverCollapse: "Collapse",
+				deliverExpandAria: "Expand all {count} delivered files",
+				deliverCollapseAria: "Collapse the delivered-files list",
+				composerPlaceholder: "Say something to continue…",
+				composerHint: "Confirm forks a branch from this session and starts this turn in the official chat",
+				dtPlaceholder: "Date & time",
+				dtStart: "Start",
+				dtEnd: "End",
+				dtToday: "Today",
+				dtNow: "Now",
+				dtClear: "Clear",
+				dtHour: "h",
+				dtMinute: "m",
+				dtSecond: "s",
+				dtPrevYear: "Previous year",
+				dtPrevMonth: "Previous month",
+				dtNextMonth: "Next month",
+				dtNextYear: "Next year",
+				dtInvalidRange: "End is before start",
+				fieldClear: "Clear",
+				fieldDecrease: "Decrease",
+				fieldIncrease: "Increase",
+				inputUndo: "Undo",
+				inputAction: "Action",
+				sessionImage: "[Image]",
+				sessionProbeStyle: "Official styles not matched (using the self-drawn fallback)"
+			}
+		};
+		/**
+		* 宿主当前语言。官方 `@deepseek-ai/dsh-client-locale` 把生效语言写进 `<html lang>`
+		* （zh → `zh-CN`，其余按语言 id），切语言时同步改写 ⇒ 这里读它即可，插件不必自己接 locale 服务。
+		* 非浏览器环境（Node 自检）没有 document，回落 'zh'。
+		*/
+		function hostLocale() {
+			if (typeof document === "undefined") return "zh";
+			const tag = document.documentElement.lang !== "" ? document.documentElement.lang : navigator.language;
+			if (tag === void 0 || tag === "") return "zh";
+			return tag.toLowerCase().startsWith("zh") ? "zh" : "en";
 		}
-		/** 确保标签已挂载且内容最新（幂等）。 */
-		function ensureUiStyles() {
-			active.ensureStyles();
+		function getLocale() {
+			return hostLocale();
 		}
-		/** 登记 + 立刻确保挂载。 */
-		function applyStyle(domain, css) {
-			active.applyStyle(domain, css);
-		}
-		/** 登记核心 token 层并确保样式已注入（幂等）。 */
-		function ensureUiBase() {
-			registerStyle(TOKENS_DOMAIN, active.tokensCss);
-			ensureUiStyles();
+		/** 用内置字典翻译一个 key；未知 key 直接回退 key 本身（不抛、不空白）。 */
+		function t$1(key, vars) {
+			const template = DICT[getLocale()][key] ?? DICT.zh[key] ?? key;
+			if (vars === void 0) return template;
+			return template.replace(/\{(\w+)\}/g, (whole, name) => {
+				const value = vars[name];
+				return value === void 0 ? whole : String(value);
+			});
 		}
 		//#endregion
-		//#region src/client/ui/controls-css.ts
-		/**
-		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
-		*
-		* 规矩（docs/design/ui-style-guide.md §三）：
-		*  - **只消费 `var(--dshpc-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
-		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达（本文件的 `--seg-*`）；
-		*  - 高度只取 `--dshpc-control-h-sm` / `-md` / `-lg` 三档（段高 = 控件总高 − 6px：上下 padding 2px×2 + 描边 1px×2；真不够用才在调用点本地覆盖 `--dshpc-control-h-*`，属例外）。
-		*
-		* 分期：P1 只有分段控件（滑动块）；P2 按钮 / P3 输入下拉 / P4 开关日期时间会往本文件追加，
-		* 追加时保持「一段一控件、段头写清哪一期」的写法。
-		*/
-		/** 分段控件的皮肤规则（P1）。 */
-		const SEGMENTED_CSS = `
-/* ── 分段控件（滑动块）P1 ────────────────────────────────────────────────
-   结构一套 + 两个受控轴：size(sm|md|lg) × variant(default|inset)。
-   变体**只覆盖两个颜色变量**（--seg-track 轨道底 / --seg-thumb 选中块），
-   这正是「同一份样式、只重载颜色」的落地形态。 */
-/* 两套基础样式（2026-10-01 用户拍板：保留「纯黑面」与「灰底面」两套，不可合并）：
-   - default = 纯黑面：轨道=第二层面 + 外描边，选中=亮片底；
-   - inset = 灰底面：抄「版本」开关观感（轨道=交互灰 hover 底、无外描边、选中=亮片底），用户觉得比原灰底那套好看。
-   ⚠️ 高度对齐规则（2026-10-01 用户拍板，同日修正 +2）：有边 / 无边总高必须 == 控件 token，边框在内部补回，不许额外撑高。
-   几何 = 段高 = token − 6px（上下各 2px padding + 1px 边框）；default 真边框 1px + padding 2px，
-   inset 无边框故 padding 收 3px 把缺的 1px 补回，两种外观总高都 == token（24/28/32），不再多 +2px。
-   以后 Button / Input 的有边 / 无边同此规则。 */
-.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:var(--dshpc-radius-md);background:var(--seg-track);}
-.dsh-tdt-seg--default{--seg-track:var(--dshpc-surface-2);--seg-thumb:var(--dshpc-surface-raised);border:1px solid var(--dshpc-border);}
-.dsh-tdt-seg--inset{--seg-track:var(--dshpc-hover);--seg-thumb:var(--dshpc-surface-raised);border:0;padding:3px;}
-
-.dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
-  height:calc(var(--dshpc-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--dshpc-radius-sm);
-  background:transparent;color:var(--dshpc-fg-2);font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);
-  font-weight:400;white-space:nowrap;cursor:pointer;
-  transition:color var(--dshpc-dur-fast) var(--dshpc-ease),background-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--dshpc-control-h-md) - 6px);}
-.dsh-tdt-seg--lg .dsh-tdt-seg__item{height:calc(var(--dshpc-control-h-lg) - 6px);}
-.dsh-tdt-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--dshpc-fg);}
-.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--dshpc-shadow-raised);color:var(--dshpc-fg);font-weight:600;}
-.dsh-tdt-seg__item:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px;}
-.dsh-tdt-seg__item:disabled{cursor:default;opacity:.4;}
-
-/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染。
-   ⚠️ **必须是正圆**（用户 2026-10-03：「多位数给它撑开了，那不是圆的就没办法了」）：
-   固定 16×16 + border-radius:50% + padding:0 + overflow:hidden ⇒ 一位数 / 两位数都是同一个圆，
-   数字缩到 10px 塞得下；不再用 min-width + 左右 padding（那会让宽度随位数增长变椭圆）。 */
-.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;flex:none;
-  width:16px;height:16px;padding:0;overflow:hidden;
-  border-radius:50%;background:var(--dshpc-danger);color:var(--dshpc-on-signal);
-  font-size:10px;line-height:16px;font-weight:500;font-variant-numeric:tabular-nums;}
-
-/* block：撑满父宽（表单行用），各段等分 */
-.dsh-tdt-seg--block{display:flex;width:100%;}
-.dsh-tdt-seg--block .dsh-tdt-seg__item{flex:1 1 auto;justify-content:center;}
-
-/* weekday：星期多选方块（任务新增 / 编辑页）。基础插件的特殊化定制（用户 2026-10-01 明确要求：
-   原 WeekdayPicker 即「蓝底 + 近似方形」，统一到 Segmented 后由这一修饰类补回两处差异）：
-   - 每格做成正方形（宽 = 段高）；
-   - 选中态用品牌蓝（--dshpc-business）、反白字，轨道用 hover 灰（与原自绘轨道一致）。
-   皮肤集中在此、不内联；调用点只挂 .dsh-tdt-seg--weekday 一个修饰类，符合「皮肤只在 controls-css」的规矩。 */
-.dsh-tdt-seg--weekday{--seg-track:var(--dshpc-hover);}
-.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--dshpc-control-h-lg) - 6px);padding:0;justify-content:center;}
-.dsh-tdt-seg--weekday .dsh-tdt-seg__item[aria-pressed='true']{background:var(--dshpc-business);color:var(--dshpc-fg-inverse);box-shadow:var(--dshpc-shadow-raised);}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
-`;
-		/** 按钮 / 图标钮的皮肤规则（P2）。 */
-		const BUTTON_CSS = `
-/* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────
-   与 Segmented 同一条高度纪律：--dshpc-control-h-sm(24) / -md(28) / -lg(32)，
-   有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。
-   variant 只换颜色，结构 / 尺寸 / 交互只此一份。 */
-.dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--dshpc-space-1);
-  box-sizing:border-box;border:1px solid transparent;border-radius:var(--dshpc-radius-md);
-  background:transparent;color:var(--dshpc-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;
-  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),opacity var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-btn--sm{height:var(--dshpc-control-h-sm);padding:0 10px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
-.dsh-tdt-btn--md{height:var(--dshpc-control-h-md);padding:0 12px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-btn--lg{height:var(--dshpc-control-h-lg);padding:0 14px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-btn__icon{display:inline-flex;align-items:center;flex:none;}
-
-.dsh-tdt-btn--primary{background:var(--dshpc-accent);color:var(--dshpc-fg-inverse);}
-.dsh-tdt-btn--primary:hover:not(:disabled){opacity:.9;}
-.dsh-tdt-btn--outline{background:var(--dshpc-surface-1);border-color:var(--dshpc-border-strong);color:var(--dshpc-fg);}
-.dsh-tdt-btn--outline:hover:not(:disabled){background:var(--dshpc-hover);}
-.dsh-tdt-btn--ghost{color:var(--dshpc-fg-2);}
-.dsh-tdt-btn--ghost:hover:not(:disabled){background:var(--dshpc-hover);color:var(--dshpc-fg);}
-.dsh-tdt-btn--danger{background:var(--dshpc-danger);color:var(--dshpc-on-signal);}
-.dsh-tdt-btn--danger:hover:not(:disabled){opacity:.9;}
-/* danger-ink：红字描边（破坏性次要操作，如卡片上的「删除」），挂与 outline 组合的修饰类 */
-.dsh-tdt-btn--danger-ink{border-color:var(--dshpc-danger);color:var(--dshpc-danger);}
-.dsh-tdt-btn--danger-ink:hover:not(:disabled){background:color-mix(in srgb,var(--dshpc-danger) 10%,transparent);color:var(--dshpc-danger);}
-/* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */
-.dsh-tdt-btn--link{height:auto;padding:0;border:0;background:none;color:var(--dshpc-link);font-weight:400;text-align:left;}
-.dsh-tdt-btn--link:hover:not(:disabled){background:none;color:var(--dshpc-link);text-decoration:underline;}
-.dsh-tdt-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
-.dsh-tdt-btn:disabled{cursor:default;opacity:.5;}
-
-.dsh-tdt-iconbtn{appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;
-  border:1px solid transparent;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);
-  font-family:inherit;cursor:pointer;flex:none;
-  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),opacity var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-iconbtn--sm{width:var(--dshpc-control-h-sm);height:var(--dshpc-control-h-sm);font-size:var(--dshpc-font-sm);}
-.dsh-tdt-iconbtn--md{width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);font-size:var(--dshpc-font-md);}
-.dsh-tdt-iconbtn--lg{width:var(--dshpc-control-h-lg);height:var(--dshpc-control-h-lg);font-size:var(--dshpc-font-md);}
-.dsh-tdt-iconbtn--plain{color:var(--dshpc-fg-2);}
-.dsh-tdt-iconbtn--outline{background:var(--dshpc-surface-1);border-color:var(--dshpc-border);color:var(--dshpc-fg-2);}
-.dsh-tdt-iconbtn--danger{color:var(--dshpc-danger);}
-.dsh-tdt-iconbtn:hover:not(:disabled){background:var(--dshpc-hover);color:var(--dshpc-fg);}
-.dsh-tdt-iconbtn--danger:hover:not(:disabled){background:var(--dshpc-hover);color:var(--dshpc-danger);}
-.dsh-tdt-iconbtn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
-.dsh-tdt-iconbtn:disabled{cursor:default;opacity:.4;}
-
-/* ── 产出物「图标 chip」P2：28×28 方角小底板 + 官方文件类型图标 ──────────────
-   用途：产出物列表里**只给图标**的小按钮（卡片「执行记录」面板、执行记录总查询页、展开区都挂它）。
-   ⚠️ 底板**必须走 class**——inline background 会盖掉 :hover（用户 2026-10-03 踩过）。
-   hover 用 「--dshpc-chip-bg-hover」：浅色更深、暗色更亮（两端都是「更明显」）；不许拿
-   「--dshpc-plate-hover」 顶——暗色下反而更淡，鼠标移上去底板就消失了。
-   ✅ **全站唯一实现**（2026-10-04 收编）：此前卡片面板与执行记录页各写一份**同名不同皮**的
-   「.dsh-tdt-rec-out」，两份 CSS 都注入同一页面 ⇒ 谁后注册谁生效、互相污染；现已收成这一份。 */
-.dsh-tdt-chip{appearance:none;-webkit-appearance:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
-  width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);padding:0;border:none;border-radius:var(--dshpc-radius-sm);
-  background:transparent;color:var(--dshpc-fg-2);font-family:inherit;line-height:0;cursor:pointer;
-  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
-/* 底板**平时透明、鼠标移上去才浮出来**（用户 2026-10-04：「那个带底色的框，鼠标移上去才有」）。
-   只给图标、没有文字可读 ⇒ hover 用更明显的那档（浅色更深、暗色更亮，两端都是「更明显」）。 */
-.dsh-tdt-chip:hover:not(:disabled){background:var(--dshpc-chip-bg-hover);}
-.dsh-tdt-chip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
-/* 不可点（没有会话 / 预览面未就位）：没有底板、没有手指，别给假入口 */
-.dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
-/* 文字型 chip（「…」 / 「+N」）：不固定方宽，按内容撑开 */
-.dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-
-/* ── 行式文件按钮（图标 + 文件名）P2：**全站唯一实现**（2026-10-04 收编）──────────
-   用途：「产出物 / 附件」那种**一行一个文件**的清单项（基础信息右栏产出物清单、附件区、
-   执行记录页的展开区）。平时透明、**鼠标移上去才出浅底**（沿用用户 2026-10-03 定的观感）。
-   两个形态修饰类：
-     --block   撑满父宽（清单里一项一行）
-     --inline  内容宽（跟在文字后头，如附件行）
-   收编原因：这份皮肤此前只写在 task-list.tsx 的 TASK_LIST_CSS 里（旧名 .dsh-tdt-info-out），
-   执行记录页展开区要用同一种观感 ⇒ 上提基础层，避免再出现「各写一份外观」（同名不同皮的坑刚踩过）。 */
-.dsh-tdt-filechip{appearance:none;-webkit-appearance:none;border:0;border-radius:var(--dshpc-radius-xs);
-  background:transparent;color:var(--dshpc-fg);font:inherit;text-align:left;cursor:pointer;min-width:0;
-  transition:background-color var(--dshpc-dur) var(--dshpc-ease);}
-.dsh-tdt-filechip:hover:not(:disabled){background:var(--dshpc-chip-bg);}
-.dsh-tdt-filechip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
-.dsh-tdt-filechip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
-.dsh-tdt-filechip--block{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;
-  padding:4px 6px;font-size:var(--dshpc-font-xs);}
-.dsh-tdt-filechip--inline{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;font-size:var(--dshpc-font-sm);}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn,.dsh-tdt-chip,.dsh-tdt-filechip{transition:none;}}
-`;
-		/** 输入 / 前缀输入 / 数字步进的皮肤规则（P3）。 */
-		const FIELD_CSS = `
-/* ── 输入类 P3 ────────────────────────────────────────────────────────── */
-.dsh-tdt-input{box-sizing:border-box;border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-md);
-  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font-family:inherit;outline:none;
-  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-input--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
-.dsh-tdt-input--md{height:var(--dshpc-control-h-md);padding:0 10px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-input--lg{height:var(--dshpc-control-h-lg);padding:0 12px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-input::placeholder{color:var(--dshpc-fg-dim);}
-.dsh-tdt-input:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}
-.dsh-tdt-input--error{border-color:var(--dshpc-danger);}
-.dsh-tdt-input:disabled{cursor:default;opacity:.5;}
-
-.dsh-tdt-pfx{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
-  border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg);}
-.dsh-tdt-pfx--sm{height:var(--dshpc-control-h-sm);}
-.dsh-tdt-pfx--md{height:var(--dshpc-control-h-md);}
-.dsh-tdt-pfx--lg{height:var(--dshpc-control-h-lg);}
-/* md / lg 档字号跟档走（与同档下拉同字号）：此前写死 sm(12px)，同排下拉是 13px ⇒ 显得「input 字小」。 */
-.dsh-tdt-pfx--md .dsh-tdt-pfx__label,.dsh-tdt-pfx--lg .dsh-tdt-pfx__label{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-pfx--md .dsh-tdt-pfx__input,.dsh-tdt-pfx--lg .dsh-tdt-pfx__input{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-pfx--error{border-color:var(--dshpc-danger);}
-.dsh-tdt-pfx:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}
-.dsh-tdt-pfx__label{padding:0 8px;color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);white-space:nowrap;border-right:1px solid var(--dshpc-border);}
-.dsh-tdt-pfx__input{flex:1 1 auto;min-width:0;height:100%;padding:0 8px;border:0;background:transparent;color:var(--dshpc-fg);
-  font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);outline:none;}
-.dsh-tdt-pfx__input::placeholder{color:var(--dshpc-fg-dim);}
-
-.dsh-tdt-num{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
-  border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg);}
-.dsh-tdt-num--sm{height:var(--dshpc-control-h-sm);}
-.dsh-tdt-num--md{height:var(--dshpc-control-h-md);}
-.dsh-tdt-num--lg{height:var(--dshpc-control-h-lg);}
-.dsh-tdt-num--md .dsh-tdt-num__input,.dsh-tdt-num--lg .dsh-tdt-num__input{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-num--md .dsh-tdt-num__suffix,.dsh-tdt-num--lg .dsh-tdt-num__suffix{font-size:var(--dshpc-font-md);}
-.dsh-tdt-num--disabled{opacity:.5;}
-.dsh-tdt-num__input{width:36px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--dshpc-fg);
-  font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);text-align:center;outline:none;}
-.dsh-tdt-num__suffix{padding:0 6px;color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm);white-space:nowrap;}
-.dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--dshpc-fg-2);}
-
-/* 官方 Switch 包装统一：选中 = success 绿。
-   （合并原先 task-editor-css / task-list 两处就地覆盖；选择器带包装类 + role，特异性高于官方。） */
-.dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
-
-/* 多行文本输入（提示词等，P3）：卡内无边框（视觉重心在整张卡上），占位色走 dimmed；校验不通过描红盒。
-   （从 task-editor-css 的 .dsh-tdt-ed-prompt 上提而来；业务文件不再自写 textarea 皮肤。） */
-.dsh-tdt-textarea{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--dshpc-fg);font:inherit;font-size:var(--dshpc-font-lg);line-height:1.6;resize:vertical;}
-.dsh-tdt-textarea::placeholder{color:var(--dshpc-fg-dim);}
-.dsh-tdt-textarea--error{box-shadow:0 0 0 1px var(--dshpc-danger);}
-
-/* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
-   具体 z-index 由 .dsh-tdt-ed-resizer / .dsh-tdt-sv-resizer 各自补。 */
-.dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
-.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover,rgba(38,49,72,.06));}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
-`;
-		/** 日期 / 时间的皮肤规则（P4）。 */
-		const DATETIME_CSS = `
-/* ── 日期 / 时间 P4 ───────────────────────────────────────────────────── */
-.dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
-/* ⚠️ 边框粗细 / 圆角必须与下拉锚点（dsh-tdt-ed-field 的 fieldButtonStyle）完全一致
-   （用户 2026-10-02 点名：同排的日期框与下拉框看着不是一套）⇒ 这里也是 0.5px + radius-md。 */
-.dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--dshpc-control-h-lg);
-  min-width:0;max-width:100%;padding:0 8px;border:0.5px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);
-  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font:inherit;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);
-  cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease);}
-/* 日期 / 时间锚点：三档高度（默认 lg=32）。base 已含 lg 高度作兜底，下面三档按 size 覆盖。 */
-.dsh-tdt-dtf--sm{height:var(--dshpc-control-h-sm);padding:0 6px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
-.dsh-tdt-dtf--md{height:var(--dshpc-control-h-md);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-dtf--lg{height:var(--dshpc-control-h-lg);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-dtf:hover:not(:disabled){background:var(--dshpc-hover);}
-.dsh-tdt-dtf:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
-.dsh-tdt-dtf:disabled{cursor:not-allowed;opacity:.6;}
-.dsh-tdt-dtf__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
-.dsh-tdt-dtf__label--ph{color:var(--dshpc-fg-dim);}
-.dsh-tdt-dtf__icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:none;color:var(--dshpc-fg-3);}
-
-.dsh-tdt-layer{position:fixed;z-index:var(--dshpc-z-menu);box-sizing:border-box;padding:8px;background:var(--dshpc-surface-1);
-  box-shadow:var(--dshpc-shadow-2);border-radius:var(--dshpc-radius-md);color:var(--dshpc-fg);font-size:var(--dshpc-font-md);}
-
-.dsh-tdt-cal__head{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px;}
-.dsh-tdt-cal__title{flex:1 1 auto;text-align:center;font-size:var(--dshpc-font-md);font-weight:600;color:var(--dshpc-fg);}
-.dsh-tdt-cal__grid{display:grid;grid-template-columns:repeat(7,32px);gap:2px;}
-.dsh-tdt-cal__weekday{height:24px;display:flex;align-items:center;justify-content:center;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3);}
-.dsh-tdt-cal__cell{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;
-  border:1px solid transparent;border-radius:var(--dshpc-radius-md);background:transparent;color:var(--dshpc-fg);
-  font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;
-  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-cal__cell--hover{background:var(--dshpc-hover);}
-.dsh-tdt-cal__cell--out{color:var(--dshpc-fg-dim);}
-.dsh-tdt-cal__cell--today{border-color:var(--dshpc-business);}
-.dsh-tdt-cal__cell[aria-pressed='true']{background:var(--dshpc-accent);color:var(--dshpc-fg-inverse);}
-.dsh-tdt-cal__foot{margin-top:6px;padding-top:6px;border-top:1px solid var(--dshpc-border);}
-
-.dsh-tdt-time__cols{display:flex;gap:4px;}
-.dsh-tdt-time__list{width:56px;max-height:196px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
-.dsh-tdt-time__opt{padding:5px 0;border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);
-  font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-time__opt[aria-selected='true']{background:var(--dshpc-hover);color:var(--dshpc-fg);font-weight:600;}
-.dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--dshpc-border);}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-cal__cell,.dsh-tdt-time__opt{transition:none;}}
-`;
-		/** 下拉锚点 / 跑马灯的皮肤规则（P6：原 editor-fields 内联 + task-editor-css 迁入基础层）。 */
-		const SELECT_CSS = `
-/* 下拉 / 日历 / 时分锚点：键盘可达性描边 + 校验描红（类名从业务层沿用，皮肤归位基础层） */
-.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dshpc-business);outline-offset:1px;}
-.dsh-tdt-ed-field--error{border-color:var(--dshpc-danger)!important;box-shadow:0 0 0 1px var(--dshpc-danger);}
-/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满 */
-.dsh-tdt-ed-selectwrap{width:100%;}
-
-/* 省略号三件套（ui-style-guide §三「待抽象 #1」的收敛点）：**新代码一律挂这个类**，不再各写一遍。
-   ⚠️ 已有 19 处旧写法待逐步收编（2026-10-04 起新增的调用点不许再手写这三条属性）。 */
-.dsh-tdt-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-
-/* 跑马灯文本（MarqueeText）：双层——外层只裁剪，内层才 transform 滚动；非 hover 内层自带省略号 */
-.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
-.dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
-/* ⚠️ 跑法（用户 2026-10-03 拍板）：**跑一遍、停在尾字**（播放 1 次 + forwards），不来回弹、不无限跑。
-   滚距 = 精确溢出量 ⇒ 停下时最后一个字正好贴右缘，**不会跑进黑块**（黑块是旧手写版把
-   内层盒子裁了、按「半截文本」平移导致的）。鼠标移开 ⇒ :hover 失效 ⇒ 自动复位回省略号态。 */
-.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s 1 forwards;}
-@keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
-`;
-		/** 「过程文件」块的皮肤规则（2026-10-10：回执过程文件桶的次级展示件）。 */
-		const PROCESS_FILES_CSS = `
-/* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
-   （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
-   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用 .dsh-tdt-filechip--inline。 */
-.dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
-.dsh-tdt-proc-head{appearance:none;-webkit-appearance:none;align-self:flex-start;display:inline-flex;align-items:center;
-  gap:6px;padding:2px 6px;border:0;border-radius:var(--dshpc-radius-xs);background:transparent;color:var(--dshpc-fg-3);
-  font:inherit;font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);cursor:pointer;
-  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
-.dsh-tdt-proc-head:hover{background:var(--dshpc-chip-bg);color:var(--dshpc-fg-2);}
-.dsh-tdt-proc-head:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
-.dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-proc-head{transition:none;}}
-`;
-		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
-		const CONTROLS_DOMAIN = "controls";
-		/**
-		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
-		*/
-		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS + PROCESS_FILES_CSS);
-		}
-		//#endregion
-		//#region src/client/ui/Segmented.tsx
-		/**
-		* 分段控件（滑动块）—— **全站唯一实现**（L2 组件皮肤，P1）
-		*
-		* 它是「同一份结构 + 两个受控轴」的样板：
-		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— **离散三档**，调用点**不许**自己写高度
-		*    （真不够用才允许在调用点本地覆盖 `--dshpc-control-h-*`，属例外而非常态）；
-		*  - `variant`：`default`（纯黑面：轨道=第二层面 + 外描边）/ `inset`（灰底面：抄「版本」开关观感，
-		*    轨道=交互灰 hover 底、无外描边）—— 两套都保留、不合并；变体只改两个颜色变量，结构 / 尺寸 / 交互规则零重复。
-		*
-		* 用法：
-		*   // 单选
-		*   h(Segmented<'a' | 'b'>, { value: v, size: 'md', items: [{ value: 'a', label: '甲' }], onChange: setV })
-		*   // 多选（如星期）
-		*   h(Segmented<'1' | '2'>, { multiple: true, value: vs, items: [...], onChange: setVs })
-		*
-		* ⚠️ 不许在任何使用点就地写分段样式；要多一档高度 / 多一个外观 ⇒ 走
-		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
-		*/
-		/**
-		* 渲染一个分段控件（单选 / 多选同体）。
-		*
-		* @param props 见 {@link SegmentedProps}。
-		* @returns 分段控件元素。
-		*/
-		function Segmented(props) {
-			ensureUiBase();
-			ensureControlsStyle();
-			const size = props.size ?? "lg";
-			const variant = props.variant ?? "default";
-			const multiple = props.multiple === true;
-			const value = props.value;
-			const onChange = props.onChange;
-			return (0, react$1.createElement)("div", {
-				role: "group",
-				"aria-label": props.label,
-				id: props.id,
-				className: `dsh-tdt-seg dsh-tdt-seg--${variant} dsh-tdt-seg--${size}${props.block === true ? " dsh-tdt-seg--block" : ""}${props.className !== void 0 ? " " + props.className : ""}`,
-				style: props.style
-			}, props.items.map((item) => {
-				const on = multiple ? value.includes(item.value) : value === item.value;
-				const disabled = item.disabled === true || props.disabled === true;
-				const handle = () => {
-					if (disabled) return;
-					if (multiple) {
-						const arr = value;
-						const next = arr.includes(item.value) ? arr.filter((v) => v !== item.value) : [...arr, item.value];
-						onChange(next);
-					} else onChange(item.value);
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/locale.js
+		/** 返回当前语言，并在宿主语言切换（`<html lang>` 变化）时触发重渲。 */
+		function useLocale() {
+			const [locale, setLocaleState] = (0, react$1.useState)(getLocale);
+			(0, react$1.useEffect)(() => {
+				const observer = new MutationObserver(() => {
+					setLocaleState(getLocale());
+				});
+				observer.observe(document.documentElement, {
+					attributes: true,
+					attributeFilter: ["lang"]
+				});
+				return () => {
+					observer.disconnect();
 				};
-				return (0, react$1.createElement)("button", {
-					key: item.value,
-					type: "button",
-					className: "dsh-tdt-seg__item",
-					"aria-pressed": on,
-					disabled,
-					onClick: handle
-				}, item.label, item.badge !== void 0 && item.badge > 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-seg__badge" }, String(item.badge)) : null);
+			}, []);
+			return locale;
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/picker-logic.js
+		/** 两种输入归一成 groups：给了 `options` 就当成一个无标题的组。 */
+		function toGroups(groups, options) {
+			if (groups !== void 0 && groups.length > 0) return groups;
+			const flat = options ?? [];
+			return flat.length === 0 ? [] : [{
+				value: "",
+				label: "",
+				options: flat
+			}];
+		}
+		function flattenOptions(groups) {
+			const out = [];
+			for (const g of groups) out.push(...g.options);
+			return out;
+		}
+		/** 按关键词过滤（大小写不敏感，匹配 label 与 keywords 拼起来的串；整组无命中则整组去掉）。 */
+		function filterGroups(groups, query) {
+			const q = query.trim().toLowerCase();
+			if (q === "") return groups;
+			const out = [];
+			for (const g of groups) {
+				const hit = g.options.filter((o) => `${o.label} ${o.keywords ?? ""}`.toLowerCase().includes(q));
+				if (hit.length > 0) out.push({
+					...g,
+					options: hit
+				});
+			}
+			return out;
+		}
+		/** 按选项条数跨组切片（首屏 limit 条）；count <= 0 视为不分页，整组没被截到就复用原对象。 */
+		function sliceGroups(groups, count) {
+			if (!(count > 0)) return groups;
+			const out = [];
+			let left = count;
+			for (const g of groups) {
+				if (left <= 0) break;
+				out.push(left >= g.options.length ? g : {
+					...g,
+					options: g.options.slice(0, left)
+				});
+				left -= g.options.length;
+			}
+			return out;
+		}
+		/** 多选切换；`max` 达到上限时不再添加（返回原数组，不静默截断）。 */
+		function toggleValue(current, value, max) {
+			if (current.indexOf(value) >= 0) return current.filter((v) => v !== value);
+			if (max !== void 0 && current.length >= max) return [...current];
+			return [...current, value];
+		}
+		function labelsOf(groups, values) {
+			const all = flattenOptions(groups);
+			const out = [];
+			for (const v of values) {
+				const hit = all.find((o) => o.value === v);
+				if (hit !== void 0) out.push(hit.label);
+			}
+			return out;
+		}
+		/** 触发器宽度解析：把 width / minWidth / maxWidth 译成内联样式。
+		* 定宽（width）忽略 min/max 并锁定三值；否则各自生效，缺省沿用 CSS 默认（min 120px、max 100%）。
+		* 数值按 px 处理，字符串原样透传。 */
+		function resolveTriggerSizing(opts) {
+			const px = (v) => typeof v === "number" ? `${v}px` : v;
+			if (opts.width !== void 0) {
+				const w = px(opts.width);
+				return {
+					width: w,
+					minWidth: w,
+					maxWidth: w
+				};
+			}
+			const style = {};
+			if (opts.minWidth !== void 0) style.minWidth = px(opts.minWidth);
+			if (opts.maxWidth !== void 0) style.maxWidth = px(opts.maxWidth);
+			return style;
+		}
+		//#endregion
+		//#region node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs
+		function hasWindow() {
+			return typeof window !== "undefined";
+		}
+		function getNodeName(node) {
+			if (isNode(node)) return (node.nodeName || "").toLowerCase();
+			return "#document";
+		}
+		function getWindow(node) {
+			var _node$ownerDocument;
+			return (node == null || (_node$ownerDocument = node.ownerDocument) == null ? void 0 : _node$ownerDocument.defaultView) || window;
+		}
+		function getDocumentElement(node) {
+			var _ref;
+			return (_ref = (isNode(node) ? node.ownerDocument : node.document) || window.document) == null ? void 0 : _ref.documentElement;
+		}
+		function isNode(value) {
+			if (!hasWindow()) return false;
+			return value instanceof Node || value instanceof getWindow(value).Node;
+		}
+		function isElement(value) {
+			if (!hasWindow()) return false;
+			return value instanceof Element || value instanceof getWindow(value).Element;
+		}
+		function isHTMLElement(value) {
+			if (!hasWindow()) return false;
+			return value instanceof HTMLElement || value instanceof getWindow(value).HTMLElement;
+		}
+		function isShadowRoot(value) {
+			if (!hasWindow() || typeof ShadowRoot === "undefined") return false;
+			return value instanceof ShadowRoot || value instanceof getWindow(value).ShadowRoot;
+		}
+		function isOverflowElement(element) {
+			const { overflow, overflowX, overflowY, display } = getComputedStyle$1(element);
+			return /auto|scroll|overlay|hidden|clip/.test(overflow + overflowY + overflowX) && display !== "inline" && display !== "contents";
+		}
+		function isTableElement(element) {
+			return /^(table|td|th)$/.test(getNodeName(element));
+		}
+		function isTopLayer(element) {
+			try {
+				if (element.matches(":popover-open")) return true;
+			} catch (_e) {}
+			try {
+				return element.matches(":modal");
+			} catch (_e) {
+				return false;
+			}
+		}
+		const willChangeRe = /transform|translate|scale|rotate|perspective|filter/;
+		const containRe = /paint|layout|strict|content/;
+		const isNotNone = (value) => !!value && value !== "none";
+		let isWebKitValue;
+		function isContainingBlock(elementOrCss) {
+			const css = isElement(elementOrCss) ? getComputedStyle$1(elementOrCss) : elementOrCss;
+			return isNotNone(css.transform) || isNotNone(css.translate) || isNotNone(css.scale) || isNotNone(css.rotate) || isNotNone(css.perspective) || !isWebKit() && (isNotNone(css.backdropFilter) || isNotNone(css.filter)) || willChangeRe.test(css.willChange || "") || containRe.test(css.contain || "");
+		}
+		function getContainingBlock(element) {
+			let currentNode = getParentNode(element);
+			while (isHTMLElement(currentNode) && !isLastTraversableNode(currentNode)) {
+				if (isContainingBlock(currentNode)) return currentNode;
+				else if (isTopLayer(currentNode)) return null;
+				currentNode = getParentNode(currentNode);
+			}
+			return null;
+		}
+		function isWebKit() {
+			if (isWebKitValue == null) isWebKitValue = typeof CSS !== "undefined" && CSS.supports && CSS.supports("-webkit-backdrop-filter", "none");
+			return isWebKitValue;
+		}
+		function isLastTraversableNode(node) {
+			return /^(html|body|#document)$/.test(getNodeName(node));
+		}
+		function getComputedStyle$1(element) {
+			return getWindow(element).getComputedStyle(element);
+		}
+		function getNodeScroll(element) {
+			if (isElement(element)) return {
+				scrollLeft: element.scrollLeft,
+				scrollTop: element.scrollTop
+			};
+			return {
+				scrollLeft: element.scrollX,
+				scrollTop: element.scrollY
+			};
+		}
+		function getParentNode(node) {
+			if (getNodeName(node) === "html") return node;
+			const result = node.assignedSlot || node.parentNode || isShadowRoot(node) && node.host || getDocumentElement(node);
+			return isShadowRoot(result) ? result.host : result;
+		}
+		function getNearestOverflowAncestor(node) {
+			const parentNode = getParentNode(node);
+			if (isLastTraversableNode(parentNode)) return (node.ownerDocument || node).body;
+			if (isHTMLElement(parentNode) && isOverflowElement(parentNode)) return parentNode;
+			return getNearestOverflowAncestor(parentNode);
+		}
+		function getOverflowAncestors(node, list, traverseIframes) {
+			var _node$ownerDocument2;
+			if (list === void 0) list = [];
+			if (traverseIframes === void 0) traverseIframes = true;
+			const scrollableAncestor = getNearestOverflowAncestor(node);
+			const isBody = scrollableAncestor === ((_node$ownerDocument2 = node.ownerDocument) == null ? void 0 : _node$ownerDocument2.body);
+			const win = getWindow(scrollableAncestor);
+			if (isBody) {
+				const frameElement = getFrameElement(win);
+				return list.concat(win, win.visualViewport || [], isOverflowElement(scrollableAncestor) ? scrollableAncestor : [], frameElement && traverseIframes ? getOverflowAncestors(frameElement) : []);
+			} else return list.concat(scrollableAncestor, getOverflowAncestors(scrollableAncestor, [], traverseIframes));
+		}
+		function getFrameElement(win) {
+			return win.parent && Object.getPrototypeOf(win.parent) ? win.frameElement : null;
+		}
+		//#endregion
+		//#region node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs
+		const min = Math.min;
+		const max = Math.max;
+		const round = Math.round;
+		const floor = Math.floor;
+		const createCoords = (v) => ({
+			x: v,
+			y: v
+		});
+		const oppositeSideMap = {
+			left: "right",
+			right: "left",
+			bottom: "top",
+			top: "bottom"
+		};
+		function clamp(start, value, end) {
+			return max(start, min(value, end));
+		}
+		function evaluate(value, param) {
+			return typeof value === "function" ? value(param) : value;
+		}
+		function getSide(placement) {
+			return placement.split("-")[0];
+		}
+		function getAlignment(placement) {
+			return placement.split("-")[1];
+		}
+		function getOppositeAxis(axis) {
+			return axis === "x" ? "y" : "x";
+		}
+		function getAxisLength(axis) {
+			return axis === "y" ? "height" : "width";
+		}
+		function getSideAxis(placement) {
+			const firstChar = placement[0];
+			return firstChar === "t" || firstChar === "b" ? "y" : "x";
+		}
+		function getAlignmentAxis(placement) {
+			return getOppositeAxis(getSideAxis(placement));
+		}
+		function getAlignmentSides(placement, rects, rtl) {
+			if (rtl === void 0) rtl = false;
+			const alignment = getAlignment(placement);
+			const alignmentAxis = getAlignmentAxis(placement);
+			const length = getAxisLength(alignmentAxis);
+			let mainAlignmentSide = alignmentAxis === "x" ? alignment === (rtl ? "end" : "start") ? "right" : "left" : alignment === "start" ? "bottom" : "top";
+			if (rects.reference[length] > rects.floating[length]) mainAlignmentSide = getOppositePlacement(mainAlignmentSide);
+			return [mainAlignmentSide, getOppositePlacement(mainAlignmentSide)];
+		}
+		function getExpandedPlacements(placement) {
+			const oppositePlacement = getOppositePlacement(placement);
+			return [
+				getOppositeAlignmentPlacement(placement),
+				oppositePlacement,
+				getOppositeAlignmentPlacement(oppositePlacement)
+			];
+		}
+		function getOppositeAlignmentPlacement(placement) {
+			return placement.includes("start") ? placement.replace("start", "end") : placement.replace("end", "start");
+		}
+		const lrPlacement = ["left", "right"];
+		const rlPlacement = ["right", "left"];
+		const tbPlacement = ["top", "bottom"];
+		const btPlacement = ["bottom", "top"];
+		function getSideList(side, isStart, rtl) {
+			switch (side) {
+				case "top":
+				case "bottom":
+					if (rtl) return isStart ? rlPlacement : lrPlacement;
+					return isStart ? lrPlacement : rlPlacement;
+				case "left":
+				case "right": return isStart ? tbPlacement : btPlacement;
+				default: return [];
+			}
+		}
+		function getOppositeAxisPlacements(placement, flipAlignment, direction, rtl) {
+			const alignment = getAlignment(placement);
+			let list = getSideList(getSide(placement), direction === "start", rtl);
+			if (alignment) {
+				list = list.map((side) => side + "-" + alignment);
+				if (flipAlignment) list = list.concat(list.map(getOppositeAlignmentPlacement));
+			}
+			return list;
+		}
+		function getOppositePlacement(placement) {
+			const side = getSide(placement);
+			return oppositeSideMap[side] + placement.slice(side.length);
+		}
+		function expandPaddingObject(padding) {
+			var _padding$top, _padding$right, _padding$bottom, _padding$left;
+			return {
+				top: (_padding$top = padding.top) != null ? _padding$top : 0,
+				right: (_padding$right = padding.right) != null ? _padding$right : 0,
+				bottom: (_padding$bottom = padding.bottom) != null ? _padding$bottom : 0,
+				left: (_padding$left = padding.left) != null ? _padding$left : 0
+			};
+		}
+		function getPaddingObject(padding) {
+			return typeof padding !== "number" ? expandPaddingObject(padding) : {
+				top: padding,
+				right: padding,
+				bottom: padding,
+				left: padding
+			};
+		}
+		function rectToClientRect(rect) {
+			const { x, y, width, height } = rect;
+			return {
+				width,
+				height,
+				top: y,
+				left: x,
+				right: x + width,
+				bottom: y + height,
+				x,
+				y
+			};
+		}
+		/*!
+		* tabbable 6.5.1
+		* @license MIT, https://github.com/focus-trap/tabbable/blob/master/LICENSE
+		*/
+		//#endregion
+		//#region node_modules/@floating-ui/react/dist/floating-ui.react.utils.mjs
+		var import_dist$1 = (/* @__PURE__ */ __commonJSMin(((exports) => {
+			var candidateSelector = /* #__PURE__ */ [
+				"input:not([inert]):not([inert] *)",
+				"select:not([inert]):not([inert] *)",
+				"textarea:not([inert]):not([inert] *)",
+				"a[href]:not([inert]):not([inert] *)",
+				"area[href]:not([inert]):not([inert] *)",
+				"button:not([inert]):not([inert] *)",
+				"[tabindex]:not(slot):not([inert]):not([inert] *)",
+				"audio[controls]:not([inert]):not([inert] *)",
+				"video[controls]:not([inert]):not([inert] *)",
+				"[contenteditable]:not([contenteditable=\"false\"]):not([inert]):not([inert] *)",
+				"details>summary:first-of-type:not([inert]):not([inert] *)",
+				"details:not([inert]):not([inert] *)"
+			].join(",");
+			var NoElement = typeof Element === "undefined";
+			var matches = NoElement ? function() {} : Element.prototype.matches || Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+			var getRootNode = !NoElement && Element.prototype.getRootNode ? function(element) {
+				return element == null || element.getRootNode == null ? void 0 : element.getRootNode();
+			} : function(element) {
+				return element == null ? void 0 : element.ownerDocument;
+			};
+			/**
+			* Determines if a node is inert or in an inert ancestor.
+			* @param {Node} [node]
+			* @param {boolean} [lookUp] If true and `node` is not inert, looks up at ancestors to
+			*  see if any of them are inert. If false, only `node` itself is considered.
+			* @returns {boolean} True if inert itself or by way of being in an inert ancestor.
+			*  False if `node` is falsy.
+			*/
+			var _isInert = function isInert(node, lookUp) {
+				if (lookUp === void 0) lookUp = true;
+				var inertAtt = node == null || node.getAttribute == null ? void 0 : node.getAttribute("inert");
+				return inertAtt === "" || inertAtt === "true" || lookUp && node && (typeof node.closest === "function" ? node.closest("[inert]") : _isInert(node.parentNode));
+			};
+			/**
+			* Determines if a node's content is editable.
+			* @param {Element} [node]
+			* @returns True if it's content-editable; false if it's not or `node` is falsy.
+			*/
+			var isContentEditable = function isContentEditable(node) {
+				var _node$getAttribute;
+				var attValue = node == null || node.getAttribute == null || (_node$getAttribute = node.getAttribute("contenteditable")) == null ? void 0 : _node$getAttribute.toLowerCase();
+				return attValue === "" || attValue === "true" || attValue === "plaintext-only";
+			};
+			/**
+			* @param {Element} el container to check in
+			* @param {boolean} includeContainer add container to check
+			* @param {(node: Element) => boolean} filter filter candidates
+			* @returns {Element[]}
+			*/
+			var getCandidates = function getCandidates(el, includeContainer, filter) {
+				if (_isInert(el)) return [];
+				var candidates = Array.prototype.slice.apply(el.querySelectorAll(candidateSelector));
+				if (includeContainer && matches.call(el, candidateSelector)) candidates.unshift(el);
+				candidates = candidates.filter(filter);
+				return candidates;
+			};
+			/**
+			* @callback GetShadowRoot
+			* @param {Element} element to check for shadow root
+			* @returns {ShadowRoot|boolean} ShadowRoot if available or boolean indicating if a shadowRoot is attached but not available.
+			*/
+			/**
+			* @callback ShadowRootFilter
+			* @param {Element} shadowHostNode the element which contains shadow content
+			* @returns {boolean} true if a shadow root could potentially contain valid candidates.
+			*/
+			/**
+			* @typedef {Object} CandidateScope
+			* @property {Element} scopeParent contains inner candidates
+			* @property {Element[]} candidates list of candidates found in the scope parent
+			*/
+			/**
+			* @typedef {Object} IterativeOptions
+			* @property {GetShadowRoot|boolean} getShadowRoot true if shadow support is enabled; falsy if not;
+			*  if a function, implies shadow support is enabled and either returns the shadow root of an element
+			*  or a boolean stating if it has an undisclosed shadow root
+			* @property {(node: Element) => boolean} filter filter candidates
+			* @property {boolean} flatten if true then result will flatten any CandidateScope into the returned list
+			* @property {ShadowRootFilter} shadowRootFilter filter shadow roots;
+			*/
+			/**
+			* @param {Element[]} elements list of element containers to match candidates from
+			* @param {boolean} includeContainer add container list to check
+			* @param {IterativeOptions} options
+			* @returns {Array.<Element|CandidateScope>}
+			*/
+			var _getCandidatesIteratively = function getCandidatesIteratively(elements, includeContainer, options) {
+				var candidates = [];
+				var elementsToCheck = Array.from(elements);
+				while (elementsToCheck.length) {
+					var element = elementsToCheck.shift();
+					if (_isInert(element, false)) continue;
+					if (element.tagName === "SLOT") {
+						var assigned = element.assignedElements();
+						var nestedCandidates = _getCandidatesIteratively(assigned.length ? assigned : element.children, true, options);
+						if (options.flatten) candidates.push.apply(candidates, nestedCandidates);
+						else candidates.push({
+							scopeParent: element,
+							candidates: nestedCandidates
+						});
+					} else {
+						if (matches.call(element, candidateSelector) && options.filter(element) && (includeContainer || !elements.includes(element))) candidates.push(element);
+						var shadowRoot = element.shadowRoot || typeof options.getShadowRoot === "function" && options.getShadowRoot(element);
+						var validShadowRoot = !_isInert(shadowRoot, false) && (!options.shadowRootFilter || options.shadowRootFilter(element));
+						if (shadowRoot && validShadowRoot) {
+							var _nestedCandidates = _getCandidatesIteratively(shadowRoot === true ? element.children : shadowRoot.children, true, options);
+							if (options.flatten) candidates.push.apply(candidates, _nestedCandidates);
+							else candidates.push({
+								scopeParent: element,
+								candidates: _nestedCandidates
+							});
+						} else elementsToCheck.unshift.apply(elementsToCheck, element.children);
+					}
+				}
+				return candidates;
+			};
+			/**
+			* @private
+			* Determines if the node has an explicitly specified `tabindex` attribute.
+			* @param {HTMLElement} node
+			* @returns {boolean} True if so; false if not.
+			*/
+			var hasTabIndex = function hasTabIndex(node) {
+				return !isNaN(parseInt(node.getAttribute("tabindex"), 10));
+			};
+			/**
+			* Determine the tab index of a given node.
+			* @param {HTMLElement} node
+			* @returns {number} Tab order (negative, 0, or positive number).
+			* @throws {Error} If `node` is falsy.
+			*/
+			var getTabIndex = function getTabIndex(node) {
+				if (!node) throw new Error("No node provided");
+				if (node.tabIndex < 0) {
+					if ((/^(AUDIO|VIDEO|DETAILS)$/.test(node.tagName) || isContentEditable(node)) && !hasTabIndex(node)) return 0;
+				}
+				return node.tabIndex;
+			};
+			/**
+			* Determine the tab index of a given node __for sort order purposes__.
+			* @param {HTMLElement} node
+			* @param {boolean} [isScope] True for a custom element with shadow root or slot that, by default,
+			*  has tabIndex -1, but needs to be sorted by document order in order for its content to be
+			*  inserted into the correct sort position.
+			* @returns {number} Tab order (negative, 0, or positive number).
+			*/
+			var getSortOrderTabIndex = function getSortOrderTabIndex(node, isScope) {
+				var tabIndex = getTabIndex(node);
+				if (tabIndex < 0 && isScope && !hasTabIndex(node)) return 0;
+				return tabIndex;
+			};
+			var sortOrderedTabbables = function sortOrderedTabbables(a, b) {
+				return a.tabIndex === b.tabIndex ? a.documentOrder - b.documentOrder : a.tabIndex - b.tabIndex;
+			};
+			var isInput = function isInput(node) {
+				return node.tagName === "INPUT";
+			};
+			var isHiddenInput = function isHiddenInput(node) {
+				return isInput(node) && node.type === "hidden";
+			};
+			var isDetailsWithSummary = function isDetailsWithSummary(node) {
+				return node.tagName === "DETAILS" && Array.prototype.slice.apply(node.children).some(function(child) {
+					return child.tagName === "SUMMARY";
+				});
+			};
+			var getCheckedRadio = function getCheckedRadio(nodes, form) {
+				for (var i = 0; i < nodes.length; i++) if (nodes[i].checked && nodes[i].form === form) return nodes[i];
+			};
+			var isTabbableRadio = function isTabbableRadio(node) {
+				if (!node.name) return true;
+				var radioScope = node.form || getRootNode(node);
+				var queryRadios = function queryRadios(name) {
+					return radioScope.querySelectorAll("input[type=\"radio\"][name=\"" + name + "\"]");
+				};
+				var radioSet;
+				if (typeof window !== "undefined" && typeof window.CSS !== "undefined" && typeof window.CSS.escape === "function") radioSet = queryRadios(window.CSS.escape(node.name));
+				else try {
+					radioSet = queryRadios(node.name);
+				} catch (err) {
+					console.error("Looks like you have a radio button with a name attribute containing invalid CSS selector characters and need the CSS.escape polyfill: %s", err.message);
+					return false;
+				}
+				var checked = getCheckedRadio(radioSet, node.form);
+				return !checked || checked === node;
+			};
+			var isRadio = function isRadio(node) {
+				return isInput(node) && node.type === "radio";
+			};
+			var isNonTabbableRadio = function isNonTabbableRadio(node) {
+				return isRadio(node) && !isTabbableRadio(node);
+			};
+			var isNodeAttached = function isNodeAttached(node) {
+				var _nodeRoot;
+				var nodeRoot = node && getRootNode(node);
+				var nodeRootHost = (_nodeRoot = nodeRoot) == null ? void 0 : _nodeRoot.host;
+				var attached = false;
+				if (nodeRoot && nodeRoot !== node) {
+					var _nodeRootHost, _node$ownerDocument;
+					attached = !!((_nodeRootHost = nodeRootHost) != null && (_nodeRootHost = _nodeRootHost.ownerDocument) != null && _nodeRootHost.contains(nodeRootHost) || node != null && (_node$ownerDocument = node.ownerDocument) != null && _node$ownerDocument.contains(node));
+					while (!attached && nodeRootHost) {
+						var _nodeRoot2, _nodeRootHost2;
+						nodeRoot = getRootNode(nodeRootHost);
+						nodeRootHost = (_nodeRoot2 = nodeRoot) == null ? void 0 : _nodeRoot2.host;
+						attached = !!((_nodeRootHost2 = nodeRootHost) != null && (_nodeRootHost2 = _nodeRootHost2.ownerDocument) != null && _nodeRootHost2.contains(nodeRootHost));
+					}
+				}
+				return attached;
+			};
+			var isZeroArea = function isZeroArea(node) {
+				var _node$getBoundingClie = node.getBoundingClientRect(), width = _node$getBoundingClie.width, height = _node$getBoundingClie.height;
+				return width === 0 && height === 0;
+			};
+			var isHidden = function isHidden(node, _ref) {
+				var displayCheck = _ref.displayCheck, getShadowRoot = _ref.getShadowRoot;
+				if (displayCheck === "full-native") {
+					if ("checkVisibility" in node) return !node.checkVisibility({
+						checkOpacity: false,
+						opacityProperty: false,
+						contentVisibilityAuto: true,
+						visibilityProperty: true,
+						checkVisibilityCSS: true
+					});
+				}
+				var visibility = getComputedStyle(node).visibility;
+				if (visibility === "hidden" || visibility === "collapse") return true;
+				var nodeUnderDetails = matches.call(node, "details>summary:first-of-type") ? node.parentElement : node;
+				if (matches.call(nodeUnderDetails, "details:not([open]) *")) return true;
+				if (!displayCheck || displayCheck === "full" || displayCheck === "full-native" || displayCheck === "legacy-full") {
+					if (typeof getShadowRoot === "function") {
+						var originalNode = node;
+						while (node) {
+							var parentElement = node.parentElement;
+							var rootNode = getRootNode(node);
+							if (parentElement && !parentElement.shadowRoot && getShadowRoot(parentElement) === true) return isZeroArea(node);
+							else if (node.assignedSlot) node = node.assignedSlot;
+							else if (!parentElement && rootNode !== node.ownerDocument) node = rootNode.host;
+							else node = parentElement;
+						}
+						node = originalNode;
+					}
+					if (isNodeAttached(node)) return !node.getClientRects().length;
+					if (displayCheck !== "legacy-full") return true;
+				} else if (displayCheck === "non-zero-area") return isZeroArea(node);
+				return false;
+			};
+			var isDisabledFromFieldset = function isDisabledFromFieldset(node) {
+				if (/^(INPUT|BUTTON|SELECT|TEXTAREA)$/.test(node.tagName)) {
+					var parentNode = node.parentElement;
+					while (parentNode) {
+						if (parentNode.tagName === "FIELDSET" && parentNode.disabled) {
+							for (var i = 0; i < parentNode.children.length; i++) {
+								var child = parentNode.children.item(i);
+								if (child.tagName === "LEGEND") return matches.call(parentNode, "fieldset[disabled] *") ? true : !child.contains(node);
+							}
+							return true;
+						}
+						parentNode = parentNode.parentElement;
+					}
+				}
+				return false;
+			};
+			var isNodeMatchingSelectorFocusable = function isNodeMatchingSelectorFocusable(options, node) {
+				if (node.disabled || isHiddenInput(node) || isHidden(node, options) || isDetailsWithSummary(node) || isDisabledFromFieldset(node)) return false;
+				return true;
+			};
+			var isNodeMatchingSelectorTabbable = function isNodeMatchingSelectorTabbable(options, node) {
+				if (isNonTabbableRadio(node) || getTabIndex(node) < 0 || !isNodeMatchingSelectorFocusable(options, node)) return false;
+				return true;
+			};
+			var isShadowRootTabbable = function isShadowRootTabbable(shadowHostNode) {
+				var tabIndex = parseInt(shadowHostNode.getAttribute("tabindex"), 10);
+				if (isNaN(tabIndex) || tabIndex >= 0) return true;
+				return false;
+			};
+			/**
+			* @param {Array.<Element|CandidateScope>} candidates
+			* @returns Element[]
+			*/
+			var _sortByOrder = function sortByOrder(candidates) {
+				var regularTabbables = [];
+				var orderedTabbables = [];
+				candidates.forEach(function(item, i) {
+					var isScope = !!item.scopeParent;
+					var element = isScope ? item.scopeParent : item;
+					var candidateTabindex = getSortOrderTabIndex(element, isScope);
+					var elements = isScope ? _sortByOrder(item.candidates) : element;
+					if (candidateTabindex === 0) isScope ? regularTabbables.push.apply(regularTabbables, elements) : regularTabbables.push(element);
+					else orderedTabbables.push({
+						documentOrder: i,
+						tabIndex: candidateTabindex,
+						item,
+						isScope,
+						content: elements
+					});
+				});
+				return orderedTabbables.sort(sortOrderedTabbables).reduce(function(acc, sortable) {
+					sortable.isScope ? acc.push.apply(acc, sortable.content) : acc.push(sortable.content);
+					return acc;
+				}, []).concat(regularTabbables);
+			};
+			exports.tabbable = function tabbable(container, options) {
+				options = options || {};
+				var candidates;
+				if (options.getShadowRoot) candidates = _getCandidatesIteratively([container], options.includeContainer, {
+					filter: isNodeMatchingSelectorTabbable.bind(null, options),
+					flatten: false,
+					getShadowRoot: options.getShadowRoot,
+					shadowRootFilter: isShadowRootTabbable
+				});
+				else candidates = getCandidates(container, options.includeContainer, isNodeMatchingSelectorTabbable.bind(null, options));
+				return _sortByOrder(candidates);
+			};
+		})))();
+		function isSafari() {
+			return /apple/i.test(navigator.vendor);
+		}
+		function activeElement(doc) {
+			let activeElement = doc.activeElement;
+			while (((_activeElement = activeElement) == null || (_activeElement = _activeElement.shadowRoot) == null ? void 0 : _activeElement.activeElement) != null) {
+				var _activeElement;
+				activeElement = activeElement.shadowRoot.activeElement;
+			}
+			return activeElement;
+		}
+		function contains$2(parent, child) {
+			if (!parent || !child) return false;
+			const rootNode = child.getRootNode == null ? void 0 : child.getRootNode();
+			if (parent.contains(child)) return true;
+			if (rootNode && isShadowRoot(rootNode)) {
+				let next = child;
+				while (next) {
+					if (parent === next) return true;
+					next = next.parentNode || next.host;
+				}
+			}
+			return false;
+		}
+		function getDocument(node) {
+			return (node == null ? void 0 : node.ownerDocument) || document;
+		}
+		var index$1 = typeof document !== "undefined" ? react$1.useLayoutEffect : function noop() {};
+		const useSafeInsertionEffect = { ...react$1 }.useInsertionEffect || ((fn) => fn());
+		function useEffectEvent(callback) {
+			const ref = react$1.useRef(() => {});
+			useSafeInsertionEffect(() => {
+				ref.current = callback;
+			});
+			return react$1.useCallback(function() {
+				for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) args[_key] = arguments[_key];
+				return ref.current == null ? void 0 : ref.current(...args);
+			}, []);
+		}
+		const getTabbableOptions = () => ({
+			getShadowRoot: true,
+			displayCheck: typeof ResizeObserver === "function" && ResizeObserver.toString().includes("[native code]") ? "full" : "none"
+		});
+		function getTabbableIn(container, dir) {
+			const list = (0, import_dist$1.tabbable)(container, getTabbableOptions());
+			const len = list.length;
+			if (len === 0) return;
+			const active = activeElement(getDocument(container));
+			const index = list.indexOf(active);
+			return list[index === -1 ? dir === 1 ? 0 : len - 1 : index + dir];
+		}
+		function getNextTabbable(referenceElement) {
+			return getTabbableIn(getDocument(referenceElement).body, 1) || referenceElement;
+		}
+		function getPreviousTabbable(referenceElement) {
+			return getTabbableIn(getDocument(referenceElement).body, -1) || referenceElement;
+		}
+		function isOutsideEvent(event, container) {
+			const containerElement = container || event.currentTarget;
+			const relatedTarget = event.relatedTarget;
+			return !relatedTarget || !contains$2(containerElement, relatedTarget);
+		}
+		function disableFocusInside(container) {
+			(0, import_dist$1.tabbable)(container, getTabbableOptions()).forEach((element) => {
+				element.dataset.tabindex = element.getAttribute("tabindex") || "";
+				element.setAttribute("tabindex", "-1");
+			});
+		}
+		function enableFocusInside(container) {
+			container.querySelectorAll("[data-tabindex]").forEach((element) => {
+				const tabindex = element.dataset.tabindex;
+				delete element.dataset.tabindex;
+				if (tabindex) element.setAttribute("tabindex", tabindex);
+				else element.removeAttribute("tabindex");
+			});
+		}
+		//#endregion
+		//#region node_modules/@floating-ui/core/dist/floating-ui.core.mjs
+		function computeCoordsFromPlacement(_ref, placement, rtl) {
+			let { reference, floating } = _ref;
+			const sideAxis = getSideAxis(placement);
+			const alignmentAxis = getAlignmentAxis(placement);
+			const alignLength = getAxisLength(alignmentAxis);
+			const side = getSide(placement);
+			const isVertical = sideAxis === "y";
+			const commonX = reference.x + reference.width / 2 - floating.width / 2;
+			const commonY = reference.y + reference.height / 2 - floating.height / 2;
+			const commonAlign = reference[alignLength] / 2 - floating[alignLength] / 2;
+			let coords;
+			switch (side) {
+				case "top":
+					coords = {
+						x: commonX,
+						y: reference.y - floating.height
+					};
+					break;
+				case "bottom":
+					coords = {
+						x: commonX,
+						y: reference.y + reference.height
+					};
+					break;
+				case "right":
+					coords = {
+						x: reference.x + reference.width,
+						y: commonY
+					};
+					break;
+				case "left":
+					coords = {
+						x: reference.x - floating.width,
+						y: commonY
+					};
+					break;
+				default: coords = {
+					x: reference.x,
+					y: reference.y
+				};
+			}
+			const alignment = getAlignment(placement);
+			if (alignment) coords[alignmentAxis] += commonAlign * (alignment === "end" ? 1 : -1) * (rtl && isVertical ? -1 : 1);
+			return coords;
+		}
+		/**
+		* Resolves with an object of overflow side offsets that determine how much the
+		* element is overflowing a given clipping boundary on each side.
+		* - positive = overflowing the boundary by that number of pixels
+		* - negative = how many pixels left before it will overflow
+		* - 0 = lies flush with the boundary
+		* @see https://floating-ui.com/docs/detectOverflow
+		*/
+		async function detectOverflow(state, options) {
+			var _await$platform$isEle;
+			if (options === void 0) options = {};
+			const { x, y, platform, rects, elements, strategy } = state;
+			const { boundary = "clippingAncestors", rootBoundary = "viewport", elementContext = "floating", altBoundary = false, padding = 0 } = evaluate(options, state);
+			const paddingObject = getPaddingObject(padding);
+			const element = elements[altBoundary ? elementContext === "floating" ? "reference" : "floating" : elementContext];
+			const clippingClientRect = rectToClientRect(await platform.getClippingRect({
+				element: ((_await$platform$isEle = await (platform.isElement == null ? void 0 : platform.isElement(element))) != null ? _await$platform$isEle : true) ? element : element.contextElement || await (platform.getDocumentElement == null ? void 0 : platform.getDocumentElement(elements.floating)),
+				boundary,
+				rootBoundary,
+				strategy
+			}));
+			const rect = elementContext === "floating" ? {
+				x,
+				y,
+				width: rects.floating.width,
+				height: rects.floating.height
+			} : rects.reference;
+			const offsetParent = await (platform.getOffsetParent == null ? void 0 : platform.getOffsetParent(elements.floating));
+			const offsetScale = await (platform.isElement == null ? void 0 : platform.isElement(offsetParent)) && await (platform.getScale == null ? void 0 : platform.getScale(offsetParent)) || {
+				x: 1,
+				y: 1
+			};
+			const elementClientRect = rectToClientRect(platform.convertOffsetParentRelativeRectToViewportRelativeRect ? await platform.convertOffsetParentRelativeRectToViewportRelativeRect({
+				elements,
+				rect,
+				offsetParent,
+				strategy
+			}) : rect);
+			return {
+				top: (clippingClientRect.top - elementClientRect.top + paddingObject.top) / offsetScale.y,
+				bottom: (elementClientRect.bottom - clippingClientRect.bottom + paddingObject.bottom) / offsetScale.y,
+				left: (clippingClientRect.left - elementClientRect.left + paddingObject.left) / offsetScale.x,
+				right: (elementClientRect.right - clippingClientRect.right + paddingObject.right) / offsetScale.x
+			};
+		}
+		const MAX_RESET_COUNT = 50;
+		/**
+		* Computes the `x` and `y` coordinates that will place the floating element
+		* next to a given reference element.
+		*
+		* This export does not have any `platform` interface logic. You will need to
+		* write one for the platform you are using Floating UI with.
+		*/
+		const computePosition$1 = async (reference, floating, config) => {
+			const { placement = "bottom", strategy = "absolute", middleware = [], platform } = config;
+			const platformWithDetectOverflow = platform.detectOverflow ? platform : {
+				...platform,
+				detectOverflow
+			};
+			const rtl = await (platform.isRTL == null ? void 0 : platform.isRTL(floating));
+			let rects = await platform.getElementRects({
+				reference,
+				floating,
+				strategy
+			});
+			let { x, y } = computeCoordsFromPlacement(rects, placement, rtl);
+			let statefulPlacement = placement;
+			let resetCount = 0;
+			const middlewareData = {};
+			for (let i = 0; i < middleware.length; i++) {
+				const currentMiddleware = middleware[i];
+				if (!currentMiddleware) continue;
+				const { name, fn } = currentMiddleware;
+				const { x: nextX, y: nextY, data, reset } = await fn({
+					x,
+					y,
+					initialPlacement: placement,
+					placement: statefulPlacement,
+					strategy,
+					middlewareData,
+					rects,
+					platform: platformWithDetectOverflow,
+					elements: {
+						reference,
+						floating
+					}
+				});
+				x = nextX != null ? nextX : x;
+				y = nextY != null ? nextY : y;
+				middlewareData[name] = {
+					...middlewareData[name],
+					...data
+				};
+				if (reset && resetCount < MAX_RESET_COUNT) {
+					resetCount++;
+					if (typeof reset === "object") {
+						if (reset.placement) statefulPlacement = reset.placement;
+						if (reset.rects) rects = reset.rects === true ? await platform.getElementRects({
+							reference,
+							floating,
+							strategy
+						}) : reset.rects;
+						({x, y} = computeCoordsFromPlacement(rects, statefulPlacement, rtl));
+					}
+					i = -1;
+				}
+			}
+			return {
+				x,
+				y,
+				placement: statefulPlacement,
+				strategy,
+				middlewareData
+			};
+		};
+		/**
+		* Optimizes the visibility of the floating element by flipping the `placement`
+		* in order to keep it in view when the preferred placement(s) will overflow the
+		* clipping boundary. Alternative to `autoPlacement`.
+		* @see https://floating-ui.com/docs/flip
+		*/
+		const flip$2 = function(options) {
+			if (options === void 0) options = {};
+			return {
+				name: "flip",
+				options,
+				async fn(state) {
+					var _middlewareData$arrow, _middlewareData$flip;
+					const { placement, middlewareData, rects, initialPlacement, platform, elements } = state;
+					const { mainAxis: checkMainAxis = true, crossAxis: checkCrossAxis = true, fallbackPlacements: specifiedFallbackPlacements, fallbackStrategy = "bestFit", fallbackAxisSideDirection = "none", flipAlignment = true, ...detectOverflowOptions } = evaluate(options, state);
+					if ((_middlewareData$arrow = middlewareData.arrow) != null && _middlewareData$arrow.alignmentOffset) return {};
+					const side = getSide(placement);
+					const initialSideAxis = getSideAxis(initialPlacement);
+					const isBasePlacement = getSide(initialPlacement) === initialPlacement;
+					const rtl = await (platform.isRTL == null ? void 0 : platform.isRTL(elements.floating));
+					const fallbackPlacements = specifiedFallbackPlacements || (isBasePlacement || !flipAlignment ? [getOppositePlacement(initialPlacement)] : getExpandedPlacements(initialPlacement));
+					const hasFallbackAxisSideDirection = fallbackAxisSideDirection !== "none";
+					if (!specifiedFallbackPlacements && hasFallbackAxisSideDirection) fallbackPlacements.push(...getOppositeAxisPlacements(initialPlacement, flipAlignment, fallbackAxisSideDirection, rtl));
+					const placements = [initialPlacement, ...fallbackPlacements];
+					const overflow = await platform.detectOverflow(state, detectOverflowOptions);
+					const overflows = [];
+					let overflowsData = ((_middlewareData$flip = middlewareData.flip) == null ? void 0 : _middlewareData$flip.overflows) || [];
+					if (checkMainAxis) overflows.push(overflow[side]);
+					if (checkCrossAxis) {
+						const sides = getAlignmentSides(placement, rects, rtl);
+						overflows.push(overflow[sides[0]], overflow[sides[1]]);
+					}
+					overflowsData = [...overflowsData, {
+						placement,
+						overflows
+					}];
+					if (!overflows.every((side) => side <= 0)) {
+						var _middlewareData$flip2, _overflowsData$filter;
+						const nextIndex = (((_middlewareData$flip2 = middlewareData.flip) == null ? void 0 : _middlewareData$flip2.index) || 0) + 1;
+						const nextPlacement = placements[nextIndex];
+						if (nextPlacement) {
+							if (!(checkCrossAxis === "alignment" ? initialSideAxis !== getSideAxis(nextPlacement) : false) || overflowsData.every((d) => getSideAxis(d.placement) === initialSideAxis ? d.overflows[0] > 0 : true)) return {
+								data: {
+									index: nextIndex,
+									overflows: overflowsData
+								},
+								reset: { placement: nextPlacement }
+							};
+						}
+						let resetPlacement = (_overflowsData$filter = overflowsData.filter((d) => d.overflows[0] <= 0).sort((a, b) => a.overflows[1] - b.overflows[1])[0]) == null ? void 0 : _overflowsData$filter.placement;
+						if (!resetPlacement) switch (fallbackStrategy) {
+							case "bestFit": {
+								var _overflowsData$filter2;
+								const placement = (_overflowsData$filter2 = overflowsData.filter((d) => {
+									if (hasFallbackAxisSideDirection) {
+										const currentSideAxis = getSideAxis(d.placement);
+										return currentSideAxis === initialSideAxis || currentSideAxis === "y";
+									}
+									return true;
+								}).map((d) => [d.placement, d.overflows.filter((overflow) => overflow > 0).reduce((acc, overflow) => acc + overflow, 0)]).sort((a, b) => a[1] - b[1])[0]) == null ? void 0 : _overflowsData$filter2[0];
+								if (placement) resetPlacement = placement;
+								break;
+							}
+							case "initialPlacement": resetPlacement = initialPlacement;
+						}
+						if (placement !== resetPlacement) return { reset: { placement: resetPlacement } };
+					}
+					return {};
+				}
+			};
+		};
+		const originSides = /*#__PURE__*/ new Set(["left", "top"]);
+		async function convertValueToCoords(state, options) {
+			const { placement, platform, elements } = state;
+			const rtl = await (platform.isRTL == null ? void 0 : platform.isRTL(elements.floating));
+			const side = getSide(placement);
+			const alignment = getAlignment(placement);
+			const isVertical = getSideAxis(placement) === "y";
+			const mainAxisMulti = originSides.has(side) ? -1 : 1;
+			const crossAxisMulti = rtl && isVertical ? -1 : 1;
+			const rawValue = evaluate(options, state);
+			let { mainAxis, crossAxis, alignmentAxis } = typeof rawValue === "number" ? {
+				mainAxis: rawValue,
+				crossAxis: 0,
+				alignmentAxis: null
+			} : {
+				mainAxis: rawValue.mainAxis || 0,
+				crossAxis: rawValue.crossAxis || 0,
+				alignmentAxis: rawValue.alignmentAxis
+			};
+			if (alignment && typeof alignmentAxis === "number") crossAxis = alignment === "end" ? alignmentAxis * -1 : alignmentAxis;
+			return isVertical ? {
+				x: crossAxis * crossAxisMulti,
+				y: mainAxis * mainAxisMulti
+			} : {
+				x: mainAxis * mainAxisMulti,
+				y: crossAxis * crossAxisMulti
+			};
+		}
+		/**
+		* Modifies the placement by translating the floating element along the
+		* specified axes.
+		* A number (shorthand for `mainAxis` or distance), or an axes configuration
+		* object may be passed.
+		* @see https://floating-ui.com/docs/offset
+		*/
+		const offset$2 = function(options) {
+			if (options === void 0) options = 0;
+			return {
+				name: "offset",
+				options,
+				async fn(state) {
+					var _middlewareData$offse, _middlewareData$arrow;
+					const { x, y, placement, middlewareData } = state;
+					const diffCoords = await convertValueToCoords(state, options);
+					if (placement === ((_middlewareData$offse = middlewareData.offset) == null ? void 0 : _middlewareData$offse.placement) && (_middlewareData$arrow = middlewareData.arrow) != null && _middlewareData$arrow.alignmentOffset) return {};
+					return {
+						x: x + diffCoords.x,
+						y: y + diffCoords.y,
+						data: {
+							...diffCoords,
+							placement
+						}
+					};
+				}
+			};
+		};
+		/**
+		* Optimizes the visibility of the floating element by shifting it in order to
+		* keep it in view when it will overflow the clipping boundary.
+		* @see https://floating-ui.com/docs/shift
+		*/
+		const shift$3 = function(options) {
+			if (options === void 0) options = {};
+			return {
+				name: "shift",
+				options,
+				async fn(state) {
+					const { x, y, placement, platform } = state;
+					const { mainAxis: checkMainAxis = true, crossAxis: checkCrossAxis = false, limiter = { fn: (_ref) => {
+						let { x, y } = _ref;
+						return {
+							x,
+							y
+						};
+					} }, ...detectOverflowOptions } = evaluate(options, state);
+					const coords = {
+						x,
+						y
+					};
+					const overflow = await platform.detectOverflow(state, detectOverflowOptions);
+					const crossAxis = getSideAxis(placement);
+					const mainAxis = getOppositeAxis(crossAxis);
+					let mainAxisCoord = coords[mainAxis];
+					let crossAxisCoord = coords[crossAxis];
+					const clampCoord = (axis, coord) => clamp(coord + overflow[axis === "y" ? "top" : "left"], coord, coord - overflow[axis === "y" ? "bottom" : "right"]);
+					if (checkMainAxis) mainAxisCoord = clampCoord(mainAxis, mainAxisCoord);
+					if (checkCrossAxis) crossAxisCoord = clampCoord(crossAxis, crossAxisCoord);
+					const limitedCoords = limiter.fn({
+						...state,
+						[mainAxis]: mainAxisCoord,
+						[crossAxis]: crossAxisCoord
+					});
+					return {
+						...limitedCoords,
+						data: {
+							x: limitedCoords.x - x,
+							y: limitedCoords.y - y,
+							enabled: {
+								[mainAxis]: checkMainAxis,
+								[crossAxis]: checkCrossAxis
+							}
+						}
+					};
+				}
+			};
+		};
+		/**
+		* Provides data that allows you to change the size of the floating element —
+		* for instance, prevent it from overflowing the clipping boundary or match the
+		* width of the reference element.
+		* @see https://floating-ui.com/docs/size
+		*/
+		const size$2 = function(options) {
+			if (options === void 0) options = {};
+			return {
+				name: "size",
+				options,
+				async fn(state) {
+					const { placement, rects, platform, elements } = state;
+					const { apply = () => {}, ...detectOverflowOptions } = evaluate(options, state);
+					const overflow = await platform.detectOverflow(state, detectOverflowOptions);
+					const side = getSide(placement);
+					const alignment = getAlignment(placement);
+					const isYAxis = getSideAxis(placement) === "y";
+					const { width, height } = rects.floating;
+					let heightSide;
+					let widthSide;
+					if (side === "top" || side === "bottom") {
+						heightSide = side;
+						widthSide = alignment === (await (platform.isRTL == null ? void 0 : platform.isRTL(elements.floating)) ? "start" : "end") ? "left" : "right";
+					} else {
+						widthSide = side;
+						heightSide = alignment === "end" ? "top" : "bottom";
+					}
+					const maximumClippingHeight = height - overflow.top - overflow.bottom;
+					const maximumClippingWidth = width - overflow.left - overflow.right;
+					const overflowAvailableHeight = min(height - overflow[heightSide], maximumClippingHeight);
+					const overflowAvailableWidth = min(width - overflow[widthSide], maximumClippingWidth);
+					const shiftData = state.middlewareData.shift;
+					const noShift = !shiftData;
+					let availableHeight = overflowAvailableHeight;
+					let availableWidth = overflowAvailableWidth;
+					if (shiftData != null && shiftData.enabled.x) availableWidth = maximumClippingWidth;
+					if (shiftData != null && shiftData.enabled.y) availableHeight = maximumClippingHeight;
+					if (noShift && !alignment) {
+						if (isYAxis) availableWidth = width - 2 * max(overflow.left, overflow.right);
+						else availableHeight = height - 2 * max(overflow.top, overflow.bottom);
+					}
+					await apply({
+						...state,
+						availableWidth,
+						availableHeight
+					});
+					const nextDimensions = await platform.getDimensions(elements.floating);
+					if (width !== nextDimensions.width || height !== nextDimensions.height) return { reset: { rects: true } };
+					return {};
+				}
+			};
+		};
+		//#endregion
+		//#region node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs
+		function getCssDimensions(element) {
+			const css = getComputedStyle$1(element);
+			let width = parseFloat(css.width) || 0;
+			let height = parseFloat(css.height) || 0;
+			const hasOffset = isHTMLElement(element);
+			const offsetWidth = hasOffset ? element.offsetWidth : width;
+			const offsetHeight = hasOffset ? element.offsetHeight : height;
+			const shouldFallback = round(width) !== offsetWidth || round(height) !== offsetHeight;
+			if (shouldFallback) {
+				width = offsetWidth;
+				height = offsetHeight;
+			}
+			return {
+				width,
+				height,
+				$: shouldFallback
+			};
+		}
+		function unwrapElement(element) {
+			return !isElement(element) ? element.contextElement : element;
+		}
+		function getScale$1(element) {
+			const domElement = unwrapElement(element);
+			if (!isHTMLElement(domElement)) return createCoords(1);
+			const rect = domElement.getBoundingClientRect();
+			const { width, height, $ } = getCssDimensions(domElement);
+			let x = ($ ? round(rect.width) : rect.width) / width;
+			let y = ($ ? round(rect.height) : rect.height) / height;
+			if (!x || !Number.isFinite(x)) x = 1;
+			if (!y || !Number.isFinite(y)) y = 1;
+			return {
+				x,
+				y
+			};
+		}
+		const noOffsets = /*#__PURE__*/ createCoords(0);
+		function getVisualOffsets(element) {
+			const win = getWindow(element);
+			if (!isWebKit() || !win.visualViewport) return noOffsets;
+			return {
+				x: win.visualViewport.offsetLeft,
+				y: win.visualViewport.offsetTop
+			};
+		}
+		function shouldAddVisualOffsets(element, isFixed, floatingOffsetParent) {
+			if (isFixed === void 0) isFixed = false;
+			return !!floatingOffsetParent && isFixed && floatingOffsetParent === getWindow(element);
+		}
+		function getBoundingClientRect(element, includeScale, isFixedStrategy, offsetParent) {
+			if (includeScale === void 0) includeScale = false;
+			if (isFixedStrategy === void 0) isFixedStrategy = false;
+			const clientRect = element.getBoundingClientRect();
+			const domElement = unwrapElement(element);
+			let scale = createCoords(1);
+			if (includeScale) {
+				if (offsetParent) {
+					if (isElement(offsetParent)) scale = getScale$1(offsetParent);
+				} else scale = getScale$1(element);
+			}
+			const visualOffsets = shouldAddVisualOffsets(domElement, isFixedStrategy, offsetParent) ? getVisualOffsets(domElement) : createCoords(0);
+			let x = (clientRect.left + visualOffsets.x) / scale.x;
+			let y = (clientRect.top + visualOffsets.y) / scale.y;
+			let width = clientRect.width / scale.x;
+			let height = clientRect.height / scale.y;
+			if (domElement && offsetParent) {
+				const win = getWindow(domElement);
+				const offsetWin = isElement(offsetParent) ? getWindow(offsetParent) : offsetParent;
+				let currentWin = win;
+				let currentIFrame = getFrameElement(currentWin);
+				while (currentIFrame && offsetWin !== currentWin) {
+					const iframeScale = getScale$1(currentIFrame);
+					const iframeRect = currentIFrame.getBoundingClientRect();
+					const css = getComputedStyle$1(currentIFrame);
+					const left = iframeRect.left + (currentIFrame.clientLeft + parseFloat(css.paddingLeft)) * iframeScale.x;
+					const top = iframeRect.top + (currentIFrame.clientTop + parseFloat(css.paddingTop)) * iframeScale.y;
+					x *= iframeScale.x;
+					y *= iframeScale.y;
+					width *= iframeScale.x;
+					height *= iframeScale.y;
+					x += left;
+					y += top;
+					currentWin = getWindow(currentIFrame);
+					currentIFrame = getFrameElement(currentWin);
+				}
+			}
+			return rectToClientRect({
+				width,
+				height,
+				x,
+				y
+			});
+		}
+		function getWindowScrollBarX(element, rect) {
+			const leftScroll = getNodeScroll(element).scrollLeft;
+			if (!rect) return getBoundingClientRect(getDocumentElement(element)).left + leftScroll;
+			return rect.left + leftScroll;
+		}
+		function getHTMLOffset(documentElement, scroll) {
+			const htmlRect = documentElement.getBoundingClientRect();
+			return {
+				x: htmlRect.left + scroll.scrollLeft - getWindowScrollBarX(documentElement, htmlRect),
+				y: htmlRect.top + scroll.scrollTop
+			};
+		}
+		function convertOffsetParentRelativeRectToViewportRelativeRect(_ref) {
+			let { elements, rect, offsetParent, strategy } = _ref;
+			const isFixed = strategy === "fixed";
+			const documentElement = getDocumentElement(offsetParent);
+			const topLayer = elements ? isTopLayer(elements.floating) : false;
+			if (offsetParent === documentElement || topLayer && isFixed) return rect;
+			let scroll = {
+				scrollLeft: 0,
+				scrollTop: 0
+			};
+			let scale = createCoords(1);
+			const offsets = createCoords(0);
+			const isOffsetParentAnElement = isHTMLElement(offsetParent);
+			if (isOffsetParentAnElement || !isFixed) {
+				if (getNodeName(offsetParent) !== "body" || isOverflowElement(documentElement)) scroll = getNodeScroll(offsetParent);
+				if (isOffsetParentAnElement) {
+					const offsetRect = getBoundingClientRect(offsetParent);
+					scale = getScale$1(offsetParent);
+					offsets.x = offsetRect.x + offsetParent.clientLeft;
+					offsets.y = offsetRect.y + offsetParent.clientTop;
+				}
+			}
+			const htmlOffset = documentElement && !isOffsetParentAnElement && !isFixed ? getHTMLOffset(documentElement, scroll) : createCoords(0);
+			return {
+				width: rect.width * scale.x,
+				height: rect.height * scale.y,
+				x: rect.x * scale.x - scroll.scrollLeft * scale.x + offsets.x + htmlOffset.x,
+				y: rect.y * scale.y - scroll.scrollTop * scale.y + offsets.y + htmlOffset.y
+			};
+		}
+		function getClientRects(element) {
+			return element.getClientRects ? Array.from(element.getClientRects()) : [];
+		}
+		function getDocumentRect(html) {
+			const scroll = getNodeScroll(html);
+			const body = html.ownerDocument.body;
+			const width = max(html.scrollWidth, html.clientWidth, body.scrollWidth, body.clientWidth);
+			const height = max(html.scrollHeight, html.clientHeight, body.scrollHeight, body.clientHeight);
+			let x = -scroll.scrollLeft + getWindowScrollBarX(html);
+			const y = -scroll.scrollTop;
+			if (getComputedStyle$1(body).direction === "rtl") x += max(html.clientWidth, body.clientWidth) - width;
+			return {
+				width,
+				height,
+				x,
+				y
+			};
+		}
+		const SCROLLBAR_MAX = 25;
+		function getViewportRect(element, strategy, rootBoundary) {
+			if (rootBoundary === void 0) rootBoundary = "viewport";
+			const isLayoutViewport = rootBoundary === "layoutViewport";
+			const win = getWindow(element);
+			const html = getDocumentElement(element);
+			const visualViewport = win.visualViewport;
+			let width = html.clientWidth;
+			let height = html.clientHeight;
+			let x = 0;
+			let y = 0;
+			if (visualViewport) {
+				const layoutRelativeClientCoords = !isWebKit() || strategy === "fixed";
+				if (isLayoutViewport) {
+					if (!layoutRelativeClientCoords) {
+						x = -visualViewport.offsetLeft;
+						y = -visualViewport.offsetTop;
+					}
+				} else {
+					width = visualViewport.width;
+					height = visualViewport.height;
+					if (layoutRelativeClientCoords) {
+						x = visualViewport.offsetLeft;
+						y = visualViewport.offsetTop;
+					}
+				}
+			}
+			if (getWindowScrollBarX(html) <= 0) {
+				const doc = html.ownerDocument;
+				const body = doc.body;
+				const bodyStyles = getComputedStyle(body);
+				const bodyMarginInline = doc.compatMode === "CSS1Compat" ? parseFloat(bodyStyles.marginLeft) + parseFloat(bodyStyles.marginRight) || 0 : 0;
+				const reservedWidth = Math.abs(html.clientWidth - body.clientWidth - bodyMarginInline);
+				const gutter = getComputedStyle(html).scrollbarGutter === "stable both-edges" ? reservedWidth / 2 : reservedWidth;
+				if (gutter <= SCROLLBAR_MAX) width -= gutter;
+			}
+			return {
+				width,
+				height,
+				x,
+				y
+			};
+		}
+		function getInnerBoundingClientRect(element, strategy) {
+			const clientRect = getBoundingClientRect(element, true, strategy === "fixed");
+			const top = clientRect.top + element.clientTop;
+			const left = clientRect.left + element.clientLeft;
+			const scale = getScale$1(element);
+			return {
+				width: element.clientWidth * scale.x,
+				height: element.clientHeight * scale.y,
+				x: left * scale.x,
+				y: top * scale.y
+			};
+		}
+		function getClientRectFromClippingAncestor(element, clippingAncestor, strategy) {
+			let rect;
+			if (clippingAncestor === "viewport" || clippingAncestor === "layoutViewport") rect = getViewportRect(element, strategy, clippingAncestor);
+			else if (clippingAncestor === "document") rect = getDocumentRect(getDocumentElement(element));
+			else if (isElement(clippingAncestor)) rect = getInnerBoundingClientRect(clippingAncestor, strategy);
+			else {
+				const visualOffsets = getVisualOffsets(element);
+				rect = {
+					x: clippingAncestor.x - visualOffsets.x,
+					y: clippingAncestor.y - visualOffsets.y,
+					width: clippingAncestor.width,
+					height: clippingAncestor.height
+				};
+			}
+			return rectToClientRect(rect);
+		}
+		function getClippingElementAncestors(element, cache) {
+			const cachedResult = cache.get(element);
+			if (cachedResult) return cachedResult;
+			let result = getOverflowAncestors(element, [], false).filter((el) => isElement(el) && getNodeName(el) !== "body");
+			let lastKeptComputedStyle = null;
+			const elementIsFixed = getComputedStyle$1(element).position === "fixed";
+			let currentNode = elementIsFixed ? getParentNode(element) : element;
+			while (isElement(currentNode) && !isLastTraversableNode(currentNode)) {
+				const computedStyle = getComputedStyle$1(currentNode);
+				const currentNodeIsContaining = isContainingBlock(currentNode);
+				const lastPosition = lastKeptComputedStyle ? lastKeptComputedStyle.position : elementIsFixed ? "fixed" : "";
+				if (!currentNodeIsContaining && (lastPosition === "fixed" || lastPosition === "absolute" && computedStyle.position === "static")) result = result.filter((ancestor) => ancestor !== currentNode);
+				else lastKeptComputedStyle = computedStyle;
+				currentNode = getParentNode(currentNode);
+			}
+			cache.set(element, result);
+			return result;
+		}
+		function getClippingRect(_ref) {
+			let { element, boundary, rootBoundary, strategy } = _ref;
+			const clippingAncestors = [...boundary === "clippingAncestors" ? isTopLayer(element) ? [] : getClippingElementAncestors(element, this._c) : [].concat(boundary), rootBoundary];
+			const firstRect = getClientRectFromClippingAncestor(element, clippingAncestors[0], strategy);
+			let top = firstRect.top;
+			let right = firstRect.right;
+			let bottom = firstRect.bottom;
+			let left = firstRect.left;
+			for (let i = 1; i < clippingAncestors.length; i++) {
+				const rect = getClientRectFromClippingAncestor(element, clippingAncestors[i], strategy);
+				top = max(rect.top, top);
+				right = min(rect.right, right);
+				bottom = min(rect.bottom, bottom);
+				left = max(rect.left, left);
+			}
+			return {
+				width: right - left,
+				height: bottom - top,
+				x: left,
+				y: top
+			};
+		}
+		function getDimensions(element) {
+			const { width, height } = getCssDimensions(element);
+			return {
+				width,
+				height
+			};
+		}
+		function getRectRelativeToOffsetParent(element, offsetParent, strategy) {
+			const isOffsetParentAnElement = isHTMLElement(offsetParent);
+			const documentElement = getDocumentElement(offsetParent);
+			const isFixed = strategy === "fixed";
+			const rect = getBoundingClientRect(element, true, isFixed, offsetParent);
+			let scroll = {
+				scrollLeft: 0,
+				scrollTop: 0
+			};
+			const offsets = createCoords(0);
+			if (isOffsetParentAnElement || !isFixed) {
+				if (getNodeName(offsetParent) !== "body" || isOverflowElement(documentElement)) scroll = getNodeScroll(offsetParent);
+				if (isOffsetParentAnElement) {
+					const offsetRect = getBoundingClientRect(offsetParent, true, isFixed, offsetParent);
+					offsets.x = offsetRect.x + offsetParent.clientLeft;
+					offsets.y = offsetRect.y + offsetParent.clientTop;
+				}
+			}
+			if (!isOffsetParentAnElement && documentElement) offsets.x = getWindowScrollBarX(documentElement);
+			const htmlOffset = documentElement && !isOffsetParentAnElement && !isFixed ? getHTMLOffset(documentElement, scroll) : createCoords(0);
+			return {
+				x: rect.left + scroll.scrollLeft - offsets.x - htmlOffset.x,
+				y: rect.top + scroll.scrollTop - offsets.y - htmlOffset.y,
+				width: rect.width,
+				height: rect.height
+			};
+		}
+		function isStaticPositioned(element) {
+			return getComputedStyle$1(element).position === "static";
+		}
+		function getTrueOffsetParent(element, polyfill) {
+			if (!isHTMLElement(element) || getComputedStyle$1(element).position === "fixed") return null;
+			if (polyfill) return polyfill(element);
+			let rawOffsetParent = element.offsetParent;
+			if (getDocumentElement(element) === rawOffsetParent) rawOffsetParent = rawOffsetParent.ownerDocument.body;
+			return rawOffsetParent;
+		}
+		function getOffsetParent(element, polyfill) {
+			const win = getWindow(element);
+			if (isTopLayer(element)) return win;
+			if (!isHTMLElement(element)) {
+				let svgOffsetParent = getParentNode(element);
+				while (svgOffsetParent && !isLastTraversableNode(svgOffsetParent)) {
+					if (isElement(svgOffsetParent) && !isStaticPositioned(svgOffsetParent)) return svgOffsetParent;
+					svgOffsetParent = getParentNode(svgOffsetParent);
+				}
+				return win;
+			}
+			let offsetParent = getTrueOffsetParent(element, polyfill);
+			while (offsetParent && isTableElement(offsetParent) && isStaticPositioned(offsetParent)) offsetParent = getTrueOffsetParent(offsetParent, polyfill);
+			if (offsetParent && isLastTraversableNode(offsetParent) && isStaticPositioned(offsetParent) && !isContainingBlock(offsetParent)) return win;
+			return offsetParent || getContainingBlock(element) || win;
+		}
+		const getElementRects = async function(data) {
+			const getOffsetParentFn = this.getOffsetParent || getOffsetParent;
+			const getDimensionsFn = this.getDimensions;
+			const floatingDimensions = await getDimensionsFn(data.floating);
+			return {
+				reference: getRectRelativeToOffsetParent(data.reference, await getOffsetParentFn(data.floating), data.strategy),
+				floating: {
+					x: 0,
+					y: 0,
+					width: floatingDimensions.width,
+					height: floatingDimensions.height
+				}
+			};
+		};
+		function isRTL(element) {
+			return getComputedStyle$1(element).direction === "rtl";
+		}
+		const platform = {
+			convertOffsetParentRelativeRectToViewportRelativeRect,
+			getDocumentElement,
+			getClippingRect,
+			getOffsetParent,
+			getElementRects,
+			getClientRects,
+			getDimensions,
+			getScale: getScale$1,
+			isElement,
+			isRTL
+		};
+		function rectsAreEqual(a, b) {
+			return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+		}
+		function observeMove(element, onMove, ancestorResize) {
+			let io = null;
+			let timeoutId;
+			const root = getDocumentElement(element);
+			function cleanup() {
+				var _io;
+				clearTimeout(timeoutId);
+				(_io = io) == null || _io.disconnect();
+				io = null;
+			}
+			function refresh(skip, threshold) {
+				if (skip === void 0) skip = false;
+				if (threshold === void 0) threshold = 1;
+				cleanup();
+				const elementRectForRootMargin = element.getBoundingClientRect();
+				const { left, top, width, height } = elementRectForRootMargin;
+				if (!skip) onMove();
+				if (!width || !height) return;
+				const insetTop = floor(top);
+				const insetRight = floor(root.clientWidth - (left + width));
+				const insetBottom = floor(root.clientHeight - (top + height));
+				const insetLeft = floor(left);
+				const options = {
+					rootMargin: -insetTop + "px " + -insetRight + "px " + -insetBottom + "px " + -insetLeft + "px",
+					threshold: max(0, min(1, threshold)) || 1
+				};
+				let isFirstUpdate = true;
+				function handleObserve(entries) {
+					const ratio = entries[0].intersectionRatio;
+					if (!rectsAreEqual(elementRectForRootMargin, element.getBoundingClientRect())) return refresh();
+					if (ratio !== threshold) {
+						if (!isFirstUpdate) return refresh();
+						if (!ratio) timeoutId = setTimeout(() => {
+							refresh(false, 1e-7);
+						}, 1e3);
+						else refresh(false, ratio);
+					}
+					isFirstUpdate = false;
+				}
+				try {
+					io = new IntersectionObserver(handleObserve, {
+						...options,
+						root: root.ownerDocument
+					});
+				} catch (_e) {
+					io = new IntersectionObserver(handleObserve, options);
+				}
+				io.observe(element);
+			}
+			const win = getWindow(element);
+			const handleResize = () => refresh(ancestorResize);
+			win.addEventListener("resize", handleResize);
+			refresh(true);
+			return () => {
+				win.removeEventListener("resize", handleResize);
+				cleanup();
+			};
+		}
+		/**
+		* Automatically updates the position of the floating element when necessary.
+		* Should only be called when the floating element is mounted on the DOM or
+		* visible on the screen.
+		* @returns cleanup function that should be invoked when the floating element is
+		* removed from the DOM or hidden from the screen.
+		* @see https://floating-ui.com/docs/autoUpdate
+		*/
+		function autoUpdate(reference, floating, update, options) {
+			if (options === void 0) options = {};
+			const { ancestorScroll = true, ancestorResize = true, elementResize = typeof ResizeObserver === "function", layoutShift = typeof IntersectionObserver === "function", animationFrame = false } = options;
+			const referenceEl = unwrapElement(reference);
+			const ancestors = ancestorScroll || ancestorResize ? [...referenceEl ? getOverflowAncestors(referenceEl) : [], ...floating ? getOverflowAncestors(floating) : []] : [];
+			ancestors.forEach((ancestor) => {
+				ancestorScroll && ancestor.addEventListener("scroll", update);
+				ancestorResize && ancestor.addEventListener("resize", update);
+			});
+			const cleanupIo = referenceEl && layoutShift ? observeMove(referenceEl, update, ancestorResize) : null;
+			let reobserveFrame = -1;
+			let resizeObserver = null;
+			if (elementResize) {
+				resizeObserver = new ResizeObserver((_ref) => {
+					let [firstEntry] = _ref;
+					if (firstEntry && firstEntry.target === referenceEl && resizeObserver && floating) {
+						resizeObserver.unobserve(floating);
+						cancelAnimationFrame(reobserveFrame);
+						reobserveFrame = requestAnimationFrame(() => {
+							var _resizeObserver;
+							(_resizeObserver = resizeObserver) == null || _resizeObserver.observe(floating);
+						});
+					}
+					update();
+				});
+				if (referenceEl && !animationFrame) resizeObserver.observe(referenceEl);
+				if (floating) resizeObserver.observe(floating);
+			}
+			let frameId;
+			let prevRefRect = animationFrame ? getBoundingClientRect(reference) : null;
+			if (animationFrame) frameLoop();
+			function frameLoop() {
+				const nextRefRect = getBoundingClientRect(reference);
+				if (prevRefRect && !rectsAreEqual(prevRefRect, nextRefRect)) update();
+				prevRefRect = nextRefRect;
+				frameId = requestAnimationFrame(frameLoop);
+			}
+			update();
+			return () => {
+				var _resizeObserver2;
+				ancestors.forEach((ancestor) => {
+					ancestorScroll && ancestor.removeEventListener("scroll", update);
+					ancestorResize && ancestor.removeEventListener("resize", update);
+				});
+				cleanupIo?.();
+				(_resizeObserver2 = resizeObserver) == null || _resizeObserver2.disconnect();
+				resizeObserver = null;
+				if (animationFrame) cancelAnimationFrame(frameId);
+			};
+		}
+		/**
+		* Modifies the placement by translating the floating element along the
+		* specified axes.
+		* A number (shorthand for `mainAxis` or distance), or an axes configuration
+		* object may be passed.
+		* @see https://floating-ui.com/docs/offset
+		*/
+		const offset$1 = offset$2;
+		/**
+		* Optimizes the visibility of the floating element by shifting it in order to
+		* keep it in view when it will overflow the clipping boundary.
+		* @see https://floating-ui.com/docs/shift
+		*/
+		const shift$2 = shift$3;
+		/**
+		* Optimizes the visibility of the floating element by flipping the `placement`
+		* in order to keep it in view when the preferred placement(s) will overflow the
+		* clipping boundary. Alternative to `autoPlacement`.
+		* @see https://floating-ui.com/docs/flip
+		*/
+		const flip$1 = flip$2;
+		/**
+		* Provides data that allows you to change the size of the floating element —
+		* for instance, prevent it from overflowing the clipping boundary or match the
+		* width of the reference element.
+		* @see https://floating-ui.com/docs/size
+		*/
+		const size$1 = size$2;
+		/**
+		* Computes the `x` and `y` coordinates that will place the floating element
+		* next to a given reference element.
+		*/
+		const computePosition = (reference, floating, options) => {
+			const cache = /* @__PURE__ */ new Map();
+			const mergedOptions = options != null ? options : {};
+			const platformWithCache = {
+				...platform,
+				...mergedOptions.platform,
+				_c: cache
+			};
+			return computePosition$1(reference, floating, {
+				...mergedOptions,
+				platform: platformWithCache
+			});
+		};
+		//#endregion
+		//#region node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs
+		var index = typeof document !== "undefined" ? react$1.useLayoutEffect : function noop() {};
+		function deepEqual(a, b) {
+			if (a === b) return true;
+			if (typeof a !== typeof b) return false;
+			if (typeof a === "function" && a.toString() === b.toString()) return true;
+			let length;
+			let i;
+			let keys;
+			if (a && b && typeof a === "object") {
+				if (Array.isArray(a)) {
+					length = a.length;
+					if (length !== b.length) return false;
+					for (i = length; i-- !== 0;) if (!deepEqual(a[i], b[i])) return false;
+					return true;
+				}
+				keys = Object.keys(a);
+				length = keys.length;
+				if (length !== Object.keys(b).length) return false;
+				for (i = length; i-- !== 0;) if (!{}.hasOwnProperty.call(b, keys[i])) return false;
+				for (i = length; i-- !== 0;) {
+					const key = keys[i];
+					if (key === "_owner" && a.$$typeof) continue;
+					if (!deepEqual(a[key], b[key])) return false;
+				}
+				return true;
+			}
+			return a !== a && b !== b;
+		}
+		function getDPR(element) {
+			if (typeof window === "undefined") return 1;
+			return (element.ownerDocument.defaultView || window).devicePixelRatio || 1;
+		}
+		function roundByDPR(element, value) {
+			const dpr = getDPR(element);
+			return Math.round(value * dpr) / dpr;
+		}
+		function useLatestRef(value) {
+			const ref = react$1.useRef(value);
+			index(() => {
+				ref.current = value;
+			});
+			return ref;
+		}
+		/**
+		* Provides data to position a floating element.
+		* @see https://floating-ui.com/docs/useFloating
+		*/
+		function useFloating$1(options) {
+			if (options === void 0) options = {};
+			const { placement = "bottom", strategy = "absolute", middleware = [], platform, elements: { reference: externalReference, floating: externalFloating } = {}, transform = true, whileElementsMounted, open } = options;
+			const [data, setData] = react$1.useState({
+				x: 0,
+				y: 0,
+				strategy,
+				placement,
+				middlewareData: {},
+				isPositioned: false
+			});
+			const [latestMiddleware, setLatestMiddleware] = react$1.useState(middleware);
+			if (!deepEqual(latestMiddleware, middleware)) setLatestMiddleware(middleware);
+			const [_reference, _setReference] = react$1.useState(null);
+			const [_floating, _setFloating] = react$1.useState(null);
+			const setReference = react$1.useCallback((node) => {
+				if (node !== referenceRef.current) {
+					referenceRef.current = node;
+					_setReference(node);
+				}
+			}, []);
+			const setFloating = react$1.useCallback((node) => {
+				if (node !== floatingRef.current) {
+					floatingRef.current = node;
+					_setFloating(node);
+				}
+			}, []);
+			const referenceEl = externalReference || _reference;
+			const floatingEl = externalFloating || _floating;
+			const referenceRef = react$1.useRef(null);
+			const floatingRef = react$1.useRef(null);
+			const dataRef = react$1.useRef(data);
+			const hasWhileElementsMounted = whileElementsMounted != null;
+			const whileElementsMountedRef = useLatestRef(whileElementsMounted);
+			const platformRef = useLatestRef(platform);
+			const openRef = useLatestRef(open);
+			const update = react$1.useCallback(() => {
+				if (!referenceRef.current || !floatingRef.current) return;
+				const config = {
+					placement,
+					strategy,
+					middleware: latestMiddleware
+				};
+				if (platformRef.current) config.platform = platformRef.current;
+				computePosition(referenceRef.current, floatingRef.current, config).then((data) => {
+					const fullData = {
+						...data,
+						isPositioned: openRef.current !== false
+					};
+					if (isMountedRef.current && !deepEqual(dataRef.current, fullData)) {
+						dataRef.current = fullData;
+						react_dom.flushSync(() => {
+							setData(fullData);
+						});
+					}
+				});
+			}, [
+				latestMiddleware,
+				placement,
+				strategy,
+				platformRef,
+				openRef
+			]);
+			index(() => {
+				if (open === false && dataRef.current.isPositioned) {
+					dataRef.current.isPositioned = false;
+					setData((data) => ({
+						...data,
+						isPositioned: false
+					}));
+				}
+			}, [open]);
+			const isMountedRef = react$1.useRef(false);
+			index(() => {
+				isMountedRef.current = true;
+				return () => {
+					isMountedRef.current = false;
+				};
+			}, []);
+			index(() => {
+				if (referenceEl) referenceRef.current = referenceEl;
+				if (floatingEl) floatingRef.current = floatingEl;
+				if (referenceEl && floatingEl) {
+					if (whileElementsMountedRef.current) return whileElementsMountedRef.current(referenceEl, floatingEl, update);
+					update();
+				}
+			}, [
+				referenceEl,
+				floatingEl,
+				update,
+				whileElementsMountedRef,
+				hasWhileElementsMounted
+			]);
+			const refs = react$1.useMemo(() => ({
+				reference: referenceRef,
+				floating: floatingRef,
+				setReference,
+				setFloating
+			}), [setReference, setFloating]);
+			const elements = react$1.useMemo(() => ({
+				reference: referenceEl,
+				floating: floatingEl
+			}), [referenceEl, floatingEl]);
+			const floatingStyles = react$1.useMemo(() => {
+				const initialStyles = {
+					position: strategy,
+					left: 0,
+					top: 0
+				};
+				if (!elements.floating) return initialStyles;
+				const x = roundByDPR(elements.floating, data.x);
+				const y = roundByDPR(elements.floating, data.y);
+				if (transform) return {
+					...initialStyles,
+					transform: "translate(" + x + "px, " + y + "px)",
+					...getDPR(elements.floating) >= 1.5 && { willChange: "transform" }
+				};
+				return {
+					position: strategy,
+					left: x,
+					top: y
+				};
+			}, [
+				strategy,
+				transform,
+				elements.floating,
+				data.x,
+				data.y
+			]);
+			return react$1.useMemo(() => ({
+				...data,
+				update,
+				refs,
+				elements,
+				floatingStyles
+			}), [
+				data,
+				update,
+				refs,
+				elements,
+				floatingStyles
+			]);
+		}
+		/**
+		* Modifies the placement by translating the floating element along the
+		* specified axes.
+		* A number (shorthand for `mainAxis` or distance), or an axes configuration
+		* object may be passed.
+		* @see https://floating-ui.com/docs/offset
+		*/
+		const offset = (options, deps) => {
+			const result = offset$1(options);
+			return {
+				name: result.name,
+				fn: result.fn,
+				options: [options, deps]
+			};
+		};
+		/**
+		* Optimizes the visibility of the floating element by shifting it in order to
+		* keep it in view when it will overflow the clipping boundary.
+		* @see https://floating-ui.com/docs/shift
+		*/
+		const shift$1 = (options, deps) => {
+			const result = shift$2(options);
+			return {
+				name: result.name,
+				fn: result.fn,
+				options: [options, deps]
+			};
+		};
+		/**
+		* Optimizes the visibility of the floating element by flipping the `placement`
+		* in order to keep it in view when the preferred placement(s) will overflow the
+		* clipping boundary. Alternative to `autoPlacement`.
+		* @see https://floating-ui.com/docs/flip
+		*/
+		const flip = (options, deps) => {
+			const result = flip$1(options);
+			return {
+				name: result.name,
+				fn: result.fn,
+				options: [options, deps]
+			};
+		};
+		/**
+		* Provides data that allows you to change the size of the floating element —
+		* for instance, prevent it from overflowing the clipping boundary or match the
+		* width of the reference element.
+		* @see https://floating-ui.com/docs/size
+		*/
+		const size = (options, deps) => {
+			const result = size$1(options);
+			return {
+				name: result.name,
+				fn: result.fn,
+				options: [options, deps]
+			};
+		};
+		//#endregion
+		//#region node_modules/@floating-ui/react/dist/floating-ui.react.mjs
+		const ARROW_LEFT = "ArrowLeft";
+		const ARROW_RIGHT = "ArrowRight";
+		const ARROW_UP = "ArrowUp";
+		const ARROW_DOWN = "ArrowDown";
+		const horizontalKeys = [ARROW_LEFT, ARROW_RIGHT];
+		const verticalKeys = [ARROW_UP, ARROW_DOWN];
+		[...horizontalKeys, ...verticalKeys];
+		const SafeReact = { ...react$1 };
+		let serverHandoffComplete = false;
+		let count$1 = 0;
+		const genId = () => "floating-ui-" + Math.random().toString(36).slice(2, 6) + count$1++;
+		function useFloatingId() {
+			const [id, setId] = react$1.useState(() => serverHandoffComplete ? genId() : void 0);
+			index$1(() => {
+				if (id == null) setId(genId());
+			}, []);
+			react$1.useEffect(() => {
+				serverHandoffComplete = true;
+			}, []);
+			return id;
+		}
+		/**
+		* Uses React 18's built-in `useId()` when available, or falls back to a
+		* slightly less performant (requiring a double render) implementation for
+		* earlier React versions.
+		* @see https://floating-ui.com/docs/react-utils#useid
+		*/
+		const useId = SafeReact.useId || useFloatingId;
+		function createEventEmitter() {
+			const map = /* @__PURE__ */ new Map();
+			return {
+				emit(event, data) {
+					var _map$get;
+					(_map$get = map.get(event)) == null || _map$get.forEach((listener) => listener(data));
+				},
+				on(event, listener) {
+					if (!map.has(event)) map.set(event, /* @__PURE__ */ new Set());
+					map.get(event).add(listener);
+				},
+				off(event, listener) {
+					var _map$get2;
+					(_map$get2 = map.get(event)) == null || _map$get2.delete(listener);
+				}
+			};
+		}
+		const FloatingNodeContext = /*#__PURE__*/ react$1.createContext(null);
+		const FloatingTreeContext = /*#__PURE__*/ react$1.createContext(null);
+		/**
+		* Returns the parent node id for nested floating elements, if available.
+		* Returns `null` for top-level floating elements.
+		*/
+		const useFloatingParentNodeId = () => {
+			var _React$useContext;
+			return ((_React$useContext = react$1.useContext(FloatingNodeContext)) == null ? void 0 : _React$useContext.id) || null;
+		};
+		/**
+		* Returns the nearest floating tree context, if available.
+		*/
+		const useFloatingTree = () => react$1.useContext(FloatingTreeContext);
+		function createAttribute(name) {
+			return "data-floating-ui-" + name;
+		}
+		const HIDDEN_STYLES = {
+			border: 0,
+			clip: "rect(0 0 0 0)",
+			height: "1px",
+			margin: "-1px",
+			overflow: "hidden",
+			padding: 0,
+			position: "fixed",
+			whiteSpace: "nowrap",
+			width: "1px",
+			top: 0,
+			left: 0
+		};
+		const FocusGuard = /*#__PURE__*/ react$1.forwardRef(function FocusGuard(props, ref) {
+			const [role, setRole] = react$1.useState();
+			index$1(() => {
+				if (isSafari()) setRole("button");
+			}, []);
+			const restProps = {
+				ref,
+				tabIndex: 0,
+				role,
+				"aria-hidden": role ? void 0 : true,
+				[createAttribute("focus-guard")]: "",
+				style: HIDDEN_STYLES
+			};
+			return /*#__PURE__*/ (0, react_jsx_runtime.jsx)("span", {
+				...props,
+				...restProps
+			});
+		});
+		const HIDDEN_OWNER_STYLES = {
+			clipPath: "inset(50%)",
+			position: "fixed",
+			top: 0,
+			left: 0
+		};
+		const PortalContext = /*#__PURE__*/ react$1.createContext(null);
+		const attr = /*#__PURE__*/ createAttribute("portal");
+		/**
+		* @see https://floating-ui.com/docs/FloatingPortal#usefloatingportalnode
+		*/
+		function useFloatingPortalNode(props) {
+			if (props === void 0) props = {};
+			const { id, root } = props;
+			const uniqueId = useId();
+			const portalContext = usePortalContext();
+			const [portalNode, setPortalNode] = react$1.useState(null);
+			const portalNodeRef = react$1.useRef(null);
+			index$1(() => {
+				return () => {
+					portalNode?.remove();
+					queueMicrotask(() => {
+						portalNodeRef.current = null;
+					});
+				};
+			}, [portalNode]);
+			index$1(() => {
+				if (!uniqueId) return;
+				if (portalNodeRef.current) return;
+				const existingIdRoot = id ? document.getElementById(id) : null;
+				if (!existingIdRoot) return;
+				const subRoot = document.createElement("div");
+				subRoot.id = uniqueId;
+				subRoot.setAttribute(attr, "");
+				existingIdRoot.appendChild(subRoot);
+				portalNodeRef.current = subRoot;
+				setPortalNode(subRoot);
+			}, [id, uniqueId]);
+			index$1(() => {
+				if (root === null) return;
+				if (!uniqueId) return;
+				if (portalNodeRef.current) return;
+				let container = root || (portalContext == null ? void 0 : portalContext.portalNode);
+				if (container && !isNode(container)) container = container.current;
+				container = container || document.body;
+				let idWrapper = null;
+				if (id) {
+					idWrapper = document.createElement("div");
+					idWrapper.id = id;
+					container.appendChild(idWrapper);
+				}
+				const subRoot = document.createElement("div");
+				subRoot.id = uniqueId;
+				subRoot.setAttribute(attr, "");
+				container = idWrapper || container;
+				container.appendChild(subRoot);
+				portalNodeRef.current = subRoot;
+				setPortalNode(subRoot);
+			}, [
+				id,
+				root,
+				uniqueId,
+				portalContext
+			]);
+			return portalNode;
+		}
+		/**
+		* Portals the floating element into a given container element — by default,
+		* outside of the app root and into the body.
+		* This is necessary to ensure the floating element can appear outside any
+		* potential parent containers that cause clipping (such as `overflow: hidden`),
+		* while retaining its location in the React tree.
+		* @see https://floating-ui.com/docs/FloatingPortal
+		*/
+		function FloatingPortal(props) {
+			const { children, id, root, preserveTabOrder = true } = props;
+			const portalNode = useFloatingPortalNode({
+				id,
+				root
+			});
+			const [focusManagerState, setFocusManagerState] = react$1.useState(null);
+			const beforeOutsideRef = react$1.useRef(null);
+			const afterOutsideRef = react$1.useRef(null);
+			const beforeInsideRef = react$1.useRef(null);
+			const afterInsideRef = react$1.useRef(null);
+			const modal = focusManagerState == null ? void 0 : focusManagerState.modal;
+			const open = focusManagerState == null ? void 0 : focusManagerState.open;
+			const shouldRenderGuards = !!focusManagerState && !focusManagerState.modal && focusManagerState.open && preserveTabOrder && !!(root || portalNode);
+			react$1.useEffect(() => {
+				if (!portalNode || !preserveTabOrder || modal) return;
+				function onFocus(event) {
+					if (portalNode && isOutsideEvent(event)) (event.type === "focusin" ? enableFocusInside : disableFocusInside)(portalNode);
+				}
+				portalNode.addEventListener("focusin", onFocus, true);
+				portalNode.addEventListener("focusout", onFocus, true);
+				return () => {
+					portalNode.removeEventListener("focusin", onFocus, true);
+					portalNode.removeEventListener("focusout", onFocus, true);
+				};
+			}, [
+				portalNode,
+				preserveTabOrder,
+				modal
+			]);
+			react$1.useEffect(() => {
+				if (!portalNode) return;
+				if (open) return;
+				enableFocusInside(portalNode);
+			}, [open, portalNode]);
+			return /*#__PURE__*/ (0, react_jsx_runtime.jsxs)(PortalContext.Provider, {
+				value: react$1.useMemo(() => ({
+					preserveTabOrder,
+					beforeOutsideRef,
+					afterOutsideRef,
+					beforeInsideRef,
+					afterInsideRef,
+					portalNode,
+					setFocusManagerState
+				}), [preserveTabOrder, portalNode]),
+				children: [
+					shouldRenderGuards && portalNode && /*#__PURE__*/ (0, react_jsx_runtime.jsx)(FocusGuard, {
+						"data-type": "outside",
+						ref: beforeOutsideRef,
+						onFocus: (event) => {
+							if (isOutsideEvent(event, portalNode)) {
+								var _beforeInsideRef$curr;
+								(_beforeInsideRef$curr = beforeInsideRef.current) == null || _beforeInsideRef$curr.focus();
+							} else getPreviousTabbable(focusManagerState ? focusManagerState.domReference : null)?.focus();
+						}
+					}),
+					shouldRenderGuards && portalNode && /*#__PURE__*/ (0, react_jsx_runtime.jsx)("span", {
+						"aria-owns": portalNode.id,
+						style: HIDDEN_OWNER_STYLES
+					}),
+					portalNode && /*#__PURE__*/ react_dom.createPortal(children, portalNode),
+					shouldRenderGuards && portalNode && /*#__PURE__*/ (0, react_jsx_runtime.jsx)(FocusGuard, {
+						"data-type": "outside",
+						ref: afterOutsideRef,
+						onFocus: (event) => {
+							if (isOutsideEvent(event, portalNode)) {
+								var _afterInsideRef$curre;
+								(_afterInsideRef$curre = afterInsideRef.current) == null || _afterInsideRef$curre.focus();
+							} else {
+								getNextTabbable(focusManagerState ? focusManagerState.domReference : null)?.focus();
+								focusManagerState != null && focusManagerState.closeOnFocusOut && focusManagerState?.onOpenChange(false, event.nativeEvent, "focus-out");
+							}
+						}
+					})
+				]
+			});
+		}
+		const usePortalContext = () => react$1.useContext(PortalContext);
+		function useFloatingRootContext(options) {
+			const { open = false, onOpenChange: onOpenChangeProp, elements: elementsProp } = options;
+			const floatingId = useId();
+			const dataRef = react$1.useRef({});
+			const [events] = react$1.useState(() => createEventEmitter());
+			const nested = useFloatingParentNodeId() != null;
+			const [positionReference, setPositionReference] = react$1.useState(elementsProp.reference);
+			const onOpenChange = useEffectEvent((open, event, reason) => {
+				dataRef.current.openEvent = open ? event : void 0;
+				events.emit("openchange", {
+					open,
+					event,
+					reason,
+					nested
+				});
+				onOpenChangeProp?.(open, event, reason);
+			});
+			const refs = react$1.useMemo(() => ({ setPositionReference }), []);
+			const elements = react$1.useMemo(() => ({
+				reference: positionReference || elementsProp.reference || null,
+				floating: elementsProp.floating || null,
+				domReference: elementsProp.reference
+			}), [
+				positionReference,
+				elementsProp.reference,
+				elementsProp.floating
+			]);
+			return react$1.useMemo(() => ({
+				dataRef,
+				open,
+				onOpenChange,
+				elements,
+				events,
+				floatingId,
+				refs
+			}), [
+				open,
+				onOpenChange,
+				elements,
+				events,
+				floatingId,
+				refs
+			]);
+		}
+		/**
+		* Provides data to position a floating element and context to add interactions.
+		* @see https://floating-ui.com/docs/useFloating
+		*/
+		function useFloating(_temp) {
+			var _elementsOption$refer, _elementsOption$float;
+			let { elements: elementsOption, ...options } = _temp === void 0 ? {} : _temp;
+			const { nodeId } = options;
+			const internalRootContext = useFloatingRootContext({
+				...options,
+				elements: {
+					reference: (_elementsOption$refer = elementsOption == null ? void 0 : elementsOption.reference) != null ? _elementsOption$refer : null,
+					floating: (_elementsOption$float = elementsOption == null ? void 0 : elementsOption.floating) != null ? _elementsOption$float : null
+				}
+			});
+			const rootContext = options.rootContext || internalRootContext;
+			const computedElements = rootContext.elements;
+			const [_domReference, setDomReference] = react$1.useState(null);
+			const [positionReference, _setPositionReference] = react$1.useState(null);
+			const domReference = (computedElements == null ? void 0 : computedElements.domReference) || _domReference;
+			const domReferenceRef = react$1.useRef(null);
+			const tree = useFloatingTree();
+			index$1(() => {
+				if (domReference) domReferenceRef.current = domReference;
+			}, [domReference]);
+			const position = useFloating$1({
+				...options,
+				elements: {
+					...computedElements,
+					...positionReference && { reference: positionReference }
+				}
+			});
+			const setPositionReference = react$1.useCallback((node) => {
+				const computedPositionReference = isElement(node) ? {
+					getBoundingClientRect: () => node.getBoundingClientRect(),
+					getClientRects: () => node.getClientRects(),
+					contextElement: node
+				} : node;
+				_setPositionReference(computedPositionReference);
+				position.refs.setReference(computedPositionReference);
+			}, [position.refs]);
+			const setReference = react$1.useCallback((node) => {
+				if (isElement(node) || node === null) {
+					domReferenceRef.current = node;
+					setDomReference(node);
+				}
+				if (isElement(position.refs.reference.current) || position.refs.reference.current === null || node !== null && !isElement(node)) position.refs.setReference(node);
+			}, [position.refs]);
+			const refs = react$1.useMemo(() => ({
+				...position.refs,
+				setReference,
+				setPositionReference,
+				domReference: domReferenceRef
+			}), [
+				position.refs,
+				setReference,
+				setPositionReference
+			]);
+			const elements = react$1.useMemo(() => ({
+				...position.elements,
+				domReference
+			}), [position.elements, domReference]);
+			const context = react$1.useMemo(() => ({
+				...position,
+				...rootContext,
+				refs,
+				elements,
+				nodeId
+			}), [
+				position,
+				refs,
+				elements,
+				nodeId,
+				rootContext
+			]);
+			index$1(() => {
+				rootContext.dataRef.current.floatingContext = context;
+				const node = tree == null ? void 0 : tree.nodesRef.current.find((node) => node.id === nodeId);
+				if (node) node.context = context;
+			});
+			return react$1.useMemo(() => ({
+				...position,
+				context,
+				refs,
+				elements
+			}), [
+				position,
+				refs,
+				elements,
+				context
+			]);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/chevron.js
+		/**
+		* 全站唯一的箭头：**自绘 chevron**（就是下拉框右侧那颗）。
+		*
+		* 为什么自绘：`ui` 层零官方依赖（官方图标只在宿主内可解析），官方件在这个包里 import 不到。
+		* 为什么不再写字形：'▾' / '↑' 这类字符在各系统字体下粗细、角度、基线都不一样，
+		* 同一套界面里会出现两种箭头 —— 2026-10-26 用户点名 ▾ 太丑 ⇒ 一律换成这颗 chevron。
+		*
+		* 用法：`h(Chevron, { dir: 'up', size: 18 })`；要动画就在外层套一个带 transform 的类
+		* （如卡片折叠的 `.dshpc-card__caret.is-open`），不要给每个方向另画一条路径。
+		*/
+		const ROTATE = {
+			down: 0,
+			up: 180,
+			left: 90,
+			right: 270
+		};
+		function Chevron(props) {
+			const size = props.size ?? 12;
+			const deg = ROTATE[props.dir ?? "down"];
+			const style = deg === 0 ? void 0 : { transform: `rotate(${String(deg)}deg)` };
+			return (0, react$1.createElement)("svg", {
+				className: props.className,
+				width: size,
+				height: size,
+				viewBox: "0 0 16 16",
+				fill: "none",
+				"aria-hidden": true,
+				style
+			}, (0, react$1.createElement)("path", {
+				d: "M4 6l4 4 4-4",
+				stroke: "currentColor",
+				"stroke-width": 1.5,
+				"stroke-linecap": "round",
+				"stroke-linejoin": "round"
 			}));
 		}
 		//#endregion
-		//#region src/client/ui/Button.tsx
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/segmented-css.generated.js
+		const SEGMENTED_CSS = "\n/* ── 分段控件 P2 ─────────────────────────────────────────────────────\n   结构照兄弟项目 dsh-task-dispatch-table 的 Segmented 皮肤（item 无边框、hover 只提亮文字），\n   前缀 / 变量名换成本仓口径。用户额外要的两处（兄弟没有）：weekday 方块间隔（现为 2px）；段内中性计数 __count。\n   ⚠️ 2026-10-19 两次误判均已澄清：① 「宿主只认单行 CSS」——假，多行一直正常；\n   ② 「宿主吃掉 token 块之后第一条规则」——也假，真因是 tokens 模板字符串结尾多了一个反斜杠，\n   注入文本里留下字面反引号，把紧随其后的那条规则的选择器污染掉了（见 dsh-host.md §9）。\n   样式照常多行书写，不必压行；也不需要任何「牺牲规则」。 */\n/* 外观只有一套（2026-10-26）：原 variant 的 default / inset 两档在 CSS 里只差 1px 内距，\n   且 default 比文档承诺矮 2px，却让下游以为「有得选」而反复对图 ⇒ 整轴删除。\n   padding 3px 是尺寸契约的一部分：item 高度 = 控制高 − 6px，加起来正好 24 / 28 / 32。 */\n/* 选中片配色收在两条局部变量里（--seg-thumb 底 / --seg-on 字）：默认走主题亮片，\n   tone 档与自定义 {bg, fg} 都只改这两条（后者由组件内联写根节点，内联恒胜）。 */\n.dshpc-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:var(--dshpc-radius-md);--seg-thumb:var(--dshpc-surface-raised);--seg-on:var(--dshpc-fg);background:var(--dshpc-seg-track);}\n.dshpc-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;height:calc(var(--dshpc-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);font-family:inherit;font-size:var(--dshpc-font-xs);font-weight:500;white-space:nowrap;cursor:pointer;flex:none;transition:color var(--dshpc-dur-fast) var(--dshpc-ease),background-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-seg--md .dshpc-seg__item{height:calc(var(--dshpc-control-h-md) - 6px);}\n.dshpc-seg--lg .dshpc-seg__item{height:calc(var(--dshpc-control-h-lg) - 6px);}\n/* 段内图标（前置）：与 Button 同口径 —— inline-flex 吃掉行高基线，svg 按块级。 */\n.dshpc-seg__icon{display:inline-flex;align-items:center;justify-content:center;flex:none;line-height:0;}\n.dshpc-seg__icon svg{display:block;margin:0;}\n/* 只有图标（无文字 / 计数 / 角标）：段必须是正方形 ⇒ 宽 = 段高、左右内距归零、内容居中；\n   否则基础规则的 0 12px 会把它拉成长方形。放在三档之后：同名特异性下后写者胜。 */\n.dshpc-seg__item--icon-only{width:calc(var(--dshpc-control-h-sm) - 6px);padding:0;justify-content:center;}\n.dshpc-seg--md .dshpc-seg__item--icon-only{width:calc(var(--dshpc-control-h-md) - 6px);}\n.dshpc-seg--lg .dshpc-seg__item--icon-only{width:calc(var(--dshpc-control-h-lg) - 6px);}\n.dshpc-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--dshpc-fg);}\n.dshpc-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--dshpc-shadow-raised);color:var(--seg-on);font-weight:600;}\n.dshpc-seg__item:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px;}\n.dshpc-seg__item:disabled{cursor:default;opacity:.4;}\n/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染。必须是正圆（用户 2026-10-03）。 */\n.dshpc-seg__badge{display:inline-flex;align-items:center;justify-content:center;flex:none;width:16px;height:16px;padding:0;overflow:hidden;border-radius:50%;background:var(--dshpc-danger);color:var(--dshpc-on-signal);font-size:10px;line-height:16px;font-weight:500;font-variant-numeric:tabular-nums;}\n/* 段内中性计数（如筛选条「全部 11」）：纯文字、无底无边（对齐 task-ledger .dtl-seg__num 拍板口径）；0 由组件侧不渲染。 */\n.dshpc-seg__count{display:inline;flex:none;margin-left:3px;padding:0;border:0;border-radius:0;background:none;color:var(--dshpc-fg-3);font-size:10px;line-height:1;font-weight:400;font-variant-numeric:tabular-nums;}\n/* 选中段（彩色实面）里的计数：必须跟着 --seg-on 走再压暗一档（72% 白 ≈ 「比正文稍灰」）。\n   不许用 --dshpc-fg-3：它跟主题走，暗色下是深灰 ⇒ 蓝底上几乎看不见（2026-10-29 用户截图「My todos 4」）。 */\n.dshpc-seg__item[aria-pressed='true'] .dshpc-seg__count{color:color-mix(in srgb,var(--seg-on) 72%,transparent);}\n/* block：撑满父宽（表单行用），各段等分 */\n.dshpc-seg--block{display:flex;width:100%;}\n.dshpc-seg--block .dshpc-seg__item{flex:1 1 auto;justify-content:center;}\n/* weekday：星期多选方块。基础插件的特殊化定制（用户 2026-10-01：原 WeekdayPicker 即「蓝底 + 近似方形」）：\n   每格正方形（宽 = 段高）、选中品牌蓝反白字、**无外描边**（2026-10-18 重申）、\n   方块之间间距 gap:2px（2026-10-20 用户定稿：方块改小后 6px 显得太宽。10-18 曾从 2px 放宽到 6px，\n   两次都是用户拍板 —— 别自作主张改回去）。 */\n.dshpc-seg--weekday{--seg-track:var(--dshpc-seg-track);gap:2px;border:0;padding:3px;background:var(--seg-track);}\n.dshpc-seg--weekday .dshpc-seg__item{width:calc(var(--dshpc-control-h-lg) - 8px);padding:0;justify-content:center;}\n/* 蓝底反白：字色必须是常量白（--dshpc-on-signal）。2026-10-29 用户实测：暗色主题下这里曾用\n   --dshpc-fg-inverse，而它跟随宿主 label-primary-foreground，暗色下是近黑 ⇒ 蓝底黑字看不清。 */\n.dshpc-seg--weekday{--seg-thumb:var(--dshpc-business);--seg-on:var(--dshpc-on-signal);}\n\n/* ── tone（2026-10-29 用户）：选中片传内置基础色名，底 / 字由核心给，深浅两主题各自成立。\n   放在 weekday 之后：同名变量后写者胜，tone 与 className=\"dshpc-seg--weekday\" 同给时以 tone 为准。\n   黄底按 Chip / Button 同源口径用 on-warning（中高明度，白字看不清）。 */\n.dshpc-seg--tone-business{--seg-thumb:var(--dshpc-business);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-success{--seg-thumb:var(--dshpc-success);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-warning{--seg-thumb:var(--dshpc-warning);--seg-on:var(--dshpc-on-warning);}\n.dshpc-seg--tone-danger{--seg-thumb:var(--dshpc-danger);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-purple{--seg-thumb:var(--dshpc-purple);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-pink{--seg-thumb:var(--dshpc-pink);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-cyan{--seg-thumb:var(--dshpc-cyan);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-teal{--seg-thumb:var(--dshpc-teal);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-orange{--seg-thumb:var(--dshpc-orange);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-indigo{--seg-thumb:var(--dshpc-indigo);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-rose{--seg-thumb:var(--dshpc-rose);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-slate{--seg-thumb:var(--dshpc-slate);--seg-on:var(--dshpc-on-signal);}\n\n/* ── 单选滑动块（2026-10-26 用户：点选后选中底应「滑过去」，不是旧段消失、新段直接亮）。\n   结构 = 一块绝对定位的共用底 + 各段透明；位置/尺寸由组件量出后内联，这里只管外观与过渡。\n   --slide 只在单选挂上：多选（如星期）每段各自着色，没有唯一滑块可滑，保持原样。 */\n.dshpc-seg--slide{position:relative;}\n.dshpc-seg--slide .dshpc-seg__item{position:relative;z-index:1;}\n.dshpc-seg--slide .dshpc-seg__item[aria-pressed='true']{background:transparent;box-shadow:none;}\n.dshpc-seg__thumb{position:absolute;z-index:0;border-radius:var(--dshpc-radius-sm);background:var(--seg-thumb);box-shadow:var(--dshpc-shadow-raised);pointer-events:none;transition:left var(--dshpc-dur) var(--dshpc-ease),top var(--dshpc-dur) var(--dshpc-ease),width var(--dshpc-dur) var(--dshpc-ease),height var(--dshpc-dur) var(--dshpc-ease);}\n\n/* ── bordered 外框（2026-10-20 用户要的第二种模式）：**只在最外面套一圈 1px 描边**，\n   里面一概不动 —— 选中片的填充色 / 阴影 / 文字色全部保持原样（weekday 的蓝面照旧），\n   这里不写任何针对 __item 的规则。\n   总高必须与无框版逐像素一致：border 1px×2 由 padding 各让 1px 抵消（3 → 2）；\n   weekday 自己声明的 3px 在文件更后面，靠双类选择器压回 2px。 */\n.dshpc-seg--bordered{border:1px solid var(--dshpc-border);padding:2px;}\n.dshpc-seg--bordered.dshpc-seg--weekday{padding:2px;}\n\n@media (prefers-reduced-motion: reduce){.dshpc-seg__item{transition:none;}.dshpc-seg__thumb{transition:none;}}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/actions/button-css.generated.js
+		const BUTTON_CSS$1 = "\n/* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────\n   与 Segmented 同一条高度纪律：--dshpc-control-h-sm(24) / -md(28) / -lg(32)，\n   有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。\n\n   三条受控轴（2026-10-19 重写，对齐主流 UI 框架的分类口径）：\n     · variant —— 外观档 = 形态 + 语义色，共 10 档：\n         primary / secondary / outline / ghost / danger / success / warning / info /\n         danger-outline（红字描边）/ link（行内链接）\n     · size —— sm / md / lg\n     · block —— 撑满父宽\n   每一档**只填 5 个局部变量**（--btn-bg / -fg / -border / -bg-hover / -bg-active），\n   结构与交互只有上面这一份；任何档位都不许再写一遍 display/height/padding。\n   自定义颜色（Button 的 color 参数）同样只覆盖这 5 个变量（token 覆盖，不是新皮肤）。\n\n   ⚠️ hover 不再用 opacity 压一层（用户 2026-10-19：「黑色和红色的按钮移上去变化太小，\n   完全感觉不到颜色变了」）⇒ 走 --dshpc-*-hover / -active 的明确混色，见 tokens-css.ts。 */\n.dshpc-btn{--btn-bg:transparent;--btn-fg:var(--dshpc-fg);--btn-border:transparent;--btn-pad:12px;\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);--btn-fg-hover:var(--btn-fg);\n  appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;\n  box-sizing:border-box;border:1px solid var(--btn-border);border-radius:var(--dshpc-radius-md);\n  background-color:var(--btn-bg);color:var(--btn-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease),transform var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-btn--sm{--btn-pad:10px;height:var(--dshpc-control-h-sm);padding:0 var(--btn-pad);font-size:var(--dshpc-font-sm);line-height:1;}\n.dshpc-btn--md{--btn-pad:12px;height:var(--dshpc-control-h-md);padding:0 var(--btn-pad);font-size:var(--dshpc-font-md);line-height:1;}\n.dshpc-btn--lg{--btn-pad:14px;height:var(--dshpc-control-h-lg);padding:0 var(--btn-pad);font-size:var(--dshpc-font-md);line-height:1;}\n/* block：撑满父宽（表单底栏 / 抽屉底部的主操作） */\n.dshpc-btn--block{display:flex;width:100%;}\n/* block + 前置图标 ⇒ 文字视觉居中（2026-10-19 用户点名）：\n   内容组 [图标 + 间距 + 文字] 整体在盒内居中时，**文字**的中心会被图标推右半格。\n   把右内边距补上「图标宽 + 间距」，可用盒随之左移同量 ⇒ 文字落回视觉中心，图标贴左侧。\n   图标宽按 1.2em 估（官方图标 14/16px vs 字号 12/13px），em 随字号档自动缩放。 */\n.dshpc-btn--block.dshpc-btn--icon-start{padding-right:calc(var(--btn-pad) + 1.2em + 6px);}\n/* 图标比同档文字小一号（用户 2026-11-02）：容器吃掉 0.875em，内联 SVG 一律跟随 1em，\n   不再由调用方的 size={16} 说了算 —— 全站按钮图标尺寸只由这一处决定。 */\n.dshpc-btn__icon,.dshpc-btn__icon-end{display:inline-flex;align-items:center;justify-content:center;flex:none;line-height:0;font-size:.875em;}\n.dshpc-btn__icon svg,.dshpc-btn__icon-end svg{display:block;margin:0;width:1em;height:1em;}\n/* maxWidth 包 MarqueeText 时：标签作为 flex 子项必须能收缩到内容以下，否则省略号 / 跑马灯测不准 */\n.dshpc-btn .dshpc-btn__label{min-width:0;}\n/* loading：不换 DOM 结构，只在文案前插一枚 Loader（size=xs，12px）。\n   环的画法与动画统一在 controls/loader.css（本文件不再维护第二份 SVG 弧 / keyframes）。 */\n\n/* 交互态：颜色变化写在变量上 ⇒ 所有档位一次生效，且变化幅度由 token 决定（够明显） */\n.dshpc-btn:hover:not(:disabled){background-color:var(--btn-bg-hover);color:var(--btn-fg-hover);}\n.dshpc-btn:active:not(:disabled){background-color:var(--btn-bg-active);transform:translateY(1px);}\n.dshpc-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}\n.dshpc-btn:disabled{cursor:default;opacity:.5;}\n\n.dshpc-btn--primary{--btn-bg:var(--dshpc-accent);--btn-fg:var(--dshpc-fg-inverse);\n  --btn-bg-hover:var(--dshpc-accent-hover);--btn-bg-active:var(--dshpc-accent-active);}\n/* secondary：中性实心（灰面），用于「取消 / 次要」这类与主操作并排的按钮 */\n.dshpc-btn--secondary{--btn-bg:var(--dshpc-hover);--btn-fg:var(--dshpc-fg);\n  --btn-bg-hover:var(--dshpc-active);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--outline{--btn-bg:var(--dshpc-surface-1);--btn-border:var(--dshpc-border-strong);\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--ghost{--btn-fg:var(--dshpc-fg-2);--btn-fg-hover:var(--dshpc-fg);\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--danger{--btn-bg:var(--dshpc-danger);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-danger-hover);--btn-bg-active:var(--dshpc-danger-active);}\n.dshpc-btn--success{--btn-bg:var(--dshpc-success);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-success-hover);--btn-bg-active:var(--dshpc-success-active);}\n.dshpc-btn--warning{--btn-bg:var(--dshpc-warning);--btn-fg:var(--dshpc-on-warning);\n  --btn-bg-hover:var(--dshpc-warning-hover);--btn-bg-active:var(--dshpc-warning-active);}\n.dshpc-btn--info{--btn-bg:var(--dshpc-business);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-business-hover);--btn-bg-active:var(--dshpc-business-active);}\n/* 扩展八色实心（2026-10-29）：白字两主题均 ≥4.5:1；hover/active 走各自 token 派生。 */\n.dshpc-btn--purple{--btn-bg:var(--dshpc-purple);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-purple-hover);--btn-bg-active:var(--dshpc-purple-active);}\n.dshpc-btn--pink{--btn-bg:var(--dshpc-pink);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-pink-hover);--btn-bg-active:var(--dshpc-pink-active);}\n.dshpc-btn--cyan{--btn-bg:var(--dshpc-cyan);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-cyan-hover);--btn-bg-active:var(--dshpc-cyan-active);}\n.dshpc-btn--teal{--btn-bg:var(--dshpc-teal);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-teal-hover);--btn-bg-active:var(--dshpc-teal-active);}\n.dshpc-btn--orange{--btn-bg:var(--dshpc-orange);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-orange-hover);--btn-bg-active:var(--dshpc-orange-active);}\n.dshpc-btn--indigo{--btn-bg:var(--dshpc-indigo);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-indigo-hover);--btn-bg-active:var(--dshpc-indigo-active);}\n.dshpc-btn--rose{--btn-bg:var(--dshpc-rose);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-rose-hover);--btn-bg-active:var(--dshpc-rose-active);}\n.dshpc-btn--slate{--btn-bg:var(--dshpc-slate);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-slate-hover);--btn-bg-active:var(--dshpc-slate-active);}\n/* danger-outline：红字描边（破坏性次要操作，如卡片上的「删除」）。\n   ⚠️ 旧修饰类 danger-ink 保留为别名（消费方可能还在挂），两者同一套皮肤。 */\n.dshpc-btn--danger-outline,.dshpc-btn--danger-ink{--btn-border:var(--dshpc-danger);--btn-fg:var(--dshpc-danger);\n  --btn-fg-hover:var(--dshpc-danger);--btn-bg-hover:var(--dshpc-danger-soft);--btn-bg-active:var(--dshpc-danger-soft);}\n/* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */\n.dshpc-btn--link{--btn-fg:var(--dshpc-link);--btn-fg-hover:var(--dshpc-link);\n  --btn-bg-hover:transparent;--btn-bg-active:transparent;\n  height:auto;padding:0;border:0;background:none;font-weight:400;text-align:left;}\n.dshpc-btn--link:hover:not(:disabled){text-decoration:underline;}\n\n/* 图标钮：纯图标，方形；尺寸档的宽高与同档文字按钮等高、圆角统一吃 md（与 .dshpc-btn 同款，2026-10-28 拍板）\n   底色 / 图标色全走局部变量：默认**无底色**，消费方可传 color（图标色）/ background（底色）覆盖（用户 2026-11-02）。 */\n.dshpc-iconbtn{--icb-bg:transparent;--icb-bg-hover:var(--dshpc-hover);--icb-fg:var(--dshpc-fg-2);--icb-fg-hover:var(--dshpc-fg);\n  appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;\n  border:1px solid var(--icb-border,transparent);border-radius:var(--dshpc-radius-md);\n  background:var(--icb-bg);color:var(--icb-fg);\n  font-family:inherit;cursor:pointer;flex:none;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),opacity var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-iconbtn--sm{width:var(--dshpc-control-h-sm);height:var(--dshpc-control-h-sm);font-size:var(--dshpc-font-sm);}\n.dshpc-iconbtn--md{width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);font-size:var(--dshpc-font-md);}\n.dshpc-iconbtn--lg{width:var(--dshpc-control-h-lg);height:var(--dshpc-control-h-lg);font-size:var(--dshpc-font-md);}\n/* 图标与文字按钮同口径：内联 SVG 一律跟随 1em（比 16px 档小一号） */\n.dshpc-iconbtn > svg{display:block;width:1em;height:1em;}\n.dshpc-iconbtn--outline{--icb-bg:var(--dshpc-surface-1);--icb-border:var(--dshpc-border);}\n.dshpc-iconbtn--danger{--icb-fg:var(--dshpc-danger);--icb-bg-hover:var(--dshpc-danger-soft);--icb-fg-hover:var(--dshpc-danger);}\n.dshpc-iconbtn:hover:not(:disabled){background:var(--icb-bg-hover);color:var(--icb-fg-hover);}\n.dshpc-iconbtn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}\n.dshpc-iconbtn:disabled{cursor:default;opacity:.4;}\n\n/* ── 行式文件按钮（图标 + 文件名）P2：**全站唯一实现**（2026-10-04 收编）──────────\n   用途：「产出物 / 附件」那种**一行一个文件**的清单项（基础信息右栏产出物清单、附件区、\n   执行记录页的展开区）。平时透明、**鼠标移上去才出浅底**（沿用用户 2026-10-03 定的观感）。\n   两个形态修饰类：\n     --block   撑满父宽（清单里一项一行）\n     --inline  内容宽（跟在文字后头，如附件行）\n   收编原因：这份皮肤此前只写在 task-list.tsx 的 TASK_LIST_CSS 里（旧名 .dshpc-info-out），\n   执行记录页展开区要用同一种观感 ⇒ 上提基础层，避免再出现「各写一份外观」（同名不同皮的坑刚踩过）。 */\n.dshpc-filechip{appearance:none;-webkit-appearance:none;border:0;border-radius:var(--dshpc-radius-xs);\n  background:transparent;color:var(--dshpc-fg);font:inherit;text-align:left;cursor:pointer;min-width:0;\n  transition:background-color var(--dshpc-dur) var(--dshpc-ease);}\n.dshpc-filechip:hover:not(:disabled){background:var(--dshpc-chip-bg);}\n.dshpc-filechip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}\n.dshpc-filechip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}\n.dshpc-filechip--block{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;\n  padding:4px 6px;font-size:var(--dshpc-font-xs);}\n.dshpc-filechip--inline{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;font-size:var(--dshpc-font-sm);}\n\n@media (prefers-reduced-motion: reduce){.dshpc-btn,.dshpc-iconbtn,.dshpc-filechip{transition:none;}}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/field-css.generated.js
+		const FIELD_CSS$1 = "\n/* ── 字段 + 问号提示（hint 参数内置） ──────────────────────────────────── */\n/* 控件 + FieldHint 同一行；hint 版由组件自己包，调用方只传 hint 字符串。\n   铺满型控件（input/textarea）进包后改吃 flex 弹性，让位给问号。 */\n.dshpc-fieldwrap{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;}\n.dshpc-fieldwrap--inline{display:inline-flex;}\n.dshpc-fieldwrap > .dshpc-input,.dshpc-fieldwrap > .dshpc-textarea,.dshpc-fieldwrap > .dshpc-iwrap{flex:1 1 auto;width:auto;min-width:0;}\n/* 多行输入：问号钉在**右下角**（2026-10-20 用户：不要垂直居中），文本区底部留出它的位置。\n   ⚠️ 这一档必须把 textarea 的宽度还回去（上面那条 flex 让位规则会把它缩窄）。 */\n.dshpc-fieldwrap--block{position:relative;display:block;}\n.dshpc-fieldwrap--block > .dshpc-textarea{width:100%;padding-bottom:24px;}\n.dshpc-fieldwrap--block > .dshpc-hint{position:absolute;right:8px;bottom:6px;}\n\n/* ── 输入类 P3 ────────────────────────────────────────────────────────── */\n/* 默认铺满容器（width:100%，与 .dshpc-textarea 同口径）：input 原生按 size 属性取内在宽，\n   不铺满 ⇒ 调用方套定宽壳时会「右边空一截、看着没贴右」（2026-10-20 用户抓的 bug）。\n   要定宽由调用方在外面套壳控制（如 192px 搜索槽）。 */\n.dshpc-input{display:block;width:100%;box-sizing:border-box;border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);\n  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font-family:inherit;outline:none;\n  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-input--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}\n.dshpc-input--md{height:var(--dshpc-control-h-md);padding:0 10px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-input--lg{height:var(--dshpc-control-h-lg);padding:0 12px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-input::placeholder{color:var(--dshpc-fg-3);}\n/* type=\"search\"：原生清除钮（::-webkit-search-cancel-button）整个隐掉，换组件自己挂的 plain IconButton\n   —— 原生那个各子系统长相不一、还不吃 token（2026-10-28 用户：不好看，要数字框加减号那种）。 */\n.dshpc-iwrap .dshpc-input::-webkit-search-cancel-button{display:none;}\n.dshpc-input:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n.dshpc-input--error{border-color:var(--dshpc-danger);}\n.dshpc-input:disabled{cursor:default;opacity:.5;}\n\n/* 左侧图标槽（Input 的 icon 参数）：图标绝对定位压在输入框的左内边距上，\n   输入框自己的边框 / 焦点圈 / 描红一律不动。图标不吃点击（pointer-events:none）⇒ 点在图标上照样聚焦。\n   左内边距 = 左偏 8 + 图标宽（sm 14 / md·lg 16，见 fieldMetricsOf）+ 间距 4。 */\n.dshpc-iwrap{position:relative;display:block;width:100%;min-width:0;}\n.dshpc-iwrap__icon{position:absolute;left:8px;top:50%;transform:translateY(-50%);display:inline-flex;pointer-events:none;color:var(--dshpc-fg-2);}\n.dshpc-iwrap--sm > .dshpc-input{padding-left:26px;}\n.dshpc-iwrap--md > .dshpc-input,.dshpc-iwrap--lg > .dshpc-input{padding-left:28px;}\n/* 禁用时图标跟输入框一起变淡（输入框自己已有 opacity:.5，图标不在它里面，得单独跟一下）。 */\n.dshpc-iwrap:has(> .dshpc-input:disabled) > .dshpc-iwrap__icon{opacity:.5;}\n\n/* 搜索框的清空钮（Field.ts 在「有焦点 + 有内容」时才挂出来）：**并进框里**，与数字框的 − / +\n   同形态 —— 整段同高、左直右圆、hover 底色铺满这一格（2026-10-28 用户：不要一颗悬在右边的小按钮）。\n   向内让 1px，免得底色压住输入框自己的边框。 */\n.dshpc-iwrap__clear.dshpc-iconbtn{position:absolute;right:1px;top:1px;bottom:1px;height:auto;width:auto;aspect-ratio:1;\n  border-radius:0 var(--dshpc-radius-md) var(--dshpc-radius-md) 0;font-size:var(--dshpc-font-md);}\n/* height:auto 必须：iconbtn--md/lg 的固定 height 会让 absolute 的 bottom 被忽略\n   （top:1 + 固定高 ⇒ 整钮错位 1px，× 显得没居中，2026-10-28 用户截图抓的）。 */\n/* 文字让开这一段（宽度 = 控件高 - 2，故按档位补）。 */\n.dshpc-iwrap--clear > .dshpc-input{padding-right:calc(var(--dshpc-control-h-md) + 3px);}\n.dshpc-iwrap--clear.dshpc-iwrap--sm > .dshpc-input{padding-right:calc(var(--dshpc-control-h-sm) + 3px);}\n.dshpc-iwrap--clear.dshpc-iwrap--lg > .dshpc-input{padding-right:calc(var(--dshpc-control-h-lg) + 3px);}\n\n.dshpc-pfx{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg);}\n.dshpc-pfx--sm{height:var(--dshpc-control-h-sm);}\n.dshpc-pfx--md{height:var(--dshpc-control-h-md);}\n.dshpc-pfx--lg{height:var(--dshpc-control-h-lg);}\n/* md / lg 档字号跟档走（与同档下拉同字号）：此前写死 sm(12px)，同排下拉是 13px ⇒ 显得「input 字小」。 */\n.dshpc-pfx--md .dshpc-pfx__label,.dshpc-pfx--lg .dshpc-pfx__label{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-pfx--md .dshpc-pfx__input,.dshpc-pfx--lg .dshpc-pfx__input{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-pfx--error{border-color:var(--dshpc-danger);}\n.dshpc-pfx:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n.dshpc-pfx__label{padding:0 8px;color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);white-space:nowrap;border-right:1px solid var(--dshpc-border);}\n.dshpc-pfx__input{flex:1 1 auto;min-width:0;height:100%;padding:0 8px;border:0;background:transparent;color:var(--dshpc-fg);\n  font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);outline:none;}\n.dshpc-pfx__input::placeholder{color:var(--dshpc-fg-3);}\n\n.dshpc-num{display:inline-flex;align-items:center;justify-content:space-between;box-sizing:border-box;overflow:hidden;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg);}\n/* 中段：数字 + 后缀成组居中；容器被消费端拉宽时吃掉全部余量，两端 − / + 因此钉死在左右边缘。 */\n.dshpc-num__mid{display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0;}\n.dshpc-num--sm{height:var(--dshpc-control-h-sm);}\n.dshpc-num--md{height:var(--dshpc-control-h-md);}\n.dshpc-num--lg{height:var(--dshpc-control-h-lg);}\n.dshpc-num--md .dshpc-num__input,.dshpc-num--lg .dshpc-num__input{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-num--md .dshpc-num__suffix,.dshpc-num--lg .dshpc-num__suffix{font-size:var(--dshpc-font-md);}\n.dshpc-num--disabled{opacity:.5;}\n/* 焦点态与 Input 同款（2026-10-20 用户：数字框里点进去没有蓝框）：内层 input 无边框，\n   焦点状态画在整个步进控件外框上。 */\n.dshpc-num:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n.dshpc-num__input{width:36px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--dshpc-fg);\n  font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);text-align:center;outline:none;}\n.dshpc-num__suffix{padding:0 6px;color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm);white-space:nowrap;}\n.dshpc-num .dshpc-iconbtn{border-radius:0;color:var(--dshpc-fg-2);flex:none;}\n\n/* 官方 Switch 包装统一：选中 = success 绿。\n   （合并原先 task-editor-css / task-list 两处就地覆盖；选择器带包装类 + role，特异性高于官方。） */\n.dshpc-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}\n\n/* 多行文本输入（提示词等，P3）：**边框 / 圆角 / 底 / 焦点态与 Input 同一套口径**（用户 2026-10-20：\n   「多行输入应该和 input 的边儿是一个道理，包括圆角在内，都是一个东西」）。\n   ⚠️ 旧意图「卡内无边框、视觉重心在整张卡上」已作废 —— 现在它就是一只带框的多行输入框。\n   （从 task-editor-css 的 .dshpc-ed-prompt 上提而来；业务文件不再自写 textarea 皮肤。） */\n.dshpc-textarea{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:8px 12px;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);outline:none;\n  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font-family:inherit;font-size:var(--dshpc-font-lg);line-height:1.6;resize:vertical;\n  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-textarea::placeholder{color:var(--dshpc-fg-3);}\n.dshpc-textarea:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n/* 校验不通过：与 Input 一致，走边框描红（旧版是 box-shadow 描红盒，与 Input 不同口径） */\n.dshpc-textarea--error{border-color:var(--dshpc-danger);}\n.dshpc-textarea:disabled{cursor:default;opacity:.5;}\n@media (prefers-reduced-motion: reduce){.dshpc-textarea{transition:none;}}\n\n/* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。\n   具体 z-index 由 .dshpc-ed-resizer / .dshpc-sv-resizer 各自补。 */\n.dshpc-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}\n.dshpc-resizer:hover,.dshpc-resizer:active{background:var(--dshpc-hover);}\n\n@media (prefers-reduced-motion: reduce){.dshpc-input,.dshpc-pfx{transition:none;}}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/loading-css.generated.js
+		const LOADING_CSS = "\n/* 运行中 / loading 的活动指示：三个小方块依次脉动。 */\n@keyframes dshpc-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }\n.dshpc-run-blocks { display: inline-flex; align-items: center; gap: 3px; }\n.dshpc-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dshpc-run-block 1.2s ease-in-out infinite; }\n.dshpc-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }\n.dshpc-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }\n@media (prefers-reduced-motion: reduce) { .dshpc-run-blocks > i { animation: none; opacity: 1; } }\n\n/* ── 加载提示（LoadingToast / LoadingBlock / showLoading）───────────────────\n   两种样式的表面统一走 token（2026-11-03：原来写死 #f4f4f5/#18181b 再补一段暗色覆盖，\n   等于自己造第二套主题；现在底色/字色/阴影全从 var(--dshpc-*) 来，暗色自动跟随）。\n   卡里的转圈图标不自绘：复用 Loader（size sm / md），环的画法与动画只有 controls/loader.css 一份。 */\n\n/* 样式一：横排 toast 卡（图标在左、文字在右），与 notify 的 info 卡同尺寸同色。 */\n.dshpc-loading-toast {\n  display: inline-flex; align-items: center; gap: 10px;\n  /* 不学 notify 固定 320 宽：这张卡也常被塞进表格 / 窄栏里，宽度随内容走。\n     shortcut: 下限 250px，要更宽 / 更窄就改这一处。 */\n  min-width: 250px; min-height: 48px; padding: 12px 16px; box-sizing: border-box;\n  border-radius: var(--dshpc-radius-lg); box-shadow: var(--dshpc-shadow-2);\n  background: var(--dshpc-surface-1); color: var(--dshpc-fg);\n  font-size: var(--dshpc-font-lg); line-height: var(--dshpc-line-lg);\n}\n\n/* 样式二：方块卡（转圈在上、文字在下），内距更大。 */\n.dshpc-loading-block {\n  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;\n  min-width: 132px; min-height: 132px; padding: 24px; box-sizing: border-box;\n  border-radius: var(--dshpc-radius-md); box-shadow: var(--dshpc-shadow-2);\n  background: var(--dshpc-surface-1); color: var(--dshpc-fg);\n  font-size: var(--dshpc-font-md); line-height: var(--dshpc-line-md);\n}\n\n/* 全局浮层：居中、不挡点击（遮罩层单独一个 div 才挡）。\n   与 Modal 遮罩同一套让位口径：右边界读 --dshpc-page-inset-right。 */\n.dshpc-loading-overlay {\n  position: fixed; inset: 0 var(--dshpc-page-inset-right, 0px) 0 0; z-index: var(--dshpc-z-modal);\n  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;\n  padding: 24px; box-sizing: border-box; pointer-events: none;\n}\n/* 七向定位（与 Toast 的六向同名 + 正中）：默认 bottom-center，与 Sonner 提示同屏位。 */\n.dshpc-loading-overlay--top-left { align-items: flex-start; justify-content: flex-start; }\n.dshpc-loading-overlay--top-center { justify-content: flex-start; }\n.dshpc-loading-overlay--top-right { align-items: flex-end; justify-content: flex-start; }\n.dshpc-loading-overlay--bottom-left { align-items: flex-start; justify-content: flex-end; }\n.dshpc-loading-overlay--bottom-center { justify-content: flex-end; }\n.dshpc-loading-overlay--bottom-right { align-items: flex-end; justify-content: flex-end; }\n.dshpc-loading-overlay__mask { position: absolute; inset: 0; pointer-events: auto; }\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/loader-css.generated.js
+		const LOADER_CSS = "/* ── Loader：统一的加载动画图标（无背景 / 无定位 / 颜色跟随 currentColor）────────\n   形态 × 尺寸两轴正交：形态管几何与动画；尺寸档只改 width / height，几何按\n   viewBox=\"0 0 24 24\" 等比缩放 —— 一套几何吃五档，12px 时描边即 1.5px、48px 时 6px，\n   视觉重量一致，不用逐个尺寸换算 calc。\n\n   边界：本控件**只管图标本身**。背景 / 圆角 / 内距 / 阴影 / 定位（fixed、居中、漂浮）\n   一律归调用方 —— 套 Chip、套 Card，或自己包一个 div。 */\n\n.dshpc-loader { display: inline-block; flex: none; vertical-align: middle; line-height: 0; color: inherit; }\n\n.dshpc-loader--xs { width: 12px; height: 12px; }\n.dshpc-loader--sm { width: 16px; height: 16px; }\n.dshpc-loader--md { width: 24px; height: 24px; }\n.dshpc-loader--lg { width: 32px; height: 32px; }\n.dshpc-loader--xl { width: 48px; height: 48px; }\n\n/* 形态一 ring：开口弧整体旋转。必须走 SVG 矢量弧 —— 次像素边框画圆在 12px 下会被\n   抗锯齿拉毛、看着像圆角方（2026-10-20 真机实测，曾被误判成 border-radius 被覆盖）。 */\n.dshpc-loader--ring { animation: dshpc-loader-rotate .8s linear infinite; }\n@keyframes dshpc-loader-rotate { to { transform: rotate(360deg) } }\n\n/* 形态二 blocks：三个方块依次脉动放大。\n   transform-box: fill-box 是 SVG 子元素做 CSS transform 的必要条件 —— 否则 origin\n   落在 viewBox 原点，节点会绕着左上角飞出去。 */\n.dshpc-loader__node { transform-box: fill-box; transform-origin: center; }\n.dshpc-loader--blocks .dshpc-loader__node { animation: dshpc-loader-blink 1.2s ease-in-out infinite; }\n.dshpc-loader__node:nth-child(2) { animation-delay: .15s; }\n.dshpc-loader__node:nth-child(3) { animation-delay: .3s; }\n@keyframes dshpc-loader-blink {\n  0%, 80%, 100% { opacity: .25; transform: scale(.8) }\n  40% { opacity: 1; transform: scale(1) }\n}\n\n/* 降低动效：停在「全部可见、实体大小」，而不是停在动画中途的半透明小点。 */\n@media (prefers-reduced-motion: reduce) {\n  .dshpc-loader--ring { animation: none; }\n  .dshpc-loader__node { animation: none; opacity: 1; transform: none; }\n}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/layout/quick-toolbar-css.generated.js
+		const QUICK_TOOLBAR_CSS = "/* 快捷工具栏：右侧悬浮的一列独立圆钮。\n   横向 left / right 与 bottom、按钮直径、纵向间距由组件按 props 实时写入 style；\n   这里只放与位置无关的皮肤。 */\n.dshpc-quick-toolbar{\n  position:fixed;\n  z-index:var(--dshpc-z-dock);\n  display:flex;\n  flex-direction:column;\n  align-items:center;\n}\n/* 出现 / 消失：挂载即淡入，退场先播 fade-out（组件延迟卸载，见 QuickToolbar.ts）。 */\n@keyframes dshpc-quick-toolbar-in{\n  from{opacity:0;transform:translateY(6px) scale(.9);}\n  to{opacity:1;transform:none;}\n}\n@keyframes dshpc-quick-toolbar-out{\n  from{opacity:1;transform:none;}\n  to{opacity:0;transform:translateY(6px) scale(.9);}\n}\n.dshpc-quick-toolbar__item{\n  display:inline-flex;\n  align-items:center;\n  justify-content:center;\n  padding:0;\n  margin:0;\n  box-sizing:border-box;\n  border:1px solid var(--dshpc-border);\n  border-radius:50%;\n  /* 自定义底色 / 字色只写这两个变量（见 QuickToolbar.ts），hover/active 才能跟着混色。 */\n  background:var(--dshpc-quick-toolbar-bg, var(--dshpc-solid));\n  color:var(--dshpc-quick-toolbar-fg, var(--dshpc-on-solid));\n  box-shadow:var(--dshpc-shadow-2);\n  cursor:pointer;\n  animation:dshpc-quick-toolbar-in var(--dshpc-dur) var(--dshpc-ease);\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),\n             color var(--dshpc-dur-fast) var(--dshpc-ease),\n             transform var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n/* 退场期保留占位，避免同列其他按钮瞬时跳位。 */\n.dshpc-quick-toolbar__item.is-leaving{\n  animation:dshpc-quick-toolbar-out var(--dshpc-dur) var(--dshpc-ease) forwards;\n  pointer-events:none;\n}\n/* 变色与核心 Button 实心档同一套：按 --dshpc-fg 混出 hover / active 底色（自定义 color 也跟随）。 */\n.dshpc-quick-toolbar__item:hover{\n  background:color-mix(in srgb, var(--dshpc-quick-toolbar-bg, var(--dshpc-solid)) 82%, var(--dshpc-fg));\n}\n.dshpc-quick-toolbar__item:active{\n  background:color-mix(in srgb, var(--dshpc-quick-toolbar-bg, var(--dshpc-solid)) 70%, var(--dshpc-fg));\n  transform:scale(.94);\n}\n.dshpc-quick-toolbar__item:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}\n@media (prefers-reduced-motion: reduce){\n  .dshpc-quick-toolbar__item{transition:none;transform:none;animation:none;}\n  .dshpc-quick-toolbar__item.is-leaving{animation:none;opacity:0;}\n}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/hint-css.generated.js
+		const HINT_CSS = "\n/* ── 问号提示 P4（用户 2026-10-18：对齐真实插件 HelpButton——**带圈的问号图标**）──\n   本体 14px 细圈 + 圈内 ?，颜色 fg-3、hover 只提亮不加底（与 dshpc-ed-help 同规矩）。\n   气泡不在本文件：2026-10-19 用户拍板「问号必须用官方 Tooltip 那一个」⇒ 气泡由注入的\n   官方组件渲染（src/ui/tooltip.ts），这里只管问号图标本身。 */\n.dshpc-hint{display:inline-flex;align-items:center;justify-content:center;flex:none;\n  box-sizing:border-box;width:14px;height:14px;padding:0;border:1px solid currentColor;border-radius:50%;background:transparent;\n  color:var(--dshpc-fg-3);font-family:inherit;font-size:8px;font-weight:600;line-height:12px;cursor:help;vertical-align:middle;\n  transition:color var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-hint:hover,.dshpc-hint:focus-visible{color:var(--dshpc-fg);background:0 0;}\n.dshpc-hint:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/datetime-css.generated.js
+		const DATETIME_CSS$1 = "/* 日期时间选择器（DateTimePicker）。类名 dshpc-dt-*；配色只吃 token，明暗随 token 切换。\n   结构：触发器（range = 一个整条：两个日期区 + 样式画的灰隔条；single = 单日期）→ 浮层\n   （两个独立端框 + 两块独立日历 + 底部动作）。\n   浮层行为与 Picker 一致：portal 到 body、贴边翻转、点外关闭、无遮罩。 */\n.dshpc-dt{position:relative;display:inline-block;font-size:13px;line-height:20px}\n.dshpc-dt__trigger{\n  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;\n  max-width:100%;height:var(--dshpc-control-h-md);padding:0 10px;\n  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);\n  color:var(--dshpc-fg);background:var(--dshpc-surface-1);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);cursor:pointer;\n}\n/* 三档与 .dshpc-input 逐项对齐：高度同 control-h、内距 8/10/12、字号 sm 降到 font-sm（2026-11-06）。 */\n.dshpc-dt__trigger--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm)}\n.dshpc-dt__trigger--lg{height:var(--dshpc-control-h-lg);padding:0 12px}\n.dshpc-dt__trigger:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed;opacity:.7}\n/* 焦点与基础 Input 完全同款（点击即蓝描边 + 1px 光环）。 */\n.dshpc-dt__trigger:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__trigger-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-variant-numeric:tabular-nums}\n.dshpc-dt__trigger-label--empty{color:var(--dshpc-fg-3)}\n.dshpc-dt__cal{flex:none;color:var(--dshpc-fg-3)}\n/* range 触发器：一个整条里两个日期区 + 样式画出来的灰隔条（左右两条竖边），点整条都展开。 */\n/* 组撑满触发器内容高度，隔条才能上下顶到 border。 */\n.dshpc-dt__pair-group{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:8px}\n/* 两个日期区平分（flex:1 1 0）：开始 / 结束永远一样宽，不随内容偏袒。 */\n.dshpc-dt__pair-date{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__pair-date--empty{color:var(--dshpc-fg-3)}\n/* 隔条：上下顶到触发器 border（与边框连起来），中间隔出一块；块里放「到」的符号（-，用户 2026-10-24 拍板）。 */\n.dshpc-dt__pair-sep{\n  flex:none;align-self:stretch;width:22px;margin:0;\n  display:inline-flex;align-items:center;justify-content:center;\n  background:var(--dshpc-surface-sunken);\n  border-left:1px solid var(--dshpc-border);border-right:1px solid var(--dshpc-border);\n  color:var(--dshpc-fg-3);font-size:12px;line-height:1;\n}\n/* 默认宽：**固定**（选中前后不变），数值对照参考图实测（2x 屏，换算 CSS px）后\n   统一 -6px（用户 2026-10-24：实测值留得偏多）：\n   单值 day 128 / 时·分 153.2 / 秒 174.8；区间 day 269 / 分 341.4 / 秒 377.6。\n   ch = 字体里 \"0\" 的宽（日期 tabular-nums 等宽）⇒ 写成 Nch + 常数；常数同时兜住\n   默认占位「请选择日期时间」（7 汉字）不省略。调用方要另给宽：className 传 width。 */\n.dshpc-dt__trigger--w-day{width:calc(10ch + 56px)}\n.dshpc-dt__trigger--w-minute{width:calc(16ch + 38px)}\n.dshpc-dt__trigger--w-second{width:calc(19ch + 38px)}\n.dshpc-dt__trigger--wr-day{width:calc(20ch + 125px)}\n.dshpc-dt__trigger--wr-minute{width:calc(32ch + 111px)}\n.dshpc-dt__trigger--wr-second{width:calc(38ch + 104px)}\n\n/* 弹层表面积归 panel.css 的 popover 档（与选文件弹窗同档）：这里只留层序与内距。 */\n.dshpc-dt__pop{\n  z-index:var(--dshpc-z-popmenu);padding:10px;user-select:none;\n  font-size:13px;line-height:20px;\n}\n/* 两个独立端框（range）：按钮皮肤全走核心 Button，这里只管两根框的排布与内部文字。 */\n.dshpc-dt__ends{display:flex;gap:6px;margin-bottom:8px}\n.dshpc-dt__ends > .dshpc-btn{flex:1 1 0;min-width:0}\n.dshpc-dt__end-label{flex:none;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3);white-space:nowrap}\n.dshpc-dt__end-value{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__end-value--empty{color:var(--dshpc-fg-3)}\n\n.dshpc-dt__nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}\n.dshpc-dt__nav-group{display:flex;gap:2px}\n.dshpc-dt__nav-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__nav-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__nav-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__caption{font-size:13px;font-weight:600;color:var(--dshpc-fg);white-space:nowrap}\n\n/* 列宽弹性：弹层常被底部动作钮（英文 Today/Clear/Cancel/Confirm）撑得比日历宽，\n   固定 30px 会在右边留一大块空白。minmax(30px,1fr) ⇒ 中文时按钮短、格子仍 30px；\n   英文时按钮长、格子自动拉开填满，不留白（2026-11-06）。 */\n.dshpc-dt__grid{display:grid;grid-template-columns:repeat(7,minmax(30px,1fr));gap:2px}\n.dshpc-dt__wd{height:20px;font-size:11px;line-height:20px;color:var(--dshpc-fg-3);text-align:center}\n.dshpc-dt__cell{\n  height:26px;padding:0;font-size:12px;font-variant-numeric:tabular-nums;\n  color:var(--dshpc-fg);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__cell:hover{background:var(--dshpc-surface-sunken)}\n.dshpc-dt__cell:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__cell--out{color:var(--dshpc-fg-dim)}\n.dshpc-dt__cell--today{color:var(--dshpc-business);font-weight:600}\n/* 起 / 止端：品牌蓝实面反白（与 Segmented weekday 选中同口径）。\n   ⚠️ 字色用常量白 --dshpc-on-signal，不用 --dshpc-fg-inverse：后者跟宿主 label-primary-foreground，\n   暗色主题下是近黑 ⇒ 蓝底黑字（与 Segmented 2026-10-29 同一事故）。 */\n.dshpc-dt__cell--sel{background:var(--dshpc-business);color:var(--dshpc-on-signal);font-weight:600}\n.dshpc-dt__cell--sel:hover{background:var(--dshpc-business-hover)}\n\n/* 两块日历面板（range：左开始、右结束，各选各的）。 */\n.dshpc-dt__panels{display:flex;gap:14px;align-items:flex-start}\n/* 面板跟着 body 一起吃掉弹层多出来的宽，grid 的 1fr 才有东西可分；\n   range 两块日历各自 basis = 内容宽，多余空间才平分，不会互相挤窄。 */\n.dshpc-dt__panel{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}\n\n/* 左列（两个端框 + 两块日历）与右列（快捷档）并排；不传 presets 时只剩左列，布局与旧版一致。 */\n.dshpc-dt__layout{display:flex;align-items:stretch;gap:10px}\n.dshpc-dt__body{flex:1 1 auto;min-width:0}\n/* 右列高度由 layout 的 stretch 跟左边日历区拉齐，自己不撑高弹层；档位多了只在列内滚。\n   76px 容得下英文缩写最长那档 + 滚动条，中文两字居中，不随文案变宽（2026-11-06）。 */\n.dshpc-dt__side{\n  position:relative;flex:none;width:76px;\n  padding-left:9px;border-left:1px solid var(--dshpc-border-faint);\n}\n.dshpc-dt__side-scroll{\n  position:absolute;inset:0 0 0 9px;\n  display:flex;flex-direction:column;gap:2px;overflow-y:auto;\n  border-right:1px solid transparent;\n}\n.dshpc-dt__side-scroll > .dshpc-btn{flex:none}\n\n.dshpc-dt__time{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:2px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__unit{display:flex;flex-direction:column;align-items:center;gap:2px}\n.dshpc-dt__unit-label{font-size:10px;line-height:14px;color:var(--dshpc-fg-3)}\n.dshpc-dt__step-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:34px;height:14px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__step-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__step-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__step-val{\n  width:34px;height:24px;padding:0;box-sizing:border-box;text-align:center;\n  font-size:13px;font-variant-numeric:tabular-nums;color:var(--dshpc-fg);\n  background:var(--dshpc-surface-sunken);border:1px solid var(--dshpc-border-heavy);\n  border-radius:var(--dshpc-radius-sm);outline:none;\n}\n.dshpc-dt__step-val:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__step-val:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed}\n.dshpc-dt__sep{padding-bottom:5px;color:var(--dshpc-fg-3);font-size:12px}\n\n.dshpc-dt__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__foot-side{display:flex;align-items:center;gap:6px}\n.dshpc-dt__warn{font-size:11px;color:var(--dshpc-warning-label);white-space:nowrap}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/section-head-css.generated.js
+		const SECTION_HEAD_CSS = "/* 分区标题行：标签（可选，画出来的短竖线）/ icon + 标题 + 右侧控件。 */\n.dshpc-section-head{display:flex;align-items:center;gap:var(--dshpc-space-2);\n  margin-bottom:var(--dshpc-space-3);}\n.dshpc-section-head--flush{margin-bottom:0;}\n\n.dshpc-section-head__bar{flex:none;width:4px;height:1em;border-radius:999px;\n  font-size:var(--dshpc-font-lg);background:var(--dshpc-fg-2);}\n\n.dshpc-section-head__icon{display:inline-flex;align-items:center;flex:none;\n  line-height:var(--dshpc-line-lg);color:var(--dshpc-fg-3);}\n\n.dshpc-section-head__title{font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);\n  font-weight:600;color:var(--dshpc-fg);flex:none;}\n\n.dshpc-section-head__right{flex:1;display:flex;align-items:center;\n  justify-content:flex-end;gap:var(--dshpc-space-2);min-width:0;}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/FieldHint.js
 		/**
-		* 按钮 / 图标钮 —— **全站唯一实现**（L2 组件皮肤，P2）
+		* 问号提示 —— **全站唯一实现、独立组件**（L2，P4）
 		*
-		* 两轴模型（同 Segmented）：
-		*  - `variant`：`primary`（实心强调）/ `outline`（描边中性）/ `ghost`（无底无边）/ `danger`（实心红，破坏性确认）
-		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— 高度一律吃 `--dshpc-control-h-*`，**有边 / 无边同高**（边框在内部补回）
+		* ⚠️ 它**不属于 Input 家族**：任何地方都能挂——表单行尾、标题后面、卡片角落……
+		* 调用点自己把它排进自己的 flex / label 里即可（组件只是 14px 的内联图标 + 气泡）。
 		*
-		* `IconButton` 是纯图标钮：`plain`（默认无底无边，hover 起灰底）/ `outline`（描边）/ `danger`（红）。
-		* 链接型文字钮 = `Button variant="ghost"` + 修饰类 `dsh-tdt-btn--link`（红字危险描边 = `outline` + `dsh-tdt-btn--danger-ink`）。
-		*
-		* ⚠️ 不许在任何使用点就地写按钮样式；要多一档外观 ⇒ 走
-		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
+		* 气泡渲染 = **官方 Tooltip 本体**（2026-10-19 用户拍板「必须和悬停提示用同一个」）：
+		* 插件启动时 `setTooltipRenderer` 把官方 Tooltip 交给 core，本组件直接走它。
+		* ⚠️ **不做降级兜底**（用户同日明确：宿主内官方包恒在；官方改版 = 我们重新适配，不另造一套）。
+		* 未注入 renderer 的环境（node 自检）只出问号图标、没有气泡——那是非宿主环境，不是产品形态。
 		*/
-		/** 组装按钮 class（结构一套 + 轴类）。 */
-		function buttonClass(variant, size, extra) {
-			return `dsh-tdt-btn dsh-tdt-btn--${variant} dsh-tdt-btn--${size}${extra !== void 0 && extra !== "" ? " " + extra : ""}`;
-		}
-		/**
-		* 渲染一个文字 / 图标 + 文字按钮。
-		*
-		* @param props 见 {@link ButtonProps}。
-		* @returns 按钮元素。
-		*/
-		function Button$2(props) {
-			ensureControlsStyle();
-			const { variant = "outline", size = "lg", icon, className, style, children, ...rest } = props;
-			const attrs = {
-				...rest,
-				type: rest.type ?? "button",
-				className: buttonClass(variant, size, className),
-				style
-			};
-			return (0, react$1.createElement)("button", attrs, icon !== void 0 && icon !== null ? (0, react$1.createElement)("span", { className: "dsh-tdt-btn__icon" }, icon) : null, children);
-		}
-		/**
-		* 渲染一个纯图标按钮。
-		*
-		* @param props 见 {@link IconButtonProps}。
-		* @returns 图标按钮元素。
-		*/
-		function IconButton(props) {
-			ensureControlsStyle();
-			const { variant = "plain", size = "lg", icon, label, className, style, ...rest } = props;
-			const attrs = {
-				...rest,
-				type: rest.type ?? "button",
-				title: rest.title ?? label,
-				"aria-label": rest["aria-label"] ?? label,
-				className: `dsh-tdt-iconbtn dsh-tdt-iconbtn--${variant} dsh-tdt-iconbtn--${size}${className !== void 0 && className !== "" ? " " + className : ""}`,
-				style
-			};
-			return (0, react$1.createElement)("button", attrs, icon);
+		/** 问号提示图标：hover / focus 浮出说明气泡（官方 Tooltip 渲染）。 */
+		function FieldHint(props) {
+			ensureComponentStyles("hint", HINT_CSS);
+			const { text, side, align, maxWidth, className, style } = props;
+			return (0, react$1.createElement)("span", {
+				className: `dshpc-hint${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
+				style,
+				tabIndex: 0,
+				role: "note",
+				"aria-label": text
+			}, "?");
 		}
 		//#endregion
-		//#region src/client/ui/MarqueeText.tsx
+		//#region node_modules/dsh-plugin-core/dist/ui/display/marquee-css.generated.js
+		const MARQUEE_CSS = "/* 跑马灯（MarqueeText）：双层——外层只裁剪，内层才 transform 滚动；非 hover 内层自带省略号。\n   2026-10-20：本文件原是杂烩「select.css」（下拉 / 日历 / 时分的皮肤都装过），随着那些控件\n   一个个删完，最后只剩跑马灯，故按本包「一个 css 服务一个对象」的格局改名归档。\n   同批清掉的还有零引用的省略号类 .dshpc-ellipsis —— 本包三个用到截断的地方都没采纳它。 */\n.dshpc-mq{display:block;overflow:hidden;white-space:nowrap;}\n.dshpc-mq .dshpc-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}\n/* ⚠️ 跑法（用户 2026-10-03 拍板）：**跑一遍、停在尾字**（播放 1 次 + forwards），不来回弹、不无限跑。\n   滚距 = 精确溢出量 ⇒ 停下时最后一个字正好贴右缘，**不会跑进黑块**（黑块是旧手写版把\n   内层盒子裁了、按「半截文本」平移导致的）。鼠标移开 ⇒ :hover 失效 ⇒ 自动复位回省略号态。 */\n.dshpc-mq-run:hover .dshpc-mq-in{max-width:none;overflow:visible;animation:dshpc-mq-scroll var(--dshpc-mq-dur,6s) linear .4s 1 forwards;}\n@keyframes dshpc-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dshpc-mq-dist,-40px))}}\n/* 溢出渐影（用户 2026-10-24 拍板「左右稍微有点渐影」；官方口径 = dsh-client-ui-primitives@0.2.1-rc.2\n   PathLabel.module.css:13-15：mask-image 线性渐隐 + 28px 随官方）。⚠️ 只在 **hover 滚动态** 加：\n   静态态（三个点）不要渐影（用户 2026-10-24 二次拍板），hover 滚动时两端渐影——左缘柔化被裁的文字头。 */\n/* token-ok：遮罩模板色（纯黑 = 完全不透明），不是主题色；换主题也不该变。 */\n.dshpc-mq-run:hover{mask-image:linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/MarqueeText.js
 		/**
 		* 跑马灯文本 —— **全站唯一实现**（L2，P6 从 editor-fields 迁入 ui）
 		*
 		* 默认超长省略号；hover 且确实放不下时，来回滚动展示全名。自实现原因：官方 primitives 无跑马灯组件。
-		* 测宽用 ResizeObserver + 文本变化重测；滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画）。
+		* 测宽用 ResizeObserver + 文本变化重测；滚动距离 0 时不启用 hover 动画（`.dshpc-mq-run` 才有动画）。
 		*
-		* **双层结构**：外层 `.dsh-tdt-mq` 只负责裁剪（overflow:hidden），内层 `.dsh-tdt-mq-in` 才做
+		* **双层结构**：外层 `.dshpc-mq` 只负责裁剪（overflow:hidden），内层 `.dshpc-mq-in` 才做
 		* transform 滚动——文字永远在自己那一块里跑，不会压到相邻文字。皮肤在 `controls-css.ts`。
 		*/
 		/** 跑马灯文本。 */
 		function MarqueeText(props) {
+			ensureComponentStyles("marquee", MARQUEE_CSS);
 			const outerRef = (0, react$1.useRef)(null);
 			const innerRef = (0, react$1.useRef)(null);
 			const [dist, setDist] = (0, react$1.useState)(0);
@@ -2189,10 +5194,12 @@ window.__ModuleLoader__.load({
 			}, []);
 			(0, react$1.useLayoutEffect)(() => {
 				const outer = outerRef.current;
-				if (outer === null) return;
+				const inner = innerRef.current;
+				if (outer === null || inner === null) return;
 				measure();
 				const ro = new ResizeObserver(measure);
 				ro.observe(outer);
+				ro.observe(inner);
 				return () => {
 					ro.disconnect();
 				};
@@ -2203,20 +5210,1856 @@ window.__ModuleLoader__.load({
 			const run = dist > 0;
 			return (0, react$1.createElement)("span", {
 				ref: outerRef,
-				className: (run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq") + (props.className === void 0 ? "" : ` ${props.className}`),
+				className: (run ? "dshpc-mq dshpc-mq-run" : "dshpc-mq") + (props.className === void 0 ? "" : ` ${props.className}`),
 				title: props.title,
 				style: props.style
 			}, (0, react$1.createElement)("span", {
 				ref: innerRef,
-				className: "dsh-tdt-mq-in",
+				className: "dshpc-mq-in",
 				style: { ...run ? {
-					"--dsh-tdt-mq-dist": `${-dist}px`,
-					"--dsh-tdt-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
+					"--dshpc-mq-dist": `${-dist}px`,
+					"--dshpc-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
 				} : null }
 			}, props.text));
 		}
 		//#endregion
-		//#region src/client/ui/Field.tsx
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/panel-css.generated.js
+		const PANEL_CSS = "/* 浮层面板皮肤（2026-11-03 用户定：皮肤统一，只改样式不动交互）。\n *\n * 这份文件是**所有「浮起来的框」的皮肤真源**。定位（fixed / absolute、贴谁、怎么翻转、多大的\n * 层序）留在各自控件里，这里只管表面四件：底色 / 描边宽 / 圆角 / 阴影。\n * ⚠️ 组件 CSS 里不许再写这四个字面值 —— 想改外观就改这里，别在消费方另起一套。\n *\n * 三档（差异只在这三段定义，别处分叉）：\n *   --modal    居中模态（Modal / ConfirmModal / AlertModal 家族）\n *   --popover  贴锚点的浮层面板（pickWorkspaceFile 选文件弹窗、DateTimePicker 弹层）\n *   --menu     下拉菜单（文件浏览器 ▾ 选层、Picker 下拉）\n *\n * 不并入三档的：PanelDock 与 SideSheet 是**贴边家族**（side-panel.css 的\n * .dshpc-side-surface，surface-base、无外描边）—— 2026-11-02 拍板「两者皮肤一模一样」，\n * 一个是布局成员、一个是贴边抽屉，都不是浮层。\n */\n.dshpc-panel{\n  background:var(--dshpc-panel-bg);color:var(--dshpc-fg);\n  border:var(--dshpc-panel-bw) solid var(--dshpc-border);\n  border-radius:var(--dshpc-panel-radius);box-shadow:var(--dshpc-panel-shadow);\n}\n.dshpc-panel--modal{\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:3px;\n  --dshpc-panel-radius:var(--dshpc-radius-xl);\n  --dshpc-panel-shadow:var(--dshpc-shadow-2);\n  overflow:hidden;\n}\n.dshpc-panel--popover{\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:1px;\n  --dshpc-panel-radius:var(--dshpc-radius-lg);\n  --dshpc-panel-shadow:var(--dshpc-shadow-2);\n  overflow:hidden;\n  /* 与 menu 同口径的加重描边；日期弹层与选文件弹窗共用这一档（2026-11-06）。 */\n  border-color:var(--dshpc-border-heavy);\n}\n.dshpc-panel--menu{\n  /* 菜单底与模态同一层（用户 2026-11-03：别用页面底色，暗色下看着全黑）。 */\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:1px;\n  /* 圆角与 popover 档统一成 lg（2026-11-06 用户：下拉框也改成 16）。 */\n  --dshpc-panel-radius:var(--dshpc-radius-lg);\n  --dshpc-panel-shadow:var(--dshpc-shadow-1);\n  /* 下拉菜单同样加重描边；modal 的 3px 边框不动。 */\n  border-color:var(--dshpc-border-heavy);\n}\n\n/* 浮层唯一的关闭钮（20×20 方角图标位）。\n   旧类名 .dshpc-overlay-head__close 保留为别名：消费方写在旧类名上的覆盖仍生效。 */\n.dshpc-panel__close,.dshpc-overlay-head__close{\n  display:inline-flex;align-items:center;justify-content:center;flex:none;\n  width:20px;height:20px;padding:0;border:none;border-radius:var(--dshpc-radius-sm);\n  background:transparent;color:var(--dshpc-fg-3);font-family:inherit;font-size:13px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-panel__close:hover,.dshpc-overlay-head__close:hover{background:var(--dshpc-hover);color:var(--dshpc-fg)}\n.dshpc-panel__close:focus-visible,.dshpc-overlay-head__close:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/panel.js
+		/**
+		* 浮层面板公共件（2026-11-03）：`PanelSurface` = 皮肤载体，`PanelClose` = 唯一那枚关闭钮。
+		*
+		* 分工（用户 2026-11-03 定，目的就是「样式统一但各家用各家自己的逻辑」）：
+		*  - **定位**留在各自控件：Modal 居中、选文件弹窗贴锚点并翻转、菜单挂在触发器下方；
+		*  - **表面**全部来自 `panel.css` 的三档（modal / popover / menu），组件里不许再写
+		*    底色 / 描边 / 圆角 / 阴影。
+		*
+		* 为什么不做成「一个万能 Panel 组件」：那会把定位也吞进来，等于要求所有浮层同一套交互。
+		* 这里只统一皮肤，不统一行为。
+		*/
+		/** 浮层唯一那枚关闭钮（20×20 方角）；位置由各自的头部决定，这个件不管定位。 */
+		function PanelClose(props) {
+			ensureComponentStyles("panel", PANEL_CSS);
+			return (0, react$1.createElement)("button", {
+				type: "button",
+				className: `dshpc-panel__close${props.className === void 0 ? "" : ` ${props.className}`}`,
+				"aria-label": props.label,
+				onClick: () => props.onClick()
+			}, props.icon ?? "✕");
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/overlay.js
+		/**
+		* 浮层公共件 —— Modal 与 SideSheet 共用，**别各写一份**。
+		*
+		* 抽出来的判据：这两件在两种浮层里完全同构（遮罩让位分栏、头部四槽、Esc 判定），
+		* 差异只在「面板怎么排」（居中 vs 贴边），那部分留在各自的控件里。
+		*/
+		/**
+		* 锁定广播：Modal / SideSheet `locked` 时把 true 传下去。
+		* 为什么要有它：面板挂 `inert` 管不到 **portal 到 body** 的那几个浮层（Picker / 日期选择的菜单
+		* 不在面板 DOM 里），锁定时它们还浮在屏幕上能点；那几个组件自己订阅这里、锁上就收起。
+		*/
+		const LockedContext = (0, react$1.createContext)(false);
+		/** 外层浮层是否锁死（不在浮层里 = false）。 */
+		function useOverlayLocked() {
+			return (0, react$1.useContext)(LockedContext);
+		}
+		LockedContext.Provider;
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/picker-css.generated.js
+		const PICKER_CSS = "\n.dshpc-picker{position:relative;display:inline-block;max-width:100%;font-size:13px;line-height:20px}\n.dshpc-picker__trigger{\n  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;\n  min-width:120px;max-width:100%;height:28px;padding:0 8px;\n  color:var(--dshpc-fg);background:var(--dshpc-surface-1);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);cursor:pointer;\n}\n.dshpc-picker__trigger:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed;opacity:.7}\n/* 聚焦（键盘或点击选中）时与全站一致的蓝色描边；菜单打开后焦点会进去，触发器自然失去焦点。 */\n.dshpc-picker__trigger:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 文字默认靠左（吃掉剩余宽度），不给 space-between 把短文案推到中间的机会；\n   确实要居中就显式传 align=\"center\"。 */\n.dshpc-picker__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}\n.dshpc-picker__trigger--center .dshpc-picker__label{text-align:center}\n.dshpc-picker__caret{flex:none;color:var(--dshpc-fg-3)}\n.dshpc-picker__icon{display:inline-flex;flex:none;color:var(--dshpc-fg-2)}\n.dshpc-picker__option-icon{display:inline-flex;flex:none;color:var(--dshpc-fg-2)}\n/* 下拉面板只留定位 / 滚动 / 字号：底色·描边·圆角·阴影来自 panel.css 的 menu 档。 */\n.dshpc-picker__menu{\n  z-index:var(--dshpc-z-popmenu);max-height:280px;overflow:auto;padding:4px;\n  /* 菜单经 FloatingPortal 挂到 body，脱离 .dshpc-picker，须显式字号，否则继承 body 的大字号 */\n  font-size:13px;line-height:20px;\n}\n/* 尺寸档（与 Field 的 sm/md/lg 对应）。 */\n.dshpc-picker__trigger--sm{height:24px;font-size:12px}\n.dshpc-picker__trigger--lg{height:32px}\n/* 键盘游标所在项（无 hover 也要看得见）。 */\n.dshpc-picker__option[data-active='true']{background:var(--dshpc-surface-sunken);outline:1px solid var(--dshpc-border)}\n.dshpc-picker__option--clear{color:var(--dshpc-fg-3)}\n.dshpc-picker__search{\n  width:100%;height:28px;margin-bottom:4px;padding:0 8px;box-sizing:border-box;\n  color:var(--dshpc-fg);background:var(--dshpc-surface-sunken);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);outline:none;\n}\n.dshpc-picker__search::placeholder{color:var(--dshpc-fg-3)}\n.dshpc-picker__group-label{\n  padding:6px 8px 2px;color:var(--dshpc-fg-3);font-size:11px;\n}\n.dshpc-picker__option{\n  display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n  color:var(--dshpc-fg);white-space:nowrap;\n}\n.dshpc-picker__option:hover{background:var(--dshpc-surface-sunken)}\n.dshpc-picker__option--active{background:var(--dshpc-open-bg);color:var(--dshpc-business)}\n.dshpc-picker__option--disabled{color:var(--dshpc-fg-dim);cursor:not-allowed}\n/* 选项文字吃掉剩余宽度：超长省略号（配合 MarqueeText hover 跑马灯），不撑宽菜单。 */\n.dshpc-picker__option-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.dshpc-picker__tick{width:12px;color:var(--dshpc-business)}\n.dshpc-picker__empty{padding:8px;color:var(--dshpc-fg-3);text-align:center}\n.dshpc-picker__degraded{\n  padding:6px 8px;margin-bottom:4px;border-radius:var(--dshpc-radius-sm);\n  color:var(--dshpc-warning-label);background:color-mix(in srgb,var(--dshpc-warning) 12%,transparent);\n  font-size:11px;\n}\n.dshpc-picker__row{display:flex;align-items:center;gap:8px}\n/* 「显示更多」吸在滚动容器底部：不新增滚动层，列表再长也点得到。 */\n.dshpc-picker__more{\n  position:sticky;bottom:0;display:block;width:100%;margin-top:4px;padding:6px 8px;\n  color:var(--dshpc-business);background:var(--dshpc-surface-1);\n  border:0;border-top:1px solid var(--dshpc-border-faint);cursor:pointer;\n  font-size:12px;line-height:20px;text-align:center;\n}\n.dshpc-picker__more:hover{background:var(--dshpc-surface-sunken)}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Picker.js
+		/**
+		* 通用选择器：单选 / 多选 / 上限 / 搜索 / 分组 / 空态 / 降级。
+		*
+		* **纯零件，不自己取数** —— 选项由调用方传入（工作区列表、模型列表这类数据要跨 host↔client
+		* 边界，通道是插件私有的，组件取不到，见需求文档 §6）。
+		*/
+		function Picker(props) {
+			ensureComponentStyles("picker", PICKER_CSS);
+			ensureComponentStyles("panel", PANEL_CSS);
+			ensureComponentStyles("field", FIELD_CSS$1);
+			const tt = props.translate ?? t$1;
+			const mode = props.mode ?? "single";
+			const size$4 = props.size ?? "md";
+			const placement = props.placement ?? "down";
+			const clearable = props.clearable === true;
+			const showLabels = props.showLabels !== false;
+			const triggerStyle = resolveTriggerSizing(props);
+			const groups = (0, react$1.useMemo)(() => toGroups(props.groups, props.options), [props.groups, props.options]);
+			const controlled = props.value !== void 0;
+			const [inner, setInner] = (0, react$1.useState)(() => toArray(props.defaultValue));
+			const selected = controlled ? toArray(props.value) : inner;
+			const emit = (next) => {
+				if (!controlled) setInner(next);
+				props.onChange?.(mode === "single" ? next[0] ?? "" : next);
+			};
+			const limit = props.limit ?? 0;
+			const [open, setOpen] = (0, react$1.useState)(false);
+			const [query, setQuery] = (0, react$1.useState)("");
+			const [active, setActive] = (0, react$1.useState)(-1);
+			const [visible, setVisible] = (0, react$1.useState)(limit);
+			const rootRef = (0, react$1.useRef)(null);
+			const searchRef = (0, react$1.useRef)(null);
+			const { refs, floatingStyles } = useFloating({
+				open,
+				onOpenChange: setOpen,
+				placement: placement === "up" ? "top-start" : "bottom-start",
+				middleware: [
+					offset(4),
+					flip(),
+					shift$1({ padding: 8 }),
+					size({ apply({ elements, rects, availableWidth, availableHeight }) {
+						Object.assign(elements.floating.style, {
+							minWidth: `${rects.reference.width}px`,
+							maxWidth: `${Math.min(480, availableWidth ?? 480)}px`,
+							maxHeight: `${Math.max(80, Math.min(280, (availableHeight ?? 320) - 8))}px`
+						});
+					} })
+				],
+				whileElementsMounted: autoUpdate,
+				strategy: "fixed"
+			});
+			const setSearchRef = (0, react$1.useCallback)((el) => {
+				searchRef.current = el;
+				if (el !== null && open) el.focus();
+			}, [open]);
+			(0, react$1.useEffect)(() => {
+				if (!open) return;
+				const onDown = (e) => {
+					const root = rootRef.current;
+					const floatingEl = refs.floating.current;
+					if (root?.contains(e.target) === true) return;
+					if (floatingEl?.contains(e.target) === true) return;
+					setOpen(false);
+				};
+				document.addEventListener("mousedown", onDown);
+				return () => document.removeEventListener("mousedown", onDown);
+			}, [open]);
+			const overlayLocked = useOverlayLocked();
+			const off = props.disabled === true || overlayLocked;
+			(0, react$1.useEffect)(() => {
+				if (overlayLocked) setOpen(false);
+			}, [overlayLocked]);
+			(0, react$1.useEffect)(() => {
+				setVisible(limit);
+				if (open) return;
+				setQuery("");
+				setActive(-1);
+			}, [open, limit]);
+			const matched = filterGroups(groups, query);
+			const shown = sliceGroups(matched, visible);
+			const flat = flattenOptions(shown);
+			const hasMore = limit > 0 && flat.length < flattenOptions(matched).length;
+			const atMax = mode === "multiple" && props.max !== void 0 && selected.length >= props.max;
+			const summary = selected.length === 0 ? props.placeholder ?? tt("pickerPlaceholder") : mode === "multiple" && !showLabels ? tt("pickerSelected", { n: selected.length }) : labelsOf(groups, selected).join("、") || (props.placeholder ?? tt("pickerPlaceholder"));
+			const pick = (value) => {
+				if (mode === "single") {
+					emit([value]);
+					setOpen(false);
+					return;
+				}
+				emit(toggleValue(selected, value, props.max));
+				if (props.closeOnSelect === true) setOpen(false);
+			};
+			const clear = () => {
+				emit([]);
+				setOpen(false);
+			};
+			const onKeyDown = (e) => {
+				if (!open) return;
+				if (e.key === "Escape") {
+					setOpen(false);
+					return;
+				}
+				if (flat.length === 0) return;
+				if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+					e.preventDefault();
+					const dir = e.key === "ArrowDown" ? 1 : -1;
+					setActive((cur) => (cur + dir + flat.length) % flat.length);
+					return;
+				}
+				if (e.key === "Enter" && active >= 0) {
+					e.preventDefault();
+					const hit = flat[active];
+					if (hit !== void 0) pick(hit.value);
+				}
+			};
+			const trigger = (0, react$1.createElement)("button", {
+				type: "button",
+				"aria-label": props.ariaLabel,
+				"aria-expanded": open,
+				ref: refs.setReference,
+				className: `dshpc-picker__trigger dshpc-picker__trigger--${size$4}${props.align === "center" ? " dshpc-picker__trigger--center" : ""}`,
+				style: triggerStyle,
+				disabled: off,
+				onClick: () => {
+					if (!off) setOpen(!open);
+				}
+			}, props.icon !== void 0 && props.icon !== null ? (0, react$1.createElement)("span", { className: "dshpc-picker__icon" }, props.icon) : null, (0, react$1.createElement)(MarqueeText, {
+				text: summary,
+				className: "dshpc-picker__label"
+			}), (0, react$1.createElement)(Chevron, {
+				size: 12,
+				className: "dshpc-picker__caret"
+			}));
+			const triggerRow = props.hint === void 0 ? trigger : (0, react$1.createElement)("span", { className: "dshpc-fieldwrap dshpc-fieldwrap--inline" }, trigger, (0, react$1.createElement)(FieldHint, { text: props.hint }));
+			return (0, react$1.createElement)("div", {
+				className: `dshpc-picker${props.className === void 0 ? "" : ` ${props.className}`}`,
+				ref: rootRef,
+				onKeyDown
+			}, triggerRow, open ? (0, react$1.createElement)(FloatingPortal, null, (0, react$1.createElement)("div", {
+				className: "dshpc-panel dshpc-panel--menu dshpc-picker__menu",
+				ref: refs.setFloating,
+				style: floatingStyles
+			}, props.degraded === true ? (0, react$1.createElement)("div", { className: "dshpc-picker__degraded" }, tt("pickerDegraded")) : null, atMax ? (0, react$1.createElement)("div", { className: "dshpc-picker__degraded" }, tt("pickerMaxReached", { n: props.max ?? 0 })) : null, props.searchable === true ? (0, react$1.createElement)("input", {
+				ref: setSearchRef,
+				className: "dshpc-picker__search",
+				placeholder: tt("pickerSearch"),
+				value: query,
+				onChange: (e) => {
+					setQuery(e.target.value);
+					setVisible(limit);
+				}
+			}) : null, flat.length === 0 && groups.length === 0 ? (0, react$1.createElement)("div", { className: "dshpc-picker__empty" }, tt("pickerEmpty")) : flat.length === 0 ? (0, react$1.createElement)("div", { className: "dshpc-picker__empty" }, tt("pickerNoMatch")) : [
+				clearable && mode === "single" && selected.length > 0 ? (0, react$1.createElement)("div", {
+					key: "__clear__",
+					className: "dshpc-picker__option dshpc-picker__option--clear",
+					onClick: clear
+				}, tt("pickerClear")) : null,
+				...shown.map((g) => (0, react$1.createElement)("div", { key: g.value || "_" }, g.label === "" ? null : (0, react$1.createElement)("div", { className: "dshpc-picker__group-label" }, g.label), g.options.map((o) => {
+					const blocked = o.disabled === true || atMax && !selected.includes(o.value);
+					const activeCls = [
+						"dshpc-picker__option",
+						selected.includes(o.value) ? "dshpc-picker__option--active" : "",
+						blocked ? "dshpc-picker__option--disabled" : ""
+					].filter((s) => s !== "").join(" ");
+					const idx = flat.indexOf(o);
+					return (0, react$1.createElement)("div", {
+						key: o.value,
+						className: activeCls,
+						"data-active": idx === active ? "true" : void 0,
+						onClick: () => {
+							if (!blocked) pick(o.value);
+						}
+					}, mode === "multiple" ? (0, react$1.createElement)("span", { className: "dshpc-picker__tick" }, selected.includes(o.value) ? "✓" : "") : null, o.icon !== void 0 && o.icon !== null ? (0, react$1.createElement)("span", { className: "dshpc-picker__option-icon" }, o.icon) : null, (0, react$1.createElement)(MarqueeText, {
+						text: o.label,
+						className: "dshpc-picker__option-label"
+					}));
+				}))),
+				hasMore ? (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dshpc-picker__more",
+					onClick: () => setVisible((v) => v + limit)
+				}, tt("pickerMore")) : null
+			])) : null);
+		}
+		function toArray(v) {
+			if (v === void 0) return [];
+			return Array.isArray(v) ? [...v] : [v];
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/Loader.js
+		/**
+		* Loader —— 统一的加载动画图标（UI 基础层 · 反馈族）。
+		*
+		* 一句话边界：**只画图标本身**。没有背景、没有内距、没有圆角、没有定位。
+		* 要圆角底就外面套 `Chip` / `Card`，要浮在屏幕上就自己包一层 fixed 容器 ——
+		* 背景与位置属于调用方，不属于这个控件。
+		*
+		* 两轴正交（不是两个组件，也不是 N×M 份样式）：
+		* - `variant`：`ring` 开口弧旋转（默认）/ `blocks` 三块脉动
+		* - `size`：`xs` 12 / `sm` 16 / `md` 24（默认）/ `lg` 32 / `xl` 48
+		*
+		* 几何统一画在 `viewBox="0 0 24 24"` 里，尺寸档只改 `width` / `height` ⇒ 等比缩放，
+		* 描边与方块的视觉重量在各档一致（12px 下描边 1.5px，48px 下 6px）。
+		*
+		* 颜色：全程 `currentColor`，自动跟随所在按钮 / 标签的文字色，不给 color 轴
+		* （要换色在调用点给 `style={{ color }}` 即可，不必新增参数）。
+		*
+		* 无障碍：默认 `aria-hidden`（图标本身是装饰，语义由所在按钮的文字 / 卡片的
+		* `role="status"` 承担）；要让它自己承担语义时传 `label`，此时输出 `role="status"`。
+		*
+		* 扩展新形态：在 `LoaderVariant` 加一个值 + 本文件加一支几何 + `loader.css` 加一段规则，
+		* 不新增导出（形态由数据决定时直接传字符串即可，见 docs/help/ui.md）。
+		*/
+		/** 形态一：约 265° 的开口弧（周长 59.7，画 44 的空缺留 15.7）。 */
+		function ringNode() {
+			return (0, react$1.createElement)("circle", {
+				cx: 12,
+				cy: 12,
+				r: 9.5,
+				fill: "none",
+				stroke: "currentColor",
+				strokeWidth: 3,
+				strokeLinecap: "round",
+				strokeDasharray: "44 15.7"
+			});
+		}
+		/**
+		* 形态二：三个圆角短条，横向三等分。
+		* 每个 7.2×6.0 —— 正方形在 24px 档看着像「方点」，用户 2026-10-30 指出太丑。
+		* 间隔 0.6，左右各留 0.6；三块总宽 22.8，垂直居中于 24 高。
+		*/
+		function blockNodes() {
+			return [
+				0,
+				1,
+				2
+			].map((i) => (0, react$1.createElement)("rect", {
+				key: i,
+				className: "dshpc-loader__node",
+				x: .6 + i * 7.8,
+				y: 9,
+				width: 7.2,
+				height: 6,
+				rx: 1.5,
+				fill: "currentColor"
+			}));
+		}
+		/**
+		* 渲染一个加载动画图标。
+		*
+		* @param props 见 {@link LoaderProps}。
+		* @returns `<svg>` 元素（inline，不占额外行高）。
+		*/
+		function Loader(props) {
+			ensureComponentStyles("loader", LOADER_CSS);
+			const { variant = "ring", size = "md", label, className } = props;
+			const classes = [
+				"dshpc-loader",
+				`dshpc-loader--${variant}`,
+				`dshpc-loader--${size}`
+			];
+			if (className !== void 0 && className !== "") classes.push(className);
+			return (0, react$1.createElement)("svg", {
+				className: classes.join(" "),
+				viewBox: "0 0 24 24",
+				role: label === void 0 ? void 0 : "status",
+				"aria-label": label,
+				"aria-hidden": label === void 0 ? true : void 0,
+				focusable: "false"
+			}, variant === "ring" ? ringNode() : blockNodes());
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/thenable.js
+		/** 返回值是不是 thenable。Button 的自动 loading 与命令式弹窗的收尾共用这一份判定。 */
+		function isThenable(value) {
+			if (value === null || value === void 0) return false;
+			return typeof value.then === "function";
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/actions/Button.js
+		/**
+		* 按钮 / 图标钮 —— **全站唯一实现**（L2 组件皮肤，P2）
+		*
+		* 三轴模型：
+		*  - `variant`：外观档（形态 + 语义色），共 18 档
+		*      primary（黑实心）/ secondary（灰实心）/ outline（描边）/ ghost（无底无边）
+		*      danger（红实心）/ success（绿实心）/ warning（黄实心）/ info（蓝实心）
+		*      danger-outline（红字描边）/ link（行内链接）
+		*      purple / pink / cyan / teal / orange / indigo / rose / slate（扩展八色实心，2026-10-29）
+		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— 高度一律吃 `--dshpc-control-h-*`，
+		*    **有边 / 无边同高**（边框在内部补回）
+		*  - `block`：撑满父宽
+		*
+		* 内容轴：`icon`（前置）/ `iconRight`（后置）/ `loading`（前置小圈并自动禁用）。
+		* 颜色轴：任一档都可以再用 `color` 传任意 CSS 色值 —— 只覆盖 `--btn-*` 几个变量，
+		* 不新增皮肤（皮肤仍只在 `controls-css.ts` 里）。
+		*
+		* `IconButton` 是纯图标钮：`plain`（默认无底无边，hover 起灰底）/ `outline`（描边）/ `danger`（红）。
+		* 兼容别名：`danger-ink` 仍是 `danger-outline` 的旧类名，可直接挂 className。
+		*
+		* ⚠️ 不许在任何使用点就地写按钮样式；要多一档外观 ⇒ 改基础层（一处改全站生效）。
+		*/
+		/**
+		* 有 DOM 时用 layout effect（绘制前锁宽，用户看不到中间态），SSR 退化成 useEffect（服务端本就不跑）。
+		* 直接用 `useLayoutEffect` 会在服务端渲染时告警。
+		*/
+		const useIsoLayoutEffect = typeof document === "undefined" ? react$1.useEffect : react$1.useLayoutEffect;
+		/** 实心档（color 参数按「底色」处理；其余档按「字色 + 描边色」处理）。 */
+		const SOLID_VARIANTS = [
+			"primary",
+			"secondary",
+			"danger",
+			"success",
+			"warning",
+			"info",
+			"purple",
+			"pink",
+			"cyan",
+			"teal",
+			"orange",
+			"indigo",
+			"rose",
+			"slate"
+		];
+		/** 把自定义颜色翻译成 5 个局部变量（只覆盖 token，不新增皮肤）。 */
+		function colorVars(variant, color) {
+			if (color === void 0 || color === "") return void 0;
+			if (SOLID_VARIANTS.includes(variant)) return {
+				"--btn-bg": color,
+				"--btn-bg-hover": `color-mix(in srgb, ${color} 82%, var(--dshpc-fg))`,
+				"--btn-bg-active": `color-mix(in srgb, ${color} 70%, var(--dshpc-fg))`
+			};
+			return {
+				"--btn-fg": color,
+				"--btn-fg-hover": color,
+				"--btn-border": color,
+				"--btn-bg-hover": `color-mix(in srgb, ${color} 12%, transparent)`,
+				"--btn-bg-active": `color-mix(in srgb, ${color} 18%, transparent)`
+			};
+		}
+		/** 组装按钮 class（结构一套 + 轴类）。 */
+		function buttonClass(variant, size, block, hasIcon, extra) {
+			return `dshpc-btn dshpc-btn--${variant} dshpc-btn--${size}${block ? " dshpc-btn--block" : ""}${hasIcon ? " dshpc-btn--icon-start" : ""}${extra !== void 0 && extra !== "" ? ` ${extra}` : ""}`;
+		}
+		/**
+		* 异步点击：`onClick` 返回 thenable 就自己转圈（并禁用），settle 后恢复。
+		* 不用 `onBusyChange` 也能单独工作 —— 它只是把状态报给外面（弹窗锁关闭用）。
+		* `onBusyStart` 在 setBusy 之前跑：那时按钮还是「有文案」的样子，要量宽度只能抓这一刻。
+		*/
+		function useAsyncClick(onClick, onBusyChange, onBusyStart) {
+			const [busy, setBusy] = (0, react$1.useState)(false);
+			const click = (event) => {
+				if (onClick === void 0) return;
+				const out = onClick(event);
+				if (!isThenable(out)) return;
+				onBusyStart?.(event.currentTarget);
+				setBusy(true);
+				onBusyChange?.(true);
+				const done = () => {
+					setBusy(false);
+					onBusyChange?.(false);
+				};
+				out.then(done, (err) => {
+					done();
+					console.error("[dsh-plugin-core] Button 异步点击失败，已恢复可点：", err);
+				});
+			};
+			return {
+				busy,
+				click
+			};
+		}
+		/**
+		* 渲染一个「图标 + 文案」按钮。
+		*
+		* @param props 见 {@link ButtonProps}。
+		* @returns 按钮元素。
+		*/
+		function Button$2(props) {
+			ensureComponentStyles("button", BUTTON_CSS$1);
+			const { variant = "outline", size = "lg", icon, iconRight, color, loading: loadingProp = false, loadingText = true, block = false, width, minWidth, maxWidth, className, style, children, onClick, onBusyChange, ...rest } = props;
+			const btnRef = (0, react$1.useRef)(null);
+			const idleWidth = (0, react$1.useRef)(null);
+			const [lockWidth, setLockWidth] = (0, react$1.useState)(null);
+			const hasOwnWidth = width !== void 0 || style !== void 0 && style.width !== void 0;
+			const lockable = !loadingText && !hasOwnWidth && !block;
+			const asyncClick = useAsyncClick(onClick, onBusyChange, (el) => {
+				if (!lockable) return;
+				const w = el.getBoundingClientRect().width;
+				if (w > 0) {
+					idleWidth.current = w;
+					setLockWidth(w);
+				}
+			});
+			const loading = loadingProp || asyncClick.busy;
+			const locked = useOverlayLocked();
+			useIsoLayoutEffect(() => {
+				const el = btnRef.current;
+				if (el === null) return;
+				if (!loading) {
+					const w = el.getBoundingClientRect().width;
+					if (w > 0) idleWidth.current = w;
+					if (lockWidth !== null) setLockWidth(null);
+					return;
+				}
+				if (!lockable) {
+					if (lockWidth !== null) setLockWidth(null);
+					return;
+				}
+				if (lockWidth === null && idleWidth.current !== null) setLockWidth(idleWidth.current);
+			}, [
+				loading,
+				lockable,
+				lockWidth
+			]);
+			const widthStyle = {};
+			if (width !== void 0) widthStyle.width = width;
+			else if (loading && lockWidth !== null) widthStyle.width = lockWidth;
+			else {
+				if (minWidth !== void 0) widthStyle.minWidth = minWidth;
+				if (maxWidth !== void 0) widthStyle.maxWidth = maxWidth;
+			}
+			const hideText = loading && !loadingText;
+			const marqueeLabel = !hideText && maxWidth !== void 0 && width === void 0 && typeof children === "string";
+			const autoLabel = hideText && typeof children === "string" ? children : void 0;
+			const attrs = {
+				...rest,
+				ref: btnRef,
+				type: rest.type ?? "button",
+				disabled: rest.disabled === true || loading || locked,
+				"aria-busy": loading || void 0,
+				...autoLabel !== void 0 && rest["aria-label"] === void 0 ? { "aria-label": autoLabel } : {},
+				onClick: asyncClick.click,
+				className: buttonClass(variant, size, block, icon !== void 0 && icon !== null && !loading, className),
+				style: {
+					...colorVars(variant, color),
+					...widthStyle,
+					...style
+				}
+			};
+			return (0, react$1.createElement)("button", attrs, loading ? (0, react$1.createElement)("span", { className: "dshpc-btn__icon" }, (0, react$1.createElement)(Loader, { size: "xs" })) : icon !== void 0 && icon !== null ? (0, react$1.createElement)("span", { className: "dshpc-btn__icon" }, icon) : null, hideText ? null : marqueeLabel ? (0, react$1.createElement)(MarqueeText, {
+				text: children,
+				className: "dshpc-btn__label"
+			}) : children, iconRight !== void 0 && iconRight !== null && !loading ? (0, react$1.createElement)("span", { className: "dshpc-btn__icon-end" }, iconRight) : null);
+		}
+		/**
+		* 渲染一个纯图标按钮。
+		*
+		* @param props 见 {@link IconButtonProps}。
+		* @returns 图标按钮元素。
+		*/
+		function IconButton(props) {
+			ensureComponentStyles("button", BUTTON_CSS$1);
+			const { variant = "plain", size = "lg", icon, label, color, background, loading: loadingProp = false, className, style, onClick, onBusyChange, ...rest } = props;
+			const asyncClick = useAsyncClick(onClick, onBusyChange);
+			const loading = loadingProp || asyncClick.busy;
+			const locked = useOverlayLocked();
+			const accent = {};
+			if (color !== void 0 && color !== "") {
+				accent["--icb-fg"] = color;
+				accent["--icb-fg-hover"] = color;
+				accent["--icb-bg-hover"] = `color-mix(in srgb, ${color} 14%, transparent)`;
+			}
+			if (background !== void 0 && background !== "") {
+				accent["--icb-bg"] = background;
+				accent["--icb-bg-hover"] = `color-mix(in srgb, ${background} 85%, var(--dshpc-fg))`;
+			}
+			const attrs = {
+				...rest,
+				type: rest.type ?? "button",
+				title: rest.title ?? label,
+				"aria-label": rest["aria-label"] ?? label,
+				"aria-busy": loading || void 0,
+				disabled: rest.disabled === true || loading || locked,
+				onClick: asyncClick.click,
+				className: `dshpc-iconbtn dshpc-iconbtn--${variant} dshpc-iconbtn--${size}${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
+				style: {
+					...accent,
+					...style
+				}
+			};
+			return (0, react$1.createElement)("button", attrs, loading ? (0, react$1.createElement)(Loader, { size: "xs" }) : icon);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/utils/date.js
+		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
+		function pad2$1(value) {
+			return String(value).padStart(2, "0");
+		}
+		/**
+		* 按精度显示：day ⇒ `YYYY-MM-DD`；hour / minute ⇒ `YYYY-MM-DD HH:mm`；second ⇒ 补 `:ss`。
+		* 「数据补全到毫秒、显示只到精度」——不该显示的时分秒不出现（DateTimePicker 的显示口径）。
+		* 解析失败 ⇒ `opts.fallback`，缺省返回原串。
+		*/
+		function formatDateTimePrecision(iso, precision, opts) {
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return opts?.fallback ?? iso;
+			const d = new Date(ms);
+			const day = `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`;
+			if (precision === "day") return day;
+			const clock = `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			return precision === "second" ? `${day} ${clock}:${pad2$1(d.getSeconds())}` : `${day} ${clock}`;
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/datetime-logic.js
+		const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?)?$/;
+		const STEP_MAX = {
+			hour: 23,
+			minute: 59,
+			second: 59
+		};
+		const EN_MONTHS = [
+			"January",
+			"February",
+			"March",
+			"April",
+			"May",
+			"June",
+			"July",
+			"August",
+			"September",
+			"October",
+			"November",
+			"December"
+		];
+		/** 星期表头（周一起排；中文一~日，英文 Mon~Sun）。 */
+		const WEEKDAYS = {
+			zh: [
+				"一",
+				"二",
+				"三",
+				"四",
+				"五",
+				"六",
+				"日"
+			],
+			en: [
+				"Mon",
+				"Tue",
+				"Wed",
+				"Thu",
+				"Fri",
+				"Sat",
+				"Sun"
+			]
+		};
+		const pad3 = (ms) => String(ms).padStart(3, "0");
+		const pad4 = (year) => String(year).padStart(4, "0");
+		/**
+		* 本地 ISO（`YYYY-MM-DDTHH:mm:ss.SSS`，无时区后缀）→ 各部分。
+		* 不存在的日期（2026-02-30 / 2026-13-01）经 Date 反向校验后返回 null。
+		*/
+		function parseDateTime(iso) {
+			const m = ISO_RE.exec(iso.trim());
+			if (m === null) return null;
+			const parts = {
+				year: Number(m[1]),
+				month: Number(m[2]),
+				day: Number(m[3]),
+				hour: Number(m[4] ?? "0"),
+				minute: Number(m[5] ?? "0"),
+				second: Number(m[6] ?? "0"),
+				ms: Number((m[7] ?? "0").padEnd(3, "0"))
+			};
+			const d = new Date(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second, parts.ms);
+			if (d.getFullYear() !== parts.year || d.getMonth() !== parts.month - 1 || d.getDate() !== parts.day || d.getHours() !== parts.hour || d.getMinutes() !== parts.minute || d.getSeconds() !== parts.second) return null;
+			return parts;
+		}
+		/**
+		* 各部分 → 本地 ISO。毫秒恒三位：数据库若只收「到秒」，`23:59:59.999` 被截成
+		* `23:59:59` 仍是当天最后一秒，语义不坏（优雅降级，调用方无需特殊处理）。
+		*/
+		function formatDateTimeIso(p) {
+			return `${pad4(p.year)}-${pad2$1(p.month)}-${pad2$1(p.day)}T${pad2$1(p.hour)}:${pad2$1(p.minute)}:${pad2$1(p.second)}.${pad3(p.ms)}`;
+		}
+		/** 各部分 → 本地毫秒时间戳（仅用于比较，不涉及时区换算）。 */
+		function partsToMs(p) {
+			return new Date(p.year, p.month - 1, p.day, p.hour, p.minute, p.second, p.ms).getTime();
+		}
+		/** 本地毫秒时间戳 → 各部分。 */
+		function msToParts(ms) {
+			const d = new Date(ms);
+			return {
+				year: d.getFullYear(),
+				month: d.getMonth() + 1,
+				day: d.getDate(),
+				hour: d.getHours(),
+				minute: d.getMinutes(),
+				second: d.getSeconds(),
+				ms: d.getMilliseconds()
+			};
+		}
+		/** 当前时刻。 */
+		function nowParts() {
+			return msToParts(Date.now());
+		}
+		/** 本地 ISO → 一端草稿（日期 / 时间分离）；解析失败或空 ⇒ 日期为空、时间归零。 */
+		function toEndDraft(iso) {
+			const p = iso === void 0 || iso === null || iso === "" ? null : parseDateTime(iso);
+			if (p === null) return {
+				day: null,
+				time: {
+					hour: 0,
+					minute: 0,
+					second: 0,
+					ms: 0
+				}
+			};
+			return {
+				day: {
+					year: p.year,
+					month: p.month,
+					day: p.day
+				},
+				time: {
+					hour: p.hour,
+					minute: p.minute,
+					second: p.second,
+					ms: p.ms
+				}
+			};
+		}
+		/** 一端草稿 → 完整时刻；**没选日期 ⇒ null**（调用方据此不传数据）。 */
+		function partsOf(e) {
+			return e.day === null ? null : {
+				...e.day,
+				...e.time
+			};
+		}
+		/**
+		* 「现在」按钮的时间部分：按精度截断（day ⇒ 全零；hour ⇒ H:00:00；
+		* minute ⇒ H:M:00；second ⇒ 完整当前时刻）。
+		*/
+		function nowTimeFor(precision) {
+			const n = nowParts();
+			if (precision === "day") return {
+				hour: 0,
+				minute: 0,
+				second: 0,
+				ms: 0
+			};
+			if (precision === "hour") return {
+				hour: n.hour,
+				minute: 0,
+				second: 0,
+				ms: 0
+			};
+			if (precision === "minute") return {
+				hour: n.hour,
+				minute: n.minute,
+				second: 0,
+				ms: 0
+			};
+			return {
+				hour: n.hour,
+				minute: n.minute,
+				second: n.second,
+				ms: n.ms
+			};
+		}
+		/**
+		* 起始端补全：未选的时间单位归零。
+		* day ⇒ `00:00:00.000`；hour ⇒ `H:00:00.000`；minute ⇒ `H:M:00.000`；second ⇒ ms 归零。
+		*/
+		function floorToPrecision(p, precision) {
+			switch (precision) {
+				case "day": return {
+					...p,
+					hour: 0,
+					minute: 0,
+					second: 0,
+					ms: 0
+				};
+				case "hour": return {
+					...p,
+					minute: 0,
+					second: 0,
+					ms: 0
+				};
+				case "minute": return {
+					...p,
+					second: 0,
+					ms: 0
+				};
+				case "second": return {
+					...p,
+					ms: 0
+				};
+			}
+		}
+		/**
+		* 结束端补全：未选的时间单位拉到最大。
+		* day ⇒ `23:59:59.999`；hour ⇒ `H:59:59.999`；minute ⇒ `H:M:59.999`；
+		* second ⇒ 精确值不动（用户显式选到秒，不猜）。
+		*/
+		function ceilToPrecision(p, precision) {
+			switch (precision) {
+				case "day": return {
+					...p,
+					hour: 23,
+					minute: 59,
+					second: 59,
+					ms: 999
+				};
+				case "hour": return {
+					...p,
+					minute: 59,
+					second: 59,
+					ms: 999
+				};
+				case "minute": return {
+					...p,
+					second: 59,
+					ms: 999
+				};
+				case "second": return p;
+			}
+		}
+		/**
+		* 6×7 固定月历网格，周一起排；补位格给真实日期并标 `inMonth: false`。
+		* 42 格恒定 ⇒ 弹层高度不随月份跳动。
+		*/
+		function buildMonthCells(year, month) {
+			const firstWeekday = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+			const cells = [];
+			for (let i = 0; i < 42; i++) {
+				const d = new Date(year, month - 1, 1 - firstWeekday + i);
+				cells.push({
+					iso: `${pad4(d.getFullYear())}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`,
+					year: d.getFullYear(),
+					month: d.getMonth() + 1,
+					day: d.getDate(),
+					inMonth: d.getMonth() === month - 1 && d.getFullYear() === year,
+					weekday: i % 7
+				});
+			}
+			return cells;
+		}
+		/** 月历标题：zh `2026年10月`；en `October 2026`。 */
+		function monthCaption(year, month, locale) {
+			return locale === "zh" ? `${pad4(year)}年${pad2$1(month)}月` : `${EN_MONTHS[month - 1] ?? ""} ${String(year)}`;
+		}
+		/** 星期表头（周一起排）。 */
+		function weekdayLabels(locale) {
+			return WEEKDAYS[locale];
+		}
+		/** 日月格的无障碍标题：zh `2026年11月3日`；en `Tue, 2026-11-03`。 */
+		function dayCaption(cell, locale) {
+			const y = String(cell.year);
+			const m = String(cell.month).padStart(2, "0");
+			const d = String(cell.day).padStart(2, "0");
+			return locale === "zh" ? `${y}年${cell.month}月${cell.day}日` : `${weekdayLabels("en")[cell.weekday]}, ${y}-${m}-${d}`;
+		}
+		/** 步进 ±1 循环（23→0、59→0）：免去用户点 60 次选分钟。 */
+		function stepUnit(value, unit, delta) {
+			const max = STEP_MAX[unit] + 1;
+			return ((value + delta) % max + max) % max;
+		}
+		/** 把键入 / 滚轮得到的原始值收进合法范围（NaN 归 0）。 */
+		function clampUnit(value, unit) {
+			if (!Number.isFinite(value)) return 0;
+			const max = STEP_MAX[unit];
+			return Math.min(max, Math.max(0, Math.round(value)));
+		}
+		/** 时间段是否成立（起 ≤ 止；任一端解析失败 ⇒ 不成立）。 */
+		function rangeIsValid(startIso, endIso) {
+			const a = parseDateTime(startIso);
+			const b = parseDateTime(endIso);
+			if (a === null || b === null) return false;
+			return partsToMs(a) <= partsToMs(b);
+		}
+		/** `now` + 可选 `[+-]N{单位}`，末尾 `/{单位}` 取整到整周期。Q = 季、M = 月、m = 分。 */
+		const PRESET_EXPR_RE = /^now(?:([+-])(\d+)([yQMwdhms]))?(?:\/([yQMwdhms]))?$/;
+		function daysInMonth(year, month0) {
+			return new Date(year, month0 + 1, 0).getDate();
+		}
+		/** 按日历字段位移，M / y 先把日钳到目标月的天数，避免 3-31 减 1 月卷回 3 月。 */
+		function shiftByUnit(ms, n, unit) {
+			const d = new Date(ms);
+			const Y = d.getFullYear(), M = d.getMonth(), D = d.getDate();
+			const h = d.getHours(), mi = d.getMinutes(), s = d.getSeconds(), x = d.getMilliseconds();
+			const at = (y, mo, day, hh = h, mm = mi, ss = s) => new Date(y, mo, day, hh, mm, ss, x).getTime();
+			switch (unit) {
+				case "y": return at(Y + n, M, Math.min(D, daysInMonth(Y + n, M)));
+				case "Q":
+				case "M": {
+					const total = Y * 12 + M + (unit === "Q" ? 3 * n : n);
+					const y = Math.floor(total / 12), mo = (total % 12 + 12) % 12;
+					return at(y, mo, Math.min(D, daysInMonth(y, mo)));
+				}
+				case "w": return at(Y, M, D + 7 * n);
+				case "d": return at(Y, M, D + n);
+				case "h": return at(Y, M, D, h + n);
+				case "m": return at(Y, M, D, h, mi + n);
+				case "s": return at(Y, M, D, h, mi, s + n);
+			}
+		}
+		/** 取整到某个周期的首尾（周一为周首，与月历网格一致）。 */
+		function unitBounds(ms, unit) {
+			const d = new Date(ms);
+			const Y = d.getFullYear(), M = d.getMonth(), D = d.getDate();
+			const h = d.getHours(), mi = d.getMinutes(), s = d.getSeconds();
+			const at = (y, mo, day, hh = 0, mm = 0, ss = 0) => new Date(y, mo, day, hh, mm, ss).getTime();
+			switch (unit) {
+				case "y": return [at(Y, 0, 1), at(Y + 1, 0, 1) - 1];
+				case "Q": {
+					const q = Math.floor(M / 3) * 3;
+					return [at(Y, q, 1), at(Y, q + 3, 1) - 1];
+				}
+				case "M": return [at(Y, M, 1), at(Y, M + 1, 1) - 1];
+				case "w": {
+					const wd = (d.getDay() + 6) % 7;
+					return [at(Y, M, D - wd), at(Y, M, D - wd + 7) - 1];
+				}
+				case "d": return [at(Y, M, D), at(Y, M, D + 1) - 1];
+				case "h": return [at(Y, M, D, h), at(Y, M, D, h + 1) - 1];
+				case "m": return [at(Y, M, D, h, mi), at(Y, M, D, h, mi + 1) - 1];
+				case "s": return [at(Y, M, D, h, mi, s), at(Y, M, D, h, mi, s + 1) - 1];
+			}
+		}
+		/**
+		* 把预设算式展开成一对本地 ISO 起止（起端 floor、止端 ceil 到 precision）；非法写法返回 null。
+		* 无 `/取整` 时是从位移点到当下的一段滚动窗口。now 可注入以便单测。
+		*/
+		function resolvePresetExpr(expr, precision, now = nowParts()) {
+			const m = PRESET_EXPR_RE.exec(expr.trim());
+			if (m === null) return null;
+			const amount = m[2] === void 0 ? 0 : Number(m[2]) * (m[1] === "-" ? -1 : 1);
+			const base = partsToMs(now);
+			const shifted = shiftByUnit(base, amount, m[3] ?? "d");
+			const [startMs, endMs] = m[4] !== void 0 ? unitBounds(shifted, m[4]) : [Math.min(base, shifted), Math.max(base, shifted)];
+			return [formatDateTimeIso(floorToPrecision(msToParts(startMs), precision)), formatDateTimeIso(ceilToPrecision(msToParts(endMs), precision))];
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/DateTimePicker.js
+		const UNIT_LABEL = {
+			hour: "dtHour",
+			minute: "dtMinute",
+			second: "dtSecond"
+		};
+		const UNITS_OF = {
+			hour: ["hour"],
+			minute: ["hour", "minute"],
+			second: [
+				"hour",
+				"minute",
+				"second"
+			]
+		};
+		const SIZE_CLASS = {
+			sm: "dshpc-dt__trigger--sm",
+			md: "",
+			lg: "dshpc-dt__trigger--lg"
+		};
+		/**
+		* 默认宽度类：宽**固定**（选中前后不跳），数值对照参考图实测（2x 屏换算 CSS px）
+		* 后统一 -6px（用户 2026-10-24：实测值留得偏多）：
+		* 单值 day 128 / 时·分 153.2 / 秒 174.8；区间 day 269 / 分 341.4 / 秒 377.6。
+		* 日期数字 tabular-nums 等宽，ch 即 "0" 宽，故写成 Nch + 常数；常数同时兜住默认占位不省略。
+		* 调用方传更宽的 className 会自然撑开。
+		*/
+		const WIDTH_CLASS = (rangeMode, precision) => {
+			if (rangeMode) {
+				if (precision === "day") return "dshpc-dt__trigger--wr-day";
+				return precision === "second" ? "dshpc-dt__trigger--wr-second" : "dshpc-dt__trigger--wr-minute";
+			}
+			if (precision === "day") return "dshpc-dt__trigger--w-day";
+			return precision === "second" ? "dshpc-dt__trigger--w-second" : "dshpc-dt__trigger--w-minute";
+		};
+		function draftOf(value) {
+			const empty = {
+				day: null,
+				time: {
+					hour: 0,
+					minute: 0,
+					second: 0,
+					ms: 0
+				}
+			};
+			if (value === null || value === void 0) return {
+				start: empty,
+				end: empty
+			};
+			if (Array.isArray(value)) return {
+				start: toEndDraft(value[0]),
+				end: toEndDraft(value[1])
+			};
+			return {
+				start: toEndDraft(value),
+				end: empty
+			};
+		}
+		function dayIso(d) {
+			return `${String(d.year).padStart(4, "0")}-${String(d.month).padStart(2, "0")}-${String(d.day).padStart(2, "0")}`;
+		}
+		/** 显示一律按精度截断：day 只出日期，hour/minute 到分，second 才出秒（数据侧仍是完整 ISO）。 */
+		function fmtParts(p, precision) {
+			return formatDateTimePrecision(formatDateTimeIso(p), precision);
+		}
+		/** 内联 SVG 图标（ui 零官方依赖，与 Picker 的 caret 同口径自绘）。 */
+		function icon(paths, size) {
+			return (0, react$1.createElement)("svg", {
+				width: size,
+				height: size,
+				viewBox: "0 0 16 16",
+				fill: "none",
+				"aria-hidden": true
+			}, ...paths.map((d) => (0, react$1.createElement)("path", {
+				d,
+				stroke: "currentColor",
+				"stroke-width": 1.5,
+				"stroke-linecap": "round",
+				"stroke-linejoin": "round"
+			})));
+		}
+		const ICON_CAL = icon([
+			"M2 4.5A1.5 1.5 0 0 1 3.5 3h9A1.5 1.5 0 0 1 14 4.5V6H2V4.5z",
+			"M2 6h12v8.5A1.5 1.5 0 0 1 12.5 16h-9A1.5 1.5 0 0 1 2 14.5V6z",
+			"M2 9.5h12",
+			"M5.5 1.5v3M10.5 1.5v3"
+		], 14);
+		const ICON_PREV_YEAR = icon(["M9 5L5.5 8 9 11", "M12.5 5L9 8l3.5 3"], 14);
+		const ICON_PREV_MONTH = icon(["M9.5 5L6 8l3.5 3"], 14);
+		const ICON_NEXT_MONTH = icon(["M6.5 5L10 8l-3.5 3"], 14);
+		const ICON_NEXT_YEAR = icon(["M7 5l3.5 3L7 11", "M3.5 5L7 8l-3.5 3"], 14);
+		const ICON_UP = (0, react$1.createElement)(Chevron, {
+			dir: "up",
+			size: 12
+		});
+		const ICON_DOWN = (0, react$1.createElement)(Chevron, { size: 12 });
+		/**
+		* 日期时间选择器：单值 / 时间段，精度可控（日 / 时 / 分 / 秒）。
+		*
+		* **纯零件，不自己取数** —— 值由调用方受控传入；弹层内是草稿态，「确定」才提交 onChange。
+		* 浮层与 Picker 同机制（floating-ui portal + 贴边翻转 + 点外关闭，**无遮罩**）。
+		*
+		* 交互口径：
+		*  - 时间**不强制先选日期**——步进随时可调；「确定」时没选日期就不传数据。
+		*  - 快捷键：day 精度叫「今天」（只置日期）；带时分秒的叫「现在」（日期 + 时间一起置）。
+		*  - range 弹层 = 两块独立日历（左开始、右结束），各选各的，不标跨度。
+		*  - 补全：起始端把未选单位归零（day ⇒ `00:00:00.000`），结束端拉满（day ⇒ `23:59:59.999`）；
+		*    毫秒恒三位输出，数据库只收到秒时优雅退化为「当天最后一秒」。
+		*/
+		function DateTimePicker(props) {
+			ensureComponentStyles("datetime", DATETIME_CSS$1);
+			ensureComponentStyles("panel", PANEL_CSS);
+			ensureComponentStyles("field", FIELD_CSS$1);
+			const tt = props.translate ?? t$1;
+			const rangeMode = (props.mode ?? "single") === "range";
+			const precision = props.precision ?? "day";
+			const size$3 = props.size ?? "md";
+			const locale = getLocale();
+			const placeholder = props.placeholder ?? tt("dtPlaceholder");
+			const controlled = props.value !== void 0;
+			const [inner, setInner] = (0, react$1.useState)(() => props.defaultValue ?? null);
+			const current = controlled ? props.value ?? null : inner;
+			const [open, setOpen] = (0, react$1.useState)(false);
+			const overlayLocked = useOverlayLocked();
+			(0, react$1.useEffect)(() => {
+				if (overlayLocked) setOpen(false);
+			}, [overlayLocked]);
+			const off = props.disabled === true || overlayLocked;
+			const [draft, setDraft] = (0, react$1.useState)(() => draftOf(current));
+			const [views, setViews] = (0, react$1.useState)(() => {
+				const d = draftOf(current);
+				const n = nowParts();
+				const monthOf = (e) => e.day === null ? {
+					year: n.year,
+					month: n.month
+				} : {
+					year: e.day.year,
+					month: e.day.month
+				};
+				return {
+					start: monthOf(d.start),
+					end: monthOf(d.end)
+				};
+			});
+			const [active, setActive] = (0, react$1.useState)("start");
+			const [focus, setFocus] = (0, react$1.useState)({
+				start: null,
+				end: null
+			});
+			/** 步进输入框的键入中间态（失焦 / 回车才收拢成合法值，免得打 "14" 被 "1" 截断）。 */
+			const [typing, setTyping] = (0, react$1.useState)(null);
+			const rootRef = (0, react$1.useRef)(null);
+			const gridRefs = (0, react$1.useRef)({
+				start: null,
+				end: null
+			});
+			const { refs, floatingStyles } = useFloating({
+				open,
+				onOpenChange: setOpen,
+				placement: "bottom-start",
+				middleware: [
+					offset(4),
+					flip(),
+					shift$1({ padding: 8 }),
+					size({ apply({ elements, rects, availableHeight }) {
+						Object.assign(elements.floating.style, {
+							minWidth: `${rects.reference.width}px`,
+							maxHeight: `${Math.max(240, Math.min(520, (availableHeight ?? 520) - 8))}px`
+						});
+					} })
+				],
+				whileElementsMounted: autoUpdate,
+				strategy: "fixed"
+			});
+			const emit = (0, react$1.useCallback)((value) => {
+				if (!controlled) setInner(value);
+				props.onChange?.(value);
+			}, [controlled, props.onChange]);
+			const openPop = (0, react$1.useCallback)(() => {
+				if (off) return;
+				const d = draftOf(current);
+				const n = nowParts();
+				const monthOf = (e) => e.day === null ? {
+					year: n.year,
+					month: n.month
+				} : {
+					year: e.day.year,
+					month: e.day.month
+				};
+				setDraft(d);
+				setViews({
+					start: monthOf(d.start),
+					end: monthOf(d.end)
+				});
+				setActive("start");
+				setFocus({
+					start: null,
+					end: null
+				});
+				setTyping(null);
+				setOpen(true);
+			}, [current, off]);
+			(0, react$1.useEffect)(() => {
+				if (!open) return;
+				const onDown = (e) => {
+					const root = rootRef.current;
+					const floatingEl = refs.floating.current;
+					if (root?.contains(e.target)) return;
+					if (floatingEl?.contains(e.target)) return;
+					setOpen(false);
+				};
+				document.addEventListener("mousedown", onDown);
+				return () => document.removeEventListener("mousedown", onDown);
+			}, [open, refs.floating]);
+			(0, react$1.useEffect)(() => {
+				if (!open) return;
+				for (const side of ["start", "end"]) {
+					const iso = focus[side];
+					if (iso === null) continue;
+					(gridRefs.current[side]?.querySelector(`[data-iso="${CSS.escape(iso)}"]`))?.focus();
+				}
+			}, [open, focus]);
+			const units = precision === "day" ? [] : UNITS_OF[precision];
+			const setSide = (side, next) => {
+				setDraft((d) => side === "end" ? {
+					...d,
+					end: next
+				} : {
+					...d,
+					start: next
+				});
+				setActive(side);
+			};
+			const commit = () => {
+				const s = partsOf(draft.start);
+				if (s === null) return;
+				if (rangeMode) {
+					const e = partsOf(draft.end);
+					if (e === null) return;
+					const si = formatDateTimeIso(floorToPrecision(s, precision));
+					const ei = formatDateTimeIso(ceilToPrecision(e, precision));
+					if (!rangeIsValid(si, ei)) return;
+					emit([si, ei]);
+				} else emit(formatDateTimeIso(floorToPrecision(s, precision)));
+				setOpen(false);
+			};
+			const clear = () => {
+				emit(null);
+				setOpen(false);
+			};
+			const applyNow = () => {
+				const n = nowParts();
+				const day = {
+					year: n.year,
+					month: n.month,
+					day: n.day
+				};
+				const time = nowTimeFor(precision);
+				setSide(active, {
+					day,
+					time
+				});
+				setViews((v) => active === "end" ? {
+					...v,
+					end: {
+						year: n.year,
+						month: n.month
+					}
+				} : {
+					...v,
+					start: {
+						year: n.year,
+						month: n.month
+					}
+				});
+			};
+			const pickDay = (side, cell) => {
+				setSide(side, {
+					day: {
+						year: cell.year,
+						month: cell.month,
+						day: cell.day
+					},
+					time: draft[side].time
+				});
+				setFocus((f) => ({
+					...f,
+					[side]: cell.iso
+				}));
+			};
+			const shiftUnit = (side, unit, delta) => {
+				const prev = draft[side];
+				const time = unit === "hour" ? {
+					...prev.time,
+					hour: stepUnit(prev.time.hour, unit, delta)
+				} : unit === "minute" ? {
+					...prev.time,
+					minute: stepUnit(prev.time.minute, unit, delta)
+				} : {
+					...prev.time,
+					second: stepUnit(prev.time.second, unit, delta)
+				};
+				setSide(side, {
+					...prev,
+					time
+				});
+				setTyping(null);
+			};
+			/** 键入收拢：只留数字、clamp 到该单位上限（NaN 归 0）。 */
+			const commitTyping = (side, unit, text) => {
+				const digits = text.replace(/\D/g, "");
+				if (digits === "") {
+					setTyping(null);
+					return;
+				}
+				const value = clampUnit(Number(digits), unit);
+				const prev = draft[side];
+				const time = unit === "hour" ? {
+					...prev.time,
+					hour: value
+				} : unit === "minute" ? {
+					...prev.time,
+					minute: value
+				} : {
+					...prev.time,
+					second: value
+				};
+				setSide(side, {
+					...prev,
+					time
+				});
+				setTyping(null);
+			};
+			const shiftMonth = (side, delta) => {
+				setViews((v) => {
+					const cur = v[side];
+					const d = new Date(cur.year, cur.month - 1 + delta, 1);
+					return side === "end" ? {
+						...v,
+						end: {
+							year: d.getFullYear(),
+							month: d.getMonth() + 1
+						}
+					} : {
+						...v,
+						start: {
+							year: d.getFullYear(),
+							month: d.getMonth() + 1
+						}
+					};
+				});
+			};
+			const focusDay = (side, iso) => {
+				setFocus((f) => ({
+					...f,
+					[side]: iso
+				}));
+				const d = parseDateTime(`${iso}T00:00:00.000`);
+				if (d !== null) setViews((v) => side === "end" ? {
+					...v,
+					end: {
+						year: d.year,
+						month: d.month
+					}
+				} : {
+					...v,
+					start: {
+						year: d.year,
+						month: d.month
+					}
+				});
+			};
+			const onGridKeyDown = (side, e) => {
+				const cells = buildMonthCells(views[side].year, views[side].month);
+				const base = (focus[side] === null ? null : cells.find((c) => c.iso === focus[side]) ?? null) ?? cells.find((c) => c.inMonth) ?? cells[0];
+				if (base === void 0) return;
+				const move = (days) => {
+					const d = new Date(base.year, base.month - 1, base.day + days);
+					focusDay(side, `${String(d.getFullYear()).padStart(4, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+				};
+				switch (e.key) {
+					case "ArrowLeft":
+						e.preventDefault();
+						move(-1);
+						return;
+					case "ArrowRight":
+						e.preventDefault();
+						move(1);
+						return;
+					case "ArrowUp":
+						e.preventDefault();
+						move(-7);
+						return;
+					case "ArrowDown":
+						e.preventDefault();
+						move(7);
+						return;
+					case "PageUp":
+						e.preventDefault();
+						shiftMonth(side, -1);
+						return;
+					case "PageDown":
+						e.preventDefault();
+						shiftMonth(side, 1);
+						return;
+					case "Home": {
+						e.preventDefault();
+						const first = cells.find((c) => c.inMonth);
+						if (first !== void 0) focusDay(side, first.iso);
+						return;
+					}
+					case "End": {
+						e.preventDefault();
+						const last = [...cells].reverse().find((c) => c.inMonth);
+						if (last !== void 0) focusDay(side, last.iso);
+						return;
+					}
+				}
+			};
+			const onPopKeyDown = (e) => {
+				if (e.key === "Escape") {
+					e.preventDefault();
+					setOpen(false);
+				}
+			};
+			const currentDraft = draftOf(current);
+			const startValue = partsOf(currentDraft.start);
+			const endValue = rangeMode ? partsOf(currentDraft.end) : null;
+			const dateZone = (key, value) => (0, react$1.createElement)("span", {
+				key,
+				className: `dshpc-dt__pair-date${value === null ? " dshpc-dt__pair-date--empty" : ""}`
+			}, value === null ? placeholder : fmtParts(value, precision));
+			const calIcon = (0, react$1.createElement)("span", { className: "dshpc-dt__cal" }, ICON_CAL);
+			const triggerWidth = props.width === void 0 ? void 0 : { width: typeof props.width === "number" ? `${props.width}px` : props.width };
+			const trigger = (0, react$1.createElement)("button", {
+				type: "button",
+				"aria-label": props.ariaLabel,
+				"aria-expanded": open,
+				ref: refs.setReference,
+				disabled: off,
+				className: `dshpc-dt__trigger ${SIZE_CLASS[size$3]} ${WIDTH_CLASS(rangeMode, precision)}`.trim(),
+				style: triggerWidth,
+				onClick: openPop
+			}, rangeMode ? (0, react$1.createElement)("span", {
+				key: "group",
+				className: "dshpc-dt__pair-group"
+			}, dateZone("start", startValue), (0, react$1.createElement)("span", {
+				key: "sep",
+				className: "dshpc-dt__pair-sep",
+				"aria-hidden": true
+			}, "-"), dateZone("end", endValue)) : (0, react$1.createElement)("span", {
+				key: "label",
+				className: `dshpc-dt__trigger-label${startValue === null ? " dshpc-dt__trigger-label--empty" : ""}`
+			}, startValue === null ? placeholder : fmtParts(startValue, precision)), calIcon);
+			const triggerRow = props.hint === void 0 ? trigger : (0, react$1.createElement)("span", { className: "dshpc-fieldwrap dshpc-fieldwrap--inline" }, trigger, (0, react$1.createElement)(FieldHint, { text: props.hint }));
+			const endBox = (side, label) => {
+				const p = partsOf(draft[side]);
+				return (0, react$1.createElement)(Button$2, {
+					key: side,
+					variant: "outline",
+					size: "md",
+					block: true,
+					color: active === side ? "var(--dshpc-business)" : void 0,
+					style: { justifyContent: "flex-start" },
+					"aria-pressed": active === side,
+					onClick: () => setActive(side)
+				}, (0, react$1.createElement)("span", { className: "dshpc-dt__end-label" }, `${label}${locale === "zh" ? "：" : ": "}`), (0, react$1.createElement)("span", { className: `dshpc-dt__end-value${p === null ? " dshpc-dt__end-value--empty" : ""}` }, p === null ? placeholder : fmtParts(p, precision)));
+			};
+			/** 一块日历面板：导航 + 月历 + 时:分[:秒] 步进（该端自己的，互不影响）。 */
+			const panel = (side) => {
+				const view = views[side];
+				const end = draft[side];
+				const selIso = end.day === null ? null : dayIso(end.day);
+				const cells = buildMonthCells(view.year, view.month);
+				const today = nowParts();
+				return (0, react$1.createElement)("div", {
+					className: "dshpc-dt__panel",
+					key: side
+				}, (0, react$1.createElement)("div", { className: "dshpc-dt__nav" }, (0, react$1.createElement)("div", { className: "dshpc-dt__nav-group" }, (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dshpc-dt__nav-btn",
+					"aria-label": tt("dtPrevYear"),
+					onClick: () => shiftMonth(side, -12)
+				}, ICON_PREV_YEAR), (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dshpc-dt__nav-btn",
+					"aria-label": tt("dtPrevMonth"),
+					onClick: () => shiftMonth(side, -1)
+				}, ICON_PREV_MONTH)), (0, react$1.createElement)("span", { className: "dshpc-dt__caption" }, monthCaption(view.year, view.month, locale)), (0, react$1.createElement)("div", { className: "dshpc-dt__nav-group" }, (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dshpc-dt__nav-btn",
+					"aria-label": tt("dtNextMonth"),
+					onClick: () => shiftMonth(side, 1)
+				}, ICON_NEXT_MONTH), (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dshpc-dt__nav-btn",
+					"aria-label": tt("dtNextYear"),
+					onClick: () => shiftMonth(side, 12)
+				}, ICON_NEXT_YEAR))), (0, react$1.createElement)("div", {
+					className: "dshpc-dt__grid",
+					role: "grid",
+					"aria-label": monthCaption(view.year, view.month, locale),
+					ref: (el) => {
+						gridRefs.current[side] = el;
+					},
+					onKeyDown: (e) => onGridKeyDown(side, e)
+				}, ...weekdayLabels(locale).map((w) => (0, react$1.createElement)("span", {
+					key: `wd-${w}`,
+					className: "dshpc-dt__wd",
+					role: "columnheader"
+				}, w)), ...cells.map((c) => (0, react$1.createElement)("button", {
+					key: c.iso,
+					type: "button",
+					role: "gridcell",
+					className: "dshpc-dt__cell" + (c.inMonth ? "" : " dshpc-dt__cell--out") + (selIso !== null && c.iso === selIso ? " dshpc-dt__cell--sel" : "") + (c.year === today.year && c.month === today.month && c.day === today.day ? " dshpc-dt__cell--today" : ""),
+					"data-iso": c.iso,
+					tabIndex: c.iso === focus[side] ? 0 : -1,
+					"aria-label": dayCaption(c, locale),
+					"aria-selected": selIso !== null && c.iso === selIso,
+					onClick: () => pickDay(side, c)
+				}, String(c.day)))), units.length === 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-dt__time" }, ...units.flatMap((unit, i) => {
+					const labelKey = UNIT_LABEL[unit];
+					const value = end.time[unit];
+					const shown = typing !== null && typing.side === side && typing.unit === unit ? typing.text : String(value).padStart(2, "0");
+					return [i > 0 ? (0, react$1.createElement)("span", {
+						key: `sep-${unit}`,
+						className: "dshpc-dt__sep"
+					}, ":") : null, (0, react$1.createElement)("div", {
+						key: unit,
+						className: "dshpc-dt__unit"
+					}, (0, react$1.createElement)("span", { className: "dshpc-dt__unit-label" }, tt(labelKey)), (0, react$1.createElement)("button", {
+						type: "button",
+						className: "dshpc-dt__step-btn",
+						"aria-label": `${tt(labelKey)} +1`,
+						onClick: () => shiftUnit(side, unit, 1)
+					}, ICON_UP), (0, react$1.createElement)("input", {
+						className: "dshpc-dt__step-val",
+						inputMode: "numeric",
+						maxLength: 2,
+						value: shown,
+						onChange: (e) => setTyping({
+							side,
+							unit,
+							text: e.target.value.replace(/\D/g, "").slice(0, 2)
+						}),
+						onBlur: (e) => commitTyping(side, unit, e.target.value),
+						onKeyDown: (e) => {
+							if (e.key === "ArrowUp") {
+								e.preventDefault();
+								shiftUnit(side, unit, 1);
+							} else if (e.key === "ArrowDown") {
+								e.preventDefault();
+								shiftUnit(side, unit, -1);
+							} else if (e.key === "Enter") {
+								e.preventDefault();
+								commitTyping(side, unit, shown);
+							}
+						}
+					}), (0, react$1.createElement)("button", {
+						type: "button",
+						className: "dshpc-dt__step-btn",
+						"aria-label": `${tt(labelKey)} -1`,
+						onClick: () => shiftUnit(side, unit, -1)
+					}, ICON_DOWN))];
+				})));
+			};
+			const presetRows = (rangeMode && props.presets !== void 0 ? props.presets : []).flatMap((p) => {
+				const label = typeof p.label === "string" ? p.label : p.label[locale];
+				if (p.expr === null) return [{
+					label,
+					range: null,
+					isClear: true
+				}];
+				const range = resolvePresetExpr(p.expr, precision);
+				return range === null ? [] : [{
+					label,
+					range,
+					isClear: false
+				}];
+			});
+			const draftRange = (() => {
+				if (!rangeMode) return null;
+				const s = partsOf(draft.start);
+				const e = partsOf(draft.end);
+				return s === null || e === null ? null : [formatDateTimeIso(floorToPrecision(s, precision)), formatDateTimeIso(ceilToPrecision(e, precision))];
+			})();
+			const applyPreset = (range) => {
+				emit(range);
+				const d = draftOf(range);
+				setDraft(d);
+				const n = nowParts();
+				const monthOf = (e) => e.day === null ? {
+					year: n.year,
+					month: n.month
+				} : {
+					year: e.day.year,
+					month: e.day.month
+				};
+				setViews({
+					start: monthOf(d.start),
+					end: monthOf(d.end)
+				});
+			};
+			const invalidRange = rangeMode && partsOf(draft.start) !== null && partsOf(draft.end) !== null && !rangeIsValid(formatDateTimeIso(partsOf(draft.start)), formatDateTimeIso(partsOf(draft.end)));
+			const canCommit = rangeMode ? partsOf(draft.start) !== null && partsOf(draft.end) !== null && !invalidRange : partsOf(draft.start) !== null;
+			const pop = (0, react$1.createElement)("div", {
+				className: "dshpc-panel dshpc-panel--popover dshpc-dt__pop",
+				ref: refs.setFloating,
+				style: floatingStyles,
+				onKeyDown: onPopKeyDown
+			}, (0, react$1.createElement)("div", { className: "dshpc-dt__layout" }, (0, react$1.createElement)("div", { className: "dshpc-dt__body" }, rangeMode ? (0, react$1.createElement)("div", { className: "dshpc-dt__ends" }, endBox("start", tt("dtStart")), endBox("end", tt("dtEnd"))) : null, (0, react$1.createElement)("div", { className: "dshpc-dt__panels" }, panel("start"), rangeMode ? panel("end") : null)), presetRows.length === 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-dt__side" }, (0, react$1.createElement)("div", { className: "dshpc-dt__side-scroll" }, presetRows.map((p, i) => {
+				const active = !p.isClear && p.range !== null && draftRange !== null && p.range[0] === draftRange[0] && p.range[1] === draftRange[1];
+				return (0, react$1.createElement)(Button$2, {
+					key: `${i}-${p.label}`,
+					variant: active ? "outline" : "ghost",
+					size: "sm",
+					block: true,
+					color: active ? "var(--dshpc-business)" : void 0,
+					"aria-pressed": active,
+					onClick: () => applyPreset(p.range)
+				}, p.label);
+			})))), (0, react$1.createElement)("div", { className: "dshpc-dt__foot" }, (0, react$1.createElement)("div", { className: "dshpc-dt__foot-side" }, (0, react$1.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				onClick: applyNow
+			}, precision === "day" ? tt("dtToday") : tt("dtNow")), (0, react$1.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				onClick: clear
+			}, tt("dtClear"))), (0, react$1.createElement)("div", { className: "dshpc-dt__foot-side" }, invalidRange ? (0, react$1.createElement)("span", { className: "dshpc-dt__warn" }, tt("dtInvalidRange")) : null, (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => setOpen(false)
+			}, tt("cancel")), (0, react$1.createElement)(Button$2, {
+				variant: "primary",
+				size: "sm",
+				disabled: !canCommit,
+				onClick: commit
+			}, tt("confirm")))));
+			return (0, react$1.createElement)("div", {
+				className: `dshpc-dt${props.className === void 0 ? "" : ` ${props.className}`}`,
+				ref: rootRef
+			}, triggerRow, open ? (0, react$1.createElement)(FloatingPortal, null, pop) : null);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/host-data.js
+		/** 模型目录的 observable store（useSyncExternalStore 直接消费）。 */
+		var ModelCatalogStore = class {
+			constructor() {
+				this.snapshot = { status: "loading" };
+				this.listeners = /* @__PURE__ */ new Set();
+				this.getSnapshot = () => this.snapshot;
+				this.subscribe = (listener) => {
+					this.listeners.add(listener);
+					return () => {
+						this.listeners.delete(listener);
+					};
+				};
+			}
+			update(next) {
+				this.snapshot = next;
+				for (const listener of this.listeners) listener();
+			}
+			setRoutes(routes) {
+				this.update({
+					status: "ready",
+					routes
+				});
+			}
+			setUnavailable(reason) {
+				this.update({
+					status: "unavailable",
+					reason
+				});
+			}
+		};
+		/** 模型目录单例（ModelPicker 消费；connectHost 负责喂）。 */
+		const modelCatalog = new ModelCatalogStore();
+		/** 稳定的空归档集合：官方快照缺席时用它，保证 getArchiveSnapshot 引用稳定。 */
+		const NO_ARCHIVED_SESSIONS = [];
+		/**
+		* 工作区列表的 observable store：直接镜像官方 WorkspaceSource 的 `items` 与
+		* `archivedSessionIds`（宿主权威快照，follow 流实时推 —— 源变我们就变，不自持第二份状态机）。
+		* `getSnapshot` 保持原有的 items 形态（explorer 各调用方按数组消费），归档集合另给两种读法。
+		*/
+		var WorkspaceListStore = class {
+			constructor() {
+				this.items = [];
+				this.archivedSessionIds = NO_ARCHIVED_SESSIONS;
+				this.listeners = /* @__PURE__ */ new Set();
+				this.getSnapshot = () => this.items;
+				/** 归档集合的稳定引用（直接喂 useSyncExternalStore，不需要额外 selector 缓存）。 */
+				this.getArchiveSnapshot = () => this.archivedSessionIds;
+				this.isSessionArchived = (sessionId) => this.archivedSessionIds.includes(sessionId);
+				this.subscribe = (listener) => {
+					this.listeners.add(listener);
+					return () => {
+						this.listeners.delete(listener);
+					};
+				};
+			}
+			/** 换源（仅 connectHost 调；重复调用换到新源）。 */
+			setSource(source) {
+				this.unsubscribe?.();
+				const pull = () => {
+					const snap = source.getSnapshot();
+					this.items = snap.items;
+					this.archivedSessionIds = snap.archivedSessionIds ?? NO_ARCHIVED_SESSIONS;
+					for (const listener of this.listeners) listener();
+				};
+				pull();
+				this.unsubscribe = source.subscribe(pull);
+			}
+		};
+		/** 工作区列表单例（WorkspacePicker / 会话预览消费；connectHost 负责喂）。 */
+		const workspaceList = new WorkspaceListStore();
+		function isWorkspaceSource(value) {
+			if (value === null || typeof value !== "object") return false;
+			const rec = value;
+			return typeof rec.getSnapshot === "function" && typeof rec.subscribe === "function";
+		}
+		/**
+		* 把宿主数据面接进核心（插件 client `apply` 里调**一次**）。
+		*
+		* 工作区走本地 client 服务注入；模型目录走宿主路由 fetch。哪条失败只影响那一块，
+		* 选择器照常渲染空态 / 降级提示 —— 绝不让数据面拖住插件启动。
+		*/
+		function connectHost(ctx, options = {}) {
+			ctx.inject(["workspaces"], (sub) => {
+				const source = sub?.workspaces?.list;
+				if (isWorkspaceSource(source)) workspaceList.setSource(source);
+			});
+			ctx.inject(["remote", "remote.workspaceFiles"], (sub) => {
+				const rec = sub;
+				if (typeof (rec?.["remote.workspaceFiles"] ?? rec?.remote?.workspaceFiles)?.list === "function");
+			});
+			const modelsPath = options.modelsPath;
+			if (modelsPath === void 0) return;
+			fetch(modelsPath).then((response) => response.ok ? response.json() : Promise.reject(/* @__PURE__ */ new Error(`HTTP ${response.status}`))).then((data) => {
+				const routes = data?.routes;
+				if (!Array.isArray(routes)) throw new Error("模型目录响应缺少 routes");
+				modelCatalog.setRoutes(routes);
+			}).catch((error) => {
+				modelCatalog.setUnavailable(String(error));
+			});
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/layout/resizer.js
+		/** 开始一次拖拽调宽（监听 window 的 pointermove / pointerup，松手自动清理）。 */
+		function startResizeLayoutWidth(opts) {
+			opts.startEvent.preventDefault?.();
+			const body = document.body;
+			const prevUserSelect = body.style.userSelect;
+			body.style.userSelect = "none";
+			window.getSelection()?.removeAllRanges();
+			const rootEl = opts.root ?? document.getElementById("dshpc-root");
+			if (opts.rootClass !== void 0) rootEl?.classList.add(opts.rootClass);
+			let frame = 0;
+			let pendingX = 0;
+			const emit = (clientX) => {
+				const w = opts.compute(clientX);
+				opts.onMove(w);
+				return w;
+			};
+			const onMove = (event) => {
+				if (opts.rafThrottle === true) {
+					pendingX = event.clientX;
+					if (frame !== 0) return;
+					frame = requestAnimationFrame(() => {
+						frame = 0;
+						emit(pendingX);
+					});
+				} else emit(event.clientX);
+			};
+			const onUp = (event) => {
+				window.removeEventListener("pointermove", onMove);
+				window.removeEventListener("pointerup", onUp);
+				if (frame !== 0) cancelAnimationFrame(frame);
+				body.style.userSelect = prevUserSelect;
+				if (opts.rootClass !== void 0) rootEl?.classList.remove(opts.rootClass);
+				opts.onCommit(opts.compute(event.clientX));
+			};
+			window.addEventListener("pointermove", onMove);
+			window.addEventListener("pointerup", onUp);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/SectionHead.js
+		/**
+		* 模块标题行（UI 基础层）：**标签（可选，画出来的短竖线）/ icon（可选）+ 标题 + 右侧控件**。
+		*
+		* 2026-10-08 设置页重构时定型：每块 = 标题行 + 一块内容，标题行左侧 icon、右侧留给该块的控件
+		* （日志块的自动刷新 / 刷新钮，表查询块的表切换）。此前三个块各写一个 `h3`，形态不统一。
+		* 2026-10-30 增加 `accent`：标题前画一条固定样式的短竖线（4px 圆头），颜色可换、可关；
+		* 通栏表格标题也复用这一份标题样式（不再在 Table 里另画）。
+		*
+		* 排版规则：字号 / 行高 / 字色走 `--dshpc-*` token；`right` 用 `flex:1` + `justifyContent:flex-end`
+		* 靠右（比 `marginLeft:auto` 稳：内容再宽也始终贴右，不会塌成靠左）；标题 `flex:none` 不被压缩。
+		*/
+		/** 内置色名与 token 一一同名；其余值一律按 CSS 色值原样落地。 */
+		const ACCENT_TONES = [
+			"business",
+			"success",
+			"warning",
+			"danger",
+			"purple",
+			"pink",
+			"cyan",
+			"teal",
+			"orange",
+			"indigo",
+			"rose",
+			"slate"
+		];
+		function barStyleOf(accent) {
+			if (accent === "default") return void 0;
+			return { background: ACCENT_TONES.includes(accent) ? `var(--dshpc-${accent})` : accent };
+		}
+		function SectionHead(props) {
+			ensureComponentStyles("section-head", SECTION_HEAD_CSS);
+			const accent = props.accent;
+			const className = [
+				"dshpc-section-head",
+				props.flush === true ? "dshpc-section-head--flush" : "",
+				props.className ?? ""
+			].filter((s) => s !== "").join(" ");
+			return (0, react$1.createElement)("div", {
+				className,
+				style: props.style
+			}, accent === false || accent === void 0 ? null : (0, react$1.createElement)("span", {
+				className: "dshpc-section-head__bar",
+				"aria-hidden": "true",
+				style: accent === "default" ? void 0 : barStyleOf(accent)
+			}), props.icon === void 0 ? null : (0, react$1.createElement)("span", { className: "dshpc-section-head__icon" }, props.icon), (0, react$1.createElement)("span", { className: "dshpc-section-head__title" }, props.title), props.right === void 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-section-head__right" }, props.right));
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Segmented.js
+		/**
+		* 角标 / 计数要不要显示，返回要显示的文本。
+		* 数字 ≤0 是「没东西可数」的老口径；字符串（`'1K'` / `'99+'`）由调用方决定，原样显示，空串不显示。
+		*/
+		function countText(value) {
+			if (value === void 0) return null;
+			if (typeof value === "number") return value > 0 ? String(value) : null;
+			return value === "" ? null : value;
+		}
+		/**
+		* 渲染一个分段控件（单选 / 多选同体）。
+		*
+		* @param props 见 {@link SegmentedProps}。
+		* @returns 分段控件元素。
+		*/
+		function Segmented(props) {
+			ensureComponentStyles("segmented", SEGMENTED_CSS);
+			ensureComponentStyles("segmented", SEGMENTED_CSS);
+			const size = props.size ?? "lg";
+			const multiple = props.multiple === true;
+			const locked = useOverlayLocked();
+			const value = props.value;
+			const onChange = props.onChange;
+			const sliding = !multiple && props.items.length > 1;
+			const rootRef = (0, react$1.useRef)(null);
+			const [thumb, setThumb] = (0, react$1.useState)(null);
+			const measure = (0, react$1.useCallback)(() => {
+				const sel = rootRef.current?.querySelector(".dshpc-seg__item[aria-pressed=\"true\"]");
+				if (sel === void 0 || sel === null) {
+					setThumb(null);
+					return;
+				}
+				const next = {
+					left: sel.offsetLeft,
+					top: sel.offsetTop,
+					width: sel.offsetWidth,
+					height: sel.offsetHeight
+				};
+				setThumb((cur) => cur !== null && cur.left === next.left && cur.top === next.top && cur.width === next.width && cur.height === next.height ? cur : next);
+			}, []);
+			(0, react$1.useLayoutEffect)(() => {
+				if (!sliding) {
+					setThumb(null);
+					return;
+				}
+				measure();
+				const root = rootRef.current;
+				if (root === null || typeof ResizeObserver === "undefined") return;
+				const ro = new ResizeObserver(measure);
+				ro.observe(root);
+				return () => ro.disconnect();
+			}, [
+				sliding,
+				measure,
+				value,
+				size,
+				props.items,
+				props.bordered,
+				props.block
+			]);
+			const tone = props.tone;
+			const toneClass = typeof tone === "string" ? ` dshpc-seg--tone-${tone}` : "";
+			const toneStyle = tone !== void 0 && typeof tone !== "string" ? {
+				"--seg-thumb": tone.bg,
+				"--seg-on": tone.fg
+			} : void 0;
+			return (0, react$1.createElement)("div", {
+				role: "group",
+				"aria-label": props.label,
+				id: props.id,
+				ref: rootRef,
+				className: `dshpc-seg dshpc-seg--${size}${sliding ? " dshpc-seg--slide" : ""}${props.block === true ? " dshpc-seg--block" : ""}${props.bordered === true ? " dshpc-seg--bordered" : ""}${toneClass}${props.className !== void 0 ? ` ${props.className}` : ""}`,
+				style: toneStyle === void 0 ? props.style : {
+					...toneStyle,
+					...props.style
+				}
+			}, [sliding && thumb !== null ? (0, react$1.createElement)("span", {
+				key: "__thumb__",
+				className: "dshpc-seg__thumb",
+				"aria-hidden": true,
+				style: {
+					left: `${String(thumb.left)}px`,
+					top: `${String(thumb.top)}px`,
+					width: `${String(thumb.width)}px`,
+					height: `${String(thumb.height)}px`
+				}
+			}) : null, ...props.items.map((item) => {
+				const on = multiple ? value.includes(item.value) : value === item.value;
+				const disabled = item.disabled === true || props.disabled === true || locked;
+				const handle = () => {
+					if (disabled) return;
+					if (multiple) {
+						const arr = value;
+						const next = arr.includes(item.value) ? arr.filter((v) => v !== item.value) : [...arr, item.value];
+						onChange(next);
+					} else onChange(item.value);
+				};
+				const count = countText(item.count);
+				const badge = countText(item.badge);
+				const hasLabel = item.label !== void 0 && item.label !== null && item.label !== "";
+				const hasIcon = item.icon !== void 0 && item.icon !== null;
+				const iconOnly = hasIcon && !hasLabel && count === null && badge === null;
+				const itemButton = (0, react$1.createElement)("button", {
+					key: item.value,
+					type: "button",
+					className: `dshpc-seg__item${iconOnly ? " dshpc-seg__item--icon-only" : ""}`,
+					"aria-pressed": on,
+					"aria-label": item.ariaLabel ?? (iconOnly ? item.tooltip : void 0),
+					disabled,
+					onClick: handle
+				}, hasIcon ? (0, react$1.createElement)("span", { className: "dshpc-seg__icon" }, item.icon) : null, hasLabel ? item.label : null, count === null ? null : (0, react$1.createElement)("span", { className: "dshpc-seg__count" }, count), badge === null ? null : (0, react$1.createElement)("span", { className: "dshpc-seg__badge" }, badge));
+				if (item.tooltip !== void 0 && false);
+				return itemButton;
+			})]);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Field.js
 		/**
 		* 输入类控件 —— **全站唯一实现**（L2 组件皮肤，P3）
 		*
@@ -2227,45 +7070,81 @@ window.__ModuleLoader__.load({
 		*
 		* 高度一律吃 `--dshpc-control-h-*`；有边 / 无边同高（边框在内部补回）。
 		*/
+		/**
+		* 字段 hint 的统一包法：控件 + 问号提示同一行（间距/对齐收进组件，调用方传个
+		* `hint` 字符串就行，不再手动拼排版 —— 用户 2026-10-20 拍板）。
+		*/
+		function withHint(control, hint) {
+			if (hint === void 0) return control;
+			return (0, react$1.createElement)("span", { className: "dshpc-fieldwrap" }, control, (0, react$1.createElement)(FieldHint, { text: hint }));
+		}
 		function sizeClass(size) {
 			return size === "lg" ? "--lg" : size === "md" ? "--md" : "--sm";
 		}
-		/** 文本输入。 */
-		function Input$1(props) {
-			ensureControlsStyle();
-			const { value, onChange, placeholder, size = "lg", error, disabled, type, className, style } = props;
-			return (0, react$1.createElement)("input", {
+		/** 文本输入。默认铺满容器（width:100%，与 Textarea 同口径）；要定宽由调用方在外面包壳（如 192px 搜索槽）。 */
+		function Input(props) {
+			ensureComponentStyles("field", FIELD_CSS$1);
+			const { value, onChange, placeholder, size = "lg", error, disabled, type, icon, className, style } = props;
+			const locked = useOverlayLocked();
+			const off = disabled === true || locked;
+			const [focused, setFocused] = (0, react$1.useState)(false);
+			const search = type === "search";
+			const showClear = search && value !== "" && focused && !off;
+			const input = (0, react$1.createElement)("input", {
 				ref: props.inputRef,
 				type: type ?? "text",
 				value,
 				placeholder,
-				disabled,
+				disabled: off,
 				"aria-label": props["aria-label"],
 				title: props.title,
-				className: `dsh-tdt-input dsh-tdt-input${sizeClass(size)}${error === true ? " dsh-tdt-input--error" : ""}${className !== void 0 && className !== "" ? " " + className : ""}`,
+				className: `dshpc-input dshpc-input${sizeClass(size)}${error === true ? " dshpc-input--error" : ""}${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
 				style,
 				onChange: (event) => {
 					onChange(event.target.value);
 				},
 				onKeyDown: props.onKeyDown,
-				onBlur: props.onBlur
+				onFocus: () => {
+					setFocused(true);
+				},
+				onBlur: () => {
+					setFocused(false);
+					if (props.onBlur !== void 0) props.onBlur();
+				}
 			});
+			const hasIcon = icon !== void 0 && icon !== null;
+			if (!hasIcon && !search) return withHint(input, props.hint);
+			return withHint((0, react$1.createElement)("span", { className: `dshpc-iwrap dshpc-iwrap${sizeClass(size)}${showClear ? " dshpc-iwrap--clear" : ""}` }, hasIcon ? (0, react$1.createElement)("span", { className: "dshpc-iwrap__icon" }, icon) : null, input, showClear ? (0, react$1.createElement)(IconButton, {
+				className: "dshpc-iwrap__clear",
+				variant: "plain",
+				size,
+				icon: "×",
+				label: t$1("fieldClear"),
+				onMouseDown: (event) => {
+					event.preventDefault();
+				},
+				onClick: () => {
+					onChange("");
+				}
+			}) : null), props.hint);
 		}
 		/** 前缀 + 文本输入。 */
 		function PrefixedInput$1(props) {
-			ensureControlsStyle();
+			ensureComponentStyles("field", FIELD_CSS$1);
 			const { prefix, value, onChange, placeholder, size = "lg", error, disabled, type, className, style } = props;
+			const locked = useOverlayLocked();
+			const off = disabled === true || locked;
 			return (0, react$1.createElement)("div", {
-				className: `dsh-tdt-pfx dsh-tdt-pfx${sizeClass(size)}${error === true ? " dsh-tdt-pfx--error" : ""}${className !== void 0 && className !== "" ? " " + className : ""}`,
+				className: `dshpc-pfx dshpc-pfx${sizeClass(size)}${error === true ? " dshpc-pfx--error" : ""}${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
 				style
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-pfx__label" }, prefix), (0, react$1.createElement)("input", {
+			}, (0, react$1.createElement)("span", { className: "dshpc-pfx__label" }, prefix), (0, react$1.createElement)("input", {
 				type: type ?? "text",
 				value,
 				placeholder,
-				disabled,
+				disabled: off,
 				"aria-label": props["aria-label"],
 				title: props.title,
-				className: "dsh-tdt-pfx__input",
+				className: "dshpc-pfx__input",
 				onChange: (event) => {
 					onChange(event.target.value);
 				}
@@ -2278,8 +7157,10 @@ window.__ModuleLoader__.load({
 		* @returns 数字步进控件。
 		*/
 		function NumberInput(props) {
-			ensureControlsStyle();
-			const { value, onChange, min = -Infinity, max = Infinity, step = 1, size = "lg", inputWidth, disabled, suffix, label, decreaseLabel = "减少", increaseLabel = "增加", className, style } = props;
+			ensureComponentStyles("field", FIELD_CSS$1);
+			const { value, onChange, min = -Infinity, max = Infinity, step = 1, size = "lg", inputWidth, disabled, suffix, label, decreaseLabel = t$1("fieldDecrease"), increaseLabel = t$1("fieldIncrease"), className, style } = props;
+			const locked = useOverlayLocked();
+			const off = disabled === true || locked;
 			const [text, setText] = (0, react$1.useState)(String(value));
 			(0, react$1.useEffect)(() => {
 				setText(String(value));
@@ -2305,23 +7186,23 @@ window.__ModuleLoader__.load({
 				setText(String(next));
 				if (next !== value) onChange(next);
 			};
-			return (0, react$1.createElement)("div", {
-				className: `dsh-tdt-num dsh-tdt-num${sizeClass(size)}${disabled === true ? " dsh-tdt-num--disabled" : ""}${className !== void 0 && className !== "" ? " " + className : ""}`,
+			return withHint((0, react$1.createElement)("div", {
+				className: `dshpc-num dshpc-num${sizeClass(size)}${off ? " dshpc-num--disabled" : ""}${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
 				style
 			}, (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size,
 				icon: "−",
 				label: decreaseLabel,
-				disabled,
+				disabled: off,
 				onClick: () => {
 					bump(-1);
 				}
-			}), (0, react$1.createElement)("input", {
-				className: "dsh-tdt-num__input",
+			}), (0, react$1.createElement)("span", { className: "dshpc-num__mid" }, (0, react$1.createElement)("input", {
+				className: "dshpc-num__input",
 				...inputWidth === void 0 ? {} : { style: { width: `${inputWidth}px` } },
 				value: text,
-				disabled,
+				disabled: off,
 				inputMode: "numeric",
 				"aria-label": label,
 				onChange: (event) => {
@@ -2333,16 +7214,16 @@ window.__ModuleLoader__.load({
 				onKeyDown: (event) => {
 					if (event.key === "Enter") commit(text);
 				}
-			}), suffix !== void 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-num__suffix" }, suffix) : null, (0, react$1.createElement)(IconButton, {
+			}), suffix !== void 0 ? (0, react$1.createElement)("span", { className: "dshpc-num__suffix" }, suffix) : null), (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size,
 				icon: "+",
 				label: increaseLabel,
-				disabled,
+				disabled: off,
 				onClick: () => {
 					bump(1);
 				}
-			}));
+			})), props.hint);
 		}
 		/**
 		* 下拉锚点的统一样式（**全站唯一一份**）：`SelectField` 与 `TaskPicker` 共用 —— 两者是同一类锚点，
@@ -2367,7 +7248,7 @@ window.__ModuleLoader__.load({
 			cursor: "pointer",
 			transition: "background var(--dshpc-dur-fast) var(--dshpc-ease), color var(--dshpc-dur-fast) var(--dshpc-ease), border-color var(--dshpc-dur-fast) var(--dshpc-ease)"
 		};
-		/** 下拉锚点里那行文字（省略号三件套收敛到 `.dsh-tdt-ellipsis`，见 ui-style-guide §三 待抽象 #1）。 */
+		/** 下拉锚点里那行文字（省略号三件套收敛到 `.dshpc-ellipsis`，见 ui-style-guide §三 待抽象 #1）。 */
 		const FIELD_LABEL_STYLE = {
 			flex: "1 1 auto",
 			minWidth: 0,
@@ -2383,931 +7264,92 @@ window.__ModuleLoader__.load({
 				gap: size === "sm" ? "var(--dshpc-space-1)" : "6px"
 			};
 		}
-		function IconSeat(props) {
-			return (0, react$1.createElement)("span", { style: {
-				display: "inline-flex",
-				width: "16px",
-				height: "16px",
-				alignItems: "center",
-				justifyContent: "center",
-				flex: "none",
-				color: "var(--dshpc-fg-3)"
-			} }, props.children);
-		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Textarea.js
 		/**
-		* 下拉选择：官方 `Menu`（portal 到 body，避免被弹窗内部滚动裁掉；选中项自动带对勾）。
-		* 空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
+		* 多行文本输入（P3 输入类家族唯一实现；皮肤见 controls-css.ts 的 `.dshpc-textarea`）。
+		*
+		* 以前提示词框是 `task-editor.tsx` 里手写的 `<textarea>` + 业务 CSS `.dshpc-ed-prompt`；
+		* 现上提为基础层件（U20 #6，2026-10-05），业务文件只 `import { Textarea }`。
 		*/
-		function SelectField(props) {
-			ensureControlsStyle();
-			const [open, setOpen] = (0, react$1.useState)(false);
-			const [hover, setHover] = (0, react$1.useState)(false);
-			const metrics = fieldMetricsOf(props.size ?? "lg");
-			const iconSize = metrics.icon;
-			const usable = props.options.length > 0 && props.disabled !== true;
-			const current = props.options.find((option) => option.value === props.value);
-			const items = (0, react$1.useMemo)(() => props.options.map((option) => ({
-				id: option.value,
-				label: option.label
-			})), [props.options]);
-			const anchor = (0, react$1.createElement)("button", {
-				type: "button",
-				className: `dsh-tdt-ed-field${props.error === true ? " dsh-tdt-ed-field--error" : ""}`,
-				disabled: !usable,
-				"aria-haspopup": "menu",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onPointerEnter: () => {
-					setHover(true);
-				},
-				onPointerLeave: () => {
-					setHover(false);
-				},
-				onClick: () => {
-					setOpen(!open);
-				},
-				style: {
-					...FIELD_ANCHOR_STYLE,
-					height: metrics.height,
-					gap: metrics.gap,
-					fontSize: metrics.font,
-					lineHeight: metrics.line,
-					width: props.width ?? (props.block === true ? "100%" : void 0),
-					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
-					background: hover && usable ? "var(--dshpc-hover)" : "var(--dshpc-surface-1)",
-					cursor: usable ? "pointer" : "not-allowed",
-					opacity: usable ? 1 : .6
-				}
-			}, props.icon === void 0 ? null : (0, react$1.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react$1.createElement)(MarqueeText, {
-				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
-				title: props.title ?? props.ariaLabel,
-				className: "dsh-tdt-ellipsis",
-				style: {
-					...FIELD_LABEL_STYLE,
-					color: current === void 0 ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
-				}
-			}) : (0, react$1.createElement)("span", {
-				className: "dsh-tdt-ellipsis",
-				style: {
-					...FIELD_LABEL_STYLE,
-					color: current === void 0 ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
-				}
-			}, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react$1.createElement)(IconSeat, null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
-			if (!usable) return anchor;
-			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-				open,
-				anchor,
-				items,
-				selectedId: props.value,
-				selection: "check",
-				align: props.align ?? "start",
-				portal: true,
-				className: props.block === true ? "dsh-tdt-ed-selectwrap" : void 0,
-				onSelect: (id) => {
-					setOpen(false);
-					props.onChange(id);
-				},
-				onClose: () => {
-					setOpen(false);
+		/** 多行文本输入。 */
+		function Textarea(props) {
+			ensureComponentStyles("field", FIELD_CSS$1);
+			const { value, onChange, placeholder, error, disabled, id, rows, spellCheck, className, style } = props;
+			const off = disabled === true || useOverlayLocked();
+			const box = (0, react$1.createElement)("textarea", {
+				id,
+				rows,
+				value,
+				placeholder,
+				disabled: off,
+				spellCheck: spellCheck === true,
+				"aria-label": props["aria-label"],
+				className: `dshpc-textarea${error === true ? " dshpc-textarea--error" : ""}${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
+				style,
+				onChange: (event) => {
+					onChange(event.target.value);
 				}
 			});
+			if (props.hint === void 0) return box;
+			return (0, react$1.createElement)("span", { className: "dshpc-fieldwrap dshpc-fieldwrap--block" }, box, (0, react$1.createElement)(FieldHint, { text: props.hint }));
 		}
 		//#endregion
-		//#region src/client/ui/TaskPicker.tsx
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Checkbox.js
 		/**
-		* 任务选择器（带搜索） —— **全站唯一实现**（L2 组件皮肤）
+		* 勾选框（P3 输入类家族唯一实现；U20 #6，2026-10-05）。
 		*
-		* 什么时候用它：**候选多（几十上百）或需要按名字 / id 搜索**的任务选择。
-		* 候选少（十几个以内）用 `SelectField` 就够，别用它（两者分工见 docs/design/ui-foundation.md §5.4）。
-		*
-		* 形态：锚点（与 `SelectField` 同款 —— 样式从 `Field.tsx` 导入**共用那一份**，不许再抄）点开浮层
-		* ⇒ 顶部搜索框 + 候选列表 +「更多 / 收起」。底层 = 官方 `Menu`（定位 / portal / 点外关闭 / Esc）
-		* + 基础层 `Input`，**不自绘浮层**。
-		*
-		* ⚠️ 两条硬规矩（用户 2026-10-03 拍板，见 docs/design/ui-foundation.md §5.4）：
-		*  ① `scope` 是**受控入参**，不是内部 state —— 外部改工作区 ⇒ 候选实时重算；
-		*  ② 已选项掉出作用域 ⇒ **显式提示**（`outOfScopeHint`），**不静默清空**（静默清空会让用户以为自己没选过）。
-		*     ⚠️ 执行记录页在**改工作区时主动清空**掉队任务（那是筛选语义，两码事，见 records-timeline.tsx 注释）。
-		*
-		* 源码级依据（2026-10-04 解包核实，宿主 0.2.0-rc.2 `lib/index.js:3927` 的 `Menu`；已回写
-		* docs/design/external/dsh-capabilities.md §官方组件签名要点）：
-		*  - `children` 渲染进 MenuSurface 的 viewport（`:4246`），键盘只处理 Escape / Tab / 方向键（`:4093-4114`），
-		*    字母键不拦 ⇒ 搜索框能正常打字；方向键在浮层内游走属预期（等同于下拉的键盘操作）。
-		*  - `autoFocus` 会把焦点抢到浮层第一个按钮（`:4038-4044`）⇒ **不用它**，打开后自己聚焦搜索框。
+		* 以前确认弹窗里是裸 `<input type="checkbox">` + 业务内联样式，现上提为基础层件。
+		* 标记色默认随业务色；高危确认可传 `accentColor`（如 `var(--dshpc-warning)`）染橙。
 		*/
-		/** 任务选择器浮层的皮肤规则（只消费 `var(--dshpc-*)`，间距走 `--dshpc-space-*`）。 */
-		const TASKPICKER_CSS = `
-/* ── 任务选择器（带搜索）────────────────────────────────────────────────
-   结构：搜索行 + 列表 +「更多 / 收起」。浮层外壳由官方 Menu 提供，这里只管内容。
-   ⚠️ 官方 MenuSurface 自带内边距与圆角 ⇒ 本面板不再套第二层壳，避免双层底。 */
-.dsh-tdt-tp{display:flex;flex-direction:column;gap:var(--dshpc-space-1);min-width:220px;max-width:340px;}
-.dsh-tdt-tp-search{display:flex;align-items:center;gap:var(--dshpc-space-1);padding:0 var(--dshpc-space-1);color:var(--dshpc-fg-3);}
-.dsh-tdt-tp-search > span{display:inline-flex;flex:none;}
-/* 列表定高（内容区尺寸，属 ui-style-guide §三「已知例外」的内容区定高一类）。 */
-.dsh-tdt-tp-list{display:flex;flex-direction:column;max-height:264px;overflow-y:auto;}
-.dsh-tdt-tp-row{display:flex;align-items:center;gap:var(--dshpc-space-2);width:100%;padding:6px var(--dshpc-space-2);
-  border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg);font:inherit;
-  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);text-align:left;cursor:pointer;}
-.dsh-tdt-tp-row:hover{background:var(--dshpc-hover);}
-/* 键盘可达性：与其它控件同款描边（不得只靠 hover 表达可交互）。 */
-.dsh-tdt-tp-row:focus-visible,.dsh-tdt-tp-more:focus-visible{outline:2px solid var(--dshpc-business);outline-offset:-2px;}
-.dsh-tdt-tp-row--on{color:var(--dshpc-business);}
-.dsh-tdt-tp-name{flex:1 1 auto;min-width:0;}
-.dsh-tdt-tp-check{flex:none;display:inline-flex;width:14px;align-items:center;justify-content:center;}
-.dsh-tdt-tp-more{border:0;border-top:1px solid var(--dshpc-border-faint);margin-top:2px;padding:6px var(--dshpc-space-2);
-  background:transparent;color:var(--dshpc-business);font:inherit;font-size:var(--dshpc-font-sm);text-align:left;cursor:pointer;}
-.dsh-tdt-tp-more:hover{background:var(--dshpc-hover);}
-.dsh-tdt-tp-empty{padding:var(--dshpc-space-2);color:var(--dshpc-fg-3);font-size:var(--dshpc-font-sm);text-align:center;}
-`;
-		/** 皮肤域固定名（注入顺序在 controls 之后）。 */
-		const TASKPICKER_DOMAIN = "domain:taskpicker";
-		/** 确保本控件皮肤已登记并注入（幂等）。 */
-		function ensureTaskPickerStyle() {
-			applyStyle(TASKPICKER_DOMAIN, TASKPICKER_CSS);
-		}
-		/** 带搜索的任务选择器。 */
-		function TaskPicker(props) {
-			ensureControlsStyle();
-			ensureTaskPickerStyle();
-			const size = props.size ?? "lg";
-			const metrics = fieldMetricsOf(size);
-			const [open, setOpen] = (0, react$1.useState)(false);
-			const [hover, setHover] = (0, react$1.useState)(false);
-			const [keyword, setKeyword] = (0, react$1.useState)("");
-			const [showAll, setShowAll] = (0, react$1.useState)(false);
-			const searchRef = (0, react$1.useRef)(null);
-			const anchorRef = (0, react$1.useRef)(null);
-			const candidates = (0, react$1.useMemo)(() => {
-				const scope = props.scope ?? "";
-				const excludes = props.excludeIds ?? [];
-				return props.options.filter((o) => (scope === "" || o.workspace === scope) && !excludes.includes(o.id));
-			}, [
-				props.options,
-				props.scope,
-				props.excludeIds
-			]);
-			const kw = keyword.trim().toLowerCase();
-			const searching = kw !== "";
-			const matched = (0, react$1.useMemo)(() => searching ? candidates.filter((o) => o.label.toLowerCase().includes(kw) || o.id.toLowerCase().includes(kw)) : candidates, [
-				candidates,
-				searching,
-				kw
-			]);
-			const limit = props.recentLimit ?? 10;
-			const visible = searching || showAll ? matched : matched.slice(0, limit);
-			const restCount = matched.length - visible.length;
-			const current = props.options.find((o) => o.id === props.value);
-			const outOfScope = current !== void 0 && props.value !== "" && !candidates.some((o) => o.id === props.value);
-			const shownLabel = current === void 0 || props.value === "" ? props.placeholder : current.label;
-			(0, react$1.useEffect)(() => {
-				if (open) searchRef.current?.focus();
-			}, [open]);
-			(0, react$1.useEffect)(() => {
-				if (!open) {
-					setKeyword("");
-					setShowAll(false);
-				}
-			}, [open]);
-			/** 选中一项：回调 + 关浮层 + **把焦点还给锚点**（否则焦点落在 body，键盘用户会掉队）。 */
-			const pick = (0, react$1.useCallback)((id) => {
-				props.onChange(id);
-				setOpen(false);
-				anchorRef.current?.focus();
-			}, [props]);
-			const anchor = (0, react$1.createElement)("button", {
-				ref: anchorRef,
-				type: "button",
-				className: "dsh-tdt-ed-field",
-				disabled: props.disabled === true,
-				"aria-haspopup": "menu",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: outOfScope ? props.outOfScopeHint : void 0,
-				onPointerEnter: () => {
-					setHover(true);
-				},
-				onPointerLeave: () => {
-					setHover(false);
-				},
-				onClick: () => {
-					setOpen((v) => !v);
-				},
+		/** 勾选框（label + input 一体，整行可点）。 */
+		function Checkbox(props) {
+			const { checked, onChange, label, accentColor, disabled, className } = props;
+			const locked = useOverlayLocked();
+			const off = disabled === true || locked;
+			return (0, react$1.createElement)("label", {
+				className: `dshpc-checkbox${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
 				style: {
-					...FIELD_ANCHOR_STYLE,
-					height: metrics.height,
-					gap: metrics.gap,
-					fontSize: metrics.font,
-					lineHeight: metrics.line,
-					width: props.width,
-					background: hover && props.disabled !== true ? "var(--dshpc-hover)" : "var(--dshpc-surface-1)",
-					cursor: props.disabled === true ? "not-allowed" : "pointer",
-					opacity: props.disabled === true ? .6 : 1
+					display: "flex",
+					alignItems: "flex-start",
+					gap: "8px",
+					fontSize: "var(--dshpc-font-md)",
+					lineHeight: "var(--dshpc-line-md)",
+					cursor: off ? "default" : "pointer"
 				}
-			}, (0, react$1.createElement)(MarqueeText, {
-				text: shownLabel,
-				title: props.ariaLabel,
-				className: "dsh-tdt-ellipsis",
+			}, (0, react$1.createElement)("input", {
+				type: "checkbox",
+				checked,
+				disabled: off,
 				style: {
-					...FIELD_LABEL_STYLE,
-					color: current === void 0 || props.value === "" ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
-				}
-			}), outOfScope ? (0, react$1.createElement)("span", { style: {
-				flex: "none",
-				fontSize: "var(--dshpc-font-xs)",
-				color: "var(--dshpc-warning)"
-			} }, "!") : null, (0, react$1.createElement)("span", { style: {
-				display: "inline-flex",
-				width: `${metrics.icon}px`,
-				height: `${metrics.icon}px`,
-				alignItems: "center",
-				justifyContent: "center",
-				flex: "none",
-				color: "var(--dshpc-fg-3)"
-			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: metrics.icon })));
-			const allOpt = props.allOption;
-			const allRow = allOpt === void 0 ? null : (0, react$1.createElement)("button", {
-				type: "button",
-				key: "__all__",
-				className: `dsh-tdt-tp-row${props.value === allOpt.value ? " dsh-tdt-tp-row--on" : ""}`,
-				"aria-selected": props.value === allOpt.value,
-				onClick: () => {
-					pick(allOpt.value);
-				}
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-tp-name dsh-tdt-ellipsis" }, allOpt.label), props.value === allOpt.value ? (0, react$1.createElement)("span", {
-				className: "dsh-tdt-tp-check",
-				"aria-hidden": true
-			}, "✓") : null);
-			const restNodes = visible.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-tp-empty" }, props.emptyLabel) : visible.map((o) => (0, react$1.createElement)("button", {
-				type: "button",
-				key: o.id,
-				className: `dsh-tdt-tp-row${o.id === props.value ? " dsh-tdt-tp-row--on" : ""}`,
-				"aria-selected": o.id === props.value,
-				onClick: () => {
-					pick(o.id);
-				}
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-tp-name dsh-tdt-ellipsis" }, o.enabled === false ? `${o.label}${props.disabledTag ?? ""}` : o.label), o.id === props.value ? (0, react$1.createElement)("span", {
-				className: "dsh-tdt-tp-check",
-				"aria-hidden": true
-			}, "✓") : null));
-			const panel = (0, react$1.createElement)("div", { className: "dsh-tdt-tp" }, (0, react$1.createElement)("div", { className: "dsh-tdt-tp-search" }, (0, react$1.createElement)("span", null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 })), (0, react$1.createElement)(Input$1, {
-				value: keyword,
-				onChange: setKeyword,
-				placeholder: props.searchPlaceholder,
-				size,
-				"aria-label": props.searchPlaceholder,
-				inputRef: searchRef,
-				onKeyDown: (event) => {
-					if (event.key === "Enter") {
-						const first = visible[0];
-						if (first === void 0) return;
-						event.preventDefault();
-						pick(first.id);
-						return;
-					}
-					if (event.key !== "ArrowDown") return;
-					event.preventDefault();
-					(searchRef.current?.closest(".dsh-tdt-tp")?.querySelector(".dsh-tdt-tp-row"))?.focus();
-				}
-			})), (0, react$1.createElement)("div", { className: "dsh-tdt-tp-list" }, allRow === null ? restNodes : [allRow, restNodes]), !searching && (showAll || restCount > 0) ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-tp-more",
-				onClick: () => {
-					setShowAll((v) => !v);
-				}
-			}, showAll ? props.collapseLabel ?? "收起" : `${props.moreLabel ?? "更多"}（${matched.length}）`) : null);
-			if (props.disabled === true) return anchor;
-			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-				open,
-				anchor,
-				children: panel,
-				align: props.align ?? "start",
-				portal: true,
-				onSelect: () => {},
-				onClose: () => {
-					setOpen(false);
-				}
-			});
-		}
-		//#endregion
-		//#region src/client/ui/DateTime.tsx
-		/**
-		* 日期 / 时间控件 —— **全站唯一实现**（L2 组件皮肤，P4）
-		*
-		* 官方 primitives 没有日期 / 时间选择器 ⇒ 自绘日历弹层与时分列；结构、皮肤、交互只此一份，
-		* 颜色 / 尺寸 / 圆角 / 影全走 `--dshpc-*`（`controls-css.ts` 的 DATETIME_CSS），明暗自适应。
-		* 浮层定位 / 点外关闭走官方 `useAnchoredPosition` + `useDismissOnOutsidePointer`。
-		*/
-		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
-		function parseIsoDate(value) {
-			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-			if (match === null) return null;
-			return {
-				y: Number(match[1]),
-				m: Number(match[2]),
-				d: Number(match[3])
-			};
-		}
-		function toIsoDate(y, m, d) {
-			return `${y}-${pad2$1(m)}-${pad2$1(d)}`;
-		}
-		/** 本地今天（真实时间，非占位）。 */
-		function todayIso$2() {
-			const now = /* @__PURE__ */ new Date();
-			return toIsoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
-		}
-		/**
-		* 月历网格的**唯一实现**（2026-10-05 提为导出：日期框的自绘日历与「任务日程」页共用同一份，
-		* 不许两处各写一套网格算法）。
-		* 固定 6 行 × 7 列（42 格）：行数据月不同在 5/6 行之间跳动会让下方内容上下抖。
-		* @param m 1-based（与 `Date.getMonth()` 差一，与展示口径一致）。
-		*/
-		function buildMonthCells(y, m) {
-			const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
-			const start = new Date(y, m - 1, 1 - offset);
-			const today = todayIso$2();
-			const cells = [];
-			for (let i = 0; i < 42; i++) {
-				const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-				const iso = toIsoDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
-				cells.push({
-					iso,
-					day: date.getDate(),
-					inMonth: date.getMonth() + 1 === m && date.getFullYear() === y,
-					isToday: iso === today
-				});
-			}
-			return cells;
-		}
-		/**
-		* 「定死」的字段宽度（用户 2026-10-05：宽度按**最宽的内容**定死，不随值跳动）。
-		* 估算：CJK / 全角按 1 字 = 1em，其余按 0.56em；再加控件固定留白（内边距 + 图标 + gap）。
-		* ⇒ 大多数调用点直接用默认即可；确需加宽 / 收窄的，自己在调用点传 `width` 覆盖。
-		*/
-		function fieldWidthOf(text, size) {
-			const fontPx = size === "sm" ? 12 : 13;
-			const extra = size === "sm" ? 34 : 38;
-			let w = 0;
-			for (const ch of text) w += /[⺀-鿿＀-￯]/.test(ch) ? fontPx : fontPx * .56;
-			return Math.ceil(w + extra);
-		}
-		/** 日期框定宽 = 刚好放下 `0000-00-00`（0 / 9 是最宽的数字）+ 左右留白（用户 2026-10-05：md 下 118）。 */
-		const dateWidthOf = (size) => fieldWidthOf("0000-00-00", size) + 7;
-		/** 时分框定宽 = 刚好放下 `00:00` + 左右留白（用户 2026-10-05：md 下 82）。 */
-		const timeWidthOf = (size) => fieldWidthOf("00:00", size) + 7;
-		/** 自绘日历弹层（锚点 = 统一字段壳按钮）。 */
-		function DateField(props) {
-			ensureControlsStyle();
-			const size = props.size ?? "lg";
-			const [open, setOpen] = (0, react$1.useState)(false);
-			const [hoverIso, setHoverIso] = (0, react$1.useState)(null);
-			const rootRef = (0, react$1.useRef)(null);
-			const panelRef = (0, react$1.useRef)(null);
-			const parsed = parseIsoDate(props.value);
-			const [cursor, setCursor] = (0, react$1.useState)(() => {
-				if (parsed !== null) return {
-					y: parsed.y,
-					m: parsed.m
-				};
-				const now = /* @__PURE__ */ new Date();
-				return {
-					y: now.getFullYear(),
-					m: now.getMonth() + 1
-				};
-			});
-			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
-				open,
-				anchorRef: rootRef,
-				panelRef,
-				side: "bottom",
-				align: "start",
-				gap: 4,
-				margin: 12
-			});
-			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
-			(0, react$1.useEffect)(() => {
-				if (!open) return;
-				const onKeyDown = (event) => {
-					if (event.key !== "Escape") return;
-					event.preventDefault();
-					setOpen(false);
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => {
-					document.removeEventListener("keydown", onKeyDown);
-				};
-			}, [open]);
-			/** 打开时把视图对到已选月（或本月）。 */
-			const openPanel = (0, react$1.useCallback)(() => {
-				const current = parseIsoDate(props.value);
-				if (current !== null) setCursor({
-					y: current.y,
-					m: current.m
-				});
-				setOpen(true);
-			}, [props.value]);
-			const cells = (0, react$1.useMemo)(() => buildMonthCells(cursor.y, cursor.m), [cursor]);
-			const step = (months) => {
-				const next = new Date(cursor.y, cursor.m - 1 + months, 1);
-				setCursor({
-					y: next.getFullYear(),
-					m: next.getMonth() + 1
-				});
-			};
-			const navButton = (label, months, icon) => (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon,
-				label,
-				title: label,
-				onClick: () => {
-					step(months);
-				}
-			});
-			const anchor = (0, react$1.createElement)("button", {
-				type: "button",
-				className: `dsh-tdt-dtf dsh-tdt-dtf--${size}`,
-				ref: rootRef,
-				disabled: props.disabled,
-				"aria-haspopup": "dialog",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onClick: () => {
-					if (open) setOpen(false);
-					else openPanel();
+					flex: "none",
+					margin: "2px 0 0",
+					accentColor: accentColor ?? "var(--dshpc-business)",
+					width: "14px",
+					height: "14px",
+					cursor: off ? "default" : "pointer"
 				},
-				style: { width: props.width ?? dateWidthOf(size) }
-			}, (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value), (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
-			return (0, react$1.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
-				ref: panelRef,
-				role: "dialog",
-				"aria-label": props.ariaLabel,
-				className: "dsh-tdt-layer",
-				style: {
-					...pos ?? {},
-					visibility: pos === void 0 ? "hidden" : "visible"
+				onChange: (event) => {
+					onChange(event.target.checked);
 				}
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-cal__head" }, navButton(props.labels.prevYear, -12, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 })), navButton(props.labels.prevMonth, -1, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 })), (0, react$1.createElement)("span", { className: "dsh-tdt-cal__title" }, props.labels.monthTitle(cursor.y, cursor.m)), navButton(props.labels.nextMonth, 1, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), navButton(props.labels.nextYear, 12, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react$1.createElement)("div", { className: "dsh-tdt-cal__grid" }, props.labels.weekdays.map((name) => (0, react$1.createElement)("div", {
-				key: name,
-				className: "dsh-tdt-cal__weekday"
-			}, name)), cells.map((cell) => {
-				const selected = cell.iso === props.value;
-				const hovered = cell.iso === hoverIso && !selected;
-				return (0, react$1.createElement)("button", {
-					key: cell.iso,
-					type: "button",
-					"aria-label": cell.iso,
-					"aria-pressed": selected,
-					onPointerEnter: () => {
-						setHoverIso(cell.iso);
-					},
-					onPointerLeave: () => {
-						setHoverIso((current) => current === cell.iso ? null : current);
-					},
-					onClick: () => {
-						props.onChange(cell.iso);
-						setOpen(false);
-					},
-					className: `dsh-tdt-cal__cell${cell.inMonth ? "" : " dsh-tdt-cal__cell--out"}${cell.isToday && !selected ? " dsh-tdt-cal__cell--today" : ""}${hovered ? " dsh-tdt-cal__cell--hover" : ""}`
-				}, String(cell.day));
-			})), (0, react$1.createElement)("div", { className: "dsh-tdt-cal__foot" }, (0, react$1.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				style: { width: "100%" },
-				onClick: () => {
-					props.onChange(todayIso$2());
-					setOpen(false);
-				}
-			}, props.labels.today))), document.body) : null);
-		}
-		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$1(i));
-		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$1(i));
-		/** 时分列：`HH:mm`。 */
-		function TimeField(props) {
-			ensureControlsStyle();
-			const size = props.size ?? "lg";
-			const [open, setOpen] = (0, react$1.useState)(false);
-			const [draft, setDraft] = (0, react$1.useState)(props.value);
-			const selectedRef = (0, react$1.useRef)(null);
-			const rootRef = (0, react$1.useRef)(null);
-			const panelRef = (0, react$1.useRef)(null);
-			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
-				open,
-				anchorRef: rootRef,
-				panelRef,
-				side: "bottom",
-				align: "start",
-				gap: 4,
-				margin: 12
-			});
-			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
-			(0, react$1.useEffect)(() => {
-				if (!open) return;
-				const onKeyDown = (event) => {
-					if (event.key !== "Escape") return;
-					event.preventDefault();
-					setOpen(false);
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => {
-					document.removeEventListener("keydown", onKeyDown);
-				};
-			}, [open]);
-			(0, react$1.useEffect)(() => {
-				if (!open) return;
-				selectedRef.current?.scrollIntoView({ block: "center" });
-			}, [open]);
-			const parsed = /^(\d{2}):(\d{2})$/.exec(draft);
-			const hour = parsed === null ? "" : parsed[1];
-			const minute = parsed === null ? "" : parsed[2];
-			const column = (values, active, name, onPick, attachRef) => (0, react$1.createElement)("div", {
-				role: "listbox",
-				"aria-label": name,
-				className: "dsh-tdt-time__list"
-			}, values.map((item) => (0, react$1.createElement)("button", {
-				key: item,
-				type: "button",
-				role: "option",
-				"aria-selected": item === active,
-				ref: attachRef && item === active ? selectedRef : void 0,
-				className: "dsh-tdt-time__opt",
-				onClick: () => {
-					onPick(item);
-				}
-			}, item)));
-			const anchor = (0, react$1.createElement)("button", {
-				type: "button",
-				className: `dsh-tdt-dtf dsh-tdt-dtf--${size}`,
-				ref: rootRef,
-				disabled: props.disabled,
-				"aria-haspopup": "dialog",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onClick: () => {
-					if (open) {
-						setOpen(false);
-						return;
-					}
-					setDraft(props.value);
-					setOpen(true);
-				},
-				style: { width: props.width ?? timeWidthOf(size) }
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 16 })), (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value));
-			return (0, react$1.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
-				ref: panelRef,
-				role: "dialog",
-				"aria-label": props.ariaLabel,
-				className: "dsh-tdt-layer",
-				style: {
-					...pos ?? {},
-					visibility: pos === void 0 ? "hidden" : "visible"
-				}
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-time__cols" }, column(HOURS, hour, props.labels.hour, (next) => {
-				setDraft(`${next}:${minute === "" ? "00" : minute}`);
-			}, true), column(MINUTES, minute, props.labels.minute, (next) => {
-				setDraft(`${hour === "" ? "00" : hour}:${next}`);
-			}, false)), (0, react$1.createElement)("div", { className: "dsh-tdt-time__foot" }, (0, react$1.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				onClick: () => {
-					const now = /* @__PURE__ */ new Date();
-					setDraft(`${pad2$1(now.getHours())}:${pad2$1(now.getMinutes())}`);
-				}
-			}, props.labels.now), (0, react$1.createElement)(Button$2, {
-				variant: "primary",
-				size: "sm",
-				onClick: () => {
-					props.onChange(draft);
-					setOpen(false);
-				}
-			}, props.labels.confirm))), document.body) : null);
+			}), label !== void 0 ? (0, react$1.createElement)("span", null, label) : null);
 		}
 		//#endregion
-		//#region src/client/ui/time-range.ts
-		/**
-		* 时间范围 —— **预设档计算 + 日期边界归一**（纯函数，单源）。
-		*
-		* 边界约定（design/features/task-expand-panels.md §3.11）：**半开区间 `[from, to)`**——
-		* 含起点、不含终点；上界 = 所选结束日期的**次日 00:00**（day 粒度）或**下一分钟 :00**（minute 粒度）。
-		* 页面与查询层**不得各自算边界**，一律走 `rangeToQuery`（禁止 BETWEEN / 裸 `<= 当天`）。
-		*
-		* ⚠️ 全部走**本机时区**（与 `format.ts` 一致）；不合法值按「不过滤」返回 undefined，不编造时间。
-		*/
-		/** 全部预设档（缺省显示顺序）。 */
-		const ALL_TIME_PRESETS = [
-			"today",
-			"yesterday",
-			"thisWeek",
-			"lastWeek",
-			"thisMonth",
-			"lastMonth"
-		];
-		function ymd(d) {
-			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`;
-		}
-		function ymdhm(d) {
-			return `${ymd(d)} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
-		}
-		/** 当天 00:00（本机时区）。 */
-		function startOfDay(d) {
-			return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-		}
-		/** 周一为一周之始的 00:00。 */
-		function startOfWeek(d) {
-			const s = startOfDay(d);
-			const offset = (s.getDay() + 6) % 7;
-			s.setDate(s.getDate() - offset);
-			return s;
-		}
-		/** 值串 → 年月日时分；不合法返回 null。 */
-		function parseValue(value) {
-			const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(value);
-			if (match === null) return null;
-			return {
-				y: Number(match[1]),
-				m: Number(match[2]),
-				d: Number(match[3]),
-				hh: match[4] === void 0 ? 0 : Number(match[4]),
-				mm: match[5] === void 0 ? 0 : Number(match[5])
-			};
-		}
-		/**
-		* 预设档 → 起止（本机时区、真实当前时间，非占位）。
-		*
-		* ⚠️ 预设档一律是**整档**（用户 2026-10-02 拍板：「今天就是整个今天」）：
-		* - 今天 = 今天 `00:00` ~ 今天 `23:59`；**不是**「到此刻为止」；
-		* - 昨天 / 本周（周一 ~ 周日）/ 上周 / 本月（1 号 ~ 月末）/ 上月 同理，一律到该档**最后一天**的 `23:59`。
-		* 上界固定为 `23:59` ⇒ 值不随时间漂（原先取「此刻」会导致跨分钟后控件认不出档、把档名回显成「自定义」）。
-		* 配半开区间后实际含到次日 `00:00` 前一分钟，语义与「整档」一致。
-		*/
-		function presetRange(id, precision, now = /* @__PURE__ */ new Date()) {
-			const withTime = precision === "minute";
-			const fmt = (d) => withTime ? ymdhm(d) : ymd(d);
-			const endOfDay = (d) => `${ymd(d)} 23:59`;
-			const start = startOfDay(now);
-			switch (id) {
-				case "today": return {
-					from: fmt(start),
-					to: withTime ? endOfDay(start) : ymd(start)
-				};
-				case "yesterday": {
-					const y = new Date(start);
-					y.setDate(y.getDate() - 1);
-					return {
-						from: fmt(y),
-						to: withTime ? endOfDay(y) : ymd(y)
-					};
-				}
-				case "thisWeek": {
-					const mon = startOfWeek(now);
-					const sun = new Date(mon);
-					sun.setDate(sun.getDate() + 6);
-					return {
-						from: fmt(mon),
-						to: withTime ? endOfDay(sun) : ymd(sun)
-					};
-				}
-				case "lastWeek": {
-					const mon = startOfWeek(now);
-					mon.setDate(mon.getDate() - 7);
-					const sun = new Date(mon);
-					sun.setDate(sun.getDate() + 6);
-					return {
-						from: fmt(mon),
-						to: withTime ? endOfDay(sun) : ymd(sun)
-					};
-				}
-				case "thisMonth": {
-					const first = new Date(now.getFullYear(), now.getMonth(), 1);
-					const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-					return {
-						from: fmt(first),
-						to: withTime ? endOfDay(last) : ymd(last)
-					};
-				}
-				case "lastMonth": {
-					const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-					const last = new Date(now.getFullYear(), now.getMonth(), 0);
-					return {
-						from: fmt(first),
-						to: withTime ? endOfDay(last) : ymd(last)
-					};
-				}
-			}
-		}
-		/**
-		* 受控值 → 查询用**半开区间** `[from, to)`：
-		* - day：from = 当日 00:00，to = 结束日的**次日 00:00**；
-		* - minute：from = 当时分 :00，to = 结束分的**下一分钟 :00**。
-		* 空串 / 不合法 ⇒ 该端 undefined（不过滤）。
-		*/
-		function rangeToQuery(value, precision) {
-			const fromParsed = value.from === "" ? null : parseValue(value.from);
-			const toParsed = value.to === "" ? null : parseValue(value.to);
-			let fromTs;
-			if (fromParsed !== null) {
-				const d = precision === "minute" ? new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, fromParsed.hh, fromParsed.mm, 0, 0) : new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, 0, 0, 0, 0);
-				fromTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
-			}
-			let toTs;
-			if (toParsed !== null) {
-				const d = precision === "minute" ? new Date(toParsed.y, toParsed.m - 1, toParsed.d, toParsed.hh, toParsed.mm + 1, 0, 0) : new Date(toParsed.y, toParsed.m - 1, toParsed.d + 1, 0, 0, 0, 0);
-				toTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
-			}
-			return {
-				fromTs,
-				toTs
-			};
-		}
-		//#endregion
-		//#region src/client/ui/TimeRange.tsx
-		/**
-		* 时间范围筛选控件 —— **全站唯一实现**（执行记录 / 日志 / 未来总查询页复用）。
-		*
-		* 形态（用户 2026-10-02 第五轮定稿）：「下拉（全部 / 预设档 / 自定义）+ 开始框 + 结束框」一体。
-		* - 下拉**就是当前选择的真值**：选「全部」清空两框；选预设填入区间并停在档名上；
-		*   用户手动改框 ⇒ 自动落到「自定义」（该选项此时才出现）。
-		* - 下拉走基础层 `SelectField`（与全站下拉同款皮肤——不许自绘锚点）。
-		* - `precision`：`day`（只到天）/ `minute`（日期 + 时:分）；`size`：高度档必传。
-		* - **起 / 止框定长**（用户 2026-10-02：填进内容就撑开、不停跳——宽度固定，不随值变）。
-		* - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
-		*/
-		/** 本控件固定宽度（覆盖 MD 基类默认）：用户 2026-10-05 收窄。
-		* 日期 115 / 时分 80 / 预制 80；均 ≥ 内容最小宽，只收掉多余留白，不切 md/sm。 */
-		const DATE_FIELD_W = 115;
-		const TIME_FIELD_W = 80;
-		const PRESET_W = 80;
-		const labelStyle$1 = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "4px",
-			fontSize: "var(--dshpc-font-xs)",
-			color: "var(--dshpc-fg-3)",
-			flex: "none"
-		};
-		/** 本机今天（`YYYY-MM-DD`）—— 分钟档里只选了时刻、没选日期时补的默认日期。 */
-		function todayIso$1() {
-			const d = /* @__PURE__ */ new Date();
-			return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-		}
-		/** 当前值命中的档位 id：空 ⇒ all；等于某预设区间 ⇒ 该档；否则 custom。 */
-		function selectionOf(value, presets, precision) {
-			if (value.from === "" && value.to === "") return "all";
-			for (const id of presets) {
-				const range = presetRange(id, precision);
-				if (range.from === value.from && range.to === value.to) return id;
-			}
-			return "custom";
-		}
-		function TimeRange(props) {
-			const { value, onChange, labels, calendarLabels, timeLabels } = props;
-			const precision = props.precision ?? "day";
-			const size = props.size ?? "md";
-			const presets = props.presets ?? ALL_TIME_PRESETS;
-			const withTime = precision === "minute";
-			const selection = selectionOf(value, presets, precision);
-			const options = (0, react$1.useMemo)(() => {
-				const list = [{
-					value: "all",
-					label: labels.all
-				}];
-				for (const id of presets) list.push({
-					value: id,
-					label: labels.presets[id]
-				});
-				if (selection === "custom") list.push({
-					value: "custom",
-					label: labels.custom
-				});
-				return list;
-			}, [
-				labels,
-				presets,
-				selection
-			]);
-			const merge = (patch) => {
-				onChange({
-					...value,
-					...patch
-				});
-			};
-			const dateOf = (v) => withTime ? v.slice(0, 10) : v;
-			const timeOf = (v) => withTime && v.length >= 16 ? v.slice(11, 16) : "";
-			/**
-			* 日期 + 时刻 → 值串；日期空 ⇒ 值串为空（不产半截值）。
-			*
-			* ⚠️ 时刻为空时按**哪一端**给默认（用户 2026-10-02 揪出）：
-			* - 起始 = `00:00`（从这天开头算起，没毛病）；
-			* - **结束 = `23:59`** —— 若也默认 `00:00`，选「10-2 作结束」就只查到 10-2 的 00:00 那一刻，
-			*   10-2 当天数据**全漏**（用户原话：「我选 10 月 2 号，我的意思是要查 10 月 2 号的数据」）。
-			*/
-			const join = (which, date, time) => {
-				if (date === "") return "";
-				if (time !== "") return withTime ? `${date} ${time}` : date;
-				return withTime ? `${date} ${which === "to" ? "23:59" : "00:00"}` : date;
-			};
-			/** 一端 = 日期框（+ 分钟档的时分框）；「时间：」「到」由外层排（用户 2026-10-02 定式）。 */
-			const endFields = (which) => {
-				const raw = value[which];
-				const date = dateOf(raw);
-				const time = timeOf(raw);
-				const hint = which === "from" ? labels.from : labels.to;
-				return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)(DateField, {
-					value: date,
-					onChange: (next) => {
-						merge({ [which]: join(which, next, time) });
-					},
-					placeholder: hint,
-					ariaLabel: hint,
-					labels: calendarLabels,
-					size,
-					disabled: props.disabled,
-					width: DATE_FIELD_W
-				}), withTime ? (0, react$1.createElement)(TimeField, {
-					value: time,
-					onChange: (next) => {
-						merge({ [which]: join(which, date === "" ? todayIso$1() : date, next) });
-					},
-					placeholder: "HH:mm",
-					ariaLabel: hint,
-					labels: timeLabels,
-					size,
-					disabled: props.disabled,
-					width: TIME_FIELD_W
-				}) : null);
-			};
-			return (0, react$1.createElement)("div", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "6px",
-				flexWrap: "wrap"
-			} }, endFields("from"), (0, react$1.createElement)("span", {
-				style: labelStyle$1,
-				"aria-hidden": "true"
-			}, "～"), endFields("to"), (0, react$1.createElement)(SelectField, {
-				value: selection,
-				options,
-				onChange: (next) => {
-					if (next === "all") {
-						onChange({
-							from: "",
-							to: ""
-						});
-						return;
-					}
-					if (next === "custom") return;
-					onChange(presetRange(next, precision));
-				},
-				placeholder: labels.all,
-				emptyLabel: labels.all,
-				ariaLabel: labels.all,
-				size,
-				width: PRESET_W,
-				disabled: props.disabled
-			}));
-		}
-		//#endregion
-		//#region src/client/ui/loading-css.ts
-		/**
-		* Loading 指示器皮肤（UI 基础层 · P1）。
-		*
-		* 覆盖范围：
-		* - 浮动 Loading pill（`<Loading />`）
-		* - 运行中 / loading 三个脉动小方块（`.dsh-tdt-run-blocks`）
-		*
-		* 消费 token：`--dshpc-*`（颜色 / 尺寸 / 层级全部来自核心 token 层 `dsh-plugin-core/design`）。
-		*/
-		/** loading 样式域（由 `<Loading />` 渲染时登记）。 */
-		const LOADING_DOMAIN = "loading";
-		/** loading 相关全部 CSS。 */
-		const LOADING_CSS = `
-/* 运行中 / loading 的活动指示：三个小方块依次脉动。 */
-@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }
-.dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }
-.dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }
-.dsh-tdt-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }
-.dsh-tdt-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }
-@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }
-`;
-		/**
-		* 确保 loading 样式已登记并注入（幂等；组件渲染时调用一次即可）。
-		*/
-		function ensureLoadingStyle() {
-			applyStyle(LOADING_DOMAIN, LOADING_CSS);
-		}
-		//#endregion
-		//#region src/client/ui/Loading.tsx
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/Loading.js
 		/**
 		* 全局浮动 Loading 指示器（UI 基础层 · P1）。
+		*
+		* @deprecated 这是「自带定位 + 自带 pill 背景」的复合件，不属于通用加载图标。
+		*   只要图标请用 {@link Loader}（无背景、无定位，背景与位置归调用方）；
+		*   要居中 / 带文案的整卡请继续用 {@link LoadingToast} / {@link LoadingBlock}。
+		*   本组件保留不删（消费方可能还在用），但新代码不要再用。
 		*
 		* 用法：
 		*   <Loading />
 		*
 		* 行为：
 		* - fixed 定位在主内容容器右下角，**不占布局空间**；
-		* - 右侧贴齐主内容容器右边缘（`anchorId` 默认 `dsh-tdt-main`），底部留 16px；
+		* - 右侧贴齐主内容容器右边缘（`anchorId` 默认 `dshpc-main`），底部留 16px；
 		* - **三个小方块依次脉动，无任何文案**（基础抽象统一外观，禁止加字；用户 2026-10-06）；
 		* - 监听窗口 resize / scroll / 内容盒 resize，自动跟住内容宽度。
 		*
@@ -3360,9 +7402,9 @@ window.__ModuleLoader__.load({
 		}
 		/** 浮动 Loading pill：三个脉动方块（无文案；基础抽象统一外观）。 */
 		function Loading(props) {
-			ensureUiBase();
-			ensureLoadingStyle();
-			const right = useContentRight(props.anchorId ?? "dsh-tdt-main");
+			ensureComponentStyles("loading", LOADING_CSS);
+			ensureComponentStyles("loading", LOADING_CSS);
+			const right = useContentRight(props.anchorId ?? "dshpc-main");
 			return (0, react$1.createElement)("div", {
 				style: {
 					...pillStyle,
@@ -3370,351 +7412,48 @@ window.__ModuleLoader__.load({
 				},
 				role: "status",
 				"aria-live": "polite"
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null)));
+			}, (0, react$1.createElement)("span", { className: "dshpc-run-blocks" }, (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null)));
 		}
 		/** 运行中状态用的三个脉动方块（无文案），颜色跟随 `currentColor`。 */
 		function RunningBlocks() {
-			ensureLoadingStyle();
-			return (0, react$1.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null));
+			ensureComponentStyles("loading", LOADING_CSS);
+			return (0, react$1.createElement)("span", { className: "dshpc-run-blocks" }, (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null));
 		}
 		//#endregion
-		//#region src/client/ui/Textarea.tsx
-		/**
-		* 多行文本输入（P3 输入类家族唯一实现；皮肤见 controls-css.ts 的 `.dsh-tdt-textarea`）。
-		*
-		* 以前提示词框是 `task-editor.tsx` 里手写的 `<textarea>` + 业务 CSS `.dsh-tdt-ed-prompt`；
-		* 现上提为基础层件（U20 #6，2026-10-05），业务文件只 `import { Textarea }`。
-		*/
-		/** 多行文本输入。 */
-		function Textarea(props) {
-			ensureControlsStyle();
-			const { value, onChange, placeholder, error, disabled, id, rows, spellCheck, className, style } = props;
-			return (0, react$1.createElement)("textarea", {
-				id,
-				rows,
-				value,
-				placeholder,
-				disabled,
-				spellCheck: spellCheck === true,
-				"aria-label": props["aria-label"],
-				className: `dsh-tdt-textarea${error === true ? " dsh-tdt-textarea--error" : ""}${className !== void 0 && className !== "" ? " " + className : ""}`,
-				style,
-				onChange: (event) => {
-					onChange(event.target.value);
-				}
-			});
-		}
-		//#endregion
-		//#region src/client/ui/Checkbox.tsx
-		/**
-		* 勾选框（P3 输入类家族唯一实现；U20 #6，2026-10-05）。
-		*
-		* 以前确认弹窗里是裸 `<input type="checkbox">` + 业务内联样式，现上提为基础层件。
-		* 标记色默认随业务色；高危确认可传 `accentColor`（如 `var(--dshpc-warning)`）染橙。
-		*/
-		/** 勾选框（label + input 一体，整行可点）。 */
-		function Checkbox(props) {
-			const { checked, onChange, label, accentColor, disabled, className } = props;
-			return (0, react$1.createElement)("label", {
-				className: `dsh-tdt-checkbox${className !== void 0 && className !== "" ? " " + className : ""}`,
-				style: {
-					display: "flex",
-					alignItems: "flex-start",
-					gap: "8px",
-					fontSize: "var(--dshpc-font-md)",
-					lineHeight: "var(--dshpc-line-md)",
-					cursor: disabled === true ? "default" : "pointer"
-				}
-			}, (0, react$1.createElement)("input", {
-				type: "checkbox",
-				checked,
-				disabled,
-				style: {
-					flex: "none",
-					margin: "2px 0 0",
-					accentColor: accentColor ?? "var(--dshpc-business)",
-					width: "14px",
-					height: "14px",
-					cursor: disabled === true ? "default" : "pointer"
-				},
-				onChange: (event) => {
-					onChange(event.target.checked);
-				}
-			}), label !== void 0 ? (0, react$1.createElement)("span", null, label) : null);
-		}
-		//#endregion
-		//#region src/client/ui/back-to-top-css.ts
-		/**
-		* 「回到顶部」悬浮按钮皮肤（UI 基础层）。
-		*
-		* 覆盖范围：统一回顶部按钮 `<BackToTop />`。
-		* 行为约定：fixed 定位在主内容列**右缘外侧**、页面靠下；滚动超过阈值才显形（`.is-visible`）。
-		*
-		* 消费 token：`--dshpc-*`（颜色 / 尺寸 / 圆角 / 字号 / 层级 / 动效全部来自核心 token 层 `dsh-plugin-core/design`）。
-		*/
-		/** back-to-top 样式域（由 `<BackToTop />` 渲染时登记）。 */
-		const BACK_TO_TOP_DOMAIN = "back-to-top";
-		/** back-to-top 全部 CSS。 */
-		const BACK_TO_TOP_CSS = `
-/* 回到顶部悬浮钮：圆钮、实面、投影；默认隐身，滚过阈值加 .is-visible 才显形。
-   横向 left 由组件按主内容列右缘实时算出（贴在其右侧外侧），不写死。 */
-.dsh-tdt-backtotop{
-  position:fixed;
-  bottom:var(--dshpc-space-4);
-  z-index:var(--dshpc-z-dock);
-  width:44px;height:44px;
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:0;margin:0;
-  box-sizing:border-box;
-  border:1px solid var(--dshpc-border);
-  border-radius:50%;
-  background:var(--dshpc-solid);
-  color:var(--dshpc-on-solid);
-  box-shadow:var(--dshpc-shadow-2);
-  cursor:pointer;
-  opacity:0;
-  transform:translateY(8px) scale(.92);
-  transition:opacity var(--dshpc-dur) var(--dshpc-ease),
-             transform var(--dshpc-dur) var(--dshpc-ease),
-             background-color var(--dshpc-dur-fast) var(--dshpc-ease);
-  pointer-events:none;
-}
-.dsh-tdt-backtotop.is-visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
-.dsh-tdt-backtotop:hover{background:var(--dshpc-hover);}
-.dsh-tdt-backtotop:active{background:var(--dshpc-active);}
-.dsh-tdt-backtotop:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
-@media (prefers-reduced-motion: reduce){
-  .dsh-tdt-backtotop{transition:opacity var(--dshpc-dur-fast) linear;transform:none;}
-}
-`;
-		/**
-		* 确保 back-to-top 样式已登记并注入（幂等；组件渲染时调用一次即可）。
-		*/
-		function ensureBackToTopStyle() {
-			applyStyle(BACK_TO_TOP_DOMAIN, BACK_TO_TOP_CSS);
-		}
-		//#endregion
-		//#region src/client/ui/BackToTop.tsx
-		/**
-		* 统一的「回到顶部」悬浮按钮（UI 基础层）。
-		*
-		* 用法：
-		*   <BackToTop />
-		*
-		* 行为：
-		* - 渲染在主面板滚动容器（page 容器，overflow:auto）内；fixed 定位，**不占布局空间**；
-		* - 横向贴在主内容列（`PANEL_CONTENT_ID` = `dsh-tdt-main`，限宽 1120）**右缘外侧**、页面靠下，
-		*   与主内容同进退（窗口 resize / 分栏 dock 开合都会跟住）；
-		* - 滚动超过阈值（默认 320px）才显形，否则隐身（`.is-visible` 切换）；
-		* - 点击把滚动容器平滑滚回顶部（prefers-reduced-motion 下改用瞬时）。
-		*
-		* 因为主面板的三个 tab（任务配置 / 执行记录 / 任务日程 …）共用同一个滚动容器，
-		* 在 `index.ts` 的 page 容器里渲染**一次**即覆盖所有页面，无需每个页面各放一份。
-		*
-		* 横向锚定逻辑与 `<Loading />` 同源（后者贴右缘内侧），本件放在右缘**外侧**并留 16px 间隙。
-		*/
-		const DEFAULT_ANCHOR_ID = "dsh-tdt-main";
-		/** 滚动超过这个距离（px）才显形。 */
-		const SHOW_THRESHOLD_PX = 320;
-		/** 按钮左缘与主内容列右缘的间隙（px）。 */
-		const GAP_PX = 16;
-		/** 视口右缘至少留白（px），按钮越界时回退到贴近视口右缘。 */
-		const VIEWPORT_PADDING_PX = 8;
-		/** 向上找最近的「可纵向滚动」祖先（本件就挂在 page 滚动容器里，一路找到它）。 */
-		function findScrollContainer(node) {
-			let el = node?.parentElement ?? null;
-			while (el !== null) {
-				const oy = getComputedStyle(el).overflowY;
-				if (oy === "auto" || oy === "scroll") return el;
-				el = el.parentElement;
-			}
-			return null;
-		}
-		/** 统一的回到顶部悬浮按钮。 */
-		function BackToTop(props) {
-			ensureUiBase();
-			ensureBackToTopStyle();
-			const ref = (0, react$1.useRef)(null);
-			const [visible, setVisible] = (0, react$1.useState)(false);
-			const [left, setLeft] = (0, react$1.useState)("auto");
-			(0, react$1.useEffect)(() => {
-				const btn = ref.current;
-				if (btn === null) return;
-				const anchorId = props.anchorId ?? DEFAULT_ANCHOR_ID;
-				const sc = findScrollContainer(btn);
-				let observed = null;
-				const reposition = () => {
-					const el = document.getElementById(anchorId);
-					if (el === null) return;
-					if (observed !== el) {
-						if (observed !== null) ro.unobserve(observed);
-						ro.observe(el);
-						observed = el;
-					}
-					const rect = el.getBoundingClientRect();
-					const vw = document.documentElement.clientWidth;
-					const bw = btn.offsetWidth;
-					let x = rect.right + GAP_PX;
-					if (x + bw > vw - VIEWPORT_PADDING_PX) x = Math.max(VIEWPORT_PADDING_PX, vw - bw - VIEWPORT_PADDING_PX);
-					setLeft(`${x}px`);
-				};
-				const onScroll = () => {
-					const top = sc !== null ? sc.scrollTop : document.documentElement.scrollTop;
-					setVisible(top > SHOW_THRESHOLD_PX);
-				};
-				const ro = new ResizeObserver(reposition);
-				reposition();
-				onScroll();
-				window.addEventListener("resize", reposition);
-				if (sc !== null) sc.addEventListener("scroll", onScroll);
-				return () => {
-					window.removeEventListener("resize", reposition);
-					if (sc !== null) sc.removeEventListener("scroll", onScroll);
-					ro.disconnect();
-				};
-			}, [props.anchorId]);
-			const onClick = () => {
-				const sc = findScrollContainer(ref.current);
-				const behavior = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-				if (sc !== null) sc.scrollTo({
-					top: 0,
-					behavior
-				});
-				else window.scrollTo({
-					top: 0,
-					behavior
-				});
-			};
-			return (0, react$1.createElement)("button", {
-				ref,
-				type: "button",
-				className: `dsh-tdt-backtotop${visible ? " is-visible" : ""}`,
-				style: { left },
-				"aria-label": "回到顶部",
-				title: "回到顶部",
-				onClick
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 20 }));
-		}
-		//#endregion
-		//#region src/client/ui/SectionHead.tsx
-		/**
-		* 模块标题行（UI 基础层）：**icon + 标题 + 右侧控件** 三段式。
-		*
-		* 2026-10-08 设置页重构时定型：每块 = 标题行 + 一块内容，标题行左侧 icon、右侧留给该块的控件
-		* （日志块的自动刷新 / 刷新钮，表查询块的表切换）。此前三个块各写一个 `h3`，形态不统一。
-		*
-		* 排版规则：字号 / 行高 / 字色走 `--dshpc-*` token；`right` 用 `marginLeft:auto` 靠右；
-		* 标题 `flex:none` 不被压缩（与手册 §五「窄栏里的一行」同口径）。
-		*/
-		function SectionHead(props) {
-			return (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "var(--dshpc-space-2)",
-				marginBottom: "var(--dshpc-space-3)"
-			} }, (0, react$1.createElement)("span", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				flex: "none",
-				color: "var(--dshpc-fg-3)"
-			} }, props.icon), (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--dshpc-font-lg)",
-				lineHeight: "var(--dshpc-line-lg)",
-				fontWeight: 600,
-				color: "var(--dshpc-fg)",
-				flex: "none"
-			} }, props.title), props.right === void 0 ? null : (0, react$1.createElement)("div", { style: {
-				marginLeft: "auto",
-				display: "flex",
-				alignItems: "center",
-				gap: "var(--dshpc-space-2)",
-				minWidth: 0
-			} }, props.right));
-		}
-		//#endregion
-		//#region src/client/ui/resizer.ts
-		/** 开始一次拖拽调宽（监听 window 的 pointermove / pointerup，松手自动清理）。 */
-		function startResizeLayoutWidth(opts) {
-			opts.startEvent.preventDefault?.();
-			opts.startEvent.clientX;
-			const body = document.body;
-			const prevUserSelect = body.style.userSelect;
-			body.style.userSelect = "none";
-			window.getSelection()?.removeAllRanges();
-			const rootEl = document.getElementById("dsh-tdt-root");
-			if (opts.rootClass !== void 0) rootEl?.classList.add(opts.rootClass);
-			let frame = 0;
-			let pendingX = 0;
-			const emit = (clientX) => {
-				const w = opts.compute(clientX);
-				opts.onMove(w);
-				return w;
-			};
-			const onMove = (event) => {
-				if (opts.rafThrottle === true) {
-					pendingX = event.clientX;
-					if (frame !== 0) return;
-					frame = requestAnimationFrame(() => {
-						frame = 0;
-						emit(pendingX);
-					});
-				} else emit(event.clientX);
-			};
-			const onUp = (event) => {
-				window.removeEventListener("pointermove", onMove);
-				window.removeEventListener("pointerup", onUp);
-				if (frame !== 0) cancelAnimationFrame(frame);
-				body.style.userSelect = prevUserSelect;
-				if (opts.rootClass !== void 0) rootEl?.classList.remove(opts.rootClass);
-				opts.onCommit(opts.compute(event.clientX));
-			};
-			window.addEventListener("pointermove", onMove);
-			window.addEventListener("pointerup", onUp);
-		}
-		//#endregion
-		//#region src/client/ui/ticker.ts
-		const tickerListeners = /* @__PURE__ */ new Set();
-		let tickerTimer = null;
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/ticker.js
+		const tickerListeners$1 = /* @__PURE__ */ new Set();
+		let tickerTimer$1 = null;
 		/**
 		* `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
 		* 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
 		* 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
 		*/
-		const onVisibilityChange = () => {
-			for (const l of [...tickerListeners]) l();
+		const onVisibilityChange$1 = () => {
+			for (const l of [...tickerListeners$1]) l();
 		};
-		let visibilityBound = false;
+		let visibilityBound$1 = false;
 		/** 订阅全局秒级心跳；返回退订。**第一个订阅者才起 interval，最后一个退订即停**。 */
-		function subscribeTicker(cb) {
-			tickerListeners.add(cb);
-			if (tickerTimer === null) {
-				tickerTimer = window.setInterval(() => {
-					for (const l of [...tickerListeners]) l();
+		function subscribeTicker$1(cb) {
+			tickerListeners$1.add(cb);
+			if (tickerTimer$1 === null) {
+				tickerTimer$1 = window.setInterval(() => {
+					for (const l of [...tickerListeners$1]) l();
 				}, 1e3);
-				if (!visibilityBound && typeof document !== "undefined") {
-					document.addEventListener("visibilitychange", onVisibilityChange);
-					visibilityBound = true;
+				if (!visibilityBound$1 && typeof document !== "undefined") {
+					document.addEventListener("visibilitychange", onVisibilityChange$1);
+					visibilityBound$1 = true;
 				}
 			}
 			return () => {
-				tickerListeners.delete(cb);
-				if (tickerListeners.size === 0 && tickerTimer !== null) {
-					window.clearInterval(tickerTimer);
-					tickerTimer = null;
+				tickerListeners$1.delete(cb);
+				if (tickerListeners$1.size === 0 && tickerTimer$1 !== null) {
+					window.clearInterval(tickerTimer$1);
+					tickerTimer$1 = null;
 				}
 			};
 		}
-		/**
-		* 每秒拿到「现在」（需要**时间值本身**时用，如悬浮文案）；与 `LiveText` 共用同一条心跳。
-		* 不适合整列表用（每次 tick 会 setState 一次）——只在真正需要时间的小块里调。
-		*/
-		function useNowMs() {
-			const [nowMs, setNowMs] = (0, react$1.useState)(() => Date.now());
-			(0, react$1.useEffect)(() => subscribeTicker(() => setNowMs(Date.now())), []);
-			return nowMs;
-		}
 		//#endregion
-		//#region src/client/ui/LiveText.tsx
+		//#region node_modules/dsh-plugin-core/dist/ui/display/LiveText.js
 		/**
 		* 每秒自刷新的一小块：只有它自己重渲染（`render` 永远取最新闭包，ref 转发）。
 		* 2026-09-30（决策 54）：`render` 由「只能返回字符串」放宽为**可返回节点** —— 「到点未派发」
@@ -3724,27 +7463,447 @@ window.__ModuleLoader__.load({
 			const [, force] = (0, react$1.useState)(0);
 			const renderRef = (0, react$1.useRef)(props.render);
 			renderRef.current = props.render;
-			(0, react$1.useEffect)(() => subscribeTicker(() => force((v) => v + 1)), []);
+			(0, react$1.useEffect)(() => subscribeTicker$1(() => force((v) => v + 1)), []);
 			return (0, react$1.createElement)("span", { style: props.style }, renderRef.current(Date.now()));
 		}
+		/**
+		* 算出工具栏左缘的 x 坐标。
+		*
+		* - 没有锚点（或锚点取不到）：贴视口右缘，留 `offset`。
+		* - 有锚点：贴锚点右缘外侧，留 `offset`；但右侧还必须再留 `offset`，
+		*   放不下（`锚点右缘 + offset + size + offset > 视口宽`）就退回贴视口右缘。
+		*/
+		function resolveToolbarLeft(geometry, anchorRight) {
+			const { viewportWidth, offset, size } = geometry;
+			const pinned = Math.max(0, viewportWidth - offset - size);
+			if (anchorRight === null || !Number.isFinite(anchorRight)) return pinned;
+			const anchored = anchorRight + offset;
+			return anchored + size + offset <= viewportWidth ? anchored : pinned;
+		}
+		/**
+		* 排序：先按 `order`，相同 order 时内置回顶部在前、自定义项按数组顺序。
+		* 不修改入参。
+		*/
+		function sortToolbarEntries(entries) {
+			return [...entries].sort((a, b) => {
+				if (a.order !== b.order) return a.order - b.order;
+				if (a.kind !== b.kind) return a.kind === "backtop" ? -1 : 1;
+				return a.index - b.index;
+			});
+		}
+		/** 某一项此刻是否该出现（显隐判定）。 */
+		function isToolbarEntryVisible(entry, scrollTop) {
+			if (entry.visible === false) return false;
+			if ((entry.when ?? "always") === "scroll") return scrollTop > (entry.threshold ?? 320);
+			return true;
+		}
 		//#endregion
-		//#region src/client/ui/running.ts
-		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
-		const RUNNING_TONE = "var(--dshpc-business)";
-		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
-		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
-		const RUNNING_CSS = `
-@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
-.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--dshpc-dur-run) var(--dshpc-ease) infinite; }
-@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
+		//#region node_modules/dsh-plugin-core/dist/ui/layout/QuickToolbar.js
+		/**
+		* 快捷工具栏（UI 基础层）：**右侧悬浮的一列圆钮**，内置「回到顶部」，并可挂自定义按钮。
+		*
+		* 用法：
+		*   <QuickToolbar
+		*     anchorId="dshpc-main"
+		*     onAction={(id) => …}
+		*     items={[{ id: 'search', icon: <SearchIcon />, label: '搜索' }]}
+		*   />
+		*
+		* 行为（2026-10-31 用户拍板）：
+		* - **纵向恒定**贴屏幕底边，距离 `offset`（默认 16px）；按钮从下往上排。
+		* - **横向默认**贴屏幕右缘、留 `offset`；给了 `anchorId` / `anchor()` 就贴到那个控件的
+		*   **右缘外侧**，同样留 `offset`。右侧放不下（再留一个 `offset` 后越界）就退回贴屏幕右缘。
+		*   控件找不到按「跟随窗口」处理，不报错。
+		* - 内置「回到顶部」默认 `when: 'scroll'`、阈值 320：滚过才出现；可传 `backToTop: false` 关掉，
+		*   或用 `{ order, label, threshold }` 调整。
+		* - 自定义项：`icon` / `label` / `onClick`；`visible` / `when` / `order` / `threshold` / `color` /
+		*   `fgColor` 都可配。点击后先调 `onClick`，再统一回调 `onAction(id, item)`。
+		* - 滚动容器默认取工具栏最近的「可纵向滚动」祖先，也可以显式给 `scrollContainer`。
+		* - 显隐切换带 0.2s 动画：挂载淡入，消失先淡出、播完才卸载（`reduced-motion` 下关闭）。
+		*
+		* 样式只注入自己那一份（`controls/quick-toolbar.css`），横向位置 / 尺寸 / 间距由本组件在
+		* style 上实时写入，不写死 CSS。
+		*/
+		/** 默认贴边距离（px）。 */
+		const DEFAULT_OFFSET = 16;
+		/** 默认按钮直径（px）。 */
+		const DEFAULT_SIZE = 44;
+		/** 默认按钮间距（px）。 */
+		const DEFAULT_GAP = 12;
+		/** 退场动画的卸载延迟（ms，与 CSS 的 0.2s 对齐并留余量）。 */
+		const LEAVE_MS = 220;
+		/** 向上找最近的「可纵向滚动」祖先。 */
+		function findScrollParent(node) {
+			let el = node?.parentElement ?? null;
+			while (el !== null) {
+				const oy = getComputedStyle(el).overflowY;
+				if (oy === "auto" || oy === "scroll") return el;
+				el = el.parentElement;
+			}
+			return null;
+		}
+		/** 显式 scrollContainer 优先，其次最近的可滚动祖先，最后退回窗口。 */
+		function resolveScrollTarget(explicit, node) {
+			let target = null;
+			if (typeof explicit === "function") target = explicit();
+			else if (explicit !== void 0) target = explicit;
+			if (target === null) target = findScrollParent(node);
+			return target ?? window;
+		}
+		/** 读当前滚动距离。 */
+		function scrollTopOf(target) {
+			if (typeof HTMLElement !== "undefined" && target instanceof HTMLElement) return target.scrollTop;
+			if (typeof window === "undefined") return 0;
+			return window.scrollY || document.documentElement.scrollTop || 0;
+		}
+		/** 平滑回到顶部（reduced-motion 下瞬时）。 */
+		function scrollToTop(target) {
+			const behavior = typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+			if (typeof HTMLElement !== "undefined" && target instanceof HTMLElement) target.scrollTo({
+				top: 0,
+				behavior
+			});
+			else if (typeof window !== "undefined") window.scrollTo({
+				top: 0,
+				behavior
+			});
+		}
+		/** 右侧浮动的快捷工具栏：内置回顶部 + 自定义按钮。 */
+		function QuickToolbar(props) {
+			ensureComponentStyles("quick-toolbar", QUICK_TOOLBAR_CSS);
+			const ref = (0, react$1.useRef)(null);
+			const [left, setLeft] = (0, react$1.useState)(null);
+			const [scrollTop, setScrollTop] = (0, react$1.useState)(0);
+			const [leaving, setLeaving] = (0, react$1.useState)([]);
+			const shownRef = (0, react$1.useRef)([]);
+			const leaveTimers = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			const offset = props.offset ?? DEFAULT_OFFSET;
+			const size = props.size ?? DEFAULT_SIZE;
+			const gap = props.gap ?? DEFAULT_GAP;
+			(0, react$1.useEffect)(() => {
+				if (ref.current === null) return;
+				const resolveAnchor = () => {
+					if (props.anchor !== void 0) return props.anchor();
+					const id = props.anchorId;
+					return id === void 0 ? null : document.getElementById(id);
+				};
+				let observed = null;
+				let lastRight = null;
+				let lastViewport = -1;
+				const ro = new ResizeObserver(update);
+				function update() {
+					const anchorEl = resolveAnchor();
+					if (anchorEl !== observed) {
+						if (observed !== null) ro.unobserve(observed);
+						if (anchorEl !== null) ro.observe(anchorEl);
+						observed = anchorEl;
+					}
+					const viewportWidth = document.documentElement.clientWidth;
+					const rect = anchorEl === null ? null : anchorEl.getBoundingClientRect();
+					const anchorRight = rect === null || rect.width === 0 && rect.height === 0 ? null : rect.right;
+					if (viewportWidth === lastViewport && anchorRight === lastRight) return;
+					lastViewport = viewportWidth;
+					lastRight = anchorRight;
+					setLeft(resolveToolbarLeft({
+						viewportWidth,
+						offset,
+						size
+					}, anchorRight));
+				}
+				update();
+				const poll = setInterval(update, 100);
+				window.addEventListener("resize", update);
+				return () => {
+					clearInterval(poll);
+					window.removeEventListener("resize", update);
+					ro.disconnect();
+				};
+			}, [
+				props.anchor,
+				props.anchorId,
+				offset,
+				size
+			]);
+			(0, react$1.useEffect)(() => {
+				const node = ref.current;
+				if (node === null) return;
+				const target = resolveScrollTarget(props.scrollContainer, node);
+				const onScroll = () => setScrollTop(scrollTopOf(target));
+				onScroll();
+				target.addEventListener("scroll", onScroll, { passive: true });
+				return () => target.removeEventListener("scroll", onScroll);
+			}, [props.scrollContainer]);
+			const backTop = props.backToTop === false ? null : typeof props.backToTop === "object" ? props.backToTop : {};
+			const entries = [];
+			if (backTop !== null) entries.push({
+				id: "__backtop",
+				kind: "backtop",
+				order: backTop.order ?? 0,
+				index: 0
+			});
+			for (const [index, item] of (props.items ?? []).entries()) entries.push({
+				id: item.id,
+				kind: "custom",
+				order: item.order ?? index + 1,
+				index,
+				item
+			});
+			const threshold = backTop?.threshold ?? 320;
+			const sorted = sortToolbarEntries(entries);
+			const visible = sorted.filter((entry) => {
+				if (entry.kind === "backtop") return isToolbarEntryVisible({
+					when: "scroll",
+					threshold
+				}, scrollTop);
+				return isToolbarEntryVisible(entry.item ?? {}, scrollTop);
+			});
+			const visibleKey = JSON.stringify(visible.map((entry) => entry.id));
+			(0, react$1.useEffect)(() => {
+				const next = JSON.parse(visibleKey);
+				const revived = next.filter((id) => leaveTimers.current.has(id));
+				for (const id of revived) {
+					const timer = leaveTimers.current.get(id);
+					if (timer !== void 0) clearTimeout(timer);
+					leaveTimers.current.delete(id);
+				}
+				if (revived.length > 0) setLeaving((prev) => prev.filter((id) => !revived.includes(id)));
+				const gone = shownRef.current.filter((id) => !next.includes(id));
+				if (gone.length > 0) {
+					setLeaving((prev) => [...prev, ...gone.filter((id) => !prev.includes(id))]);
+					for (const id of gone) {
+						const timer = leaveTimers.current.get(id);
+						if (timer !== void 0) clearTimeout(timer);
+						leaveTimers.current.set(id, setTimeout(() => {
+							leaveTimers.current.delete(id);
+							setLeaving((prev) => prev.filter((value) => value !== id));
+						}, LEAVE_MS));
+					}
+				}
+				shownRef.current = next;
+			}, [visibleKey]);
+			(0, react$1.useEffect)(() => () => {
+				for (const timer of leaveTimers.current.values()) clearTimeout(timer);
+				leaveTimers.current.clear();
+			}, []);
+			const style = {
+				bottom: `${offset}px`,
+				gap: `${gap}px`,
+				...left === null ? { right: `${offset}px` } : { left: `${left}px` }
+			};
+			const shownSet = new Set(visible.map((entry) => entry.id));
+			const leavingSet = new Set(leaving);
+			const rendered = sorted.filter((entry) => shownSet.has(entry.id) || leavingSet.has(entry.id));
+			const renderItem = (entry, isLeaving) => {
+				const leaveClass = isLeaving ? " is-leaving" : "";
+				if (entry.kind === "backtop") {
+					const label = backTop?.label ?? t$1("backToTop");
+					return (0, react$1.createElement)("button", {
+						key: entry.id,
+						type: "button",
+						className: `dshpc-quick-toolbar__item dshpc-quick-toolbar__backtop${leaveClass}`,
+						style: {
+							width: size,
+							height: size
+						},
+						"aria-label": label,
+						title: label,
+						onClick: () => scrollToTop(resolveScrollTarget(props.scrollContainer, ref.current))
+					}, (0, react$1.createElement)(Chevron, {
+						dir: "up",
+						size: 18
+					}));
+				}
+				const item = entry.item;
+				if (item === void 0) return null;
+				const buttonStyle = {
+					width: size,
+					height: size
+				};
+				if (item.color !== void 0) buttonStyle["--dshpc-quick-toolbar-bg"] = item.color;
+				if (item.fgColor !== void 0) buttonStyle["--dshpc-quick-toolbar-fg"] = item.fgColor;
+				const onClick = () => {
+					item.onClick?.();
+					props.onAction?.(item.id, item);
+				};
+				return (0, react$1.createElement)("button", {
+					key: entry.id,
+					type: "button",
+					className: `dshpc-quick-toolbar__item${leaveClass}`,
+					style: buttonStyle,
+					"aria-label": item.label,
+					title: item.label,
+					onClick
+				}, item.icon);
+			};
+			return (0, react$1.createElement)("div", {
+				ref,
+				className: `dshpc-quick-toolbar${props.className === void 0 ? "" : ` ${props.className}`}`,
+				style,
+				role: "toolbar",
+				"aria-label": props.ariaLabel ?? t$1("quickToolbarAria")
+			}, ...rendered.map((entry) => renderItem(entry, leavingSet.has(entry.id))));
+		}
+		//#endregion
+		//#region src/client/ui/style.ts
+		/**
+		* 样式注入器（薄壳）：实现全部交给 `dsh-plugin-core` 的 style kit。
+		*
+		* 保留本文件只为两件事：
+		*  ① 固定本插件的 `<style>` id（多插件同页互不覆盖）；
+		*  ② 给历史调用点（`ensureXxxStyle()` / `applyStyle`）一个过渡入口。
+		* 注入机制、域排序、token 表都不再在本仓实现 —— 真源是
+		* `dsh-plugin-core/design`（`createStyleKit` + `tokens.css`）。
+		*
+		* 规矩：全站仍然只有**一处**注入器（kit 的标签），业务文件不许自己
+		* `document.createElement('style')`，也不许再定义 `--dshpc-*`。
+		*/
+		/** 本插件的样式标签 id（改名 = 大范围回归，不要动）。 */
+		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
+		/** token 域固定名（kit 内 `tokens` 恒排最前）。 */
+		const TOKENS_DOMAIN = "tokens";
+		setStyleKit(createStyleKit({ id: UI_STYLE_ID }));
+		const active = getStyleKit();
+		/** 登记一个域的样式（同名重复登记 = 覆盖）。 */
+		function registerStyle(domain, css) {
+			active.registerStyle(domain, css);
+		}
+		/** 确保标签已挂载且内容最新（幂等）。 */
+		function ensureUiStyles() {
+			active.ensureStyles();
+		}
+		/** 登记 + 立刻确保挂载。 */
+		function applyStyle(domain, css) {
+			active.applyStyle(domain, css);
+		}
+		/** 登记核心 token 层并确保样式已注入（幂等）。 */
+		function ensureUiBase() {
+			registerStyle(TOKENS_DOMAIN, active.tokensCss);
+			ensureUiStyles();
+		}
+		//#endregion
+		//#region src/client/ui/controls-css.ts
+		/**
+		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
+		*
+		* 规矩（docs/design/ui-style-guide.md §三）：
+		*  - **只消费 `var(--dshpc-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
+		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达。
+		*
+		* 2026-11-06：分段 / 按钮 / 输入 / 数字步进 / 多行文本 / 跑马灯已全部改接核心 `dsh-plugin-core/ui`，
+		* 对应本地皮肤（`.dsh-tdt-seg*` / `.dsh-tdt-btn*` / `.dsh-tdt-iconbtn*` / `.dsh-tdt-input*`
+		* / `.dsh-tdt-pfx*` / `.dsh-tdt-num*` / `.dsh-tdt-textarea*` / `.dsh-tdt-mq*`）整段删除。
+		* 本文件只剩**核心没有**的三类业务件：产出物 chip / 行式文件按钮、时分的弹层与列、下拉锚点与省略号，
+		* 外加「过程文件」块。
+		*/
+		/** 产出物图标 chip / 行式文件按钮的皮肤规则。 */
+		const BUTTON_CSS = `
+/* ── 产出物「图标 chip」：28×28 方角小底板 + 官方文件类型图标 ──────────────
+   用途：产出物列表里**只给图标**的小按钮（卡片「执行记录」面板、执行记录总查询页、展开区都挂它）。
+   ⚠️ 底板**必须走 class**——inline background 会盖掉 :hover（用户 2026-10-03 踩过）。
+   hover 用「--dshpc-chip-bg-hover」：浅色更深、暗色更亮（两端都是「更明显」）；不许拿
+   「--dshpc-plate-hover」顶——暗色下反而更淡，鼠标移上去底板就消失了。 */
+.dsh-tdt-chip{appearance:none;-webkit-appearance:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);padding:0;border:none;border-radius:var(--dshpc-radius-sm);
+  background:transparent;color:var(--dshpc-fg-2);font-family:inherit;line-height:0;cursor:pointer;
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
+.dsh-tdt-chip:hover:not(:disabled){background:var(--dshpc-chip-bg-hover);}
+.dsh-tdt-chip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
+.dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
+.dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+
+/* ── 行式文件按钮（图标 + 文件名）：**全站唯一实现** ───────────────────────
+   用途：「产出物 / 附件」那种**一行一个文件**的清单项（基础信息右栏产出物清单、附件区、
+   执行记录页的展开区）。平时透明、**鼠标移上去才出浅底**。
+   两个形态修饰类：
+     --block   撑满父宽（清单里一项一行）
+     --inline  内容宽（跟在文字后头，如附件行） */
+.dsh-tdt-filechip{appearance:none;-webkit-appearance:none;border:0;box-sizing:border-box;display:flex;align-items:center;gap:6px;
+  min-width:0;padding:2px 0;background:transparent;color:var(--dshpc-fg);font-family:inherit;font-size:var(--dshpc-font-md);
+  line-height:var(--dshpc-line-md);text-align:left;cursor:pointer;border-radius:var(--dshpc-radius-sm);
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
+.dsh-tdt-filechip:hover:not(:disabled){background:var(--dshpc-chip-bg);}
+.dsh-tdt-filechip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
+.dsh-tdt-filechip:disabled{cursor:default;color:var(--dshpc-fg-3);}
+.dsh-tdt-filechip--block{width:100%;}
+.dsh-tdt-filechip--inline{display:inline-flex;padding:2px 6px;font-size:var(--dshpc-font-sm);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-chip,.dsh-tdt-filechip{transition:none;}}
 `;
-		let ensured = false;
-		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
-		const ensureRunningStyle = () => {
-			if (ensured) return;
-			ensured = true;
-			applyStyle("domain:running", RUNNING_CSS);
-		};
+		/** 开关 / 拖拽分隔条的皮肤规则（核心没有的宿主件）。 */
+		const FIELD_CSS = `
+/* 官方 Switch 包装统一：选中 = success 绿。 */
+.dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
+
+/* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
+   具体 z-index 由 .dsh-tdt-ed-resizer / .dsh-tdt-sv-resizer 各自补。 */
+.dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
+.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover,rgba(38,49,72,.06));}
+`;
+		/** 时分的弹层与列（本仓唯一实现：核心暂无「纯时分」档）。 */
+		const DATETIME_CSS = `
+/* ── 纯时分（核心缺口，本仓唯一实现）────────────────────────────────────── */
+.dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
+.dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--dshpc-control-h-lg);
+  min-width:0;max-width:100%;padding:0 8px;border:0.5px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);
+  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font:inherit;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);
+  cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-dtf--sm{height:var(--dshpc-control-h-sm);padding:0 6px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
+.dsh-tdt-dtf--md{height:var(--dshpc-control-h-md);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-dtf--lg{height:var(--dshpc-control-h-lg);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+.dsh-tdt-dtf:hover:not(:disabled){background:var(--dshpc-hover);}
+.dsh-tdt-dtf:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
+.dsh-tdt-dtf:disabled{cursor:not-allowed;opacity:.6;}
+.dsh-tdt-dtf__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.dsh-tdt-dtf__label--ph{color:var(--dshpc-fg-dim);}
+.dsh-tdt-dtf__icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:none;color:var(--dshpc-fg-3);}
+
+.dsh-tdt-layer{position:fixed;z-index:var(--dshpc-z-menu);box-sizing:border-box;padding:8px;background:var(--dshpc-surface-1);
+  box-shadow:var(--dshpc-shadow-2);border-radius:var(--dshpc-radius-md);color:var(--dshpc-fg);font-size:var(--dshpc-font-md);}
+
+.dsh-tdt-time__cols{display:flex;gap:4px;}
+.dsh-tdt-time__list{width:56px;max-height:196px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+.dsh-tdt-time__opt{padding:5px 0;border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);
+  font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);}
+.dsh-tdt-time__opt[aria-selected='true']{background:var(--dshpc-hover);color:var(--dshpc-fg);font-weight:600;}
+.dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--dshpc-border);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-time__opt{transition:none;}}
+`;
+		/** 下拉锚点 / 省略号的皮肤规则（核心 `Picker` 暂缺 error/title，本仓 `SelectField` 保留）。 */
+		const SELECT_CSS = `
+/* 下拉 / 日历 / 时分锚点：键盘可达性描边 + 校验描红（类名从业务层沿用，皮肤归位基础层） */
+.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dshpc-business);outline-offset:1px;}
+.dsh-tdt-ed-field--error{border-color:var(--dshpc-danger)!important;box-shadow:0 0 0 1px var(--dshpc-danger);}
+/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满 */
+.dsh-tdt-ed-selectwrap{width:100%;}
+
+/* 省略号三件套（ui-style-guide §三「待抽象 #1」的收敛点）：**新代码一律挂这个类**，不再各写一遍。 */
+.dsh-tdt-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+`;
+		/** 「过程文件」块的皮肤规则（2026-10-10：回执过程文件桶的次级展示件）。 */
+		const PROCESS_FILES_CSS = `
+/* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
+   （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
+   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用 .dsh-tdt-filechip--inline。 */
+.dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
+.dsh-tdt-proc-head{appearance:none;-webkit-appearance:none;align-self:flex-start;display:inline-flex;align-items:center;
+  gap:6px;padding:2px 6px;border:0;border-radius:var(--dshpc-radius-xs);background:transparent;color:var(--dshpc-fg-3);
+  font:inherit;font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);cursor:pointer;
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
+.dsh-tdt-proc-head:hover{background:var(--dshpc-chip-bg);color:var(--dshpc-fg-2);}
+.dsh-tdt-proc-head:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
+.dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-proc-head{transition:none;}}
+`;
+		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
+		const CONTROLS_DOMAIN = "controls";
+		/**
+		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
+		*/
+		function ensureControlsStyle() {
+			applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS + PROCESS_FILES_CSS);
+		}
 		//#endregion
 		//#region node_modules/@babel/runtime/helpers/extends.js
 		var require_extends = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -22420,7 +26579,7 @@ window.__ModuleLoader__.load({
 		const noTokens = /*@__PURE__*/ Object.create(null);
 		const typeArray = [NodeType.none];
 		const nodeSet = /*@__PURE__*/ new NodeSet(typeArray);
-		const warned = [];
+		const warned$1 = [];
 		const byTag = /*@__PURE__*/ Object.create(null);
 		const defaultTable = /*@__PURE__*/ Object.create(null);
 		for (let [legacyName, name] of [
@@ -22448,8 +26607,8 @@ window.__ModuleLoader__.load({
 		};
 		const defaultTokenTable = /*@__PURE__*/ new TokenTable(noTokens);
 		function warnForPart(part, msg) {
-			if (warned.indexOf(part) > -1) return;
-			warned.push(part);
+			if (warned$1.indexOf(part) > -1) return;
+			warned$1.push(part);
 			console.warn(msg);
 		}
 		function createTokenType(extra, tagStr) {
@@ -28284,6 +32443,51 @@ window.__ModuleLoader__.load({
 			}, other));
 		});
 		ReactCodeMirror.displayName = "CodeMirror";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/official.js
+		/**
+		* L1 adapter —— 全仓**唯一** import 官方 primitives 平台模块的文件。
+		*
+		* 事实（对齐兄弟项目 dsh-task-dispatch-table）：
+		*  - `@deepseek-ai/dsh-client-ui-primitives` 是 dsh 宿主内核提供的**平台模块**
+		*    （见兄弟仓 tsdown.client.config.ts 的 PLATFORM_MODULES），运行时由宿主模块表 require() 解析，
+		*    既不在本包 dependencies、也**不写进** dsh.client.inject。
+		*  - 故本文件在库 `tsc` 下靠 `src/types/primitives.d.ts`（版本钉死的 ambient 声明）编译；
+		*    在宿主里由 `__ModuleLoader__` 解析；下游打包（esbuild / tsdown / vite）必须把 `@deepseek-ai/*` 标 **external**。
+		*
+		* 收敛目的（本次重构硬要求：能抽象的一律往上抽）：
+		*  全仓官方面只此一个 import 点 —— grep 即审计、stub / 替换只改一处、类型版本注释只一份、漂移告警统一。
+		*  **任何控件都不许在别处 import 平台模块**，只从本文件消费。
+		*
+		* ⚠️ 非宿主消费面（Node 单测、根预览站）需另配 stub：本文件静态 import 平台模块，
+		*    在 Node 里直接 import 会 `ERR_MODULE_NOT_FOUND` —— 这正是旧坑（SelectField 曾因依赖官方 Menu 被删）。
+		*    该 stub loader 属 P0 待办，见 docs/requirements.md。
+		*/
+		var official_exports = /* @__PURE__ */ __exportAll({
+			Official: () => _deepseek_ai_dsh_client_ui_primitives,
+			pickOfficial: () => pickOfficial
+		});
+		__reExport(official_exports, require("@deepseek-ai/dsh-client-ui-primitives"));
+		const warned = /* @__PURE__ */ new Set();
+		const officialRegistry = _deepseek_ai_dsh_client_ui_primitives;
+		/**
+		* 运行时取一个官方导出；缺失（宿主升级改名 / 老宿主没有）时**一次性**告警并回落到 `fallback`，
+		* 不静默白屏。仅用于「官方可能漂移」的边角件；稳定常用件直接用具名导出即可。
+		*
+		* @param name - 官方导出名。
+		* @param fallback - 缺失时的兜底（通常是保留的自绘实现）。
+		*/
+		function pickOfficial(name, fallback) {
+			const value = officialRegistry[name];
+			if (value === void 0) {
+				if (!warned.has(name)) {
+					warned.add(name);
+					console.warn(`[dsh-plugin-core:official] 官方 primitive "${String(name)}" 缺失，回落到本地兜底`);
+				}
+				return fallback;
+			}
+			return value;
+		}
 		//#endregion
 		//#region node_modules/@lezer/lr/dist/index.js
 		/**
@@ -46048,7 +50252,7 @@ window.__ModuleLoader__.load({
 				return "keyword";
 			}
 		}
-		function call(stream, state) {
+		function call$1(stream, state) {
 			if (stream.match(/^\+([-\w]+)/)) {
 				if (!stream.match(/^\( *[-\w]+ *=/, false)) {
 					state.javaScriptArguments = true;
@@ -46226,7 +50430,7 @@ window.__ModuleLoader__.load({
 			return state.copy();
 		}
 		function nextToken(stream, state) {
-			var tok = restOfLine(stream, state) || interpolationContinued(stream, state) || includeFilteredContinued(stream, state) || eachContinued(stream, state) || attrsContinued(stream, state) || javaScript(stream, state) || javaScriptArguments(stream, state) || callArguments(stream, state) || yieldStatement(stream) || doctype(stream) || interpolation(stream, state) || caseStatement(stream, state) || when(stream, state) || defaultStatement(stream) || extendsStatement(stream, state) || append(stream, state) || prepend(stream, state) || block(stream, state) || include(stream, state) || includeFiltered(stream, state) || mixin(stream, state) || call(stream, state) || conditional(stream, state) || each(stream, state) || whileStatement(stream, state) || tag(stream, state) || filter(stream, state) || code(stream, state) || id(stream) || className(stream) || attrs(stream, state) || attributesBlock(stream, state) || indent$1(stream) || text(stream, state) || comment(stream, state) || colon(stream) || dot(stream, state) || fail(stream);
+			var tok = restOfLine(stream, state) || interpolationContinued(stream, state) || includeFilteredContinued(stream, state) || eachContinued(stream, state) || attrsContinued(stream, state) || javaScript(stream, state) || javaScriptArguments(stream, state) || callArguments(stream, state) || yieldStatement(stream) || doctype(stream) || interpolation(stream, state) || caseStatement(stream, state) || when(stream, state) || defaultStatement(stream) || extendsStatement(stream, state) || append(stream, state) || prepend(stream, state) || block(stream, state) || include(stream, state) || includeFiltered(stream, state) || mixin(stream, state) || call$1(stream, state) || conditional(stream, state) || each(stream, state) || whileStatement(stream, state) || tag(stream, state) || filter(stream, state) || code(stream, state) || id(stream) || className(stream) || attrs(stream, state) || attributesBlock(stream, state) || indent$1(stream) || text(stream, state) || comment(stream, state) || colon(stream) || dot(stream, state) || fail(stream);
 			return tok === true ? null : tok;
 		}
 		const pug = {
@@ -49088,14 +53292,16 @@ window.__ModuleLoader__.load({
 		const stex = mkStex(false);
 		mkStex(true);
 		//#endregion
-		//#region src/client/ui/lang.ts
+		//#region node_modules/dsh-plugin-core/dist/ui/display/code-viewer-lang.js
 		/**
-		* 源码态语法高亮：扩展名 → CodeMirror 语言映射（移植自 DSH-better-sidebar，
-		* 仅保留本仓已引入的语言包：javascript/json/markdown/python/html/css/yaml +
-		* legacy-modes 长尾，避免引入新品类依赖）。纯函数、可单测。
+		* 源码态语法高亮：扩展名 → CodeMirror 语言映射。
+		*
+		* 移植自兄弟项目 dsh-task-dispatch-table（src/client/ui/lang.ts），仅保留本仓已引入的语言包：
+		* javascript/json/markdown/python/html/css/yaml + legacy-modes 长尾，避免引入新品类依赖。
+		* 纯函数、可单测。
 		*/
 		/** 取路径的扩展名（小写，无点）。 */
-		function extOf$1(path) {
+		function extOf$2(path) {
 			const base = path.slice(path.lastIndexOf("/") + 1);
 			const dot = base.lastIndexOf(".");
 			return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
@@ -49229,28 +53435,30 @@ window.__ModuleLoader__.load({
 		};
 		/** 路径对应的 CodeMirror 语法扩展；未知扩展回落 null（纯文本）。 */
 		function languageForPath(path) {
-			const key = languageKeyForExt(extOf$1(path));
+			const key = languageKeyForExt(extOf$2(path));
 			if (key === null) return null;
 			try {
 				return FACTORIES[key]();
 			} catch (error) {
-				console.warn(`[dsh-task-dispatch] language factory "${key}" failed:`, error);
+				console.warn(`[dsh-plugin-core:code-viewer] language factory "${key}" failed:`, error);
 				return null;
 			}
 		}
 		//#endregion
-		//#region src/client/ui/cm-themes.ts
+		//#region node_modules/dsh-plugin-core/dist/ui/display/code-viewer-theme.js
 		/**
-		* CodeMirror 6 主题（移植自 DSH-better-sidebar 的 cm-themes.ts，token 名换成
-		* 本仓的 --dshpc-*）。提供：
+		* CodeMirror 6 主题（DSH 共享底座版）。
+		*
+		* 移植自兄弟项目 dsh-task-dispatch-table（src/client/ui/cm-themes.ts），token 名换成
+		* 本仓的 --dshpc-*；语法配色沿用 one-dark / one-light 调色板（已真机验证的观感）。
+		* 提供：
 		*  - cmSurfaceTheme：透明底 + 13px + 等宽字体 + 行号槽用 --dshpc-fg-3，随宿主滚动；
 		*  - codeMirrorTheme(dark)：表面主题 + 选区/激活行微调 + one-dark/one-light 语法色。
-		* 主矛盾是“不卡”，配色/字号顺带对齐到用户认可的 one-dark 13px 观感。
 		*
-		* ⚠️ 选区配色的硬约束（真机 2026-10-05 修）：CodeMirror 把选区画成**文字底下的一层背景**，
-		*    **不会**给选中文字重新上色 ⇒ 选区色必须自己保证与语法色有对比度。旧实现给暗色用
-		*    rgba(255,255,255,.22) 半透明白 ⇒ 选区发白、one-dark 的浅/白字压上去直接隐身。
-		*    现按官方 @codemirror/theme-one-dark 取**不透明实色**（暗 #3E4451 / 浅 #c8d3f0）。
+		* ⚠️ 选区配色的硬约束：CodeMirror 把选区画成**文字底下的一层背景**，**不会**给选中文字重新上色
+		*  ⇒ 选区色必须自己保证与语法色有对比度。旧实现给暗色用 rgba(255,255,255,.22) 半透明白 ⇒ 选区发白、
+		*  one-dark 的浅/白字压上去直接隐身。现按官方 @codemirror/theme-one-dark 取**不透明实色**
+		*  （暗 #3E4451 / 浅 #c8d3f0）。
 		*/
 		const ONE_DARK = {
 			black: "#282c34",
@@ -49641,46 +53849,50 @@ window.__ModuleLoader__.load({
 			];
 		}
 		//#endregion
-		//#region src/client/ui/CodeViewer.tsx
+		//#region node_modules/dsh-plugin-core/dist/ui/display/code-viewer-css.generated.js
+		const CODE_VIEWER_CSS = "/* CodeViewer（只读 CodeMirror 查看器）样式。类名固定 dshpc-cv*；颜色吃 --dshpc-* token，\n   深色由 design 的 token 深色段自动生效（不写死颜色值）。 */\n/* flex:1 1 auto + min-width:0：调用方常把它放进 display:flex 的容器里（TextPreview），\n   不写会在主轴按内容宽排 —— 短文本时 __copy（absolute 相对本层）落在文字右端而不是面板右缘。 */\n.dshpc-cv{position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-width:0;height:100%;min-height:0;}\n/* 复制钮复用核心 IconButton（variant=outline / size=md）：盒型、描边、圆角（已统一 md）、底色、hover 全由核心提供；\n   这里只管「绝对定位 + 默认隐藏、hover/聚焦才显」（overlay 浮在编辑器右上角）。 */\n.dshpc-cv__copy{position:absolute;top:6px;right:6px;z-index:5;opacity:0;}\n.dshpc-cv:hover .dshpc-cv__copy,.dshpc-cv__copy:focus-visible{opacity:1;}\n.dshpc-cv__copy svg{width:16px;height:16px;}\n.dshpc-cv__editor{flex:1 1 auto;min-height:0;overflow:hidden;}\n.dshpc-cv__editor .cm-editor{height:100%;}\n/* 透明右边框 = 滚动条与右缘隔 1px（口径见 style.md §滚动条让位）。\n   只给右边：给底边会改 scroller 高度，CodeMirror 的测量循环会多算一条横滚条。 */\n.dshpc-cv__editor .cm-scroller{overflow:auto;border-right:1px solid transparent}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/CodeViewer.js
 		/**
-		* CodeViewer —— 只读源码查看器（替换官方 Shiki CodeBlock）。
+		* CodeViewer —— 只读源码查看器（替代官方 Shiki CodeBlock），DSH 共享底座版。
 		*
 		* 为什么换成 CodeMirror 6：官方 CodeBlock 把整篇 tokenize 成 <pre> + 每 token 一个
-		* <span> 的巨型 DOM，拖动改宽会触发整棵子树重排，5000 行大文件首屏与拖拽都卡。CodeMirror
+		* <span> 的巨型 DOM，拖动改宽会触发整棵子树重排，大文件首屏与拖拽都卡。CodeMirror
 		* 是行级视图 + Lezer 增量高亮，宽度变化只重排可视区，天然不为整篇买单。
 		*
+		* 移植自兄弟项目 dsh-task-dispatch-table（src/client/ui/CodeViewer.tsx），按本仓约定重写：
+		* 类名 dshpc-cv*、颜色吃 --dshpc-* token、官方图标 / writeClipboard 经 ui/official.ts 单一入口。
+		*
 		* 只读但可选中：仅用 <CodeMirror readOnly>（= EditorState.readOnly，挡住一切输入），
-		* 不设置 EditorView.editable=false —— 后者会把内容设为不可编辑并连带禁用鼠标选区，
-		* 导致用户无法框选复制某一句。保留 editable 后选区/复制正常，输入仍被 readOnly 拦下。
+		* 不设置 editable=false —— 后者会把内容设为不可编辑并连带禁用鼠标选区，导致无法框选复制。
 		*
-		* 外观：theme="none" 关掉 @uiw 默认 light 主题的白底，cmSurfaceTheme 透明底叠在宿主面板上；
-		* 默认 EditorView.lineWrapping（全换行，避免横向滚动条）；复制钮为右上角官方图标，hover 浮现。
-		*
-		* ⚠️ 明暗判据（真机 2026-10-05 修）：**只认宿主** body[data-ds-dark-theme]，
-		*    禁用 prefers-color-scheme —— 后者跟操作系统、不跟用户在宿主里的选择，两者不一致时会把
-		*    暗色语法色（浅/白字）套在宿主浅色面板上 ⇒ 白字白底隐形。判据真源见
-		*    docs/design/external/dsh-capabilities.md §主题与设计变量。
+		* 明暗判据（唯一）：body[data-ds-dark-theme]（见 design/style-kit.ts DARK_THEME_SELECTOR），
+		* 禁用 prefers-color-scheme。
 		*/
-		/** 读宿主的暗色标记（唯一明暗判据 = body[data-ds-dark-theme]，宿主启动脚本 toggleAttribute 写入）。 */
+		/** 唯一明暗判据属性名（宿主启动脚本 toggleAttribute 写入 body）。 */
+		const DARK_ATTR = "data-ds-dark-theme";
 		function hostDark() {
 			if (typeof document === "undefined") return false;
 			const body = document.body;
-			return body === null ? false : body.hasAttribute("data-ds-dark-theme");
+			return body === null ? false : body.hasAttribute(DARK_ATTR);
 		}
 		function CodeViewer(props) {
-			const { text, path, t, className, style, height = "100%" } = props;
+			ensureComponentStyles("code-viewer", CODE_VIEWER_CSS);
+			const { text, path, t, className, style, height = "100%", lineNumbers = true } = props;
 			const [copied, setCopied] = (0, react$1.useState)(false);
 			const [dark, setDark] = (0, react$1.useState)(hostDark);
+			/** 编辑器实例（定位到行要 dispatch scrollIntoView）。 */
+			const viewRef = (0, react$1.useRef)(null);
 			(0, react$1.useEffect)(() => {
 				if (typeof document === "undefined" || typeof MutationObserver !== "function") return;
 				const body = document.body;
 				if (body === null) return;
 				const sync = () => {
-					setDark(body.hasAttribute("data-ds-dark-theme"));
+					setDark(body.hasAttribute(DARK_ATTR));
 				};
 				sync();
 				const observer = new MutationObserver(sync);
-				observer.observe(body, { attributeFilter: ["data-ds-dark-theme"] });
+				observer.observe(body, { attributeFilter: [DARK_ATTR] });
 				return () => {
 					observer.disconnect();
 				};
@@ -49692,49 +53904,605 @@ window.__ModuleLoader__.load({
 				...language !== null ? [language] : []
 			], [dark, language]);
 			const copy = () => {
-				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(text).then((ok) => {
+				(0, official_exports.writeClipboard)(text).then((ok) => {
 					if (ok) {
 						setCopied(true);
 						window.setTimeout(() => setCopied(false), 1500);
 					}
 				});
 			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: `dsh-tdt-sv-cmviewer${className ? ` ${className}` : ""}`,
-				style,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-					type: "button",
-					className: "dsh-tdt-sv-cm-copy",
-					onClick: copy,
-					title: copied ? t("copiedLabel") : t("copyLabel"),
-					"aria-label": copied ? t("copiedLabel") : t("copyLabel"),
-					children: copied ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, {})
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ReactCodeMirror, {
-					value: text,
-					className: "dsh-tdt-sv-cm-editor",
-					theme: "none",
-					extensions,
-					readOnly: true,
-					height,
-					style: {
-						flex: "1 1 auto",
-						minHeight: 0,
-						overflow: "hidden"
-					},
-					basicSetup: {
-						lineNumbers: true,
-						foldGutter: false,
-						highlightActiveLine: false,
-						highlightActiveLineGutter: false,
-						autocompletion: false,
-						bracketMatching: true,
-						closeBrackets: false,
-						indentOnInput: false,
-						searchKeymap: false
-					}
-				})]
+			(0, react$1.useEffect)(() => {
+				const view = viewRef.current;
+				if (view === null || props.focusLine === void 0) return;
+				if (props.focusLine > view.state.doc.lines) return;
+				view.dispatch({ effects: EditorView.scrollIntoView(view.state.doc.line(props.focusLine).from, { y: "center" }) });
+			}, [text, props.focusLine]);
+			return (0, react$1.createElement)("div", {
+				className: `dshpc-cv${className ? ` ${className}` : ""}`,
+				style
+			}, (0, react$1.createElement)(IconButton, {
+				variant: "outline",
+				size: "md",
+				icon: copied ? (0, react$1.createElement)(official_exports.IconCheckOutlineRegular) : (0, react$1.createElement)(official_exports.IconCopyOutlineRegular),
+				label: copied ? t("codeCopied") : t("codeCopy"),
+				className: "dshpc-cv__copy",
+				onClick: copy
+			}), (0, react$1.createElement)(ReactCodeMirror, {
+				value: text,
+				className: "dshpc-cv__editor",
+				theme: "none",
+				extensions,
+				readOnly: true,
+				height,
+				onCreateEditor: (view) => {
+					viewRef.current = view;
+				},
+				style: {
+					flex: "1 1 auto",
+					minHeight: 0,
+					overflow: "hidden"
+				},
+				basicSetup: {
+					lineNumbers,
+					foldGutter: false,
+					highlightActiveLine: false,
+					highlightActiveLineGutter: false,
+					autocompletion: false,
+					bracketMatching: true,
+					closeBrackets: false,
+					indentOnInput: false,
+					searchKeymap: false
+				}
+			}));
+		}
+		//#endregion
+		//#region src/client/ui/Field.tsx
+		/**
+		* 下拉锚点 —— 本仓**唯一保留**的输入类件（2026-11-06）。
+		*
+		* `Input` / `PrefixedInput` / `NumberInput` 已全部改接核心 `dsh-plugin-core/ui`；
+		* 这里只剩 `SelectField`：核心 `Picker` 目前没有 `error`（校验描红）/ `title`（悬停提示）/ `marquee` 语义，
+		* 属核心缺口（见 worklog），在核心补齐前继续用官方 `Menu` 薄包装。
+		*/
+		function IconSeat(props) {
+			return (0, react$1.createElement)("span", { style: {
+				display: "inline-flex",
+				width: "16px",
+				height: "16px",
+				alignItems: "center",
+				justifyContent: "center",
+				flex: "none",
+				color: "var(--dshpc-fg-3)"
+			} }, props.children);
+		}
+		/**
+		* 下拉选择：官方 `Menu`（portal 到 body，避免被弹窗内部滚动裁掉；选中项自动带对勾）。
+		* 空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
+		*/
+		function SelectField(props) {
+			ensureControlsStyle();
+			const [open, setOpen] = (0, react$1.useState)(false);
+			const [hover, setHover] = (0, react$1.useState)(false);
+			const metrics = fieldMetricsOf(props.size ?? "lg");
+			const iconSize = metrics.icon;
+			const usable = props.options.length > 0 && props.disabled !== true;
+			const current = props.options.find((option) => option.value === props.value);
+			const items = (0, react$1.useMemo)(() => props.options.map((option) => ({
+				id: option.value,
+				label: option.label
+			})), [props.options]);
+			const anchor = (0, react$1.createElement)("button", {
+				type: "button",
+				className: `dsh-tdt-ed-field${props.error === true ? " dsh-tdt-ed-field--error" : ""}`,
+				disabled: !usable,
+				"aria-haspopup": "menu",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onPointerEnter: () => {
+					setHover(true);
+				},
+				onPointerLeave: () => {
+					setHover(false);
+				},
+				onClick: () => {
+					setOpen(!open);
+				},
+				style: {
+					...FIELD_ANCHOR_STYLE,
+					height: metrics.height,
+					gap: metrics.gap,
+					fontSize: metrics.font,
+					lineHeight: metrics.line,
+					width: props.width ?? (props.block === true ? "100%" : void 0),
+					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
+					background: hover && usable ? "var(--dshpc-hover)" : "var(--dshpc-surface-1)",
+					cursor: usable ? "pointer" : "not-allowed",
+					opacity: usable ? 1 : .6
+				}
+			}, props.icon === void 0 ? null : (0, react$1.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react$1.createElement)(MarqueeText, {
+				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
+				title: props.title ?? props.ariaLabel,
+				className: "dsh-tdt-ellipsis",
+				style: {
+					...FIELD_LABEL_STYLE,
+					color: current === void 0 ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
+				}
+			}) : (0, react$1.createElement)("span", {
+				className: "dsh-tdt-ellipsis",
+				style: {
+					...FIELD_LABEL_STYLE,
+					color: current === void 0 ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
+				}
+			}, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react$1.createElement)(IconSeat, null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
+			if (!usable) return anchor;
+			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open,
+				anchor,
+				items,
+				selectedId: props.value,
+				selection: "check",
+				align: props.align ?? "start",
+				portal: true,
+				className: props.block === true ? "dsh-tdt-ed-selectwrap" : void 0,
+				onSelect: (id) => {
+					setOpen(false);
+					props.onChange(id);
+				},
+				onClose: () => {
+					setOpen(false);
+				}
 			});
 		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/utils/number.js
+		/**
+		* 字节数 → 人话（`12 KB` / `3.4 MB`）。
+		* 0 与负数 ⇒ `—`（不显示「0 B」这种假精确）。
+		*/
+		function formatBytes(bytes) {
+			if (!Number.isFinite(bytes) || bytes <= 0) return "—";
+			if (bytes < 1024) return `${bytes} B`;
+			const units = [
+				"KB",
+				"MB",
+				"GB",
+				"TB"
+			];
+			let value = bytes / 1024;
+			let unit = 0;
+			while (value >= 1024 && unit < units.length - 1) {
+				value /= 1024;
+				unit++;
+			}
+			return `${value >= 10 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/utils/path.js
+		/**
+		* 纯路径方法 —— 只做字符串切分 / 拼接，不碰宿主、不依赖 React / DOM。
+		*
+		* 约定（与工作区文件 API 一致）：POSIX `/` 分隔；空串 `''` 表示根。
+		* 与宿主无关：这里不调任何宿主 API，路径字符串由调用方传入。
+		*/
+		const IMAGE_EXT = {
+			png: "image/png",
+			jpg: "image/jpeg",
+			jpeg: "image/jpeg",
+			gif: "image/gif",
+			webp: "image/webp",
+			bmp: "image/bmp",
+			svg: "image/svg+xml",
+			ico: "image/x-icon",
+			avif: "image/avif"
+		};
+		/** 扩展名 → 图片 MIME；不是已知图片扩展名返回 `undefined`。 */
+		function mimeOf(path) {
+			const ext = extOf$1(path);
+			return ext === "" ? void 0 : IMAGE_EXT[ext];
+		}
+		/** 取扩展名（小写、不含点）；无扩展名返回 `''`。 */
+		function extOf$1(path) {
+			const name = path.slice(path.lastIndexOf("/") + 1);
+			const dot = name.lastIndexOf(".");
+			return dot <= 0 ? "" : name.slice(dot + 1).toLowerCase();
+		}
+		/** 父目录（无父 = 空串，表示根）。 */
+		function parentOf(path) {
+			const cut = path.lastIndexOf("/");
+			return cut < 0 ? "" : path.slice(0, cut);
+		}
+		/** 拼接子路径，避免多余斜杠。 */
+		function joinPath(dir, name) {
+			return dir === "" ? name : `${dir}/${name}`;
+		}
+		//#endregion
+		//#region src/client/ui/TaskPicker.tsx
+		/**
+		* 任务选择器 —— **核心 `Picker` 的薄包装**（2026-11-06 起）。
+		*
+		* 本文件只做四件业务事，其余（浮层、搜索、分页、空态、键盘、明暗）全交给 `dsh-plugin-core/ui`：
+		*  ① 按 `scope`（工作区）与 `excludeIds` 过滤候选；
+		*  ② 「全部任务」作为**第一个普通选项**（`value: ''`）传进去（用户 2026-11-05 拍板，核心零改动）；
+		*  ③ 停用任务照常可选，只在 `label` 尾部拼 `disabledTag`（不加字段）；
+		*  ④ 已选项掉出作用域 ⇒ 仍留在列表里 + 触发器前置 `!` 告警（`title` 给说明），不静默清空。
+		*
+		* 搜索：核心按 `label` + `keywords` 子串匹配；这里把任务 UUID 放进 `keywords`（只搜不显示）。
+		*/
+		/** 带搜索的任务选择器。 */
+		function TaskPicker(props) {
+			const scope = props.scope ?? "";
+			const excludes = props.excludeIds ?? [];
+			const current = props.options.find((o) => o.id === props.value);
+			const candidates = (0, react$1.useMemo)(() => props.options.filter((o) => (scope === "" || o.workspace === scope) && !excludes.includes(o.id)), [
+				props.options,
+				scope,
+				excludes
+			]);
+			const labelOf = (o) => o.enabled ? o.label : `${o.label}${props.disabledTag ?? ""}`;
+			const list = [];
+			if (props.allOption !== void 0) list.push({
+				value: props.allOption.value,
+				label: props.allOption.label
+			});
+			for (const o of candidates) list.push({
+				value: o.id,
+				label: labelOf(o),
+				keywords: o.id
+			});
+			const outOfScope = current !== void 0 && props.value !== "" && scope !== "" && current.workspace !== scope;
+			if (outOfScope && current !== void 0) list.splice(props.allOption === void 0 ? 0 : 1, 0, {
+				value: current.id,
+				label: labelOf(current),
+				keywords: current.id
+			});
+			return (0, react$1.createElement)(Picker, {
+				options: list,
+				value: props.value,
+				onChange: (next) => {
+					const id = Array.isArray(next) ? next[0] ?? "" : next;
+					props.onChange(id);
+				},
+				searchable: true,
+				limit: props.recentLimit ?? 10,
+				placeholder: props.placeholder,
+				size: props.size,
+				width: props.width,
+				disabled: props.disabled,
+				ariaLabel: props.ariaLabel,
+				icon: outOfScope ? (0, react$1.createElement)("span", {
+					style: {
+						color: "var(--dshpc-warning)",
+						fontWeight: 600
+					},
+					title: props.outOfScopeHint
+				}, "!") : void 0,
+				translate: (key, vars) => {
+					if (key === "pickerSearch") return props.searchPlaceholder;
+					if (key === "pickerEmpty" || key === "pickerNoMatch") return props.emptyLabel;
+					if (key === "pickerMore" && props.moreLabel !== void 0) return props.moreLabel;
+					return t$1(key, vars);
+				}
+			});
+		}
+		//#endregion
+		//#region src/client/ui/DateTime.tsx
+		/**
+		* 日期 / 时间控件 —— 基础层。
+		*
+		* 2026-11-06：`DateField` 改接核心 `DateTimePicker`（`mode:'single'`, `precision:'day'`），
+		* 本仓只留值格式转换；核心暂无「纯时分」档 ⇒ `TimeField` 仍为本地唯一实现（待核心补齐）。
+		* 日历网格 / 浮层定位 / 明暗全部归核心，本仓不再自绘。
+		*/
+		/** 估算「定死」的字段宽度（用户 2026-10-05：宽度按最宽内容定死，不随值跳动）。 */
+		function fieldWidthOf(text, size) {
+			const fontPx = size === "sm" ? 12 : 13;
+			const extra = size === "sm" ? 34 : 38;
+			let w = 0;
+			for (const ch of text) w += /[⺀-鿿＀-￯]/.test(ch) ? fontPx : fontPx * .56;
+			return Math.ceil(w + extra);
+		}
+		/** 时分框定宽 = 刚好放下 `00:00` + 左右留白。 */
+		const timeWidthOf = (size) => fieldWidthOf("00:00", size) + 7;
+		/** 日期框：核心 `DateTimePicker` 单值 / 日精度薄包装（本仓值语义 `YYYY-MM-DD`）。 */
+		function DateField(props) {
+			const coreValue = props.value === "" ? null : `${props.value}T00:00:00.000`;
+			const picker = (0, react$1.createElement)(DateTimePicker, {
+				mode: "single",
+				precision: "day",
+				value: coreValue,
+				onChange: (next) => {
+					const iso = typeof next === "string" ? next : "";
+					props.onChange(iso === "" ? "" : iso.slice(0, 10));
+				},
+				placeholder: props.placeholder,
+				ariaLabel: props.ariaLabel,
+				disabled: props.disabled,
+				size: props.size ?? "lg",
+				width: props.width
+			});
+			return props.title === void 0 ? picker : (0, react$1.createElement)("span", {
+				title: props.title,
+				style: { display: "inline-flex" }
+			}, picker);
+		}
+		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$2(i));
+		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$2(i));
+		/** 时分列：`HH:mm`。 */
+		function TimeField(props) {
+			ensureControlsStyle();
+			const size = props.size ?? "lg";
+			const [open, setOpen] = (0, react$1.useState)(false);
+			const [draft, setDraft] = (0, react$1.useState)(props.value);
+			const selectedRef = (0, react$1.useRef)(null);
+			const rootRef = (0, react$1.useRef)(null);
+			const panelRef = (0, react$1.useRef)(null);
+			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
+				open,
+				anchorRef: rootRef,
+				panelRef,
+				side: "bottom",
+				align: "start",
+				gap: 4,
+				margin: 12
+			});
+			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
+			(0, react$1.useEffect)(() => {
+				if (!open) return;
+				const onKeyDown = (event) => {
+					if (event.key !== "Escape") return;
+					event.preventDefault();
+					setOpen(false);
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [open]);
+			(0, react$1.useEffect)(() => {
+				if (!open) return;
+				selectedRef.current?.scrollIntoView({ block: "center" });
+			}, [open]);
+			const parsed = /^(\d{2}):(\d{2})$/.exec(draft);
+			const hour = parsed === null ? "" : parsed[1];
+			const minute = parsed === null ? "" : parsed[2];
+			const column = (values, active, name, onPick, attachRef) => (0, react$1.createElement)("div", {
+				role: "listbox",
+				"aria-label": name,
+				className: "dsh-tdt-time__list"
+			}, values.map((item) => (0, react$1.createElement)("button", {
+				key: item,
+				type: "button",
+				role: "option",
+				"aria-selected": item === active,
+				ref: attachRef && item === active ? selectedRef : void 0,
+				className: "dsh-tdt-time__opt",
+				onClick: () => {
+					onPick(item);
+				}
+			}, item)));
+			const anchor = (0, react$1.createElement)("button", {
+				type: "button",
+				className: `dsh-tdt-dtf dsh-tdt-dtf--${size}`,
+				ref: rootRef,
+				disabled: props.disabled,
+				"aria-haspopup": "dialog",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onClick: () => {
+					if (open) {
+						setOpen(false);
+						return;
+					}
+					setDraft(props.value);
+					setOpen(true);
+				},
+				style: { width: props.width ?? timeWidthOf(size) }
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 16 })), (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value));
+			return (0, react$1.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
+				ref: panelRef,
+				role: "dialog",
+				"aria-label": props.ariaLabel,
+				className: "dsh-tdt-layer",
+				style: {
+					...pos ?? {},
+					visibility: pos === void 0 ? "hidden" : "visible"
+				}
+			}, (0, react$1.createElement)("div", { className: "dsh-tdt-time__cols" }, column(HOURS, hour, props.labels.hour, (next) => {
+				setDraft(`${next}:${minute === "" ? "00" : minute}`);
+			}, true), column(MINUTES, minute, props.labels.minute, (next) => {
+				setDraft(`${hour === "" ? "00" : hour}:${next}`);
+			}, false)), (0, react$1.createElement)("div", { className: "dsh-tdt-time__foot" }, (0, react$1.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				onClick: () => {
+					const now = /* @__PURE__ */ new Date();
+					setDraft(`${pad2$2(now.getHours())}:${pad2$2(now.getMinutes())}`);
+				}
+			}, props.labels.now), (0, react$1.createElement)(Button$2, {
+				variant: "primary",
+				size: "sm",
+				onClick: () => {
+					props.onChange(draft);
+					setOpen(false);
+				}
+			}, props.labels.confirm))), document.body) : null);
+		}
+		//#endregion
+		//#region src/client/ui/time-range.ts
+		/** 全部预设档（缺省显示顺序）。 */
+		const ALL_TIME_PRESETS = [
+			"today",
+			"yesterday",
+			"thisWeek",
+			"lastWeek",
+			"thisMonth",
+			"lastMonth"
+		];
+		/** 值串 → 年月日时分；不合法返回 null。 */
+		function parseValue(value) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(value);
+			if (match === null) return null;
+			return {
+				y: Number(match[1]),
+				m: Number(match[2]),
+				d: Number(match[3]),
+				hh: match[4] === void 0 ? 0 : Number(match[4]),
+				mm: match[5] === void 0 ? 0 : Number(match[5])
+			};
+		}
+		/**
+		* 受控值 → 查询用**半开区间** `[from, to)`：
+		* - day：from = 当日 00:00，to = 结束日的**次日 00:00**；
+		* - minute：from = 当时分 :00，to = 结束分的**下一分钟 :00**。
+		* 空串 / 不合法 ⇒ 该端 undefined（不过滤）。
+		*/
+		function rangeToQuery(value, precision) {
+			const fromParsed = value.from === "" ? null : parseValue(value.from);
+			const toParsed = value.to === "" ? null : parseValue(value.to);
+			let fromTs;
+			if (fromParsed !== null) {
+				const d = precision === "minute" ? new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, fromParsed.hh, fromParsed.mm, 0, 0) : new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, 0, 0, 0, 0);
+				fromTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
+			}
+			let toTs;
+			if (toParsed !== null) {
+				const d = precision === "minute" ? new Date(toParsed.y, toParsed.m - 1, toParsed.d, toParsed.hh, toParsed.mm + 1, 0, 0) : new Date(toParsed.y, toParsed.m - 1, toParsed.d + 1, 0, 0, 0, 0);
+				toTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
+			}
+			return {
+				fromTs,
+				toTs
+			};
+		}
+		//#endregion
+		//#region src/client/ui/TimeRange.tsx
+		/**
+		* 时间范围筛选 —— **核心 `DateTimePicker` 的薄包装**（2026-11-06 起）。
+		*
+		* 分工：
+		*  - 核心负责：触发器、两块日历、预设档竖列、「确定 / 取消 / 清除」、键盘与明暗；
+		*  - 本仓负责：值串 ⇄ 核心 ISO 的换算 + 预设档文案（`presets` 的 expr 由核心展开）。
+		*
+		* 值形态不变（`TimeRangeValue`：`YYYY-MM-DD` / `YYYY-MM-DD HH:mm`，空串 = 不过滤），
+		* 查询边界仍由 `rangeToQuery`（`time-range.ts`）统一算，控件不碰边界。
+		*/
+		/** 预设档 → 核心的 date-math 算式（整档取齐：`/d` `/w` `/M`；周一为周首，与核心一致）。 */
+		const PRESET_EXPR = {
+			today: "now/d",
+			yesterday: "now-1d/d",
+			thisWeek: "now/w",
+			lastWeek: "now-1w/w",
+			thisMonth: "now/M",
+			lastMonth: "now-1M/M"
+		};
+		/** 值串 → 核心 ISO（本端 floor 到 00:00:00.000，对端 ceil 到 23:59:59.999）。 */
+		function toIso(value, end, precision) {
+			const minute = precision === "minute";
+			const date = value.slice(0, 10);
+			const time = minute ? value.length >= 16 ? value.slice(11, 16) : end ? "23:59" : "00:00" : "00:00";
+			return minute ? `${date}T${time}:${end ? "59.999" : "00.000"}` : `${date}T${end ? "23:59:59.999" : "00:00:00.000"}`;
+		}
+		/** 本仓值 → 核心受控值；任一端为空 ⇒ 交给核心显示「未选」（核心的 range 需要两端齐全才提交）。 */
+		function toCoreValue(value, precision) {
+			if (value.from === "" || value.to === "") return null;
+			return [toIso(value.from, false, precision), toIso(value.to, true, precision)];
+		}
+		/** 核心受控值 → 本仓值：day 取日期，minute 取到分钟（与 `TimeRangeValue` 的口径一致）。 */
+		function fromCoreValue(out, precision) {
+			if (out === null || Array.isArray(out) === false) return {
+				from: "",
+				to: ""
+			};
+			const fmt = (iso) => precision === "minute" ? `${iso.slice(0, 10)} ${iso.slice(11, 16)}` : iso.slice(0, 10);
+			return {
+				from: fmt(out[0]),
+				to: fmt(out[1])
+			};
+		}
+		function TimeRange(props) {
+			const precision = props.precision ?? "day";
+			const presetIds = props.presets ?? ALL_TIME_PRESETS;
+			const presets = [{
+				label: props.labels.all,
+				expr: null
+			}, ...presetIds.map((id) => ({
+				label: props.labels.presets[id],
+				expr: PRESET_EXPR[id]
+			}))];
+			return (0, react$1.createElement)(DateTimePicker, {
+				mode: "range",
+				precision,
+				value: toCoreValue(props.value, precision),
+				onChange: (next) => {
+					props.onChange(fromCoreValue(next, precision));
+				},
+				presets,
+				size: props.size ?? "md",
+				disabled: props.disabled
+			});
+		}
+		//#endregion
+		//#region src/client/ui/ticker.ts
+		const tickerListeners = /* @__PURE__ */ new Set();
+		let tickerTimer = null;
+		/**
+		* `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
+		* 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
+		* 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
+		*/
+		const onVisibilityChange = () => {
+			for (const l of [...tickerListeners]) l();
+		};
+		let visibilityBound = false;
+		/** 订阅全局秒级心跳；返回退订。**第一个订阅者才起 interval，最后一个退订即停**。 */
+		function subscribeTicker(cb) {
+			tickerListeners.add(cb);
+			if (tickerTimer === null) {
+				tickerTimer = window.setInterval(() => {
+					for (const l of [...tickerListeners]) l();
+				}, 1e3);
+				if (!visibilityBound && typeof document !== "undefined") {
+					document.addEventListener("visibilitychange", onVisibilityChange);
+					visibilityBound = true;
+				}
+			}
+			return () => {
+				tickerListeners.delete(cb);
+				if (tickerListeners.size === 0 && tickerTimer !== null) {
+					window.clearInterval(tickerTimer);
+					tickerTimer = null;
+				}
+			};
+		}
+		/**
+		* 每秒拿到「现在」（需要**时间值本身**时用，如悬浮文案）；与 `LiveText` 共用同一条心跳。
+		* 不适合整列表用（每次 tick 会 setState 一次）——只在真正需要时间的小块里调。
+		*/
+		function useNowMs() {
+			const [nowMs, setNowMs] = (0, react$1.useState)(() => Date.now());
+			(0, react$1.useEffect)(() => subscribeTicker(() => setNowMs(Date.now())), []);
+			return nowMs;
+		}
+		//#endregion
+		//#region src/client/ui/running.ts
+		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
+		const RUNNING_TONE = "var(--dshpc-business)";
+		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
+		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
+		const RUNNING_CSS = `
+@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--dshpc-dur-run) var(--dshpc-ease) infinite; }
+@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
+`;
+		let ensured = false;
+		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
+		const ensureRunningStyle = () => {
+			if (ensured) return;
+			ensured = true;
+			applyStyle("domain:running", RUNNING_CSS);
+		};
 		//#endregion
 		//#region src/client/ui/index.ts
 		/**
@@ -49971,97 +54739,8 @@ window.__ModuleLoader__.load({
    不隔离时每帧重排全页 ⇒ 真机 2026-10-04「挪很久才动一下」）。 */
 .dsh-tdt-root.dsh-tdt-resizing .dsh-tdt-sv-preview-dock{contain:layout paint;will-change:width;}
 .dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));background:var(--dshpc-surface-base,#1a1a1a);}
-.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
-.dsh-tdt-sv-preview-label{flex:none;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
-/* 路径 / 文件名：走全站唯一 MarqueeText（ui/MarqueeText.tsx），本类只提供**字体与字色皮肤**
-   （挂在 MarqueeText 外层、内层继承）；外层裁剪与滚动由 .dsh-tdt-mq 负责。 */
-.dsh-tdt-sv-preview-title-inner{font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
-/* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
-.dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
-.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);border-radius:var(--dshpc-radius-sm,6px);cursor:pointer;color:var(--dshpc-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--dshpc-dur,.15s) var(--dshpc-ease,ease);}
-.dsh-tdt-sv-head-btn:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:12px 14px;}
-.dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
-.dsh-tdt-sv-preview-pdf{flex:1;border:none;}
-/* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
-.dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
-/* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
-   唯一滚动容器 = CodeViewer 内部 cm-scroller ⇒ 不再出现两条滚动条。 */
-.dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
-/* 源码态改用只读 CodeMirror 6 渲染（ui/CodeViewer.tsx）：行级视图 + Lezer 增量高亮，
-   拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；配色/字号见 cm-themes.ts。 */
-.dsh-tdt-sv-preview-coderender{white-space:normal;flex-direction:column;flex:auto;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;}
-/* CodeMirror 容器：透明底 + 单滚动容器，行级视图天然不为整篇重排。换行由 CodeMirror 行级处理，无需 CSS。 */
-/* 容器相对定位，供复制钮绝对定位于右上角。 */
-.dsh-tdt-sv-cmviewer{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
-/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方复制钮交互：仅图标、无中文文案、点击复制全文、
-   复制后短暂切勾选图标 + "已复制"提示，title/aria-label 承载本地化文案）。 */
-.dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-sm,6px);background:var(--dshpc-surface-1,rgba(30,30,30,.9));color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--dshpc-ease,ease),background .12s,color .12s;}
-.dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
-.dsh-tdt-sv-cm-copy:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg,#1f2328);}
-.dsh-tdt-sv-cm-copy svg{width:16px;height:16px;}
-.dsh-tdt-sv-cm-editor{flex:1 1 auto;min-height:0;overflow:hidden;}
-.dsh-tdt-sv-cm-editor .cm-editor{height:100%;}
-.dsh-tdt-sv-cm-editor .cm-scroller{overflow:auto;}
-/* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
-.dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--dshpc-font-xs,12px);color:var(--dshpc-warning,#f59e0b);background:var(--dshpc-surface-1,rgba(255,255,255,.04));}
-.dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
-.dsh-tdt-sv-preview-md{font-size:var(--dshpc-font-lg);line-height:1.7;word-break:break-word;}
-
-/* CodeMirror 外壳缺失兜底：代码面按容器宽度布局（ocOr 语义见上方说明）。 */
-.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
-/* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
-/* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
-   ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
-.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));white-space:nowrap;}
-.dsh-tdt-sv-crumbs-menu-wrap{position:relative;flex:none;display:inline-flex;}
-.dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
-.dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
-.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--dshpc-radius-sm,6px);font:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:pointer;display:inline-flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;}
-.dsh-tdt-sv-crumb:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg,#1f2328);}
-.dsh-tdt-sv-crumb-current{cursor:default;color:var(--dshpc-fg,#1f2328);font-weight:600;min-width:0;}
-/* MarqueeText 皮肤：填满 crumb 按钮内容宽、可收缩；字体/字色由按钮继承；截断出「…」时 hover 跑马灯。 */
-.dsh-tdt-sv-crumb-mq{flex:1 1 auto;min-width:0;}
-.dsh-tdt-sv-crumb-current:hover{background:0 0;}
-.dsh-tdt-sv-crumb-sep{flex:none;color:var(--dshpc-fg-3,rgba(128,128,128,.7));}
-/* 工作区之外的只读完整路径（用户 2026-10-03）：**不可点**（无导航），但过长仍走
-   MarqueeText 跑马灯（用户验收点正：「啪-啪-灯」= 跑马灯）。本类只提供**字体与字色皮肤**，
-   裁剪与滚动由 .dsh-tdt-mq 负责。 */
-.dsh-tdt-sv-crumbbar-plain-inner{font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-2,rgba(128,128,128,.95));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;}
-.dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
-/* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
-.dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
-.dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--dshpc-surface-1);border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-sm);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
-.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-md);padding:4px 8px;border-radius:var(--dshpc-radius-sm);color:var(--dshpc-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-crumbs-menu-empty{font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-md);padding:4px 8px;color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
-/* 第二排：文件名（跑马灯）+ 操作按钮。 */
-.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
-/* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
-.dsh-tdt-sv-tree{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
-.dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--dshpc-radius-sm,6px);cursor:pointer;user-select:none;}
-.dsh-tdt-sv-tree-row:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-tree-row:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px;}
-.dsh-tdt-sv-tree-icon{flex:none;display:inline-flex;color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
-/* 下拉选层：每行只显示一个右箭头（画在原第 index 位），行首 (index-1) 个箭头位
-   空出但占位（宽度与箭头一致），保持层级缩进（用户 2026-09-29）。 */
-.dsh-tdt-sv-crumbs-chev{flex:none;color:var(--dshpc-fg-3,rgba(128,128,128,.7));margin-right:1px;}
-.dsh-tdt-sv-crumbs-chev-slot{flex:none;width:11px;height:11px;margin-right:1px;}
-.dsh-tdt-sv-crumbs-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-/* 目录树：行内 ▸ 开关（内联展开/收起），点它只切展开、不导航。 */
-.dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--dshpc-radius-sm,6px);cursor:pointer;color:var(--dshpc-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--dshpc-dur,.15s) var(--dshpc-ease,ease),background var(--dshpc-dur,.15s) var(--dshpc-ease,ease);}
-.dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
-/* 目录树：行尾「选择」按钮（仅选择器形态，用户 2026-10-10）——平时藏起来，悬停或聚焦该行才出现，
-   点它才把整个文件夹选为附件；平时隐形但保留尺寸，出现时不会顶动行内布局。 */
-.dsh-tdt-sv-tree-act{flex:none;margin-left:auto;appearance:none;background:0 0;border:1px solid var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-sm,6px);padding:2px 8px;font-size:var(--dshpc-font-sm);line-height:1.4;color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;pointer-events:none;transition:opacity var(--dshpc-dur,.15s) var(--dshpc-ease,ease);}
-.dsh-tdt-sv-tree-row:hover .dsh-tdt-sv-tree-act,.dsh-tdt-sv-tree-act:focus-visible{opacity:1;pointer-events:auto;}
-.dsh-tdt-sv-tree-act:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg);}
-/* 内联展开子层：左缩进 + 淡竖线引导层级。 */
-.dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
-.dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-sv-tree-err{color:var(--dshpc-danger,#e5484d);}
+/* 文件浏览 / 预览（面包屑 / 目录树 / 源码 / HTML 预览）已整体改用核心 dsh-plugin-core/adv/explorer，
+   本地 .dsh-tdt-sv-preview-head/body/tree/cm-* 等 91 行规则已删（2026-11-06）；此处只留 dock 外壳。 */
 .dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:var(--dshpc-font-sm);line-height:1.6;color:var(--dshpc-fg-2,rgba(128,128,128,.95));padding:8px 0;}
 /* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
 /* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
@@ -51364,7 +56043,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}) : (0, react$1.createElement)(react$1.Fragment, null, variant === "code" && bodyText !== null ? (0, react$1.createElement)("div", { className: ocOr("ToolRow", "bodyScroll", "dsh-tdt-sv-tool-block") }, (0, react$1.createElement)(CodeViewer, {
 				text: bodyText,
 				path: "tool-code.ts",
-				t,
+				t: t$1,
 				className: ocOr("ToolRow", "codeBody", "dsh-tdt-sv-tool-block"),
 				height: "auto",
 				style: { height: "auto" }
@@ -51633,7 +56312,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileIcon", "dsh-tdt-sv-attIcon") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path: file.name,
 				size: 16
-			})), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileContent", "dsh-tdt-sv-attBody") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileName", "dsh-tdt-sv-attName") }, file.name), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileMeta", "dsh-tdt-sv-attMeta") }, formatBytes(file.bytes))))))));
+			})), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileContent", "dsh-tdt-sv-attBody") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileName", "dsh-tdt-sv-attName") }, file.name), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileMeta", "dsh-tdt-sv-attMeta") }, formatBytes$1(file.bytes))))))));
 		}
 		/** 官方 retrySeconds（lib/client.js:1215）：下限 1 秒。 */
 		function retrySeconds(milliseconds) {
@@ -53279,26 +57958,55 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}, forkErr !== null ? (0, react$1.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
 		}
 		//#endregion
-		//#region src/client/file-preview.tsx
-		/** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
-		var PreviewBoundary = class extends react$1.Component {
-			state = { crashed: false };
-			static getDerivedStateFromError() {
-				return { crashed: true };
-			}
-			componentDidCatch(error, info) {
-				console.warn("[task-dispatch:file-preview] 预览渲染崩溃（已拦在预览体内）:", error, info.componentStack ?? "");
-			}
-			render() {
-				return this.state.crashed ? this.props.fallback : this.props.children;
-			}
-		};
-		/** 值形状取证（真机排障锚点：远端返回与契约不符时打出来，别靠猜）。 */
-		function shapeOf(value) {
-			if (value === null || value === void 0) return String(value);
-			if (typeof value !== "object") return typeof value;
-			if (Array.isArray(value)) return `array(${value.length})`;
-			return `{${Object.keys(value).slice(0, 12).join(",")}}`;
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/types.js
+		/** HTML 静态预览的扩展名（与官方 htmlBodyDefinition 同款）。 */
+		const HTML_KINDS = ["html", "htm"];
+		/**
+		* Office 预览扩展名（官方 remote.officeToPdf 转 PDF 后再渲染）。
+		* ⚠️ 官方 OfficeExtension 还含 xls / xlsx，按兄弟项目 2026-10-05 拍板「Excel 向后讨论」不纳入。
+		*/
+		const OFFICE_KINDS = [
+			"doc",
+			"docx",
+			"ppt",
+			"pptx"
+		];
+		/** 源码态读取上限（256K，UTF-8 边界安全由截断处处理）。 */
+		const SOURCE_MAX_BYTES = 262144;
+		/**
+		* 按扩展名分发预览类型。**没有 unsupported 档**：认不出的扩展名一律按 text 走，
+		* 由 read 抛 not-text 落「不是文本文件」空态——官方 read 才是真源，不本地猜二进制清单。
+		*/
+		function previewInfoOf(path) {
+			const ext = extOf$1(path);
+			const mime = mimeOf(path);
+			if (mime !== void 0) return {
+				kind: "image",
+				ext,
+				mime
+			};
+			if (ext === "pdf") return {
+				kind: "pdf",
+				ext,
+				mime: "application/pdf"
+			};
+			if (ext === "md" || ext === "markdown") return {
+				kind: "md",
+				ext
+			};
+			if (HTML_KINDS.includes(ext)) return {
+				kind: "html",
+				ext
+			};
+			if (OFFICE_KINDS.includes(ext)) return {
+				kind: "office",
+				ext,
+				mime: "application/pdf"
+			};
+			return {
+				kind: "text",
+				ext
+			};
 		}
 		function unwrapEnvelope(result) {
 			if (typeof result === "object" && result !== null) {
@@ -53317,24 +58025,42 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				payload: result
 			};
 		}
-		/**
-		* `read` 结果防御解析（真机 2026-09-28 根因：page.text 为 undefined ⇒ 渲染器内部
-		* `endsWith` 抛错 ⇒ 整页黑屏，界面出现「undefined undefined undefined」）。
-		* 官方 wire 契约 = `{ offset, text, lines, eof, absolutePath, version, bytes? }`
-		* （typert.remote-client.js 的 read_result schema）；**取不到字符串一律按错误态处理**，
-		* 绝不把 undefined 喂给官方渲染器。
-		*/
+		/** 失败分支判空（TS 收窄用）。 */
+		function isFailed(value) {
+			return typeof value === "object" && value !== null && "failed" in value;
+		}
+		/** `list` 结果防御解析：返回 Listing 或失败/非法信封。 */
+		function listingOf(result) {
+			const envelope = unwrapEnvelope(result);
+			if (envelope.kind === "error") return { failed: envelope.error };
+			const raw = envelope.payload;
+			if (typeof raw !== "object" || raw === null) {
+				console.warn("[dsh-plugin-core:explorer] list 返回非对象");
+				return null;
+			}
+			const r = raw;
+			if (typeof r.path !== "string" || !Array.isArray(r.entries) || typeof r.truncated !== "boolean") {
+				console.warn("[dsh-plugin-core:explorer] list 返回形状不符契约");
+				return null;
+			}
+			return {
+				path: r.path,
+				entries: r.entries,
+				truncated: r.truncated
+			};
+		}
+		/** `read` 结果防御解析：page.text 必须是字符串，否则错误态（防渲染器内部抛错整页黑屏）。 */
 		function textPageOf(result) {
 			const envelope = unwrapEnvelope(result);
 			if (envelope.kind === "error") return { failed: envelope.error };
 			const raw = envelope.payload;
 			if (typeof raw !== "object" || raw === null) {
-				console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(result)}`);
+				console.warn("[dsh-plugin-core:explorer] read 返回非对象");
 				return null;
 			}
 			const r = raw;
 			if (typeof r.text !== "string") {
-				console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(result)}`);
+				console.warn("[dsh-plugin-core:explorer] read 返回形状不符契约（无 text 字段）");
 				return null;
 			}
 			const offset = typeof r.offset === "number" ? r.offset : 0;
@@ -53346,116 +58072,371 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				eof: r.eof !== false
 			};
 		}
-		/** `readBytes` 结果防御解析：data 必须是 Uint8Array（multipart 还原），否则错误态。 */
+		/** `readBytes` 结果防御解析：data 必须是 Uint8Array，否则错误态。 */
 		function bytesOf(result) {
 			const envelope = unwrapEnvelope(result);
 			if (envelope.kind === "error") return { failed: envelope.error };
 			const data = envelope.payload?.data;
 			if (data instanceof Uint8Array) return data;
-			console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(result)}`);
+			console.warn("[dsh-plugin-core:explorer] readBytes 返回形状不符契约");
 			return null;
 		}
-		/** `stat` 结果防御解析：只取 absolutePath（信封剥壳同款；stat 仅认 regular file）。 */
-		function absolutePathOf(result) {
-			const envelope = unwrapEnvelope(result);
-			if (envelope.kind === "error") return null;
-			const raw = envelope.payload;
-			if (typeof raw !== "object" || raw === null) return null;
-			const abs = raw.absolutePath;
-			return typeof abs === "string" && abs !== "" ? abs : null;
-		}
-		/** 失败分支判空（TS 收窄用）。 */
-		const isFailed = (value) => typeof value === "object" && value !== null && "failed" in value;
-		/** `list` 结果防御解析：返回 WorkspaceDirectoryListing 或失败/非法信封。 */
-		function listingOf(result) {
-			const envelope = unwrapEnvelope(result);
-			if (envelope.kind === "error") return { failed: envelope.error };
-			const raw = envelope.payload;
-			if (typeof raw !== "object" || raw === null) {
-				console.warn(`[task-dispatch:file-preview] list 返回非对象：${shapeOf(result)}`);
-				return null;
+		/** 剥 wire 命名空间前缀（如 `workspace-file/not-found` ⇒ `not-found`）。 */
+		function bareCode(raw) {
+			if (typeof raw === "string") {
+				const slash = raw.lastIndexOf("/");
+				return slash >= 0 ? raw.slice(slash + 1) : raw;
 			}
-			const r = raw;
-			if (typeof r.path !== "string" || !Array.isArray(r.entries) || typeof r.truncated !== "boolean") {
-				console.warn(`[task-dispatch:file-preview] list 返回形状不符契约：${shapeOf(result)}`);
-				return null;
+			if (typeof raw === "object" && raw !== null) {
+				const code = raw.code;
+				if (typeof code === "string") return bareCode(code);
 			}
-			return {
-				path: r.path,
-				entries: r.entries,
-				truncated: r.truncated
-			};
+			return "";
 		}
-		/** 图片扩展名 → MIME（svg 走 <img> 渲染：img 上下文不执行脚本）。 */
-		const IMAGE_MIME = {
-			png: "image/png",
-			jpg: "image/jpeg",
-			jpeg: "image/jpeg",
-			gif: "image/gif",
-			webp: "image/webp",
-			bmp: "image/bmp",
-			svg: "image/svg+xml",
-			ico: "image/x-icon",
-			avif: "image/avif"
-		};
-		/** HTML 静态预览的取数档位（官方 `HtmlBody` 注册为 `loading: 'bytes-complete'`：一次取全量字节）。 */
-		const HTML_KINDS = ["html", "htm"];
-		/** 源码态读取上限（用户 2026-10-04 拍板 256K；官方走 `read` 分页、上限是部署 maxBytes，无此常量）。 */
-		const SOURCE_MAX_BYTES = 262144;
-		/**
-		* Office 预览扩展名（官方 `remote.officeToPdf` 转 PDF 后再渲染）。
-		* ⚠️ 官方 `OfficeExtension` 还含 `xls` / `xlsx`，但用户 2026-10-05 拍板「Excel 向后讨论」⇒ 本轮**不纳入**，
-		* 表格文件维持原「暂不支持预览」提示（避免与「Excel 走可编辑表格引擎」的路线混为一谈）。
-		*/
-		const OFFICE_KINDS = [
-			"doc",
-			"docx",
-			"ppt",
-			"pptx"
-		];
-		/** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
-		function previewKind(path) {
-			const base = path.slice(path.lastIndexOf("/") + 1);
-			const dot = base.lastIndexOf(".");
-			const ext = dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
-			if (ext !== "" && IMAGE_MIME[ext] !== void 0) return {
-				kind: "image",
-				ext,
-				mime: IMAGE_MIME[ext]
-			};
-			if (ext === "pdf") return {
-				kind: "pdf",
-				ext,
-				mime: "application/pdf"
-			};
-			if (ext === "md" || ext === "markdown") return {
-				kind: "md",
-				ext
-			};
-			if (HTML_KINDS.some((kind) => kind === ext)) return {
-				kind: "html",
-				ext
-			};
-			if (OFFICE_KINDS.some((kind) => kind === ext)) return {
-				kind: "office",
-				ext,
-				mime: "application/pdf"
-			};
+		/** 任意抛错/reject ⇒ 文案键。官方 code 分支 + 未知回落，绝不按消息文本猜。 */
+		function errView(error) {
+			const code = bareCode(error);
+			switch (code) {
+				case "outside-workspace": return { key: "previewOutside" };
+				case "not-found": return { key: "previewNotFound" };
+				case "not-directory": return { key: "previewNotDirectory" };
+				case "not-regular-file": return { key: "previewNotFile" };
+				case "too-large": return { key: "previewTooLarge" };
+				case "not-text": return { key: "previewNotText" };
+				case "invocation-unavailable":
+				case "service-unavailable": return { key: "previewOfficeUnavailable" };
+				default:
+					console.warn("[dsh-plugin-core:explorer] 预览失败：未映射的远端错误码", code, error);
+					return {
+						key: "previewFailedCode",
+						params: { code }
+					};
+			}
+		}
+		/** 子项排序：目录在前，文件在后，各自按名称（不区分大小写）升序。 */
+		function sortEntries(entries) {
+			return [...entries].sort((a, b) => {
+				const ad = a.type === "directory" ? 0 : 1;
+				const bd = b.type === "directory" ? 0 : 1;
+				if (ad !== bd) return ad - bd;
+				return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+			});
+		}
+		function createRequestGate() {
+			let active = null;
 			return {
-				kind: "text",
-				ext
+				begin() {
+					active?.abort();
+					const next = new AbortController();
+					active = next;
+					return {
+						signal: next.signal,
+						current: () => active === next && !next.signal.aborted
+					};
+				},
+				abort() {
+					active?.abort();
+					active = null;
+				}
 			};
 		}
 		/**
-		* HTML 静态预览的**安全处理，逐条照抄官方**（`documentpreview` lib/client.js）：
-		* - 禁用标签（`:3827-3840`）：noscript / base / link / meta / iframe / frame / object / embed / set /
-		*   animate / animateMotion / animateTransform；
-		* - 禁用属性（`:3841`）：href / xlink:href；
-		* - head 第一项插入官方那条 CSP（`:3844-3846`）；
-		* - 外层 `sandbox=""`（`:4069`）——**不比官方多开一点、也不少关一点**。
-		* 官方用 DOMPurify 做第一层，本仓不引第三方包 ⇒ 用浏览器原生 DOMParser 做**等价的剔除**，
-		* 效果对齐官方清单；真正的兜底是 `sandbox=""`（禁脚本执行）+ CSP `default-src 'none'`（禁一切外链）。
+		* 这次失败是不是「我们主动取消的」。宿主两种表现都要静默：
+		* reject `AbortError`，或 resolve `{ ok:false, error }` 信封——调用方补传 signal 由这里判定。
 		*/
+		function isAborted(signal, error) {
+			if (signal?.aborted === true) return true;
+			return typeof error === "object" && error !== null && error.name === "AbortError";
+		}
+		/** 宿主绝对路径形态（/ 开头或 Windows 盘符）。 */
+		function isAbsoluteish$1(p) {
+			return p.startsWith("/") || p.startsWith("\\") || /^[a-zA-Z]:[\\/]/.test(p);
+		}
+		function matchesFilter(path, isDir, filter) {
+			if (filter === void 0) return true;
+			if (filter.dirs === true) return isDir;
+			if (filter.exts === void 0 || filter.exts.length === 0) return true;
+			if (isDir) return true;
+			return filter.exts.includes(extOf$1(path));
+		}
+		/**
+		* 归一绝对路径：`\` → `/`、盘符大写、去尾斜杠。相对路径原样返回（由调用方决定 base）。
+		* FS 面的路径一律先过这里，避免 `D:\a` 与 `d:/a` 被当成两个目录。
+		*/
+		function normalizePath(path) {
+			const slashed = path.replace(/\\/g, "/");
+			const drive = /^([a-zA-Z]):/.exec(slashed);
+			const head = drive === null ? slashed : `${drive[1].toUpperCase()}:${slashed.slice(2)}`;
+			if (/^[a-zA-Z]:$/.test(head)) return `${head}/`;
+			return head.length > 1 ? head.replace(/\/+$/, "") : head;
+		}
+		/** 把绝对路径剥回某个根之下（不在根下 ⇒ 原样返回）。根为 null ⇒ 原样返回。 */
+		function relativizeToDir(path, root) {
+			if (root === null || root === "") return path;
+			const target = normalizePath(path);
+			const base = normalizePath(root);
+			if (target === base) return "";
+			return target.startsWith(`${base}/`) ? target.slice(base.length + 1) : path;
+		}
+		/**
+		* 面包屑段：把目录路径拆成可点层级（绝对路径保留前导 /；Windows 盘符单独成段）。
+		*/
+		function crumbsOfDir(dir) {
+			const normalized = normalizePath(dir);
+			const drive = /^([a-zA-Z]):(\/|$)/.exec(normalized);
+			const body = drive === null ? normalized : normalized.slice(2);
+			const isAbs = drive === null && isAbsoluteish$1(normalized);
+			const segs = body.split("/").filter((s) => s.length > 0);
+			const out = [];
+			let acc = "";
+			if (drive !== null) {
+				acc = `${drive[1].toUpperCase()}:`;
+				out.push({
+					label: acc,
+					path: `${acc}/`
+				});
+			}
+			for (const seg of segs) {
+				acc = acc === "" ? isAbs ? `/${seg}` : seg : `${acc}/${seg}`;
+				out.push({
+					label: seg,
+					path: acc
+				});
+			}
+			return out;
+		}
+		/**
+		* 目标路径落在哪个工作区（**最长前缀**，不需要会话）。嵌套工作区取最具体的那个。
+		* 与 `workspaceAnchorForPath` 的区别：这里不要求该工作区有会话 —— 浏览已经不吃会话了。
+		*/
+		function workspaceOfPath(path, items) {
+			if (!isAbsoluteish$1(path)) return null;
+			const target = normalizePath(path);
+			let best = null;
+			let bestLen = -1;
+			for (const item of items) {
+				if (typeof item.path !== "string" || item.path === "") continue;
+				const root = normalizePath(item.path);
+				if (root === "" || !(target === root || target.startsWith(`${root}/`))) continue;
+				if (root.length > bestLen) {
+					best = item;
+					bestLen = root.length;
+				}
+			}
+			return best;
+		}
+		/** 文件/目录的显示名（末段）。 */
+		function baseNameOfPath(p) {
+			const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+			return i < 0 ? p : p.slice(i + 1);
+		}
+		/** 父目录（无父 = 空串）。 */
+		function dirnameOf(p) {
+			return parentOf(p);
+		}
+		/**
+		* 从宿主工作区清单里挑一个**真实浏览锚点**：最近更新过、且有会话的工作区。
+		*
+		* `workspaceFiles` 是会话作用域服务（list/read 都要 sessionId），所以「打开文件夹」必须先
+		* 落到一个真会话上 —— 这里是它的唯一落点。
+		*
+		* @param items 宿主工作区清单（真实快照）。
+		* @returns 锚点；清单为空 / 都没有会话则返回 null。
+		*/
+		function pickWorkspaceAnchor(items) {
+			let best = null;
+			let bestAt = Number.NEGATIVE_INFINITY;
+			for (const item of items) {
+				const sessionId = item.sessionIds?.[item.sessionIds.length - 1];
+				if (typeof item.title !== "string" || item.title === "" || typeof sessionId !== "string" || sessionId === "") continue;
+				const at = typeof item.updatedAt === "number" && Number.isFinite(item.updatedAt) ? item.updatedAt : Number.NEGATIVE_INFINITY;
+				if (best !== null && at <= bestAt) continue;
+				best = {
+					title: item.title,
+					sessionId
+				};
+				bestAt = at;
+			}
+			return best;
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/explorer-css.generated.js
+		const EXPLORER_CSS = "/* 工作区文件浏览器（dshpc-fb-*）。\n *\n * 度量真源 = 兄弟项目 dsh-task-dispatch-table 的 src/client/archive-session-css.ts\n * （.dsh-tdt-sv-* 全族）。**逐条照抄，不许自己估**：padding / gap / 圆角 / 字号 / 行高 /\n * 边框色 / 悬停色 / 透明度动画 / 溢出策略，一一对应，改这里之前先去那边对原文。\n * 前缀与变量名换成本仓口径（--tdt-* → --dshpc-*），数值不换。\n * **例外**：容器级内距（__bar / __title / __tree / __body）2026-11-03 起改成四周一致\n * 的 token 档（space-2 / space-3）——用户反馈兄弟那套「左右比上下宽」在这两处窗口里不对称。\n * 行级内距（__row / __row-note / __banner）仍是兄弟数值，未动。\n *\n * 控件：能核心就核心（面包屑 = Button ghost、行尾 = Button outline、展开 / 图标 = IconButton、\n * 分段 = Segmented、文字 = MarqueeText）。核心控件自带的 padding / 高度 / 皮肤在本文件里\n * **按兄弟数值覆盖**（选择器带 .dshpc-fb 前缀提高特异性，确保盖得住控件默认值）。\n */\n/* 背景不在这里画：dock 由 .dshpc-side-surface、选文件弹窗由 .dshpc-panel 提供。\n   自己再刷一层 surface-base 会把面板档位（modal 同色的 surface-1）盖掉 —— 弹窗就显得发黑。 */\n.dshpc-fb{\n  position:relative;display:flex;flex-direction:column;height:100%;min-height:0;\n  background:transparent;color:var(--dshpc-fg);\n}\n\n/* 第一排：▾ 选层 + 面包屑 + 动作（兄弟 .dsh-tdt-sv-crumbbar）\n   ⚠️ 不能 overflow:hidden —— 下拉浮层挂在它下面，裁了就看不见。 */\n.dshpc-fb__bar{\n  position:relative;flex:none;display:flex;align-items:center;gap:2px;\n  /* 四周内距一致（用户 2026-11-03：原来 4/10，左右比上下宽，看着不对称）——下文 __title / __tree / __body 同口径。 */\n  padding:var(--dshpc-space-2);border-bottom:1px solid var(--dshpc-border);white-space:nowrap;\n}\n.dshpc-fb__menu-wrap{position:relative;flex:none;display:inline-flex}\n.dshpc-fb__crumbs{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden}\n.dshpc-fb__crumbs-measure{\n  position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;\n  visibility:hidden;pointer-events:none;white-space:nowrap;\n}\n\n/* 面包屑：核心 ghost 钮，但皮肤与尺寸取兄弟 .dsh-tdt-sv-crumb（高由内容决定，不锁控制高）。 */\n.dshpc-fb .dshpc-fb__crumb{\n  appearance:none;background:0 0;border:none;height:auto;\n  padding:2px 4px;border-radius:var(--dshpc-radius-sm);\n  font:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);\n  color:var(--dshpc-fg-2);cursor:pointer;\n  display:inline-flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;\n}\n.dshpc-fb .dshpc-fb__crumb:hover{background:var(--dshpc-hover);color:var(--dshpc-fg)}\n.dshpc-fb .dshpc-fb__crumb:disabled{color:var(--dshpc-fg-2);cursor:default}\n.dshpc-fb .dshpc-fb__crumb--current{cursor:default;color:var(--dshpc-fg);font-weight:600;min-width:0}\n.dshpc-fb .dshpc-fb__crumb--current:hover{background:0 0}\n.dshpc-fb__crumb-mq{flex:1 1 auto;min-width:0}\n.dshpc-fb__crumb-sep{flex:none;color:var(--dshpc-fg-3)}\n\n/* 越界（outside-workspace）第一排：只读完整路径（兄弟 .dsh-tdt-sv-crumbbar-plain-inner）。 */\n.dshpc-fb__bar-plain{\n  font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-2);\n  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;\n}\n.dshpc-fb__actions{flex:none;display:flex;align-items:center;gap:4px}\n/* 选择器头部「选当前文件 / 当前文件夹」钮：与 ✕ 并排，不被面包屑挤扁。\n   「选当前目录」= 核心 Button outline（sm 档）：尺寸与皮肤全归核心，这里只留布局。\n   ⚠️ 别再往这里写 height / padding 覆盖 —— 域按登记顺序拼接，核心 .dshpc-btn--sm 谁先谁后\n   取决于渲染次序，覆盖会时灵时不灵（2026-11-03 前就是这么写的）。 */\n.dshpc-fb__pick{flex:none}\n\n/* ▾ 选层浮层。\n   层序：遮罩必须高于 picker 面板（--dshpc-z-panel），否则菜单开着点面板不算「点外部」；\n   菜单再压在遮罩之上，所以是 popmenu 一档 +1。表皮来自 panel.css 的 menu 档。 */\n.dshpc-fb__crumbs-backdrop{position:fixed;inset:0;z-index:var(--dshpc-z-popmenu);background:transparent}\n.dshpc-fb__crumbs-menu{\n  position:absolute;top:calc(100% + 4px);left:0;z-index:calc(var(--dshpc-z-popmenu) + 1);\n  min-width:160px;max-height:240px;overflow:auto;padding:4px;display:flex;flex-direction:column;\n}\n.dshpc-fb__menu-item{\n  appearance:none;background:0 0;border:none;text-align:left;font:inherit;\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-md);\n  padding:4px 8px;border-radius:var(--dshpc-radius-sm);color:var(--dshpc-fg);cursor:pointer;\n  max-width:280px;display:flex;align-items:center;gap:2px;\n  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\n}\n.dshpc-fb__menu-item:hover{background:var(--dshpc-hover)}\n.dshpc-fb__menu-empty{\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-md);padding:4px 8px;color:var(--dshpc-fg-3);\n}\n.dshpc-fb__menu-icon{flex:none;display:inline-flex}\n.dshpc-fb__menu-chev{flex:none;color:var(--dshpc-fg-3);margin-right:1px}\n.dshpc-fb__menu-chev-slot{flex:none;width:11px;height:11px;margin-right:1px}\n.dshpc-fb__menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n\n/* 第二排（仅预览态）：文件名 + 工具（兄弟 .dsh-tdt-sv-titlebar / -preview-title-inner）。 */\n.dshpc-fb__title{\n  flex:none;display:flex;align-items:center;gap:8px;\n  padding:var(--dshpc-space-2);border-bottom:1px solid var(--dshpc-border);\n}\n.dshpc-fb__title-inner{\n  font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg);\n  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;\n}\n\n/* 主体（兄弟 .dsh-tdt-sv-preview-body / -hint / -preview-err）\n   下面三个滚动容器都带透明右边框 = 滚动条与右缘隔 1px（口径见 style.md §滚动条让位）。 */\n.dshpc-fb__body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:var(--dshpc-space-3);border-right:1px solid transparent}\n.dshpc-fb__note{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-2);text-align:center;padding:12px 0}\n.dshpc-fb__err{\n  display:flex;flex-direction:column;align-items:flex-start;gap:10px;\n  font-size:var(--dshpc-font-sm);line-height:1.6;color:var(--dshpc-fg-2);padding:8px 0;\n}\n\n/* 目录树（兄弟 .dsh-tdt-sv-tree*） */\n.dshpc-fb__tree{flex:1;min-height:0;overflow:auto;padding:var(--dshpc-space-2);border-right:1px solid transparent;border-bottom:1px solid transparent}\n.dshpc-fb__row{\n  display:flex;align-items:center;gap:8px;padding:6px 8px;\n  border-radius:var(--dshpc-radius-sm);cursor:pointer;user-select:none;\n}\n.dshpc-fb__row:hover{background:var(--dshpc-hover)}\n.dshpc-fb__row:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px}\n.dshpc-fb__row-icon{flex:none;display:inline-flex;color:var(--dshpc-fg-2)}\n.dshpc-fb__row-name{\n  flex:1;min-width:0;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);\n  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\n}\n\n/* 展开开关：核心 IconButton，命中位 20×20 + 展开时转 90°（兄弟 .dsh-tdt-sv-tree-toggle{,-open}）。 */\n.dshpc-fb .dshpc-fb__row-toggle{\n  appearance:none;background:0 0;border:none;flex:none;\n  width:20px;height:20px;padding:0;margin:0;border-radius:var(--dshpc-radius-sm);\n  color:var(--dshpc-fg-2);cursor:pointer;\n  display:inline-flex;align-items:center;justify-content:center;\n  transition:transform var(--dshpc-dur-fast) var(--dshpc-ease),background var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-fb .dshpc-fb__row-toggle--open{transform:rotate(90deg)}\n\n/* 行尾「进入 / 选择」：按钮**皮肤完全交给核心 Button**（2026-11-03：原来这里又写了一遍描边/内距/\n   字号，等于自己手搓了一颗，跟别处的按钮长得不一样）。本仓只保留布局与「悬停才现身」：\n   平时隐身但占位（opacity 而非 display）⇒ 出现时不顶动行内布局。 */\n.dshpc-fb .dshpc-fb__row-act{\n  flex:none;margin-left:auto;\n  opacity:0;pointer-events:none;\n  transition:opacity var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-fb__row:hover .dshpc-fb__row-act,.dshpc-fb .dshpc-fb__row-act:focus-visible{opacity:1;pointer-events:auto}\n\n.dshpc-fb__row-children{\n  margin-left:9px;padding-left:7px;border-left:1px solid var(--dshpc-border);\n  display:flex;flex-direction:column;\n}\n.dshpc-fb__row-note{flex:none;padding:8px 10px;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3)}\n.dshpc-fb__row-err{padding:4px 8px 4px 36px;font-size:var(--dshpc-font-sm);color:var(--dshpc-danger)}\n\n/* 预览体内部容器（仅本仓预览组件用；兄弟对应 preview-fill / preview-body-code 一类）。\n   必须 border-box：渲染态 inline 加了 padding:12px 14px，content-box 下 width:100%+padding\n   会溢出父层 28px（父 .dshpc-fb 无 overflow 裁切）→ 恒多一条横滚条；border-box 把 padding\n   算进 100%，从根消除该溢出。 */\n.dshpc-fb__text{flex:1;min-height:0;overflow:auto;width:100%;box-sizing:border-box;border-right:1px solid transparent;border-bottom:1px solid transparent}\n.dshpc-fb__banner{padding:6px 10px;background:var(--dshpc-open-bg);color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm)}\n.dshpc-fb__more{display:flex;justify-content:center;padding:10px}\n.dshpc-fb__image{max-width:100%;border-radius:var(--dshpc-radius-sm);border:1px solid var(--dshpc-border)}\n/* iframe 的外壳（兄弟 .dsh-tdt-sv-preview-fill）：iframe 必须包在这一层里才拿得到高度——\n   裸挂 iframe 时替换元素的自动最小尺寸会让高度算不出来（表现为预览区整片空白、像没反应）。 */\n.dshpc-fb__fill{flex:1;min-height:0;display:flex;overflow:hidden;padding:0}\n.dshpc-fb__frame{flex:1;min-height:0;width:100%;height:100%;border:none;background:var(--dshpc-surface-1)}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/BytesPreview.js
+		function BytesPreview(props) {
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const tt = props.translate ?? t$1;
+			const [url, setUrl] = (0, react$1.useState)(null);
+			const [failed, setFailed] = (0, react$1.useState)(null);
+			(0, react$1.useEffect)(() => {
+				const controller = new AbortController();
+				let objectUrl = null;
+				setUrl(null);
+				setFailed(null);
+				props.files.readBytes(props.path, {}, controller.signal).then((res) => {
+					if (controller.signal.aborted) return;
+					const data = bytesOf(res);
+					if (data === null) {
+						console.warn("[dsh-plugin-core:explorer] readBytes 返回体无法解析为字节", props.path, res);
+						setFailed({ key: "previewBadPayload" });
+						return;
+					}
+					if ("failed" in data) {
+						setFailed(errView(data.failed));
+						return;
+					}
+					const blob = new Blob([new Uint8Array(data)], { type: props.mime });
+					objectUrl = URL.createObjectURL(blob);
+					setUrl(objectUrl);
+				}).catch((error) => {
+					if (isAborted(controller.signal, error)) return;
+					setFailed(errView(error));
+				});
+				return () => {
+					controller.abort();
+					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
+				};
+			}, [
+				props.files,
+				props.path,
+				props.mime
+			]);
+			if (failed !== null) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt(failed.key, failed.params));
+			if (url === null) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt("explorerLoading"));
+			if (props.kind === "image") return (0, react$1.createElement)("img", {
+				className: "dshpc-fb__image",
+				src: url,
+				alt: props.path
+			});
+			return (0, react$1.createElement)("div", { className: "dshpc-fb__fill" }, (0, react$1.createElement)("iframe", {
+				className: "dshpc-fb__frame",
+				src: url,
+				title: props.path
+			}));
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/md-labels.js
+		function markdownLabels() {
+			return {
+				code: {
+					copyLabel: t$1("mdCopy"),
+					copiedLabel: t$1("mdCopied"),
+					toolbarLabels: {
+						codeLabel: t$1("mdCode"),
+						wrapLabel: t$1("mdWrap"),
+						unwrapLabel: t$1("mdUnwrap")
+					}
+				},
+				footnotes: t$1("mdFootnotes")
+			};
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/TextPreview.js
+		/** 定位到行时最多自动续翻的页数（远处行号不值得为它打一整圈往返；用户仍可手动「加载更多」）。 */
+		const FOCUS_MAX_PAGES = 10;
+		function TextPreview(props) {
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const tt = props.translate ?? t$1;
+			const [text, setText] = (0, react$1.useState)("");
+			const [truncated, setTruncated] = (0, react$1.useState)(false);
+			const [nextOffset, setNextOffset] = (0, react$1.useState)(null);
+			const [loading, setLoading] = (0, react$1.useState)(false);
+			const [failed, setFailed] = (0, react$1.useState)(null);
+			const accRef = (0, react$1.useRef)("");
+			const abortRef = (0, react$1.useRef)(null);
+			const load = (0, react$1.useCallback)(async (offset, append) => {
+				abortRef.current?.abort();
+				const controller = new AbortController();
+				abortRef.current = controller;
+				setLoading(true);
+				try {
+					const parsed = textPageOf(await props.files.read(props.path, offset > 0 ? { offset } : {}, controller.signal));
+					if (controller.signal.aborted) return null;
+					if (parsed === null) {
+						console.warn("[dsh-plugin-core:explorer] read 返回体无法解析为文本页", props.path);
+						setFailed({ key: "previewBadPayload" });
+						return null;
+					}
+					if ("failed" in parsed) {
+						setFailed(errView(parsed.failed));
+						return null;
+					}
+					setFailed(null);
+					const full = append ? accRef.current + parsed.text : parsed.text;
+					accRef.current = full;
+					setText(full);
+					const next = parsed.eof ? null : parsed.offset + parsed.lines;
+					if (props.maxBytes !== void 0) {
+						if (parsed.eof) setNextOffset(null);
+						else if (new Blob([full]).size >= props.maxBytes) {
+							setTruncated(true);
+							setNextOffset(null);
+						} else setNextOffset(next);
+						return null;
+					}
+					setNextOffset(next);
+					return next;
+				} catch (error) {
+					if (isAborted(controller.signal, error)) return null;
+					setFailed(errView(error));
+					return null;
+				} finally {
+					if (!controller.signal.aborted) setLoading(false);
+				}
+			}, [
+				props.files,
+				props.path,
+				props.maxBytes
+			]);
+			(0, react$1.useEffect)(() => {
+				accRef.current = "";
+				setText("");
+				setTruncated(false);
+				setNextOffset(null);
+				setFailed(null);
+				(async () => {
+					let next = await load(0, false);
+					for (let page = 0; next !== null && props.focusLine !== void 0 && page < FOCUS_MAX_PAGES && accRef.current.split("\n").length < props.focusLine; page += 1) next = await load(next, true);
+				})();
+				return () => {
+					abortRef.current?.abort();
+				};
+			}, [load, props.focusLine]);
+			if (failed !== null) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt(failed.key, failed.params));
+			if (text === "" && loading) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt("explorerLoading"));
+			const rendered = props.markdown && !props.sourceView;
+			return (0, react$1.createElement)("div", {
+				className: "dshpc-fb__text",
+				style: {
+					display: "flex",
+					flexDirection: "column",
+					...rendered ? { padding: "var(--dshpc-space-3)" } : {}
+				}
+			}, truncated ? (0, react$1.createElement)("div", { className: "dshpc-fb__banner" }, tt("previewTruncated", { n: formatBytes(props.maxBytes ?? 0) })) : null, rendered ? (0, react$1.createElement)(official_exports.MarkdownText, {
+				text,
+				labels: markdownLabels()
+			}) : (0, react$1.createElement)("div", { style: {
+				flex: "1 1 auto",
+				minHeight: 0,
+				display: "flex"
+			} }, (0, react$1.createElement)(CodeViewer, {
+				text,
+				path: props.path,
+				t: tt,
+				focusLine: props.focusLine
+			})), nextOffset !== null && props.maxBytes === void 0 ? (0, react$1.createElement)("div", { className: "dshpc-fb__more" }, (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				loading,
+				onClick: () => void load(nextOffset, true)
+			}, tt("previewLoadMore"))) : null);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/HtmlPreview.js
+		/** 官方 CSP 原文（documentpreview lib/client.js 同款，不多开不少关）。 */
+		const HTML_CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:";
+		/** 禁用标签（官方清单）。 */
 		const HTML_FORBID_TAGS = [
 			"noscript",
 			"base",
@@ -53470,405 +58451,229 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			"animatemotion",
 			"animatetransform"
 		];
+		/** 禁用属性（官方清单）。 */
 		const HTML_FORBID_ATTRS = ["href", "xlink:href"];
-		/** 官方 CSP 原文（`:3846`）。 */
-		const HTML_CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:";
-		/** 把 HTML 文本做成官方同款的静态预览文档；解析/解码失败返回 undefined（调用方出错误态）。 */
+		/**
+		* 把 HTML 字节做成官方同款的静态预览文档：剔除禁用标签/属性、head 首项插 CSP。
+		* 真正的兜底是 iframe `sandbox=""`（禁脚本执行）+ CSP（禁一切外链）。
+		*/
 		function buildStaticHtml(data) {
+			if (typeof DOMParser === "undefined") return void 0;
 			let source;
 			try {
-				source = new TextDecoder("utf-8", { fatal: true }).decode(data);
+				source = new TextDecoder("utf-8", { fatal: false }).decode(data);
 			} catch {
 				return;
 			}
-			const parsed = new DOMParser().parseFromString(source, "text/html");
-			for (const tag of HTML_FORBID_TAGS) for (const element of Array.from(parsed.querySelectorAll(tag))) element.remove();
-			for (const element of Array.from(parsed.querySelectorAll("*"))) for (const attr of HTML_FORBID_ATTRS) element.removeAttribute(attr);
-			const policy = parsed.createElement("meta");
-			policy.setAttribute("http-equiv", "Content-Security-Policy");
-			policy.setAttribute("content", HTML_CSP);
-			const head = parsed.head ?? parsed.documentElement;
-			head.insertBefore(policy, head.firstChild);
-			return "<!doctype html>" + parsed.documentElement.outerHTML;
-		}
-		/** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
-		function bareCode(code) {
-			return code.includes("/") ? code.slice(code.lastIndexOf("/") + 1) : code;
-		}
-		/** 文本的 UTF-8 字节数（源码态上限按**字节**判，与官方 maxBytes 口径一致，不按字符数）。 */
-		function byteLengthOf(text) {
-			return new TextEncoder().encode(text).length;
-		}
-		/**
-		* 按**字节**上限精确截断（UTF-8 边界安全：不会切出半个多字节字符）。
-		* 官方是"切在 512K 整"，我们照做——此前整页追加会多带一整页（真机 2026-10-04 显示到 1 万行）。
-		*/
-		function sliceToBytes(text, maxBytes) {
-			const bytes = new TextEncoder().encode(text);
-			if (bytes.length <= maxBytes) return text;
-			const decoder = new TextDecoder("utf-8");
-			for (let cut = maxBytes; cut > maxBytes - 4 && cut > 0; cut--) try {
-				return decoder.decode(bytes.subarray(0, cut));
-			} catch {}
-			return text;
-		}
-		/** 字节数 → 人话（too-large 的 details.limit 展示用）——**唯一实现**在 `format.ts`（M4）。 */
-		/** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
-		function errView(error) {
-			const e = error ?? {};
-			const code = typeof e.code === "string" ? e.code : "";
-			const details = e.details ?? null;
-			switch (bareCode(code)) {
-				case "not-found":
-				case "lookup-not-found": return { key: "previewNotFound" };
-				case "too-large": {
-					const limit = details !== null && typeof details.limit === "number" ? details.limit : void 0;
-					return {
-						key: "previewTooLarge",
-						params: limit === void 0 ? void 0 : { limit: formatBytes(limit) }
-					};
-				}
-				case "not-text": return { key: "previewUnknownBinary" };
-				case "not-regular-file": return details !== null && details.kind === "directory" ? { key: "previewDirectory" } : { key: "previewNotRegular" };
-				case "outside-workspace": return { key: "previewOutsideWorkspace" };
-				case "invocation-unavailable":
-				case "service-unavailable": return { key: "previewOfficeUnavailable" };
-				case "failed": return details !== null && details.reason === "unavailable" ? { key: "previewOfficeUnavailable" } : { key: "previewOfficeFailed" };
-				default: return {
-					key: "previewError",
-					params: { code: code !== "" ? code : typeof e.message === "string" ? e.message : String(error) }
-				};
+			let doc;
+			try {
+				doc = new DOMParser().parseFromString(source, "text/html");
+			} catch {
+				return;
 			}
+			for (const tag of HTML_FORBID_TAGS) for (const el of Array.from(doc.querySelectorAll(tag))) el.remove();
+			for (const el of Array.from(doc.querySelectorAll("*"))) for (const attr of HTML_FORBID_ATTRS) el.removeAttribute(attr);
+			const csp = doc.createElement("meta");
+			csp.setAttribute("http-equiv", "Content-Security-Policy");
+			csp.setAttribute("content", HTML_CSP);
+			const head = doc.head ?? doc.documentElement;
+			head.insertBefore(csp, head.firstChild);
+			return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 		}
-		/** 错误/空态体：仅原因文案（复制路径已上提到顶栏按钮组，见 FilePreviewPanel head）。 */
-		function ErrBox(props) {
-			const { err, t } = props;
-			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react$1.createElement)("span", null, t(err.key, err.params))));
-		}
-		/** 图片 / PDF：readBytes → Blob → objectURL（卸载 revoke，防内存泄漏）。 */
-		function BytesPreview(props) {
-			const { workspaceFiles, sessionId, path, kind, mime, t, reloadNonce } = props;
-			const [url, setUrl] = (0, react$1.useState)(null);
-			const [err, setErr] = (0, react$1.useState)(null);
-			(0, react$1.useEffect)(() => {
-				let alive = true;
-				let objectUrl = null;
-				setUrl(null);
-				setErr(null);
-				workspaceFiles.readBytes(sessionId, path, {}).then((page) => {
-					if (!alive) return;
-					const data = bytesOf(page);
-					if (isFailed(data)) {
-						setErr(errView(data.failed));
-						return;
-					}
-					if (data === null) {
-						setErr({ key: "previewBadPayload" });
-						return;
-					}
-					objectUrl = URL.createObjectURL(new Blob([data], { type: mime }));
-					setUrl(objectUrl);
-				}).catch((error) => {
-					if (alive) setErr(errView(error));
-				});
-				return () => {
-					alive = false;
-					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
-				};
-			}, [
-				workspaceFiles,
-				sessionId,
-				path,
-				mime,
-				reloadNonce
-			]);
-			if (err !== null) return (0, react$1.createElement)(ErrBox, {
-				err,
-				t
-			});
-			if (url === null) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
-			if (kind === "pdf") return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
-				className: "dsh-tdt-sv-preview-pdf",
-				src: url,
-				title: path
-			}));
-			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("img", {
-				className: "dsh-tdt-sv-preview-img",
-				src: url,
-				alt: path
-			}));
-		}
-		/**
-		* Office（doc / docx / ppt / pptx）：官方 `remote.officeToPdf.render` 转 PDF → Blob → objectURL →
-		* **与 PDF 同款 iframe 原生渲染**。转换本身是官方能力，我方只做取数与渲染壳（零 npm 依赖）。
-		* 服务未就位（宿主未启用文档预览服务）⇒ 不发起请求，直接出「Office 预览不可用」（与官方提示同款）。
-		*/
-		function OfficePreview(props) {
-			const { officeToPdf, sessionId, path, t, reloadNonce } = props;
-			const [url, setUrl] = (0, react$1.useState)(null);
-			const [err, setErr] = (0, react$1.useState)(null);
-			(0, react$1.useEffect)(() => {
-				let alive = true;
-				let objectUrl = null;
-				setUrl(null);
-				setErr(null);
-				if (officeToPdf === null) {
-					setErr({ key: "previewOfficeUnavailable" });
-					return;
-				}
-				officeToPdf.render(sessionId, path, "foreground").then((page) => {
-					if (!alive) return;
-					const data = bytesOf(page);
-					if (isFailed(data)) {
-						setErr(errView(data.failed));
-						return;
-					}
-					if (data === null) {
-						setErr({ key: "previewBadPayload" });
-						return;
-					}
-					objectUrl = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
-					setUrl(objectUrl);
-				}).catch((error) => {
-					if (alive) setErr(errView(error));
-				});
-				return () => {
-					alive = false;
-					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
-				};
-			}, [
-				officeToPdf,
-				sessionId,
-				path,
-				reloadNonce
-			]);
-			if (err !== null) return (0, react$1.createElement)(ErrBox, {
-				err,
-				t
-			});
-			if (url === null) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
-			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
-				className: "dsh-tdt-sv-preview-pdf",
-				src: url,
-				title: path
-			}));
-		}
-		/**
-		* HTML 静态预览（照官方 `BasicHtmlFrame`，`documentpreview` lib/client.js:4052-4073）：
-		* `readBytes` 取全量字节（官方 `loading: 'bytes-complete'`）→ 官方同款安全处理 →
-		* `<iframe srcDoc sandbox="" data-html-preview>`。frames 名按官方 `dsh-sidebar-html-<id>` 同款隔离。
-		*/
 		function HtmlPreview(props) {
-			const { workspaceFiles, sessionId, path, t, reloadNonce } = props;
-			const [doc, setDoc] = (0, react$1.useState)(void 0);
-			const [err, setErr] = (0, react$1.useState)(null);
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const tt = props.translate ?? t$1;
+			const [doc, setDoc] = (0, react$1.useState)(null);
+			const [failed, setFailed] = (0, react$1.useState)(null);
 			(0, react$1.useEffect)(() => {
-				let alive = true;
-				setDoc(void 0);
-				setErr(null);
-				workspaceFiles.readBytes(sessionId, path, {}).then((page) => {
-					if (!alive) return;
-					const data = bytesOf(page);
-					if (isFailed(data)) {
-						setErr(errView(data.failed));
-						return;
-					}
+				if (props.sourceView) return;
+				const controller = new AbortController();
+				setDoc(null);
+				setFailed(null);
+				props.files.readBytes(props.path, {}, controller.signal).then((res) => {
+					if (controller.signal.aborted) return;
+					const data = bytesOf(res);
 					if (data === null) {
-						setErr({ key: "previewBadPayload" });
+						console.warn("[dsh-plugin-core:explorer] readBytes 返回体无法解析为字节", props.path, res);
+						setFailed({ key: "previewBadPayload" });
 						return;
 					}
-					const built = buildStaticHtml(data);
-					if (built === void 0) {
-						setErr({ key: "previewHtmlFailed" });
+					if ("failed" in data) {
+						setFailed(errView(data.failed));
 						return;
 					}
-					setDoc(built);
+					const html = buildStaticHtml(data);
+					if (html === void 0) {
+						setFailed({ key: "previewRenderFailed" });
+						return;
+					}
+					setDoc(html);
 				}).catch((error) => {
-					if (alive) setErr(errView(error));
+					if (isAborted(controller.signal, error)) return;
+					setFailed(errView(error));
 				});
 				return () => {
-					alive = false;
+					controller.abort();
 				};
 			}, [
-				workspaceFiles,
-				sessionId,
-				path,
-				reloadNonce
+				props.files,
+				props.path,
+				props.sourceView
 			]);
-			if (err !== null) return (0, react$1.createElement)(ErrBox, {
-				err,
-				t
+			if (props.sourceView) return (0, react$1.createElement)(TextPreview, {
+				files: props.files,
+				path: props.path,
+				markdown: false,
+				sourceView: true,
+				maxBytes: SOURCE_MAX_BYTES,
+				translate: tt
 			});
-			if (doc === void 0) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
-			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
-				className: "dsh-tdt-sv-preview-html",
-				name: "dsh-sidebar-html-preview",
-				srcDoc: doc,
+			if (failed !== null) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt(failed.key, failed.params));
+			if (doc === null) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt("explorerLoading"));
+			return (0, react$1.createElement)("div", { className: "dshpc-fb__fill" }, (0, react$1.createElement)("iframe", {
+				className: "dshpc-fb__frame",
 				sandbox: "",
-				title: t("previewHtmlFrame"),
-				"data-html-preview": true
+				srcDoc: doc,
+				title: props.path
 			}));
-		}
-		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。
-		* md 两态（渲染 ⇄ 源码）由面板顶层持有 `sourceView` 并下传——切换控件在顶栏（见 FilePreviewPanel head），
-		* 内容体只按 `showSource` 渲染，不再在内部 overlay 任何控件。 */
-		function TextPreview(props) {
-			const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t, maxBytes } = props;
-			const [text, setText] = (0, react$1.useState)(null);
-			const [nextOffset, setNextOffset] = (0, react$1.useState)(null);
-			const [loading, setLoading] = (0, react$1.useState)(true);
-			const [loadingMore, setLoadingMore] = (0, react$1.useState)(false);
-			const [err, setErr] = (0, react$1.useState)(null);
-			const [truncated, setTruncated] = (0, react$1.useState)(false);
-			(0, react$1.useEffect)(() => {
-				let alive = true;
-				setText(null);
-				setNextOffset(null);
-				setLoading(true);
-				setErr(null);
-				setTruncated(false);
-				workspaceFiles.read(sessionId, path, {}).then(async (page) => {
-					if (!alive) return;
-					const parsed = textPageOf(page);
-					if (isFailed(parsed)) {
-						setErr(errView(parsed.failed));
-						setLoading(false);
-						return;
-					}
-					if (parsed === null) {
-						setErr({ key: "previewBadPayload" });
-						setLoading(false);
-						return;
-					}
-					if (maxBytes === void 0) {
-						setText(parsed.text);
-						setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
-						setLoading(false);
-						return;
-					}
-					let merged = parsed.text;
-					let offset = parsed.eof ? null : parsed.offset + parsed.lines;
-					setText(merged);
-					while (alive && offset !== null && byteLengthOf(merged) < maxBytes) {
-						let raw = null;
-						try {
-							raw = await workspaceFiles.read(sessionId, path, { offset });
-						} catch {}
-						if (!alive) return;
-						const next = raw === null ? null : textPageOf(raw);
-						if (next === null || isFailed(next)) {
-							setErr(next === null ? { key: "previewBadPayload" } : errView(next.failed));
-							setLoading(false);
-							return;
-						}
-						merged = `${merged}\n${next.text}`;
-						offset = next.eof ? null : next.offset + next.lines;
-						if (byteLengthOf(merged) > maxBytes) merged = sliceToBytes(merged, maxBytes);
-						setText(merged);
-					}
-					if (!alive) return;
-					setTruncated(offset !== null);
-					setText(merged);
-					setNextOffset(null);
-					setLoading(false);
-				}).catch((error) => {
-					if (!alive) return;
-					setErr(errView(error));
-					setLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				workspaceFiles,
-				sessionId,
-				path,
-				reloadNonce
-			]);
-			const loadMore = () => {
-				if (nextOffset === null || loadingMore) return;
-				setLoadingMore(true);
-				workspaceFiles.read(sessionId, path, { offset: nextOffset }).then((page) => {
-					const parsed = textPageOf(page);
-					if (isFailed(parsed)) {
-						setErr(errView(parsed.failed));
-						setLoadingMore(false);
-						return;
-					}
-					if (parsed === null) {
-						setErr({ key: "previewBadPayload" });
-						setLoadingMore(false);
-						return;
-					}
-					setText((prev) => prev === null ? parsed.text : `${prev}\n${parsed.text}`);
-					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
-					setLoadingMore(false);
-				}).catch((error) => {
-					setErr(errView(error));
-					setLoadingMore(false);
-				});
-			};
-			if (err !== null) return (0, react$1.createElement)(ErrBox, {
-				err,
-				t
-			});
-			if (loading || text === null) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
-			const showSource = !markdown || sourceView;
-			const banner = truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-truncated" }, t("previewTruncated", { size: t("previewTruncatedSize") })) : null;
-			const body = (0, react$1.createElement)("div", { className: showSource && !markdown ? "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-body-code" : "dsh-tdt-sv-preview-body" }, showSource ? (0, react$1.createElement)("div", {
-				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
-				"data-code-preview": true
-			}, (0, react$1.createElement)(CodeViewer, {
-				text,
-				path,
-				t
-			})) : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text,
-				labels: MD_LABELS
-			})), !truncated && nextOffset !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "sm",
-				disabled: loadingMore,
-				onClick: loadMore
-			}, t("previewLoadMore"))) : null);
-			return (0, react$1.createElement)(react$1.Fragment, null, banner, body);
 		}
 		//#endregion
-		//#region src/client/file-browser.tsx
-		const tooled = (label, node) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-			label,
-			side: "bottom"
-		}, node);
-		/**
-		* list 的线上路径包装：**0.2.0-rc.1 起官方 list 拒绝空路径**（`gateway/bad-request` "path is required"，
-		* 官方 lib/index.js `inspect()` 首行校验；0.1.7-rc.2 还允许空串列根，行为变更）。
-		* 空串（= 工作区根）一律以 `'.'` 上线：路径按 `cwd = 工作区根` 归一 ⇒ `'.'` 解析为根本身，containment 通过。
-		* 响应里根目录的 `path` 仍是 `''`（官方 workspacePathOf 对根返回空串）⇒ 内部目录状态 / 面包屑不受影响。
-		*/
-		function listDir(workspaceFiles, sessionId, dir) {
-			return workspaceFiles.list(sessionId, dir === "" ? "." : dir);
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/OfficePreview.js
+		function OfficePreview(props) {
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const tt = props.translate ?? t$1;
+			const [url, setUrl] = (0, react$1.useState)(null);
+			const [failed, setFailed] = (0, react$1.useState)(null);
+			(0, react$1.useEffect)(() => {
+				const controller = new AbortController();
+				let objectUrl = null;
+				setUrl(null);
+				setFailed(null);
+				const face = props.officeToPdf;
+				if (face === null) return;
+				const sessionId = props.sessionId ?? pickWorkspaceAnchor(workspaceList.getSnapshot())?.sessionId;
+				if (sessionId === void 0 || sessionId === "") {
+					setFailed({ key: "previewOfficeNoSession" });
+					return;
+				}
+				face.render(sessionId, props.path, "foreground", controller.signal).then((res) => {
+					if (controller.signal.aborted) return;
+					const data = bytesOf(res);
+					if (data === null || "failed" in data) {
+						setFailed(errView(data === null ? void 0 : data.failed));
+						return;
+					}
+					const blob = new Blob([new Uint8Array(data)], { type: "application/pdf" });
+					objectUrl = URL.createObjectURL(blob);
+					setUrl(objectUrl);
+				}).catch((error) => {
+					if (isAborted(controller.signal, error)) return;
+					setFailed(errView(error));
+				});
+				return () => {
+					controller.abort();
+					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
+				};
+			}, [
+				props.officeToPdf,
+				props.sessionId,
+				props.path
+			]);
+			if (props.officeToPdf === null) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt("previewOfficeUnavailable"));
+			if (failed !== null) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt(failed.key, failed.params));
+			if (url === null) return (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt("explorerLoading"));
+			return (0, react$1.createElement)("iframe", {
+				className: "dshpc-fb__frame",
+				src: url,
+				title: props.path
+			});
 		}
-		/** 路径工具：取父目录（无父 = 空串，list('') = 工作区根）。 */
-		function dirnameOf(p) {
-			const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
-			if (i <= 0) return "";
-			return p.slice(0, i);
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/index.js
+		function FilePreview(props) {
+			ensureControls();
+			const tt = props.translate ?? t$1;
+			const info = previewInfoOf(props.path);
+			const sourceView = props.sourceView === true;
+			switch (info.kind) {
+				case "image":
+				case "pdf": return (0, react$1.createElement)(BytesPreview, {
+					files: props.files,
+					path: props.path,
+					kind: info.kind,
+					mime: info.mime ?? "application/octet-stream",
+					translate: tt
+				});
+				case "office": return (0, react$1.createElement)(OfficePreview, {
+					officeToPdf: props.officeToPdf ?? null,
+					sessionId: props.sessionId,
+					path: props.path,
+					translate: tt
+				});
+				case "html": return (0, react$1.createElement)(HtmlPreview, {
+					files: props.files,
+					path: props.path,
+					sourceView,
+					translate: tt
+				});
+				case "md":
+				case "text": return (0, react$1.createElement)(TextPreview, {
+					files: props.files,
+					path: props.path,
+					markdown: info.kind === "md",
+					sourceView,
+					focusLine: props.line,
+					translate: tt
+				});
+			}
+			return null;
 		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/crumbs-menu.js
 		/**
-		* ▾ 下拉条目构造（**picker 与 dock 共用同一段代码**，差别只在入参——用户 2026-09-29 点名提炼，
-		* 严禁两处各写一份）：
-		* - 当前工作区排第一（打开文件夹图标 + 加粗），**其下路径紧跟**（每层一个右箭头位缩进），
-		*   再列其他工作区（关合图标 + 灰）——「打开哪个就跟在哪个下面」；点当前工作区 = 回到其根目录。
-		* - 当前工作区未知（rootName 空或不在清单）时路径段置顶、全部工作区按「其他」罗列；
-		* - workspaces 不传 = 不显示工作区段（旧形态兜底：根无箭头、其下逐层缩进）。
+		* ▾ 选层下拉的**条目构造**（picker 与 dock 共用同一段代码，差别只在入参 —— 源实现用户 2026-09-29
+		* 点名提炼，严禁两处各写一份）。
+		*
+		*  - 根层常驻最上面：POSIX 一条「根目录」，Windows 是一排盘符（用户 2026-11-03）；
+		*  - 当前工作区排第一（打开文件夹图标 + 加粗），**其下路径紧跟**（每层一个右箭头位缩进），
+		*    再列其他工作区（关合图标 + 灰）—— 「打开哪个就跟在哪个下面」；点当前工作区 = 回到其根目录；
+		*  - 当前工作区未知（rootName 空或不在清单）时路径段置顶、全部工作区按「其他」罗列；
+		*  - workspaces 为空（宿主还没给工作区快照）= 只出路径段（根无箭头、其下逐层缩进）。
+		*
+		* 条目是**自写浮层**（核心没有「带缩进的选择层菜单」这类控件 ⇒ 按兄弟项目
+		* dsh-task-dispatch-table 的 .dsh-tdt-sv-crumbs-menu* 逐条照抄间距）：backdrop + 菜单本体 +
+		* `-item`（4px 8px / 最大宽 280 / 超出滚动 / 空态）。
+		*
+		* 2026-11-03 从 FileBrowser.ts 拆出来（原来单文件 1000+ 行、五个职责）：这里只有「菜单里放什么」，
+		* 浮层外壳与表皮在 FileBrowser（`panel.css` 的 menu 档），互不掺。
 		*/
+		/** 菜单条目（根层 → 当前工作区 + 其下路径 → 其他工作区）。 */
 		function crumbsMenuEntries(params) {
-			const { workspaces, rootName, rootFallbackLabel, crumbs, onPickWorkspace, onLoadDir } = params;
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const { workspaces, roots, rootName, rootFallbackLabel, crumbs, onPickWorkspace, onLoadDir } = params;
+			const out = [];
+			for (const root of roots) out.push((0, react$1.createElement)("button", {
+				key: `root:${root.path}`,
+				type: "button",
+				role: "menuitem",
+				className: "dshpc-fb__menu-item",
+				style: {
+					paddingLeft: 8,
+					display: "flex",
+					alignItems: "center",
+					gap: "6px"
+				},
+				title: root.path,
+				onClick: () => onLoadDir?.(root.path)
+			}, (0, react$1.createElement)("span", {
+				className: "dshpc-fb__menu-icon",
+				style: { color: "var(--dshpc-fg-2)" }
+			}, (0, react$1.createElement)(official_exports.IconFolderCloseRegular, { size: 13 })), (0, react$1.createElement)("span", { className: "dshpc-fb__menu-label" }, root.label)));
 			const wsEntry = (ws, current) => (0, react$1.createElement)("button", {
 				key: `ws:${ws}`,
 				type: "button",
 				role: "menuitem",
-				className: "dsh-tdt-sv-crumbs-menu-item",
+				className: "dshpc-fb__menu-item",
 				style: {
 					paddingLeft: 8,
 					display: "flex",
@@ -53877,39 +58682,40 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				},
 				title: ws,
 				onClick: () => {
-					if (current) onLoadDir("");
+					if (current) onLoadDir?.("");
 					else onPickWorkspace?.(ws);
 				}
-			}, (0, react$1.createElement)("span", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				flex: "none",
-				color: current ? "var(--dshpc-fg)" : "var(--dshpc-fg-2)"
-			} }, (0, react$1.createElement)(current ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 13 })), (0, react$1.createElement)("span", {
-				className: "dsh-tdt-sv-crumbs-menu-label",
+			}, (0, react$1.createElement)("span", {
+				className: "dshpc-fb__menu-icon",
+				style: { color: current ? "var(--dshpc-fg)" : "var(--dshpc-fg-2)" }
+			}, (0, react$1.createElement)(current ? official_exports.IconFolderOpenOutlineRegular : official_exports.IconFolderCloseRegular, { size: 13 })), (0, react$1.createElement)("span", {
+				className: "dshpc-fb__menu-label",
 				style: { fontWeight: current ? 600 : 400 }
 			}, ws));
 			const pathEntry = (crumb, depth, withArrow = true) => (0, react$1.createElement)("button", {
-				key: `p:${crumb.path}`,
+				key: `dir:${crumb.path}`,
 				type: "button",
 				role: "menuitem",
-				className: "dsh-tdt-sv-crumbs-menu-item",
+				className: "dshpc-fb__menu-item",
 				style: { paddingLeft: 8 },
 				title: crumb.path,
 				onClick: () => {
-					onLoadDir(crumb.path);
+					onLoadDir?.(crumb.path);
 				}
 			}, withArrow ? (0, react$1.createElement)(react$1.Fragment, null, Array.from({ length: depth }, (_, s) => (0, react$1.createElement)("span", {
 				key: `s${s}`,
-				className: "dsh-tdt-sv-crumbs-chev-slot",
+				className: "dshpc-fb__menu-chev-slot",
 				"aria-hidden": true
-			})), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumbs-chev" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 11 }))) : null, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumbs-menu-label" }, crumb.label));
-			if (workspaces === void 0) {
-				if (crumbs.length === 0) return [(0, react$1.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-empty" }, rootFallbackLabel)];
+			})), (0, react$1.createElement)("span", { className: "dshpc-fb__menu-chev" }, (0, react$1.createElement)(official_exports.IconChevronRightOutlineRegular, { size: 11 }))) : null, (0, react$1.createElement)("span", { className: "dshpc-fb__menu-label" }, crumb.label));
+			if (workspaces.length === 0) {
+				if (crumbs.length === 0) return [(0, react$1.createElement)("div", {
+					key: "empty",
+					className: "dshpc-fb__menu-empty"
+				}, rootFallbackLabel)];
 				return crumbs.map((crumb, index) => pathEntry(crumb, index === 0 ? 0 : index - 1, index !== 0));
 			}
-			const segments = rootName !== "" && crumbs.length > 0 && crumbs[0].path === "" ? crumbs.slice(1) : crumbs;
-			const out = [];
+			const head = crumbs[0];
+			const segments = head !== void 0 && (head.path === "" || roots.some((root) => root.path === head.path)) ? crumbs.slice(1) : crumbs;
 			if (rootName !== "" && workspaces.includes(rootName)) {
 				out.push(wsEntry(rootName, true));
 				segments.forEach((crumb, i) => {
@@ -53924,191 +58730,181 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}
 			return out;
 		}
-		/** 路径工具：dir 拼接 name（处理根与绝对/相对）。 */
-		function joinPath(dir, name) {
-			if (dir === "" || dir === "/") return (dir === "/" ? "/" : "") + name;
-			return dir.replace(/\/+$/, "") + "/" + name;
-		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/crumb-nav.js
 		/**
-		* 面包屑/下拉统一按**工作区相对**展示（用户 2026-09-29：把根目录刨掉、名字不写死）。
-		* dir 为宿主绝对路径时（openFile 入口 / 目录反推），用缓存的 workspaceRoot 把根剥掉——
-		* 根名字每个部署都不同，绝不能写死；根未知或不在根下时原样返回（退化现行为）。
-		*/
-		function relativizeToRoot(dir, sessionId) {
-			if (!dir.startsWith("/")) return dir;
-			const root = workspaceRoots.get(sessionId);
-			if (root === void 0) return dir;
-			const norm = root.replace(/\/+$/, "");
-			if (dir === norm) return "";
-			if (dir.startsWith(norm + "/")) return dir.slice(norm.length + 1);
-			return dir;
-		}
-		/** 面包屑段：把目录路径拆成可点层级（绝对路径保留前导 /）。 */
-		function crumbsOf(dir) {
-			const isAbs = dir.startsWith("/");
-			const segs = dir.split("/").filter((s) => s.length > 0);
-			const out = [];
-			let acc = "";
-			for (const seg of segs) {
-				acc = acc === "" ? isAbs ? "/" + seg : seg : acc + "/" + seg;
-				out.push({
-					label: seg,
-					path: acc
-				});
-			}
-			return out;
-		}
-		/** 子项排序：目录在前，文件在后，各自按名称（不区分大小写）升序。 */
-		function sortEntries(entries) {
-			return [...entries].sort((a, b) => {
-				const ad = a.type === "directory" ? 0 : 1;
-				const bd = b.type === "directory" ? 0 : 1;
-				if (ad !== bd) return ad - bd;
-				return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-			});
-		}
-		/** 宿主绝对路径形态（/ 开头或 Windows 盘符）。 */
-		function isAbsoluteish(p) {
-			return p.startsWith("/") || p.startsWith("\\") || /^[a-zA-Z]:[\\/]/.test(p);
-		}
-		/**
-		* 已探明的**工作区根**（宿主绝对路径），按会话缓存。
-		* 官方没有任何「目录的绝对路径」接口（stat 只认 regular file，locateFile 对目录抛
-		* not-regular-file，dsh-api-workspace-files lib/index.js:594），但工作区根可以由
-		* 「任一文件的 relativePath + stat.absolutePath」反推一次后复用 ⇒ 之后**空目录 /
-		* 只含子目录**的相对名目录也能拼出绝对路径（用户 2026-09-29 要求不留遗留）。
-		*/
-		const workspaceRoots = /* @__PURE__ */ new Map();
-		/** 由「相对路径 + 该文件宿主绝对路径」反推工作区根并缓存（absolute = 根 + '/' + 相对路径）。 */
-		function learnRoot(sessionId, relativePath, absolutePath) {
-			const rel = relativePath.replace(/^\/+/, "").replace(/\/+$/, "");
-			if (rel === "" || !absolutePath.endsWith("/" + rel)) return null;
-			const root = absolutePath.slice(0, absolutePath.length - rel.length - 1);
-			workspaceRoots.set(sessionId, root);
-			return root;
-		}
-		/** 相对路径拼接（保持工作区相对形态，不做绝对路径处理）。 */
-		function relJoin(dir, name) {
-			return dir.replace(/\/+$/, "") === "" ? name : dir.replace(/\/+$/, "") + "/" + name;
-		}
-		/**
-		* 在相对目录树里找**任意一个文件**并 stat（广度优先、有界：每层最多 5 个目录、最多 3 层）。
-		* 用于目标目录本身没有文件子项（空目录 / 只有子目录）时反推工作区根。
-		* @returns 该文件的宿主绝对路径与相对路径；找不到（工作区里一个文件都没有）返回 null。
-		*/
-		async function findAnyFileAbs(workspaceFiles, sessionId, startDir) {
-			const stat = workspaceFiles.stat;
-			if (stat === void 0) return null;
-			let frontier = [startDir];
-			for (let depth = 0; depth < 3 && frontier.length > 0; depth++) {
-				const nextDirs = [];
-				for (const dir of frontier.slice(0, 5)) {
-					let entries;
-					try {
-						const parsed = listingOf(await listDir(workspaceFiles, sessionId, dir));
-						if (isFailed(parsed) || parsed === null) continue;
-						entries = parsed.entries;
-					} catch {
-						continue;
-					}
-					const file = entries.find((entry) => entry.type === "file");
-					if (file !== void 0) {
-						const rel = relJoin(dir, file.name);
-						try {
-							const abs = absolutePathOf(await stat(sessionId, rel));
-							if (abs !== null) return {
-								absolutePath: abs,
-								relativePath: rel
-							};
-						} catch {}
-					}
-					for (const entry of entries) if (entry.type === "directory" && nextDirs.length < 5) nextDirs.push(relJoin(dir, entry.name));
-				}
-				frontier = nextDirs;
-			}
-			return null;
-		}
-		/**
-		* 把「工作区相对名」的目录解析成宿主绝对路径（面包屑才能从工作区根往下列）。
+		* 文件浏览器的第一排：▾ 选层 + 面包屑 + 右侧动作（选择 / ✕）。
 		*
-		* 场景（用户 2026-09-29 实测）：交付卡 / 执行记录「产出」列把回契声明的产出**原样**传入
-		* `openFile`，常是工作区相对名（如 `20260928`）⇒ 面包屑只剩这一层。
-		* 解析优先级（每一步失败都自然落到下一步）：
-		*   ① 工作区根已缓存 ⇒ 根 + '/' + 规范相对路径（覆盖**空目录 / 只有子目录**）；
-		*   ② 目录里有文件子项 ⇒ stat 它，`absolutePath = 根 + '/' + 目录 + '/' + 文件名`，
-		*      掐掉文件名即得目录绝对路径，并**记住工作区根**供后续复用；
-		*   ③ 目录里没文件 ⇒ 有界 BFS 在目录树里找任一文件 stat 出根，再拼。
-		* 全部失败（工作区里一个文件都没有 / stat 不可用）⇒ 退回入参，浏览不受影响。
+		* 2026-11-03 从 `FileBrowser.ts` 拆出（那里原来五个职责挤在 1000 行里）：
+		* 本模块只负责「怎么画」，状态、测量与导航全在调用方。
+		* 两个变体：
+		*  - {@link CrumbNav}：正常形态（有 ▾ + 可点面包屑）；
+		*  - {@link PlainNav}：越界形态（整条换成只读完整路径，不给会失败的入口）。
 		*/
-		async function absolutizeDir(workspaceFiles, sessionId, dir, canonical, entries) {
-			if (isAbsoluteish(dir)) return dir;
-			const rel = canonical !== "" ? canonical : dir;
-			const cached = workspaceRoots.get(sessionId);
-			if (cached !== void 0) return cached + "/" + rel;
-			const stat = workspaceFiles.stat;
-			if (stat === void 0) return dir;
-			const file = entries.find((entry) => entry.type === "file");
-			if (file !== void 0) try {
-				const sub = relJoin(rel, file.name);
-				const abs = absolutePathOf(await stat(sessionId, sub));
-				if (abs !== null && abs.endsWith("/" + file.name) && learnRoot(sessionId, sub, abs) !== null) return abs.slice(0, abs.length - file.name.length - 1);
-			} catch {}
-			const found = await findAnyFileAbs(workspaceFiles, sessionId, rel);
-			if (found === null) return dir;
-			const root = learnRoot(sessionId, found.relativePath, found.absolutePath);
-			return root === null ? dir : root + "/" + rel;
+		/** 一段面包屑（核心 ghost 钮：无底无边；度量条与可见态必须逐字同构）。 */
+		function crumbButton(label, onClick, current = false) {
+			return (0, react$1.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				className: `dshpc-fb__crumb${current ? " dshpc-fb__crumb--current" : ""}`,
+				disabled: onClick === void 0,
+				tabIndex: onClick === void 0 ? -1 : 0,
+				onClick
+			}, (0, react$1.createElement)(MarqueeText, {
+				text: label,
+				className: "dshpc-fb__crumb-mq"
+			}));
 		}
-		/** 单个文件预览体（复用 file-preview 的官方渲染组件，外裹错误边界）。 */
-		function FileBody(props) {
-			const { workspaceFiles, officeToPdf, sessionId, path, sourceView, reloadNonce, t } = props;
-			const { kind, ext, mime } = previewKind(path);
-			const isMd = kind === "md";
-			const isHtml = kind === "html";
-			const fallback = (0, react$1.createElement)(ErrBox, {
-				err: { key: "previewRenderFailed" },
-				t
-			});
-			return (0, react$1.createElement)(PreviewBoundary, {
-				fallback,
-				children: kind === "image" || kind === "pdf" ? (0, react$1.createElement)(BytesPreview, {
-					workspaceFiles,
-					sessionId,
-					path,
-					kind,
-					mime: mime ?? "application/octet-stream",
-					t,
-					reloadNonce
-				}) : kind === "office" ? (0, react$1.createElement)(OfficePreview, {
-					officeToPdf: officeToPdf ?? null,
-					sessionId,
-					path,
-					t,
-					reloadNonce
-				}) : isHtml && !sourceView ? (0, react$1.createElement)(HtmlPreview, {
-					workspaceFiles,
-					sessionId,
-					path,
-					t,
-					reloadNonce
-				}) : (0, react$1.createElement)(TextPreview, {
-					workspaceFiles,
-					sessionId,
-					path,
-					ext,
-					markdown: isMd,
-					sourceView,
-					reloadNonce,
-					t,
-					maxBytes: isHtml ? SOURCE_MAX_BYTES : void 0
-				})
-			});
+		function actions(pickNow, tt, onClose) {
+			if (pickNow == null && onClose === void 0) return null;
+			return (0, react$1.createElement)("div", { className: "dshpc-fb__actions" }, pickNow, onClose === void 0 ? null : (0, react$1.createElement)(PanelClose, {
+				label: tt("previewClose"),
+				onClick: onClose
+			}));
 		}
+		function CrumbNav(props) {
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const { translate: tt, landing, crumbs, overflow, menuItems, menuOpen, onToggleMenu, onCloseMenu, onLoadDir, pickNow, onClose, regionRef, measureRef } = props;
+			const visibleCrumbs = overflow ? crumbButton(crumbs.length > 0 ? crumbs[crumbs.length - 1]?.label ?? tt("explorerRootName") : tt("explorerRootName"), void 0, true) : crumbs.length === 0 ? crumbButton(tt("explorerRootName"), void 0, true) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(official_exports.IconChevronRightOutlineRegular, {
+				className: "dshpc-fb__crumb-sep",
+				size: 12
+			}) : null, crumbButton(crumb.label, () => onLoadDir(crumb.path))));
+			return (0, react$1.createElement)("nav", {
+				className: "dshpc-fb__bar",
+				"aria-label": tt("explorerCrumbsAria")
+			}, (0, react$1.createElement)("div", { className: "dshpc-fb__menu-wrap" }, (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react$1.createElement)(official_exports.IconChevronDownOutlineRegular, { size: 14 }),
+				label: tt("explorerLevels"),
+				"aria-expanded": menuOpen,
+				onClick: onToggleMenu
+			}), menuOpen ? (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", {
+				className: "dshpc-fb__crumbs-backdrop",
+				onClick: onCloseMenu
+			}), (0, react$1.createElement)("div", {
+				className: "dshpc-panel dshpc-panel--menu dshpc-fb__crumbs-menu",
+				role: "menu"
+			}, menuItems)) : null), landing ? (0, react$1.createElement)("div", { className: "dshpc-fb__crumbs" }) : (0, react$1.createElement)("div", {
+				ref: regionRef,
+				className: "dshpc-fb__crumbs"
+			}, (0, react$1.createElement)("span", {
+				ref: measureRef,
+				className: "dshpc-fb__crumbs-measure",
+				"aria-hidden": true
+			}, crumbs.length === 0 ? crumbButton(tt("explorerRootName")) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(official_exports.IconChevronRightOutlineRegular, {
+				className: "dshpc-fb__crumb-sep",
+				size: 12
+			}) : null, crumbButton(crumb.label)))), visibleCrumbs), actions(pickNow, tt, onClose));
+		}
+		/** 越界（工作区外）：第一排整条换成只读完整路径，不给任何会失败的入口。 */
+		function PlainNav(props) {
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const { translate: tt, path, pickNow, onClose } = props;
+			return (0, react$1.createElement)("nav", {
+				className: "dshpc-fb__bar",
+				"aria-label": tt("explorerCrumbsAria")
+			}, (0, react$1.createElement)(MarqueeText, {
+				text: path,
+				title: path,
+				className: "dshpc-fb__bar-plain",
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0
+				}
+			}), actions(pickNow, tt, onClose));
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/landing.js
 		/**
-		* 目录浏览器（在预览 dock 内）。与 FilePreviewPanel 同接 `openFile(path)`：
-		* list(path) 成功 ⇒ 目录树；not-directory ⇒ 文件预览（dir = 父目录，面包屑保留可返回）。
+		* 落地页主体（picker 刚打开、还没进任何目录时的那张表）：上面一排根层（「根目录」或盘符），
+		* 下面全部工作区。行 = 进去，行尾钮 = 直接选这个目录。
+		*
+		* 2026-11-03 从 `FileBrowser.ts` 拆出：这里只有「怎么画」，状态与取数全在调用方。
 		*/
-		function FileBrowser(props) {
-			const { workspaceFiles, officeToPdf, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props;
+		function LandingBody(props) {
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const { translate: tt, roots, anchors, pickable, onOpen, onPickDir } = props;
+			const row = (key, label, target) => (0, react$1.createElement)("div", {
+				key,
+				className: "dshpc-fb__row",
+				role: "button",
+				tabIndex: 0,
+				onClick: () => onOpen(target),
+				onKeyDown: (event) => {
+					if (event.key === "Enter" || event.key === " ") onOpen(target);
+				}
+			}, (0, react$1.createElement)("span", { className: "dshpc-fb__row-icon" }, (0, react$1.createElement)(official_exports.IconFolderCloseRegular, { size: 18 })), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, label), pickable ? (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				className: "dshpc-fb__row-act",
+				"aria-label": tt("explorerPickDirAria"),
+				onClick: (event) => {
+					event.stopPropagation();
+					onPickDir(target);
+				}
+			}, tt("explorerPickDir")) : null);
+			return (0, react$1.createElement)("div", { className: "dshpc-fb__tree" }, roots.map((root) => row(`root:${root.path}`, root.label, root.path)), anchors.filter((item) => item.path !== void 0 && item.path !== "").map((item) => row(`ws:${item.title}`, item.title, item.path)));
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview-title-bar.js
+		/**
+		* 预览态的第二排：文件名 + 渲染⇄源码切换 / 复制路径 / 刷新。
+		*
+		* 2026-11-03 从 `FileBrowser.ts` 拆出。档位照兄弟项目调用点：Segmented `sm` + 图标钮 `md`
+		* （核心 Segmented 高度由 CSS 定，不随档变）。
+		*/
+		function PreviewTitleBar(props) {
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			const { translate: tt, path, switchable, isMarkdown, sourceView, onSourceViewChange, copied, onCopyPath, onReload } = props;
+			return (0, react$1.createElement)("div", { className: "dshpc-fb__title" }, (0, react$1.createElement)(MarqueeText, {
+				text: baseNameOfPath(path),
+				title: path,
+				className: "dshpc-fb__title-inner",
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0
+				}
+			}), (0, react$1.createElement)("div", { className: "dshpc-fb__actions" }, switchable ? (0, react$1.createElement)(Segmented, {
+				size: "sm",
+				label: isMarkdown ? tt("previewMdSwitchAria") : tt("previewHtmlSwitchAria"),
+				value: sourceView ? "source" : "render",
+				items: [{
+					value: "render",
+					label: tt("previewRender")
+				}, {
+					value: "source",
+					label: tt("previewSource")
+				}],
+				onChange: (next) => onSourceViewChange(next === "source")
+			}) : null, (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: copied ? (0, react$1.createElement)(official_exports.IconCheckOutlineRegular, { size: 14 }) : (0, react$1.createElement)(official_exports.IconCopyOutlineRegular, { size: 14 }),
+				label: tt("previewCopyPath"),
+				onClick: onCopyPath
+			}), (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react$1.createElement)(official_exports.IconRefreshOutlineRegular, { size: 14 }),
+				label: tt("previewRefresh"),
+				onClick: onReload
+			})));
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/FileBrowser.js
+		/**
+		* 「根」在 POSIX 上的落点 `/`。Windows 没有这一个根 —— 根层是盘符清单，由宿主 `op:'roots'` 给出
+		* （见下面 `roots` 状态），本常量只在 POSIX / 探不到盘符时用。
+		*/
+		const FS_ROOT = "/";
+		/** 目录浏览器面板。详见 {@link FileBrowserProps}。 */
+		function FileBrowser$1(props) {
+			ensureComponentStyles("explorer", EXPLORER_CSS);
+			ensureComponentStyles("panel", PANEL_CSS);
+			useLocale();
+			const tt = props.translate ?? t$1;
+			const picker = props.picker === true;
 			const [mode, setMode] = (0, react$1.useState)("loading");
 			const [dir, setDir] = (0, react$1.useState)("");
 			const [listing, setListing] = (0, react$1.useState)(null);
@@ -54117,7 +58913,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [listErr, setListErr] = (0, react$1.useState)(null);
 			const [crumbsOverflow, setCrumbsOverflow] = (0, react$1.useState)(false);
 			const [menuOpen, setMenuOpen] = (0, react$1.useState)(false);
-			const barRef = (0, react$1.useRef)(null);
 			const regionRef = (0, react$1.useRef)(null);
 			const measureRef = (0, react$1.useRef)(null);
 			const [sourceView, setSourceView] = (0, react$1.useState)(false);
@@ -54125,29 +58920,90 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [copied, setCopied] = (0, react$1.useState)(false);
 			const [openDirs, setOpenDirs] = (0, react$1.useState)(/* @__PURE__ */ new Set());
 			const [childCache, setChildCache] = (0, react$1.useState)({});
-			const [, setRootNonce] = (0, react$1.useState)(0);
 			const [outside, setOutside] = (0, react$1.useState)(false);
+			const [landing, setLanding] = (0, react$1.useState)(props.picker === true && props.path === "" && props.sessionId === void 0);
+			const landingRef = (0, react$1.useRef)(landing);
+			(0, react$1.useLayoutEffect)(() => {
+				landingRef.current = landing;
+			}, [landing]);
+			const revision = props.revision ?? 0;
+			const listGateRef = (0, react$1.useRef)(null);
+			if (listGateRef.current === null) listGateRef.current = createRequestGate();
+			const listGate = listGateRef.current;
+			const childAbortsRef = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			const abortChildren = (0, react$1.useCallback)(() => {
+				for (const controller of childAbortsRef.current.values()) controller.abort();
+				childAbortsRef.current.clear();
+			}, []);
+			const dirRef = (0, react$1.useRef)("");
+			const listingRef = (0, react$1.useRef)(null);
+			(0, react$1.useLayoutEffect)(() => {
+				dirRef.current = dir;
+				listingRef.current = listing;
+			}, [dir, listing]);
+			const hostWorkspaces = (0, react$1.useSyncExternalStore)(workspaceList.subscribe, workspaceList.getSnapshot);
+			const anchors = props.workspaceAnchors ?? hostWorkspaces;
+			const [roots, setRoots] = (0, react$1.useState)([FS_ROOT]);
+			(0, react$1.useEffect)(() => {
+				const ask = props.files.roots;
+				if (ask === void 0) return;
+				let alive = true;
+				Promise.resolve().then(() => ask.call(props.files)).then((list) => {
+					if (!alive || list.length === 0) return;
+					setRoots((prev) => prev.length === list.length && prev.every((item, index) => item === list[index]) ? prev : list);
+				}).catch(() => {});
+				return () => {
+					alive = false;
+				};
+			}, [props.files]);
+			const anchorMatch = (0, react$1.useMemo)(() => workspaceOfPath(props.path, anchors), [props.path, anchors]);
+			/** 相对路径的基准目录（工作区根）：匹配出的工作区 > 调用方给的 > 无（只认绝对路径）。 */
+			const sessionAnchor = props.sessionId === void 0 ? null : anchors.find((item) => item.sessionIds?.includes(props.sessionId) === true) ?? null;
+			const rootBase = anchorMatch?.path ?? props.rootPath ?? sessionAnchor?.path ?? anchors.find((item) => item.path !== void 0)?.path;
+			/** 任意入参 → 绝对路径（FS 面只认绝对路径）。 */
+			const absOf = (0, react$1.useCallback)((p) => {
+				if (isAbsoluteish$1(p)) return normalizePath(p);
+				if (rootBase === void 0 || rootBase === "") return p === "" ? FS_ROOT : p;
+				return p === "" ? normalizePath(rootBase) : normalizePath(`${rootBase}/${p.replace(/^\/+/, "")}`);
+			}, [rootBase]);
+			/** 面板回传（绝对路径 + 工作区归属）。 */
+			const toPicked = (0, react$1.useCallback)((p, isDir) => {
+				const abs = absOf(p);
+				const owner = workspaceOfPath(abs, anchors);
+				return owner === null ? {
+					path: abs,
+					isDir
+				} : {
+					path: abs,
+					isDir,
+					workspaceRel: relativizeToDir(abs, owner.path ?? null),
+					workspace: owner.title
+				};
+			}, [absOf, anchors]);
 			/** 记一次 list 结果的"是否越界"（outside-workspace / not-found 均视为不可浏览）。 */
-			const noteOutside = (parsed) => {
+			const noteOutside = (0, react$1.useCallback)((parsed) => {
 				if (parsed === null || parsed === void 0) return;
 				if (!isFailed(parsed)) {
 					setOutside(false);
 					return;
 				}
-				const raw = parsed.failed ?? {};
-				const code = typeof raw.code === "string" ? bareCode(raw.code) : "";
-				if (code === "outside-workspace" || code === "not-found" || code === "lookup-not-found") setOutside(true);
-			};
+				const code = bareCode(parsed.failed);
+				if (code === "outside-workspace" || code === "not-found") setOutside(true);
+			}, []);
 			/** 列举某目录并展示（清空 viewing；收起下拉）。 */
-			const fetchDir = (targetDir) => {
-				setDir(targetDir);
+			const fetchDir = (0, react$1.useCallback)((targetDir) => {
+				const token = listGate.begin();
+				abortChildren();
+				const absTarget = absOf(targetDir);
+				setDir(absTarget);
 				setViewing(null);
 				setListErr(null);
 				setMenuOpen(false);
 				setMode("loading");
 				setOpenDirs(/* @__PURE__ */ new Set());
 				setChildCache({});
-				listDir(workspaceFiles, sessionId, targetDir).then((result) => {
+				props.files.list(absTarget, token.signal).then((result) => {
+					if (!token.current()) return;
 					const parsed = listingOf(result);
 					noteOutside(parsed);
 					if (isFailed(parsed)) {
@@ -54164,20 +59020,38 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					setTruncated(parsed.truncated);
 					setMode("dir");
 				}).catch((error) => {
+					if (isAborted(token.signal, error)) return;
 					setListErr(errView(error));
 					setMode("error");
 				});
-			};
-			/** 进入某目录：当前目录压栈（供「返回」回跳）。 */
-			const loadDir = (targetDir) => {
-				if (targetDir === dir) {
-					fetchDir(targetDir);
+			}, [
+				abortChildren,
+				absOf,
+				listGate,
+				noteOutside,
+				props.files
+			]);
+			/** 进入某目录；点到当前目录本身 = 重列本层（刷新）。 */
+			const loadDir = (0, react$1.useCallback)((targetDir) => {
+				if (landingRef.current) setLanding(false);
+				fetchDir(targetDir);
+			}, [fetchDir]);
+			(0, react$1.useEffect)(() => {
+				if (landingRef.current) return;
+				const parent = dirnameOf(props.path);
+				const name = baseNameOfPath(props.path);
+				const knownFile = listingRef.current?.some((entry) => entry.name === name && entry.type === "file") === true;
+				if (props.path !== "" && dirRef.current !== "" && parent === dirRef.current && knownFile) {
+					setViewing(absOf(props.path));
+					setMode("file");
+					setSourceView(false);
+					setReloadNonce((n) => n + 1);
+					setListErr(null);
+					setMenuOpen(false);
 					return;
 				}
-				fetchDir(targetDir);
-			};
-			(0, react$1.useEffect)(() => {
-				let alive = true;
+				const token = listGate.begin();
+				abortChildren();
 				setMode("loading");
 				setListErr(null);
 				setViewing(null);
@@ -54186,61 +59060,24 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				setMenuOpen(false);
 				setOpenDirs(/* @__PURE__ */ new Set());
 				setChildCache({});
-				const ensureRootLearned = (currentDir) => {
-					if (workspaceRoots.get(sessionId) !== void 0) return;
-					(async () => {
-						try {
-							const parsed = listingOf(await listDir(workspaceFiles, sessionId, currentDir));
-							if (!alive || isFailed(parsed) || parsed === null) return;
-							const stat = workspaceFiles.stat;
-							if (stat === void 0) return;
-							const rel = parsed.path;
-							const file = parsed.entries.find((entry) => entry.type === "file");
-							if (file !== void 0) {
-								const sub = relJoin(rel, file.name);
-								const abs = absolutePathOf(await stat(sessionId, sub));
-								if (abs !== null && learnRoot(sessionId, sub, abs) !== null) {
-									setRootNonce((n) => n + 1);
-									return;
-								}
-							}
-							const found = await findAnyFileAbs(workspaceFiles, sessionId, rel);
-							if (found !== null && learnRoot(sessionId, found.relativePath, found.absolutePath) !== null) setRootNonce((n) => n + 1);
-						} catch {}
-					})();
-				};
-				listDir(workspaceFiles, sessionId, path).then(async (result) => {
-					if (!alive) return;
+				const entry = absOf(props.path);
+				props.files.list(entry, token.signal).then((result) => {
+					if (!token.current()) return;
 					const parsed = listingOf(result);
 					if (!isFailed(parsed) && parsed !== null) {
 						setOutside(false);
-						const absDir = await absolutizeDir(workspaceFiles, sessionId, path, parsed.path, parsed.entries);
-						if (!alive) return;
-						setDir(absDir);
+						setDir(entry);
 						setListing(parsed.entries);
 						setTruncated(parsed.truncated);
 						setMode("dir");
-						ensureRootLearned(absDir);
 						return;
 					}
-					let parent = dirnameOf(path);
-					if (!isAbsoluteish(path)) {
-						const stat = workspaceFiles.stat;
-						if (stat !== void 0) try {
-							const abs = absolutePathOf(await stat(sessionId, path));
-							if (abs !== null) {
-								parent = dirnameOf(abs);
-								learnRoot(sessionId, path, abs);
-							}
-						} catch {}
-					}
-					if (!alive) return;
-					setDir(parent);
-					setViewing(path);
+					const parentDir = dirnameOf(entry);
+					setDir(parentDir);
+					setViewing(entry);
 					setMode("file");
-					ensureRootLearned(parent);
-					listDir(workspaceFiles, sessionId, parent).then((pres) => {
-						if (!alive) return;
+					props.files.list(parentDir, token.signal).then((pres) => {
+						if (!token.current()) return;
 						const pl = listingOf(pres);
 						noteOutside(pl);
 						if (!isFailed(pl) && pl !== null) {
@@ -54248,21 +59085,37 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 							setTruncated(pl.truncated);
 						}
 					}).catch(() => {});
-				}).catch(() => {
-					if (!alive) return;
-					const parent = dirnameOf(path);
-					setDir(parent);
-					setViewing(path);
+				}).catch((error) => {
+					if (!token.current() || isAborted(token.signal, error)) return;
+					setDir(dirnameOf(entry));
+					setViewing(entry);
 					setMode("file");
-					ensureRootLearned(parent);
 				});
 				return () => {
-					alive = false;
+					listGate.abort();
 				};
 			}, [
-				workspaceFiles,
-				sessionId,
-				path
+				abortChildren,
+				absOf,
+				listGate,
+				noteOutside,
+				props.files,
+				props.path,
+				revision
+			]);
+			(0, react$1.useEffect)(() => () => abortChildren(), [abortChildren]);
+			/** ▾ 里点别的工作区：调用方没接管就直接列该工作区根（不需要会话）。 */
+			const switchWorkspace = (0, react$1.useCallback)((name) => {
+				if (props.onSelectWorkspace !== void 0) {
+					props.onSelectWorkspace(name);
+					return;
+				}
+				const target = anchors.find((item) => item.title === name);
+				if (target?.path !== void 0) loadDir(target.path);
+			}, [
+				anchors,
+				loadDir,
+				props.onSelectWorkspace
 			]);
 			(0, react$1.useLayoutEffect)(() => {
 				const region = regionRef.current;
@@ -54279,27 +59132,37 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				dir,
 				viewing,
 				mode,
-				listing
+				listing,
+				outside
 			]);
-			const reload = () => {
+			const reload = (0, react$1.useCallback)(() => {
 				if (viewing !== null) {
 					setReloadNonce((n) => n + 1);
 					return;
 				}
 				loadDir(dir);
-			};
-			const copyPath = () => {
+			}, [
+				viewing,
+				dir,
+				loadDir
+			]);
+			const copyPath = (0, react$1.useCallback)(() => {
 				const target = viewing ?? dir;
 				if (target === "") return;
-				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(target).then((ok) => {
+				const rel = relativizeToDir(target, rootBase ?? null);
+				(0, official_exports.writeClipboard)(rel).then((ok) => {
 					if (ok) {
 						setCopied(true);
 						window.setTimeout(() => setCopied(false), 1500);
 					}
-				});
-			};
-			/** 内联展开/收起某目录（点 ▸）：只切展开态，不导航、不进历史；首次展开才拉子项。 */
-			const toggleDir = (path) => {
+				}).catch(() => {});
+			}, [
+				viewing,
+				dir,
+				rootBase
+			]);
+			/** 内联展开/收起某目录（点 ▸）：只切展开态，不导航；首次展开才拉子项。 */
+			const toggleDir = (0, react$1.useCallback)((path) => {
 				setOpenDirs((prev) => {
 					const next = new Set(prev);
 					if (next.has(path)) next.delete(path);
@@ -54307,41 +59170,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					return next;
 				});
 				if (!(path in childCache)) {
+					childAbortsRef.current.get(path)?.abort();
+					const controller = new AbortController();
+					childAbortsRef.current.set(path, controller);
 					setChildCache((prev) => ({
 						...prev,
 						[path]: { status: "loading" }
 					}));
-					listDir(workspaceFiles, sessionId, path).then((result) => {
+					props.files.list(absOf(path), controller.signal).then((result) => {
+						if (controller.signal.aborted) return;
 						const parsed = listingOf(result);
-						if (isFailed(parsed)) {
-							setChildCache((prev) => ({
-								...prev,
-								[path]: {
-									status: "error",
-									error: errView(parsed.failed)
-								}
-							}));
-							return;
-						}
-						if (parsed === null) {
-							setChildCache((prev) => ({
-								...prev,
-								[path]: {
-									status: "error",
-									error: { key: "previewBadPayload" }
-								}
-							}));
-							return;
-						}
 						setChildCache((prev) => ({
 							...prev,
-							[path]: {
+							[path]: isFailed(parsed) || parsed === null ? {
+								status: "error",
+								error: errView(isFailed(parsed) ? parsed.failed : void 0)
+							} : {
 								status: "ready",
 								entries: parsed.entries,
 								truncated: parsed.truncated
 							}
 						}));
 					}).catch((error) => {
+						if (isAborted(controller.signal, error)) return;
 						setChildCache((prev) => ({
 							...prev,
 							[path]: {
@@ -54349,126 +59200,323 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 								error: errView(error)
 							}
 						}));
+					}).finally(() => {
+						if (childAbortsRef.current.get(path) === controller) childAbortsRef.current.delete(path);
 					});
 				}
-			};
-			/** 递归渲染目录树（内联展开）。file = 点开预览；dir = ▸ 切展开、名字点导航。 */
-			const renderTree = (entries, baseDir) => {
-				return sortEntries(entries).map((entry) => {
-					const childPath = joinPath(baseDir, entry.name);
-					if (!(entry.type === "directory")) {
-						const pick = () => {
-							if (picker && onPick !== void 0) {
-								onPick(relativizeToRoot(childPath, sessionId), false);
-								return;
-							}
-							const parent = dirnameOf(childPath);
-							if (parent !== dir) loadDir(parent);
-							setViewing(childPath);
-							setReloadNonce(0);
-							setSourceView(false);
-						};
-						return (0, react$1.createElement)("div", {
-							key: childPath,
-							className: "dsh-tdt-sv-tree-row" + (picker === true ? " dsh-tdt-sv-tree-row-pick" : ""),
-							role: "button",
-							tabIndex: 0,
-							title: picker === true ? t("editorPickerPick") : childPath,
-							onClick: pick,
-							onKeyDown: (event) => {
-								if (event.key === "Enter" || event.key === " ") pick();
-							}
-						}, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-							path: childPath,
-							size: 18
-						})), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name));
-					}
-					const cached = childCache[childPath];
-					const isOpen = openDirs.has(childPath);
-					const rowAction = () => {
-						toggleDir(childPath);
-					};
-					/** 行尾动作按钮（stopPropagation 防触发展开）：选择器选中整个文件夹；浏览则进入该目录。 */
-					const actThisDir = (event) => {
-						event.stopPropagation();
-						if (picker === true) {
-							if (onPick !== void 0) onPick(relativizeToRoot(childPath, sessionId), true);
+			}, [
+				absOf,
+				childCache,
+				props.files
+			]);
+			const extsOnly = picker && props.filter !== void 0 && props.filter.dirs !== true && (props.filter.exts?.length ?? 0) > 0;
+			/** 选择器里目录是否可选：不限 或 明说 dirs:true 才可选；扩展名过滤下不可选。 */
+			const dirPickable = picker && props.onPick !== void 0 && !extsOnly;
+			/** 递归渲染目录树（内联展开）。file = 点开预览（picker = 选中）；dir = ▸ 切展开、行尾钮分派。 */
+			const renderTree = (0, react$1.useCallback)((entries, baseDir) => sortEntries(entries).map((entry) => {
+				const childPath = joinPath(baseDir, entry.name);
+				const isDir = entry.type === "directory";
+				if (!isDir && picker && !matchesFilter(childPath, false, props.filter)) return null;
+				if (!isDir) {
+					const pick = () => {
+						if (picker && props.onPick !== void 0) {
+							props.onPick(toPicked(childPath, false));
 							return;
 						}
-						loadDir(childPath);
+						const parent = dirnameOf(childPath);
+						if (parent !== dir) loadDir(parent);
+						setViewing(childPath);
+						setReloadNonce(0);
+						setSourceView(false);
 					};
-					return (0, react$1.createElement)(react$1.Fragment, { key: childPath }, (0, react$1.createElement)("div", {
-						className: "dsh-tdt-sv-tree-row",
+					return (0, react$1.createElement)("div", {
+						key: childPath,
+						className: `dshpc-fb__row${picker ? " dshpc-fb__row--pick" : ""}`,
 						role: "button",
 						tabIndex: 0,
-						title: childPath,
-						onClick: rowAction,
+						title: picker ? tt("explorerPickFile") : childPath,
+						onClick: pick,
 						onKeyDown: (event) => {
-							if (event.key === "Enter" || event.key === " ") rowAction();
+							if (event.key === "Enter" || event.key === " ") pick();
 						}
-					}, (0, react$1.createElement)("button", {
-						type: "button",
-						className: "dsh-tdt-sv-tree-toggle" + (isOpen ? " dsh-tdt-sv-tree-toggle-open" : ""),
-						"aria-expanded": isOpen,
-						"aria-label": isOpen ? t("explorerCollapse") : t("explorerExpand"),
+					}, (0, react$1.createElement)("span", { className: "dshpc-fb__row-icon" }, (0, react$1.createElement)(official_exports.FileTypeIcon, {
+						path: childPath,
+						size: 18
+					})), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, entry.name), picker && props.onPick !== void 0 ? (0, react$1.createElement)(Button$2, {
+						variant: "outline",
+						size: "sm",
+						className: "dshpc-fb__row-act",
+						"aria-label": tt("explorerPickFile"),
 						onClick: (event) => {
 							event.stopPropagation();
-							toggleDir(childPath);
+							pick();
 						}
-					}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name), picker === true && onPick === void 0 ? null : (0, react$1.createElement)("button", {
-						type: "button",
-						className: "dsh-tdt-sv-tree-act",
-						"aria-label": picker === true ? t("editorPickerPickDir") : t("explorerEnter"),
-						onClick: actThisDir
-					}, t(picker === true ? "editorPickerSelect" : "explorerEnter"))), isOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? null : cached.status === "error" ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react$1.createElement)(react$1.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
-				});
-			};
-			const rootAbs = workspaceRoots.get(sessionId);
-			const rootLabel = props.rootName ?? (rootAbs !== void 0 ? rootAbs.replace(/\/+$/, "").split("/").pop() ?? "" : "");
-			const crumbs = rootLabel !== "" ? [{
+					}, tt("explorerPickDir")) : null);
+				}
+				const cached = childCache[childPath];
+				const isOpen = openDirs.has(childPath);
+				const rowAction = () => {
+					toggleDir(childPath);
+				};
+				const actThisDir = (event) => {
+					event.stopPropagation();
+					if (picker) {
+						if (!extsOnly && props.onPick !== void 0) props.onPick(toPicked(childPath, true));
+						return;
+					}
+					loadDir(childPath);
+				};
+				return (0, react$1.createElement)(react$1.Fragment, { key: childPath }, (0, react$1.createElement)("div", {
+					className: "dshpc-fb__row",
+					role: "button",
+					tabIndex: 0,
+					title: childPath,
+					onClick: rowAction,
+					onKeyDown: (event) => {
+						if (event.key === "Enter" || event.key === " ") rowAction();
+					}
+				}, (0, react$1.createElement)(IconButton, {
+					variant: "plain",
+					size: "sm",
+					className: `dshpc-fb__row-toggle${isOpen ? " dshpc-fb__row-toggle--open" : ""}`,
+					icon: (0, react$1.createElement)(official_exports.IconChevronRightOutlineRegular, { size: 16 }),
+					label: isOpen ? tt("explorerCollapse") : tt("explorerExpand"),
+					"aria-expanded": isOpen,
+					onClick: (event) => {
+						event.stopPropagation();
+						toggleDir(childPath);
+					}
+				}), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, entry.name), picker ? dirPickable ? (0, react$1.createElement)(Button$2, {
+					variant: "outline",
+					size: "sm",
+					className: "dshpc-fb__row-act",
+					"aria-label": tt("explorerPickDirAria"),
+					onClick: actThisDir
+				}, tt("explorerPickDir")) : null : (0, react$1.createElement)(Button$2, {
+					variant: "outline",
+					size: "sm",
+					className: "dshpc-fb__row-act",
+					"aria-label": tt("explorerEnter"),
+					onClick: actThisDir
+				}, tt("explorerEnter"))), isOpen ? (0, react$1.createElement)("div", { className: "dshpc-fb__row-children" }, cached === void 0 || cached.status === "loading" ? null : cached.status === "error" ? (0, react$1.createElement)("div", { className: "dshpc-fb__row-err" }, tt(cached.error.key, cached.error.params)) : (0, react$1.createElement)(react$1.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react$1.createElement)("div", { className: "dshpc-fb__row-note" }, tt("explorerTruncated")) : null)) : null);
+			}), [
+				childCache,
+				openDirs,
+				picker,
+				dirPickable,
+				extsOnly,
+				props.filter,
+				props.onPick,
+				toPicked,
+				dir,
+				loadDir,
+				tt
+			]);
+			const drives = roots.filter((root) => root !== FS_ROOT);
+			const rootRows = drives.length > 0 ? drives.map((path) => ({
+				label: path.replace(/\/+$/, ""),
+				path
+			})) : [{
+				label: tt("explorerRootDir"),
+				path: FS_ROOT
+			}];
+			const owner = workspaceOfPath(dir, anchors);
+			const rootLabel = owner?.title ?? "";
+			const crumbs = owner === null ? /^[a-zA-Z]:/.test(normalizePath(dir)) ? crumbsOfDir(dir) : [{
+				label: rootRows[0]?.label ?? tt("explorerRootDir"),
+				path: FS_ROOT
+			}, ...crumbsOfDir(dir)] : [{
 				label: rootLabel,
 				path: ""
-			}, ...crumbsOf(relativizeToRoot(dir, sessionId))] : crumbsOf(dir);
-			const switchKind = viewing !== null ? previewKind(viewing).kind : null;
-			const isMdPreview = switchKind === "md";
-			const switchable = isMdPreview || switchKind === "html";
-			/**
-			* 工作区之外时的第一排：**只读完整路径**（用户 2026-10-03）。
-			* 不给任何会失败的入口：▾ 选层（下拉里全是点不动的层）、面包屑点选、← 返回、↑ 上一层
-			* 全部不渲染，只留 ✕ 关闭；路径过长省略号截断，**hover 跑马灯**（同文件名那套，用户点名；
-			* 不可点、无 tooltip）。
-			*/
-			const crumbbarPlain = (0, react$1.createElement)("nav", {
-				className: "dsh-tdt-sv-crumbbar",
-				"aria-label": t("explorerCrumbsAria")
-			}, (0, react$1.createElement)(MarqueeText, {
-				text: dir,
-				title: dir,
-				className: "dsh-tdt-sv-crumbbar-plain-inner",
-				style: {
-					flex: "1 1 auto",
-					minWidth: 0
-				}
-			}), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("previewClose"), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
-				label: t("previewClose"),
-				onClick: onClose
-			}))));
+			}, ...crumbsOfDir(relativizeToDir(dir, owner.path ?? null))];
+			const viewingIsMd = viewing !== null && /\.(md|markdown)$/i.test(viewing);
+			const viewingIsHtml = viewing !== null && /\.(html|htm)$/i.test(viewing);
+			const switchable = viewingIsMd || viewingIsHtml;
+			const menuItems = crumbsMenuEntries({
+				workspaces: props.workspaces ?? anchors.map((item) => item.title),
+				roots: rootRows,
+				rootName: rootLabel,
+				rootFallbackLabel: tt("explorerRootName"),
+				crumbs,
+				onPickWorkspace: switchWorkspace,
+				onLoadDir: loadDir
+			});
+			const pickNow = picker && props.onPick !== void 0 && !landing && dirPickable && dir !== "" ? (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				className: "dshpc-fb__pick",
+				"aria-label": tt("explorerPickDirAria"),
+				onClick: () => props.onPick?.(toPicked(dir, true))
+			}, tt("explorerPickDir")) : null;
+			const nav = outside ? (0, react$1.createElement)(PlainNav, {
+				translate: tt,
+				path: dir,
+				pickNow,
+				onClose: props.onClose
+			}) : (0, react$1.createElement)(CrumbNav, {
+				translate: tt,
+				landing,
+				crumbs,
+				overflow: crumbsOverflow,
+				menuItems,
+				menuOpen,
+				onToggleMenu: () => setMenuOpen((v) => !v),
+				onCloseMenu: () => setMenuOpen(false),
+				onLoadDir: loadDir,
+				pickNow,
+				onClose: props.onClose,
+				regionRef,
+				measureRef
+			});
+			const titleBar = viewing === null ? null : (0, react$1.createElement)(PreviewTitleBar, {
+				translate: tt,
+				path: viewing,
+				switchable,
+				isMarkdown: viewingIsMd,
+				sourceView,
+				onSourceViewChange: setSourceView,
+				copied,
+				onCopyPath: copyPath,
+				onReload: reload
+			});
 			let body;
-			if (viewing !== null) body = (0, react$1.createElement)(FileBody, {
-				workspaceFiles,
-				officeToPdf,
-				sessionId,
+			if (landing) body = (0, react$1.createElement)(LandingBody, {
+				translate: tt,
+				roots: rootRows,
+				anchors,
+				pickable: picker && props.onPick !== void 0 && !extsOnly,
+				onOpen: loadDir,
+				onPickDir: (target) => props.onPick?.(toPicked(target, true))
+			});
+			else if (viewing !== null) body = (0, react$1.createElement)(FilePreview, {
+				key: `${viewing}:${reloadNonce}`,
+				files: props.files,
+				officeToPdf: props.officeToPdf ?? null,
 				path: viewing,
 				sourceView,
-				reloadNonce,
-				t
+				line: viewing === absOf(props.path) ? props.focusLine : void 0,
+				translate: tt
 			});
-			else if (mode === "error" && listErr !== null) body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react$1.createElement)("span", null, t(listErr.key, listErr.params))));
-			else if (listing !== null) body = listing.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree" }, renderTree(listing, dir), truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
-			else body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
+			else if (mode === "error" && listErr !== null) body = (0, react$1.createElement)("div", { className: "dshpc-fb__body" }, (0, react$1.createElement)("div", { className: "dshpc-fb__err" }, tt(listErr.key, listErr.params)));
+			else if (listing !== null) {
+				const visible = listing.filter((entry) => entry.type === "directory" || matchesFilter(joinPath(dir, entry.name), false, picker ? props.filter : void 0));
+				body = visible.length === 0 ? (0, react$1.createElement)("div", { className: "dshpc-fb__body" }, (0, react$1.createElement)("div", { className: "dshpc-fb__note" }, tt("explorerEmptyDir"))) : (0, react$1.createElement)("div", { className: "dshpc-fb__tree" }, renderTree(visible, dir), truncated ? (0, react$1.createElement)("div", { className: "dshpc-fb__row-note" }, tt("explorerTruncated")) : null);
+			} else body = (0, react$1.createElement)("div", { className: "dshpc-fb__body" });
+			return (0, react$1.createElement)("div", {
+				className: "dshpc-fb",
+				style: props.style ?? void 0
+			}, nav, titleBar, body);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/fs-face.js
+		/**
+		* client 侧的**只读文件面**：fetch 宿主 `serveFsRoute` 挂的那条路由（`src/host/fs-route.ts`）。
+		*
+		* 返回体沿用官方 remote 的信封（成功是值本身，失败是 `{ ok:false, error }`），所以
+		* `listingOf` / `textPageOf` / `bytesOf`（`./types.js`）原样能解析，不用再写一套。
+		*
+		* 与 `WorkspaceFilesFace` 的差别只有一个：**不吃 sessionId，路径一律绝对**。
+		* 这也是「入口不传会话」成立的原因 —— 浏览完全不需要会话；只有 Office 预览还要。
+		*/
+		/** 路由没就位 / 网络失败时的统一回执。 */
+		function failure(message) {
+			return {
+				ok: false,
+				error: {
+					code: "service-unavailable",
+					message
+				}
+			};
+		}
+		async function call(basePath, params, signal) {
+			const query = new URLSearchParams();
+			for (const [key, value] of Object.entries(params)) if (value !== void 0) query.set(key, String(value));
+			let reply;
+			try {
+				reply = await (await fetch(`${basePath}?${query.toString()}`, { signal })).json();
+			} catch (error) {
+				if (signal?.aborted === true) return failure("aborted");
+				return failure(error instanceof Error ? error.message : "fs route unreachable");
+			}
+			if (reply === null || typeof reply !== "object") return failure("fs route returned a non-object");
+			if (reply.ok === false) return reply;
+			return reply.value ?? reply;
+		}
+		/** 造一个走 HTTP 的文件面。`basePath` 必须与宿主 `serveFsRoute({ path })` 同一个常量。 */
+		function createHttpFsFace(basePath) {
+			return {
+				list: (path, signal) => call(basePath, {
+					op: "list",
+					path
+				}, signal),
+				read: (path, range, signal) => call(basePath, {
+					op: "read",
+					path,
+					offset: range.offset,
+					limit: range.limit
+				}, signal),
+				readBytes: async (path, options, signal) => {
+					const value = await call(basePath, {
+						op: "readBytes",
+						path,
+						offset: options.range?.offset,
+						limit: options.range?.length
+					}, signal);
+					const data = value?.data;
+					if (typeof data !== "string") return value;
+					const raw = atob(data);
+					const bytes = new Uint8Array(raw.length);
+					for (let index = 0; index < raw.length; index++) bytes[index] = raw.charCodeAt(index);
+					return {
+						...value,
+						data: bytes
+					};
+				},
+				roots: async () => {
+					const list = (await call(basePath, { op: "roots" }))?.roots;
+					return Array.isArray(list) && list.every((item) => typeof item === "string") ? list : ["/"];
+				}
+			};
+		}
+		let current;
+		/** 接上宿主 `serveFsRoute` 挂的那条路由（插件 client `apply` 里调一次）。 */
+		function connectFs(options) {
+			current = createHttpFsFace(options.path);
+		}
+		/** 当前已接上的文件面；没接（宿主没这能力 / 没调 connectFs）⇒ undefined。 */
+		function getFsFace() {
+			return current;
+		}
+		//#endregion
+		//#region src/client/file-browser.tsx
+		/** 绝对路径判定（POSIX `/` 或 Windows 盘符）。 */
+		function isAbsoluteish(path) {
+			return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path);
+		}
+		/** 会话所属工作区的绝对根（宿主快照真值；拿不到 = ''）。 */
+		function rootOfSession(sessionId) {
+			return workspaceList.getSnapshot().find((ws) => (ws.sessionIds ?? []).includes(sessionId))?.path ?? "";
+		}
+		/** 按显示名取工作区绝对根（选择器用；拿不到 = ''）。 */
+		function rootOfWorkspace(name) {
+			if (name === void 0) return "";
+			return workspaceList.getSnapshot().find((ws) => ws.title === name)?.path ?? "";
+		}
+		/** 相对路径拼到根上（只处理 `/` 与 Windows 分隔符；不引入 path 依赖）。 */
+		function resolvePath(root, path) {
+			if (path === "") return root;
+			if (isAbsoluteish(path) || root === "") return path;
+			return `${root.replace(/[\\/]+$/, "")}/${path}`;
+		}
+		/**
+		* 文件浏览 / 预览（页面级 dock 或选择器浮层）。
+		* 浏览本体全部走核心；这里只负责外壳与路径口径。
+		*/
+		function FileBrowser(props) {
+			const { officeToPdf, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props;
+			const files = getFsFace();
+			const root = picker === true ? rootOfWorkspace(rootName) : rootOfSession(sessionId);
+			const startPath = resolvePath(root, path);
 			return (0, react$1.createElement)("aside", {
 				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
 				"data-preview-dock": dock === true ? true : void 0,
@@ -54481,108 +59529,28 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				onPointerDown: (event) => {
 					onResizeStart(event);
 				}
-			}), outside ? crumbbarPlain : (0, react$1.createElement)("nav", {
-				ref: barRef,
-				className: "dsh-tdt-sv-crumbbar",
-				"aria-label": t("explorerCrumbsAria")
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-wrap" }, tooled(t("explorerLevels"), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
-				label: t("explorerLevels"),
-				"aria-expanded": menuOpen,
-				onClick: () => {
-					setMenuOpen((value) => !value);
-				}
-			})), menuOpen ? (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-sv-crumbs-backdrop",
-				onClick: () => {
-					setMenuOpen(false);
-				}
-			}), (0, react$1.createElement)("div", {
-				className: "dsh-tdt-sv-crumbs-menu",
-				role: "menu"
-			}, crumbsMenuEntries({
+			}), files === void 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, t("previewRenderFailed")) : (0, react$1.createElement)(FileBrowser$1, {
+				files,
+				officeToPdf,
+				rootPath: root === "" ? void 0 : root,
+				sessionId,
+				path: startPath,
+				rootName,
 				workspaces,
-				rootName: rootLabel,
-				rootFallbackLabel: t("explorerRootName"),
-				crumbs,
-				onPickWorkspace: onSelectWorkspace,
-				onLoadDir: loadDir
-			}))) : null), (0, react$1.createElement)("div", {
-				ref: regionRef,
-				className: "dsh-tdt-sv-crumbs-region"
-			}, (0, react$1.createElement)("span", {
-				ref: measureRef,
-				className: "dsh-tdt-sv-crumbs-measure",
-				"aria-hidden": true
-			}, crumbs.length === 0 ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				disabled: true,
-				tabIndex: -1
-			}, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 12 }) : null, (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				disabled: true,
-				tabIndex: -1
-			}, crumb.label)))), crumbsOverflow ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, (0, react$1.createElement)(MarqueeText, {
-				text: crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t("explorerRootName"),
-				className: "dsh-tdt-sv-crumb-mq"
-			})) : crumbs.length === 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
-				className: "dsh-tdt-sv-crumb-sep",
-				size: 12
-			}) : null, (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				onClick: () => {
-					loadDir(crumb.path);
-				}
-			}, (0, react$1.createElement)(MarqueeText, {
-				text: crumb.label,
-				className: "dsh-tdt-sv-crumb-mq"
-			}))))), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("previewClose"), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
-				label: t("previewClose"),
-				onClick: onClose
-			})))), viewing !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, (0, react$1.createElement)(MarqueeText, {
-				text: viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1),
-				title: viewing,
-				className: "dsh-tdt-sv-preview-title-inner",
+				onSelectWorkspace,
+				translate: t$1,
+				picker,
+				onPick: onPick === void 0 ? void 0 : (picked) => {
+					onPick(picked.workspaceRel ?? picked.path, picked.isDir);
+				},
+				onClose,
 				style: {
 					flex: "1 1 auto",
-					minWidth: 0
+					minWidth: 0,
+					minHeight: 0,
+					height: "100%"
 				}
-			}), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, switchable ? (0, react$1.createElement)(Segmented, {
-				size: "sm",
-				variant: "default",
-				label: t(isMdPreview ? "previewMdSwitchAria" : "previewHtmlSwitchAria"),
-				value: sourceView ? "source" : "render",
-				items: [{
-					value: "render",
-					label: t("previewRender")
-				}, {
-					value: "source",
-					label: t("previewSource")
-				}],
-				onChange: (next) => {
-					setSourceView(next === "source");
-				}
-			}) : null, tooled(t("previewCopyPath"), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon: copied ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, { size: 14 }),
-				label: t("previewCopyPath"),
-				onClick: copyPath
-			})), tooled(t("previewRefresh"), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 }),
-				label: t("previewRefresh"),
-				onClick: reload
-			})))) : null, body);
+			}));
 		}
 		//#endregion
 		//#region src/task-sort.ts
@@ -54751,27 +59719,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				nextYear: t("editorNextYear"),
 				monthTitle: (year, month) => tt("editorMonthTitle", {
 					y: String(year),
-					m: pad2$1(month)
+					m: pad2$2(month)
 				}),
 				weekdays: t("editorWeekdayShorts").split("|")
 			};
 		}
 		/**
-		* 时分文案**单源**：`TimeField` 的所有调用方（任务编辑器 / 时间范围控件）共用这一份，
-		* 不再各处各拼「小时 / 分钟 / 现在 / 确定」。
-		*/
-		function timeLabelsOf(t) {
-			return {
-				hour: t("editorHour"),
-				minute: t("editorMinute"),
-				now: t("editorNow"),
-				confirm: t("editorConfirm")
-			};
-		}
-		/**
 		* 周几多选 = 全站统一分段控件 `Segmented`（multiple 模式），不再自绘一套
 		* （2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
-		* 唯二差异走「特殊化变体」`.dsh-tdt-seg--weekday`（用户 2026-10-01 明确要求，复刻原 WeekdayPicker 观感）：
+		* 唯二差异走核心自带修饰类 `.dshpc-seg--weekday`（用户 2026-10-01 明确要求，复刻原 WeekdayPicker 观感）：
 		*   - 每格正方形（宽 = 段高）；
 		*   - 选中态品牌蓝 + 反白字（原自绘即蓝底）。
 		* 皮肤集中在 `controls-css.ts`、不内联，调用点只挂一个修饰类。一个都不选 = 每天（间隔档语义）。
@@ -54795,8 +59751,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				value: props.value.map(String),
 				items,
 				size: "lg",
-				variant: "inset",
-				className: "dsh-tdt-seg--weekday",
+				bordered: false,
+				className: "dshpc-seg--weekday",
 				label: props.label,
 				disabled: props.disabled,
 				onChange: (next) => {
@@ -54864,7 +59820,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
    官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 提示词大输入框皮肤已上提基础层 .dsh-tdt-textarea（ui/controls-css.ts，U20 #6，2026-10-05）；此处不再自写。 */
+/* 提示词大输入框已改接核心 Textarea（dsh-plugin-core/ui，2026-11-06）；本地皮肤整段删除，此处不再自写。 */
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
@@ -63744,7 +68700,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			if (parts.length !== 5) return "09:00";
 			const [minute, hour] = parts;
 			if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return "09:00";
-			return `${pad2$1(hour)}:${pad2$1(minute)}`;
+			return `${pad2$2(hour)}:${pad2$2(minute)}`;
 		}
 		/**
 		* cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。
@@ -64303,7 +69259,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const hours = Math.floor(total / 3600);
 			const minutes = Math.floor(total % 3600 / 60);
 			const seconds = total % 60;
-			return hours > 0 ? `${pad2$1(hours)}:${pad2$1(minutes)}:${pad2$1(seconds)}` : `${pad2$1(minutes)}:${pad2$1(seconds)}`;
+			return hours > 0 ? `${pad2$2(hours)}:${pad2$2(minutes)}:${pad2$2(seconds)}` : `${pad2$2(minutes)}:${pad2$2(seconds)}`;
 		}
 		/**
 		* 「预计执行 / 下次执行」的**统一文案**：把时间传进去，由本函数按「现在」算出该显示什么——
@@ -64322,7 +69278,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		function clockOf(iso) {
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
-			return `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			return `${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
 		}
 		/**
 		* 「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走
@@ -65045,7 +70001,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			})))) : null), hasPrompt ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-promptbox" }, (0, react$1.createElement)("div", { className: `dsh-tdt-ed-view-prompt${promptOpen || isShort ? " dsh-tdt-ed-view-prompt--open" : ""}` }, promptMode === "source" ? (0, react$1.createElement)(CodeViewer, {
 				text: draft.prompt,
 				path: "prompt.md",
-				t
+				t: t$1
 			}) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text: draft.prompt,
 				labels: MD_LABELS
@@ -65096,7 +70052,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		/** 本地今天（真实时间）。 */
 		function todayIso() {
 			const now = /* @__PURE__ */ new Date();
-			return `${now.getFullYear()}-${pad2$1(now.getMonth() + 1)}-${pad2$1(now.getDate())}`;
+			return `${now.getFullYear()}-${pad2$2(now.getMonth() + 1)}-${pad2$2(now.getDate())}`;
 		}
 		/**
 		* 表单里的「日期 + 时刻」是否**已经过去**（缺值 / 解析不出也算过去 ⇒ 走智能默认）。
@@ -65117,8 +70073,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const target = new Date(now.getTime() + 36e5);
 			if (target.getMinutes() !== 0 || target.getSeconds() !== 0 || target.getMilliseconds() !== 0) target.setHours(target.getHours() + 1, 0, 0, 0);
 			return {
-				date: `${target.getFullYear()}-${pad2$1(target.getMonth() + 1)}-${pad2$1(target.getDate())}`,
-				time: `${pad2$1(target.getHours())}:${pad2$1(target.getMinutes())}`
+				date: `${target.getFullYear()}-${pad2$2(target.getMonth() + 1)}-${pad2$2(target.getDate())}`,
+				time: `${pad2$2(target.getHours())}:${pad2$2(target.getMinutes())}`
 			};
 		}
 		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
@@ -65400,6 +70356,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		*/
 		function PrefixedInput(props) {
 			return (0, react$1.createElement)(PrefixedInput$1, {
+				size: "lg",
 				prefix: props.prefix,
 				value: props.value,
 				placeholder: props.placeholder,
@@ -65411,7 +70368,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		}
 		/** 周期档的子控件：内容行 = 频率 + 月/日 + 时间；星期恒定在下面一行。 */
 		function PeriodControls(props) {
-			const { draft, patch, freqOptions, t, tt, weekdayLabels, calendarLabels, timeLabels } = props;
+			const { draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels } = props;
 			const timeField = (0, react$1.createElement)(TimeField, {
 				value: draft.time,
 				onChange: (value) => {
@@ -65575,6 +70532,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				fontSize: "var(--dshpc-font-md)",
 				color: "var(--dshpc-fg)"
 			} }, t("editorIntervalEvery")), (0, react$1.createElement)(NumberInput, {
+				size: "lg",
 				value: Number.parseInt(draft.intervalStep, 10) || 1,
 				min: 1,
 				step: 1,
@@ -65895,7 +70853,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-prompt-mode",
 				value: mode,
 				size: "md",
-				variant: "default",
+				bordered: true,
 				items: [{
 					value: "edit",
 					label: t("editorModeEdit")
@@ -65910,7 +70868,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}), readonly === true ? null : (0, react$1.createElement)(Segmented, {
 				id: "dsh-tdt-ed-histtoggle",
 				size: "md",
-				variant: "inset",
+				bordered: false,
 				multiple: true,
 				value: showVersions ? ["on"] : [],
 				items: [{
@@ -66005,9 +70963,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				className: "dsh-tdt-ed-ver-ic",
 				style: { transform: "rotate(-90deg)" }
 			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react$1.createElement)(MarqueeText, { text: formatVersionTime(v.ts) }), v.note !== "" ? (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-note" }, v.note) : null), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-right" }, hoveredId === v.file ? (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react$1.createElement)(Button$2, {
-				variant: "ghost",
+				variant: "link",
 				size: "sm",
-				className: "dsh-tdt-btn--link",
 				onClick: () => {
 					setConfirmUseFile(v.file);
 				}
@@ -66082,7 +71039,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			} }, (0, react$1.createElement)(CodeViewer, {
 				text: json,
 				path: "task-definition.json",
-				t
+				t: t$1
 			})));
 		}
 		/**
@@ -66110,7 +71067,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				if (initialView !== void 0) setViewTab(initialView);
 			}, [currentTaskId, initialView]);
 			const [advancedOpen, setAdvancedOpen] = (0, react$1.useState)(false);
-			const [jsonOpen, setJsonOpen] = (0, react$1.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react$1.useState)(false);
 			const [previewOpen, setPreviewOpen] = (0, react$1.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react$1.useState)(0);
@@ -66720,7 +71676,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-schedule",
 				value: scheduleTab,
 				size: "md",
-				variant: "inset",
+				bordered: false,
 				items: [
 					{
 						value: "once",
@@ -67037,7 +71993,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-retry",
 				value: draft.maxAttempts,
 				size: "md",
-				variant: "inset",
+				bordered: false,
 				items: retryOptions,
 				onChange: (value) => {
 					patch({ maxAttempts: value });
@@ -67160,7 +72116,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-viewtab",
 				value: viewTab,
 				size: "md",
-				variant: "default",
+				bordered: true,
 				items: [{
 					value: "view",
 					label: t("editorTabView")
@@ -67362,7 +72318,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				const anchorSessionId = (workspaceAnchors ?? {})[pickerWs] ?? "";
 				return workspaceFiles !== null && workspaceFiles !== void 0 && anchorSessionId !== "" ? (0, react$1.createElement)(FileBrowser, {
 					key: `${pickerWs}:${anchorSessionId}`,
-					workspaceFiles,
 					officeToPdf,
 					sessionId: anchorSessionId,
 					path: "",
@@ -67407,6 +72362,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				} }, t("editorPickerNoSession"));
 			})()), document.body) : null);
 		}
+		//#endregion
+		//#region src/fs-route.ts
+		/**
+		* 核心 `adv/explorer` 的文件系统 HTTP 路由（宿主注册 / 客户端连接共用一条常量）。
+		*
+		* 核心 `FileBrowser` 只吃 `FsFace`（绝对路径）；宿主侧由 `serveFsRoute` 提供该路由，
+		* 客户端由 `connectFs({ path })` 建 HTTP face。路径与插件路由同前缀，避免与其他插件撞车。
+		*/
+		const FS_ROUTE = "/api/task-dispatch-table/fs";
 		//#endregion
 		//#region src/deps.ts
 		/** 解析 resolvedDeps：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃（不让坏数据进 UI）。 */
@@ -67653,7 +72617,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		};
 		/** 本地日历日的 key（`YYYY-MM-DD`）。 */
 		function ymdOfDate(d) {
-			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`;
+			return `${d.getFullYear()}-${pad2$2(d.getMonth() + 1)}-${pad2$2(d.getDate())}`;
 		}
 		/**
 		* 信息行里的「时刻」文案（用户 2026-10-04）。
@@ -67669,7 +72633,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			if (Number.isNaN(ms)) return "--";
 			const d = new Date(ms);
 			const sameDay = ymdOfDate(d);
-			const hhmm = `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			const hhmm = `${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
 			if (sameDay === dayKey || dayKey === "unknown") return hhmm;
 			const base = dateOfDayKey(dayKey);
 			if (base === null) return hhmm;
@@ -68002,9 +72966,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 						if (depHasSid) openSession(depSid);
 					}
 				}, "…") : null), depHasSid ? (0, react$1.createElement)(Button$2, {
-					variant: "ghost",
 					size: "sm",
-					className: "dsh-tdt-btn--link",
+					variant: "link",
 					onClick: (event) => {
 						event.stopPropagation();
 						openSession(depSid);
@@ -68289,11 +73252,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				ariaLabel: t("recordsTaskPh"),
 				searchPlaceholder: t("recordsTaskSearch"),
 				moreLabel: t("recordsMore"),
-				collapseLabel: t("recordsCollapse"),
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 150
-			}))), loading ? (0, react$1.createElement)(Loading, {}) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$2, {
+			}))), loading ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
@@ -68557,10 +73519,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "--";
 			const d = new Date(ms);
-			return `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			return `${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
 		}
 		/** 月键 `YYYY-MM`（选中日是否还落在新月内，用它比）。 */
-		const monthKeyOf = (y, m) => `${y}-${pad2$1(m)}`;
+		const monthKeyOf = (y, m) => `${y}-${pad2$2(m)}`;
 		/** 任务日程页（月历）。 */
 		function TaskCalendarView(props) {
 			applyStyle(CALENDAR_DOMAIN, CALENDAR_CSS);
@@ -69014,11 +73976,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				ariaLabel: t("recordsTaskPh"),
 				searchPlaceholder: t("recordsTaskSearch"),
 				moreLabel: t("recordsMore"),
-				collapseLabel: t("recordsCollapse"),
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 150
-			}))), loading ? (0, react$1.createElement)(Loading, {}) : null, error !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, `${t("calLoadFail")}：${error}`, (0, react$1.createElement)(Button$2, {
+			}))), loading ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, error !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, `${t("calLoadFail")}：${error}`, (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
@@ -69040,7 +74001,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 							setSelected(cell.iso === selected ? "" : cell.iso);
 							setOpenId(null);
 						}
-					}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-daterow" }, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), cell.isToday ? (0, react$1.createElement)("span", { className: "dsh-tdt-cal-today" }, ` · ${t("calToday")}`) : null), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-daterow" }, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.iso === today ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), cell.iso === today ? (0, react$1.createElement)("span", { className: "dsh-tdt-cal-today" }, ` · ${t("calToday")}`) : null), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 						side: "top",
 						label: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`
 					}, (0, react$1.createElement)("div", {
@@ -69522,13 +74483,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [infoLoading, setInfoLoading] = (0, react$1.useState)(false);
 			const [infoError, setInfoError] = (0, react$1.useState)(null);
 			const [infoLoaded, setInfoLoaded] = (0, react$1.useState)(false);
-			const calendarLabels = (0, react$1.useMemo)(() => calendarLabelsOf(t), [t]);
-			const timeLabels = (0, react$1.useMemo)(() => timeLabelsOf(t), [t]);
 			const timeRangeLabels = (0, react$1.useMemo)(() => ({
 				all: t("trAll"),
-				custom: t("trCustom"),
-				from: t("cardFrom"),
-				to: t("cardTo"),
 				presets: {
 					today: t("trToday"),
 					yesterday: t("trYesterday"),
@@ -69772,7 +74728,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
 					fontSize: "var(--dshpc-font-xs)",
 					color: "var(--dshpc-danger)"
-				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, {}) : infoLast === null ? (0, react$1.createElement)("div", { style: {
+				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : infoLast === null ? (0, react$1.createElement)("div", { style: {
 					fontSize: "var(--dshpc-font-xs)",
 					color: "var(--dshpc-fg-3)"
 				} }, t("infoNoRun")) : lastRunFields({
@@ -69782,7 +74738,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					onOpenFile
 				}))));
 			};
-			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(SelectField, {
+			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(SelectField, {
 				value: recStatus,
 				options: [
 					{
@@ -69814,8 +74770,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				value: recRange,
 				onChange: setRecRange,
 				labels: timeRangeLabels,
-				calendarLabels,
-				timeLabels,
 				precision: "day",
 				size: "md"
 			}), (0, react$1.createElement)("label", { style: limitRowStyle$1 }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
@@ -69948,7 +74902,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					}
 				}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, event.detail ?? ""))))) : null];
 			})))));
-			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Input$1, {
+			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Input, {
 				value: logKeyword,
 				onChange: setLogKeyword,
 				placeholder: t("cardKeyword"),
@@ -69958,8 +74912,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				value: logRange,
 				onChange: setLogRange,
 				labels: timeRangeLabels,
-				calendarLabels,
-				timeLabels,
 				precision: "minute",
 				size: "md"
 			}), (0, react$1.createElement)("label", { style: limitRowStyle$1 }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
@@ -70082,7 +75034,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}) : null, (0, react$1.createElement)("div", { style: panelBarStyle }, (0, react$1.createElement)(Segmented, {
 				value: tab,
 				size: "md",
-				variant: "inset",
+				bordered: false,
 				items: [
 					{
 						value: "info",
@@ -70099,9 +75051,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				],
 				onChange: setTab
 			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
-				variant: "outline",
+				variant: "danger-outline",
 				size: "md",
-				className: "dsh-tdt-btn--danger-ink",
 				onClick: () => {
 					setConfirmDelete(true);
 				}
@@ -70328,13 +75279,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				alignItems: "center",
 				gap: "8px",
 				flex: "none"
-			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Input, {
+			} }, (0, react$1.createElement)(Input, {
+				size: "md",
 				className: "dsh-tdt-tl-input",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
 				value: query,
 				placeholder: t("listSearchPlaceholder"),
-				onChange: (event) => {
-					setQuery(event.target.value);
+				onChange: (value) => {
+					setQuery(value);
 				}
 			}), (0, react$1.createElement)(SelectField, {
 				value: workspace,
@@ -70837,7 +75789,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				let control;
 				if (f.kind === "number") {
 					const displayVal = f.toDisplay !== void 0 ? f.toDisplay(serverVal) : serverVal;
-					control = (0, react$1.createElement)(Input$1, {
+					control = (0, react$1.createElement)(Input, {
+						size: "lg",
 						value: draft[f.key] ?? String(displayVal),
 						style: { width: "100%" },
 						error: invalid,
@@ -72199,7 +77152,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				onViewTask: openViewer,
 				workspaces: editorOptions.workspaces,
 				onCreate: openCreate
-			}) : tab === "settings" ? (0, react$1.createElement)(SettingsPage, { t }) : data === void 0 ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react$1.createElement)("pre", { style: preStyle }, raw) : null) : null, (0, react$1.createElement)(BackToTop, null)), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
+			}) : tab === "settings" ? (0, react$1.createElement)(SettingsPage, { t }) : data === void 0 ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react$1.createElement)("pre", { style: preStyle }, raw) : null) : null, (0, react$1.createElement)(QuickToolbar, { anchorId: "dsh-tdt-main" })), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
 				t,
 				heading: viewing.heading,
 				taskId: viewing.taskId,
@@ -72306,7 +77259,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				workspaceAnchors: editorOptions.workspaceAnchors
 			}) : null, preview !== null && workspaceFiles !== null ? (0, react$1.createElement)(FileBrowser, {
 				key: `${preview.sessionId}:${preview.path}:${preview.seq}`,
-				workspaceFiles,
 				officeToPdf,
 				sessionId: preview.sessionId,
 				path: preview.path,
@@ -72594,6 +77546,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		* @param ctx - 浏览器插件上下文。
 		*/
 		function apply(ctx) {
+			connectFs({ path: FS_ROUTE });
+			connectHost(ctx);
 			ctx.inject(["locale"], (localeCtx) => {
 				ctx.effect(() => localeCtx.locale.register(LOCALE_NS, {
 					zh,

@@ -28,7 +28,7 @@ import { formatDateTime, pad2 } from './format'
 import { type TaskOverviewRow } from './task-overview'
 // API 前缀唯一真源（M9；附件上传原先硬编码了一份、还多了个前导 `/`）。
 import { API_PREFIX } from './query'
-import type { CSSProperties, ReactElement, ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import {
   Button,
   FileTypeIcon,
@@ -46,12 +46,13 @@ import {
 // 表单控件一律走基础层 barrel；`./editor-fields` 只留文案单源与周几多选（W6：不再二次再导出）。
 import { calendarLabelsOf, WeekdayPicker, type WeekdayLabels } from './editor-fields'
 import {
-  Button as TdtButton, Checkbox, CodeViewer, DateField, IconButton, MarqueeText, NumberInput,
-  PrefixedInput as TdtPrefixedInput, Segmented, SelectField, startResizeLayoutWidth, Textarea, TimeField,
+  Button as TdtButton, CodeViewer, DateField, IconButton, MarqueeText, NumberInput,
+  PrefixedInput as TdtPrefixedInput, Segmented, SelectField, Textarea, TimeField,
   type CalendarLabels, type EditorOption, type TimeLabels,
 } from './ui'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey, type Translate } from './locales'
+import { t as coreT } from 'dsh-plugin-core/utils'
 import { renderSchedule, scheduleCron, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
@@ -60,7 +61,7 @@ import { MD_LABELS } from './md-labels'
 import { createPortal } from 'react-dom'
 import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf, isSafeAttachmentRef } from '../attachment-allowlist.js'
 import { FileBrowser } from './file-browser'
-import type { OfficeToPdfFace, WorkspaceFilesFace } from './file-preview'
+import type { OfficeToPdfFace, WorkspaceFilesFace } from 'dsh-plugin-core/adv/explorer'
 import { ensureToastStyle, FloatingToast } from './toast-css'
 // 查看档正文（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）：纵向单栏 = 基础信息 → 提示词 → 上次执行。
 // ⚠️ 它与本文件是「组件互相引用 + 类型单向依赖」：task-view 只 `import type` 本文件的草稿类型（编译期擦除）。
@@ -636,9 +637,6 @@ export function definitionToDraft(definition: Record<string, unknown>): TaskEdit
 
 // ─────────────────────── 布局小件 ───────────────────────
 
-/** 区块小标题（分组标签）：600 字重小字。（原注释指向已删除的 `dsh-tdt-ed-input` 类，2026-10-01 修正。） */
-const sectionLabelStyle: CSSProperties = { fontSize: 'var(--dshpc-font-sm)', fontWeight: 600, color: 'var(--dshpc-fg)', marginBottom: '6px' }
-
 /**
  * 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
  * 用户 2026-09-29：「任务名称」别单独占一行，位置紧张。
@@ -652,6 +650,8 @@ function PrefixedInput(props: {
   error?: boolean
 }): ReactElement {
   return h(TdtPrefixedInput, {
+    // 核心默认 sm(24)，沿用原基础层默认 lg(32)（与同排卡片一致）。
+    size: 'lg',
     prefix: props.prefix,
     value: props.value,
     placeholder: props.placeholder,
@@ -677,7 +677,7 @@ function PeriodControls(props: {
   calendarLabels: CalendarLabels
   timeLabels: TimeLabels
 }): ReactElement {
-  const { draft, patch, freqOptions, t, tt, weekdayLabels, calendarLabels, timeLabels } = props
+  const { draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels } = props
   const timeField = h(TimeField, {
     value: draft.time,
     onChange: value => { patch({ time: value }) },
@@ -823,10 +823,11 @@ function IntervalControls(props: {
     h('div', { className: 'dsh-tdt-ed-row' },
       h('span', { style: { fontSize: 'var(--dshpc-font-md)', color: 'var(--dshpc-fg)' } }, t('editorIntervalEvery')),
       h(NumberInput, {
+        // 核心默认 sm(24)，显式 lg(32) —— 与同排「小时 / 分钟」下拉同档。
+        size: 'lg',
         value: Number.parseInt(draft.intervalStep, 10) || 1,
         min: 1,
         step: 1,
-        // 高度走默认 lg(=32)，与同排「小时 / 分钟」下拉同档（此前 sm=24 显矮）。
         label: t('editorIntervalStep'),
         onChange: (n: number) => { patch({ intervalStep: String(n) }) },
       }),
@@ -1069,7 +1070,7 @@ function PromptEditorModal(props: {
           id: 'dsh-tdt-ed-prompt-mode',
           value: mode,
           size: 'md',
-          variant: 'default',
+          bordered: true,
           items: [
             { value: 'edit', label: t('editorModeEdit') },
             { value: 'preview', label: t('editorModePreview') },
@@ -1084,7 +1085,7 @@ function PromptEditorModal(props: {
           : h(Segmented, {
             id: 'dsh-tdt-ed-histtoggle',
             size: 'md',
-            variant: 'inset',
+            bordered: false,
             multiple: true,
             value: showVersions ? ['on'] : [],
             items: [{ value: 'on', label: t('editorVersionToggle') }],
@@ -1142,7 +1143,7 @@ function PromptEditorModal(props: {
                       h('span', { className: 'dsh-tdt-ed-ver-right' },
                         hoveredId === v.file
                           ? h('span', { className: 'dsh-tdt-ed-ver-actions' },
-                            h(TdtButton, { variant: 'ghost', size: 'sm', className: 'dsh-tdt-btn--link', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseShort')),
+                            h(TdtButton, { variant: 'link', size: 'sm', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseShort')),
                             h(IconButton, { variant: 'danger', size: 'sm', icon: h(IconCloseOutlineRegular, { size: 12 }), label: t('editorDeleteVersion'), onClick: () => { setConfirmDeleteFile(v.file) } }),
                           )
                           : null,
@@ -1189,7 +1190,7 @@ function ConfigPreviewPanel(props: { t: T; json: string; onClose: () => void }):
       h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
     ),
     h('div', { style: { flex: '1 1 auto', minWidth: 0, minHeight: 0, overflow: 'hidden' } },
-      h(CodeViewer, { text: json, path: 'task-definition.json', t }),
+      h(CodeViewer, { text: json, path: 'task-definition.json', t: coreT }),
     ),
   )
 }
@@ -1317,7 +1318,6 @@ export function TaskEditorDrawer(props: {
     if (initialView !== undefined) setViewTab(initialView)
   }, [currentTaskId, initialView])
   const [advancedOpen, setAdvancedOpen] = useState(false)
-  const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(0) // >0 = Toast seq（「预览态不可保存」中性提示）
@@ -1847,7 +1847,7 @@ export function TaskEditorDrawer(props: {
           id: 'dsh-tdt-ed-schedule',
           value: scheduleTab,
           size: 'md',
-          variant: 'inset',
+          bordered: false,
         items: [
           { value: 'once', label: t('editorFreqOnce') },
           { value: 'periodic', label: t('editorSchedulePeriodic') },
@@ -2100,7 +2100,7 @@ export function TaskEditorDrawer(props: {
                   id: 'dsh-tdt-ed-retry',
                   value: draft.maxAttempts,
                   size: 'md',
-                  variant: 'inset',
+                  bordered: false,
                   items: retryOptions,
                   onChange: (value: string) => { patch({ maxAttempts: value }) },
                   label: t('editorRetry'),
@@ -2279,7 +2279,7 @@ export function TaskEditorDrawer(props: {
           id: 'dsh-tdt-ed-viewtab',
           value: viewTab,
           size: 'md',
-          variant: 'default',
+          bordered: true,
           items: [
             { value: 'view', label: t('editorTabView') },
             { value: 'edit', label: t('editorTabEdit') },
@@ -2497,7 +2497,6 @@ export function TaskEditorDrawer(props: {
             return workspaceFiles !== null && workspaceFiles !== undefined && anchorSessionId !== ''
               ? h(FileBrowser, {
                 key: `${pickerWs}:${anchorSessionId}`,
-                workspaceFiles,
                 officeToPdf,
                 sessionId: anchorSessionId,
                 path: '',
