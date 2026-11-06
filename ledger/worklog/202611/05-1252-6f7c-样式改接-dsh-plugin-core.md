@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 07:38:40 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 09:08:45 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -502,6 +502,39 @@ h(ChatViewFrame, {
 2. 下拉菜单从「右对齐」改为核心默认左对齐（核心无 `align:'end'`）。
 3. JSON 非法提示由「常驻直到改对」改为「进入非法时弹一次、停留 8 秒」。
 
+## P4d · 控件 / 卡片再对齐（2026-11-06）
+
+**用户原话**：「选择工作区的地方都要带搜索框。选择模型的地方，你用它那个分组的模型选择下拉框……核心专门有一个选模型的分组。第一张图宽度没控制住，最小宽度下挤在一起了……第二张图这种组合的核心也提供了……你的任务配置，每一个任务的外框，核心也提供了样式的吧？执行记录前面有一个颜色条，那个核心也提供了样式的……包括设置里面的每一块灰色的，也用核心提供的样式吧。还有设置里面的选模型的那个……直接用核心里面就可以了……两个的宽定住就可以了。」
+
+**改动表**：
+
+| 文件 | 改动 |
+|---|---|
+| `src/client/ui/Field.tsx` | `SelectFieldProps` 新增 `searchable?: boolean`，透传给核心 `Picker` |
+| `src/client/ui/index.ts` | 再导出 `ModelPicker` / `Card` / `StripCard` / `InputGroup` 及相关类型 |
+| `src/client/task-editor.tsx` | 新增 `modelGroupsOf`（自有模型列表 → `PickerGroup[]`）；模型下拉改核心 `ModelPicker variant:'grouped'`；工作区下拉加 `searchable:true`；任务名称 / 编号的 `PrefixedInput` 包装改底为核心 `InputGroup`（`label` 同格灰底） |
+| `src/client/task-editor-css.ts` | 新增 `.dsh-tdt-ed-model{width:140px}`（最小宽度下不再挤压）、`.dsh-tdt-model-pair` 两列网格 |
+| `src/client/task-list.tsx` | 任务卡外框改核心 `Card`（隐藏核心色条 + `padding:0`，保留本仓 `StatusRail`）；删本地 `cardStyle` 与 `.dsh-tdt-card` 底色规则；工作区筛选加 `searchable:true` |
+| `src/client/task-calendar.tsx` | 工作区筛选加 `searchable:true` |
+| `src/client/settings-page.tsx` | 两块灰框改核心 `StripCard`（`accent:'neutral'`）；删 `SETTINGS_CSS` / `.dsh-tdt-settings-card` |
+| `src/client/settings-config-block.tsx` | 供应商 + 模型两个下拉合并为单个核心 `ModelPicker variant:'cascade'`（`''` ⇒ 清两段）；`translate` 用 `coreT`；行高 / 宽度定住 |
+| `src/client/records-timeline.tsx` | 条目改核心 `StripCard`（`toneAccentOf` 映射 accent）；删自绘色条 `dsh-tdt-rec-bar` 与 `--rec-tone` 变量 |
+| `scripts/smoke.mjs` | 10 条执行记录断言改核心等价物（`dshpc-card__bar` / StripCard / accent / `toneAccentOf`），去掉旧色条与状态文字断言 |
+| `docs/` | [`external/plugin-core-controls.md`](../../docs/design/external/plugin-core-controls.md) 追加 ModelPicker / Card / StripCard / WorkspacePicker / InputGroup 契约；[`ui-style-guide.md`](../../docs/design/ui-style-guide.md) §二 增 4 行 |
+
+**核心缺口（已写入 external 文档）**：
+
+1. `ModelPicker` 未提供定宽档 ⇒ 宽度按使用点 className 定（编辑器 140）。
+2. `WorkspacePicker` 的值口径是 `workspaceId`，本仓任务存工作区标题 ⇒ 本轮未采用，改为核心 `Picker` 开 `searchable`。
+3. `Card` / `StripCard` 的色条不能挂 Tooltip ⇒ 执行记录失去「悬停色条看状态名」（状态名仍在展开区与标签上）。
+
+**验证**：`typecheck` ✅ · `build` ✅ · `smoke` 738 / 14（14 项均为既有失败）· `koc-codelint` 12 条（少于基线 13 条，无新增阻塞）。
+
+**需用户确认**：
+
+1. 设置页 `cascade` 两个下拉的宽度档（当前按核心默认等分两列，如需再收窄可指定 px）。
+2. 执行记录色条 Tooltip 移除是否接受（核心色条不支持挂提示）。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -516,3 +549,4 @@ h(ChatViewFrame, {
 - 2026-11-06 01:03:25 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 修复本地首启 import failed: process is not defined —— tsdown.client.config.ts 加 define process.env.NODE_ENV=production（floating-ui 模块级判断），smoke 加回归断言；build/typecheck/smoke 754/0
 - 2026-11-06 06:15:56 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览改接核心完成：核心升至 dsh-plugin-core@0.35.0（title/header/headerActions/bodyHeader/bodyFooter 槽位），session-view.ts 1471→约190 行薄包装，删 mirror 14 文件只留 Deliverables.tsx，archive-session-css 339→约95 行；删 present.host 与 remote.workspaceFiles 探测；build/typecheck 通过，smoke 738/14（14 项均为既有单引号断言失配）
 - 2026-11-06 07:38:40 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4b 编辑分栏改接核心 PanelDock 完成：index.ts 用 createPanelDock+PanelDock/DockPanel（同页双分栏），删自绘面板/拖拽条/宽度记忆与 --dsh-tdt-editor-w；task-editor 只留内容本体；typecheck/build 通过，smoke 738/14（14 项均为既有断言失配）；新增 external/plugin-core-dock.md
+- 2026-11-06 09:08:45 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4d 控件/卡片再对齐：ModelPicker(grouped/cascade)、Card/StripCard、InputGroup 全部改接核心；工作区下拉补 searchable；模型宽定 140/设置页两列等宽；typecheck/build 通过，smoke 738/14（既有），codelint 12 条（无新增）；文档 2 篇回写
