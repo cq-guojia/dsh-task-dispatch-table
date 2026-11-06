@@ -2,7 +2,15 @@
 
 > **状态**：✅ 收口（真机验证通过）
 > **来源**：决策 34 / 35
-> **配套**：过程见 [`worklog/session-view.md`](../../worklog/session-view.md)；宿主能力见 [`dsh-capabilities.md`](../external/dsh-capabilities.md)
+> **配套**：过程见 [`worklog/session-view.md`](../../worklog/session-view.md)；宿主能力见 [`dsh-capabilities.md`](../external/dsh-capabilities.md)；**核心弹窗槽位契约见 [`plugin-core-session.md`](../external/plugin-core-session.md)**
+
+> **⚠️ 2026-11-06 现状（覆盖下文 §二–§七 的实现描述）**：渲染与数据链已整体改接核心
+> `dsh-plugin-core/adv/session`（`SessionViewModal` + `openSessionView`；0.35.0 起提供
+> `title` / `bodyHeader` / `bodyFooter` / `headerActions` 等注入槽位）。
+> 本仓 [`src/client/session-view.ts`](../../../src/client/session-view.ts) 只剩一层薄包装：
+> 标题行（任务名可点）、会话顶端「接收 / 随附」、会话底端「交付文件补差 + 过程文件」；
+> `src/client/mirror/*` 镜像层只剩 `Deliverables.tsx`；`archive-session-css.ts` 只剩这两块样式。
+> 下文保留作为**历史沿革**（决策 34 → 决策 15 自绘），不再代表现状。
 
 > **里程碑**：14 · **状态**：✅ 收口（设计定型 + 落码 + 真机验证通过；外观对齐官方并入里程碑 15，2026-09-29 结项） · **定型依据**：决策记录（已并入各专题文档） 决策 34（推翻决策 29）
 > **关联文档**：[`../worklog/session-view.md`](../../worklog/session-view.md)（决策 27→28→29→34 全过程叙事）、[`dsh-capabilities.md`](../external/dsh-capabilities.md)（归档语义 / 对话渲染分层，源码级事实）

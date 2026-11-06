@@ -42,7 +42,7 @@
 | **月历网格（7 列 × 6 行）** | `ui/DateTime.tsx` 的 `buildMonthCells`（2026-10-05 由私有函数上提为导出） | `const cells = buildMonthCells(y, m)`（`m` 为 **1-based**；返回 `{ iso, day, inMonth, isToday }[]`，固定 42 格） | ✅ **2026-10-05 落码**：日期框的自绘日历与「任务日程」页**共用同一份**（此前只有前者在用，后者不许再写一套网格算法）。⚠️ **格子内容 / 选中日清单的版式是页面私有**（`task-calendar.tsx` 的样式域 `domain:calendar`）⇒ **不进本表**（它不是通用控件）；周表头与月份标题走 `calendarLabelsOf` 单源 |
 | Toast | `toast-css.ts`（`FloatingToast`，含 `closable` 可关闭变体） | `h(FloatingToast, { tone: 'error', … })` | ✅ 唯一（先前 `index.ts` 自绘中性提示条已收编为 `closable` 变体，U20 #5，2026-10-05） |
 | **回到顶部悬浮钮** | `ui/BackToTop.tsx` + `ui/back-to-top-css.ts`（皮肤 `.dsh-tdt-backtotop`） | `h(BackToTop, null)`（默认锚 `dsh-tdt-main`，横向贴主内容列右缘**外侧**、滚过 320px 才显形） | ✅ **2026-10-06 落码**：主面板三个 tab（任务配置 / 执行记录 / 任务日程 …）共用同一个 page 滚动容器，在 `index.ts` 的 page 容器里渲染**一次**即全覆盖，不许各页面各放一份；横向锚定与主内容同进退（与 `Loading` 同源，后者贴右缘内侧） |
-| 卡 / 浮层外壳 | 编辑器侧 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel` 本就单一可复用类（提示词/附件/排期/前置任务卡共用 `ed-card`）；镜像层 `.dsh-tdt-sv-*` 外壳随 §七 边界不抽 | — | ✅ **2026-10-05 收口**（编辑器侧已唯一；镜像层刻意 1:1 宿主会话面，见 §三 #4） |
+| 卡 / 浮层外壳 | 编辑器侧 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel` 本就单一可复用类（提示词/附件/排期/前置任务卡共用 `ed-card`） | — | ✅ **2026-10-05 收口**（编辑器侧已唯一）；**2026-11-06 起会话弹窗外壳归核心**（`dsh-plugin-core/adv/session` 的 `dshpc-*`），本仓 `mirror/*` 镜像层已删 |
 
 > 表外的控件一旦被写第二遍，就是本手册要拦住的事。
 
@@ -84,17 +84,18 @@
 
 以下内联字面量经评审保留，**不纳入「数值必须来自 token」的硬约束**；每次新增同类须回本表加一条。
 
+> **2026-11-06 修订**：会话弹窗改接核心（`dsh-plugin-core/adv/session`），`archive-session-css.ts` 只剩
+> 顶部「接收 / 随附」区（`tfc*`）与交付卡兜底（`deliv*`）两组规则；下表里与已删除的镜像层
+> （`dsh-tdt-sv-*` 的消息行 / 树 / 外壳）相关的字面量条目已一并清掉。
+
 | 类别 | 位置样例 | 理由 |
 |---|---|---|
-| 图标尺寸 | `task-list.tsx` 18/16、`editor-fields.tsx` 16、`task-editor.tsx` 14、`archive-session-css.ts` 14/16/6/11/40/14、`index.ts` 16 | 图标 / 图标底板与控件总高无绑定 |
-| 圆点 / 装饰点 | `task-list.tsx` 5、`task-editor.tsx` 5、`index.ts` 7、`toast-css.ts` 7、`archive-session-css.ts` 2 | 装饰元素，无三档语义 |
-| 分隔线 / 1px 圆角 | `archive-session-css.ts` 1px / 1×1 | 线宽语义 |
+| 图标尺寸 | `task-list.tsx` 18/16、`editor-fields.tsx` 16、`task-editor.tsx` 14、`archive-session-css.ts` 14/16/40、`index.ts` 16 | 图标 / 图标底板与控件总高无绑定 |
+| 圆点 / 装饰点 | `task-list.tsx` 5、`task-editor.tsx` 5、`index.ts` 7、`toast-css.ts` 7 | 装饰元素，无三档语义 |
+| 分隔线 / 发丝线 | `archive-session-css.ts` 0.5px（组间细线）、1px（焦点环） | 线宽语义 |
 | 圆形 `border-radius:50%` | `task-editor.tsx` 圆点、`task-list.tsx` 圆点 | 圆点必须圆 |
-| 内容区定高 / 限高 | `task-list.tsx` 360（刻意定高）、`task-editor-css.ts` 132、`archive-session-css.ts` 150/224/240/60、`index.ts` 16em/12em | 内容区尺寸，与控件档无关 |
-| 紧凑树开关 20×20 | `archive-session-css.ts` `.dsh-tdt-sv-tree-toggle` | 树行密度专用第四档 |
-| 随字号缩放行高 | `archive-session-css.ts` `calc(Npx + var(--dsh-content-font-delta))` | 承担字号自适应，换 token 会丢掉缩放能力 |
-| 会话镜像官方样式 | `archive-session-css.ts` 的 `--dsh-content-*` / `--dsh-chat-*` | `ui-foundation.md` §九 边界（复刻官方会话面） |
-| 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`task-list.tsx` chip；`mirror/*` 折叠头（面包屑 / 树 toggle 已归核心 `dsh-plugin-core/adv/explorer`） | 语义非普通按钮，走各自专用类与计算属性 |
+| 内容区定高 / 限高 | `task-list.tsx` 360（刻意定高）、`task-editor-css.ts` 132、`archive-session-css.ts` 60（交付卡）、16（序号徽标）、`index.ts` 16em/12em | 内容区尺寸，与控件档无关 |
+| 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`task-list.tsx` chip（面包屑 / 树 toggle 已归核心 `dsh-plugin-core/adv/explorer`） | 语义非普通按钮，走各自专用类与计算属性 |
 | **宿主值导入例外：官方 `Toast`** | `index.ts` 的保存成功提示（`import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'`） | 2026-10-04 评审登记：官件自带明暗自适应 + 淡入淡出，这里只要「一次性轻提示」，且与 `FloatingToast`（操作结果提示）分工不同。**除它之外业务文件不许再引宿主值**；若将来要收编，随 `FloatingToast` 收编一并处理 |
 
 ### 待抽象（2026-10-01 审计登记；**2026-10-05 已收口**——见下表逐条 ✅）

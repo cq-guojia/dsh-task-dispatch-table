@@ -2,7 +2,11 @@
 
 > **类型**：🌐 **外部事实** —— 记的是**官方界面**长什么样，不是本项目的设计
 > **适用版本**：`@deepseek-ai/dsh-client-ui-chat` / `-primitives` / `-conversation` **@0.1.7-rc.2**（官方升级后跑 §〇 提取命令 diff 再补）
-> **状态**：✅ 持续维护
+> **状态**：✅ 持续维护 —— **⚠️ 2026-11-06：镜像实现已移交核心**。`dsh-plugin-core@0.35.0` 起
+> `adv/session/mirror/*` 成了唯一实现；本仓 `src/client/mirror/*` 已删（只留 `Deliverables.tsx` 给
+> 交付补差）。下表「回退类」一列里的 `dsh-tdt-sv-*` 是**历史自绘镜像**的类名，现状回退类为
+> 核心的 `dshpc-sv-*`（见 [`plugin-core-session.md`](./plugin-core-session.md)）。官方元素取值仍然有效，
+> 用于核对核心镜像是否与官方一致。
 > **来源**：上述三包源码原文摘录（`lib/client.js` 内嵌 CSS module + `lib/types/*.d.ts`），CSS 值均为源码原文、非目测
 > **配套**：[`dsh-capabilities.md`](./dsh-capabilities.md)（宿主能力）· 插件自有控件样式走 [`ui-style-guide.md`](../ui-style-guide.md)，本表只管**镜像官方**的部分
 >

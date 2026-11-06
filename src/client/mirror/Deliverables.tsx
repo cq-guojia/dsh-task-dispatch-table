@@ -1,28 +1,20 @@
-// 官方对照：packages/client/ui-deliverables/src/client/{PresentRow,PresentedFileCard,Deliverables}.tsx
-// （0.1.7-rc.2 lib/client.js：PresentRow 488-560、PresentedFileCard 1529-1600、Deliverables 1632-1710）
+// 官方对照：`@deepseek-ai/dsh-client-ui-deliverables` 的 `Deliverables.tsx`
+// （PresentedFileCard + presented 网格 + >4 折叠）。
 //
-// 官方产出物层的两个用户可见面，逐值镜像：
-//   ① 交付文件行 = `present` 工具调用的专属渲染（官方经 tool.call.toolview 槽位 key='present'
-//      挂 PresentRow）：标题「交付文件」+ IconDeliverDocRegular，折叠摘要 = 状态词（已交付…）
-//      + 文件路径列表（官方纯文本**不可点**），展开体 = 工具结果原文（pre.output）。
-//   ② 交付文件卡网格 = turnTail 槽位挂 DeliverablesTail：每轮被 `present` 交付成功的文件
-//      （deliverables/presented 事件的 files，本弹窗从 present 工具调用参数同源推导）画成
-//      卡片（FileTypeIcon + 文件名 + 简介），**整卡可点 → 预览**；>4 张折叠 +「全部 N 个文件」。
-//      官方另有原生打开（桌面 Host）的状态行/重试行——本弹窗无原生层，不渲染（官方在
-//      canOpenWorkspacePath 不可用时也只是把卡片降级为侧栏预览，卡片本体不变）。
-// 数据真源 = 会话 keyed 流里的 present 工具调用（真实取数，禁模拟）。
+// 用途：会话弹窗 bodyFooter 里只补「快照没覆盖到的 DB 交付物」——核心 SessionViewModal 已按
+// 快照 turn 级 deliverables.presented 在最后一轮 turn-tail 画出自己的网格，本文件只负责补差，
+// 两个网格不重复（去重逻辑见 ../session-view.ts）。
+// 官方类命中时走 ocOr（官方 CSS module），缺失时回退下方 dsh-tdt-sv-deliv* 兜底类。
 import { createElement as h, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import {
-  DisclosureRow,
   FileTypeIcon,
   IconChevronDownOutlineRegular,
   IconChevronUpOutlineRegular,
-  IconDeliverDocRegular,
   fileExtension,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ocOr } from '../official-classes'
-import type { LocaleKey, Translate } from '../locales'
+import type { Translate } from '../locales'
 
 /** 官方 PresentedFile 的消费面（presented.d.ts：path 必有，description 可选）。 */
 export interface DeliveredFileFace {
@@ -30,76 +22,7 @@ export interface DeliveredFileFace {
   description?: string
 }
 
-/** 官方 Tool block（present 调用）的消费面：running 半截 vs 结算（kind in block）。 */
-interface PresentBlockFace {
-  argsRaw?: string
-  phase?: string
-  kind?: string
-  call?: { argsRaw?: string } | null
-  content?: ReadonlyArray<{ type?: string; text?: string }>
-  isError?: boolean
-  error?: { code?: string; name?: string } | null
-}
-
 const basename = (path: string): string => path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1)
-
-/** 官方 fileNames（PresentRow.tsx）：argsRaw.files[].path 逗号连接；解析不出回原样。 */
-function fileNames(raw: string): string {
-  let args: unknown
-  try { args = JSON.parse(raw) } catch { return raw }
-  if (typeof args !== 'object' || args === null || !('files' in args) || !Array.isArray((args as { files: unknown }).files)) return raw
-  return (args as { files: unknown[] }).files
-    .flatMap((file) => (typeof file === 'object' && file !== null && 'path' in file && typeof (file as { path: unknown }).path === 'string' ? [(file as { path: string }).path] : []))
-    .join(', ')
-}
-
-/** 官方 PresentRow：present 工具调用的状态行（折叠 = 状态词 + 路径；展开 = 结果原文）。 */
-export function PresentRowMirror(props: { block: unknown; t: Translate }): ReturnType<typeof h> {
-  const { block, t } = props
-  const b = (block ?? {}) as PresentBlockFace
-  const settled = typeof b.kind === 'string'
-  const state = !settled
-    ? (b.phase === 'preparing' ? 'preparing' : 'running')
-    : b.error?.code === 'interrupted' ? 'stopped' : b.isError ? 'error' : 'ok'
-  const argsRaw = (settled ? b.call?.argsRaw : b.argsRaw) ?? ''
-  const details = settled
-    ? ((b.content ?? []).map((item) => item.type === 'text' ? item.text ?? '' : JSON.stringify(item)).join('\n')
-      || (b.error ? `${b.error.name ?? ''}: ${b.error.code ?? ''}` : ''))
-    : ''
-  const [expanded, setExpanded] = useState(false)
-  const statusKey: LocaleKey = state === 'preparing' ? 'deliverRowPreparing'
-    : state === 'running' ? 'deliverRowRunning'
-    : state === 'error' ? 'deliverRowError'
-    : state === 'stopped' ? 'deliverRowStopped'
-    : 'deliverRowOk'
-  return h('div', {
-    className: ocOr('ToolRow', 'root', 'dsh-tdt-sv-tool'),
-    'data-tool': 'present',
-    'data-state': state,
-  },
-    h(DisclosureRow, {
-      icon: h(IconDeliverDocRegular, { size: 14 }),
-      title: t('deliverRowTitle'),
-      open: expanded && details !== '',
-      expandable: details !== '',
-      expandOnRowClick: true,
-      keepContentWhenOpen: true,
-      onToggle: () => { setExpanded((value) => !value) },
-      running: state === 'running' || state === 'preparing',
-      rowClassName: ocOr('ToolRow', 'row', 'dsh-tdt-sv-tool-row'),
-      leadingClassName: ocOr('ToolRow', 'leading', 'dsh-tdt-sv-tool-leading'),
-      titleClassName: ocOr('ToolRow', 'title', 'dsh-tdt-sv-tool-title'),
-      chevronClassName: ocOr('ToolRow', 'chevron', 'dsh-tdt-sv-tool-chevron'),
-      collapsedContent: h('span', { className: ocOr('PresentRow', 'summary', 'dsh-tdt-sv-deliv-rowsummary') },
-        h('span', null, t(statusKey)),
-        h('span', { className: ocOr('PresentRow', 'paths', 'dsh-tdt-sv-deliv-rowpaths') }, fileNames(argsRaw)),
-      ),
-      children: details !== '' && expanded
-        ? h('pre', { className: ocOr('PresentRow', 'output', 'dsh-tdt-sv-deliv-rowoutput') }, details)
-        : null,
-    }),
-  )
-}
 
 /** 官方 COLLAPSED_PRESENTED_COUNT（Deliverables.tsx）：超过 4 张折叠。 */
 const COLLAPSED_DELIVERED_COUNT = 4
@@ -110,7 +33,7 @@ function cardDescription(description: string | undefined, fallback: string): str
   return trimmed === undefined || trimmed === '' ? fallback : trimmed
 }
 
-/** 官方 PresentedFileCard：整卡可点 → onPreview（官方 = 右栏预览，本弹窗 = openFile 分栏）。 */
+/** 官方 PresentedFileCard：整卡可点 → onPreview（官方 = 右栏预览，本仓 = 页面级预览 dock）。 */
 function DeliveredFileCard(props: {
   file: DeliveredFileFace
   onPreview?: () => void

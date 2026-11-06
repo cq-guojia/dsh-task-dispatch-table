@@ -24,7 +24,6 @@ import {
 	getFsFace,
 	type OfficeToPdfFace,
 	openFilePreview,
-	type WorkspaceFilesFace,
 } from "dsh-plugin-core/adv/explorer";
 import { connectHost } from "dsh-plugin-core/ui";
 import { t as coreT } from "dsh-plugin-core/utils";
@@ -657,8 +656,6 @@ function TaskPage(props: {
 	forkSession: ((id: string, atSeq?: number) => Promise<string>) | null;
 	/** U10：官方导航跳转（uiWorkspace.openSession；未就位为 null）。 */
 	openHostSession: ((id: string) => void) | null;
-	/** U11 产出物预览：文件浏览/预览已由核心 FS 路由接管（`connectFs` + `getFsFace`），这里只剩会话弹窗的旧入口。 */
-	workspaceFiles: WorkspaceFilesFace | null;
 	/** Office 预览：官方 remote.officeToPdf 服务（未就位为 null ⇒ Office 文件出「不可用」空态）。 */
 	officeToPdf: OfficeToPdfFace | null;
 }) {
@@ -669,7 +666,6 @@ function TaskPage(props: {
 		viewSession,
 		forkSession,
 		openHostSession,
-		workspaceFiles,
 		officeToPdf,
 	} = props;
 	// 面板自己订阅 scope：保存后即时反映生效值，也拿到 writable 状态。
@@ -2045,9 +2041,8 @@ function TaskPage(props: {
 					// U10：fork + 官方跳转（服务未就位时为 null ⇒ 弹窗不渲染「继续对话」按钮）。
 					forkSession: forkSession ?? undefined,
 					openHostSession: openHostSession ?? undefined,
-					// U11：产出物预览（remote.workspaceFiles 未就位时 undefined ⇒ 链接降级纯文本）。
-					// （弹窗内的 Office 链接不在此渲染——点链接走 onOpenFile 开页面级预览面，Office 预览在那里生效。）
-					workspaceFiles: workspaceFiles ?? undefined,
+					// U11：产出物预览。文件链接只看 `onOpenFile` 是否就位（核心按它决定渲染链接还是纯文本）；
+					// Office 链接不在此渲染——点链接走 onOpenFile 开页面级预览面，Office 预览在那里生效。
 					// 弹窗内所有文件链接 → 页面级唯一预览面（预览与弹窗互不干扰）。
 					onOpenFile: canPreview
 						? (path: string) => {
@@ -2490,13 +2485,11 @@ function TaskPageHost(props: {
 	forkRef: () => ((id: string, atSeq?: number) => Promise<string>) | null;
 	/** U10：官方导航跳转（uiWorkspace 服务未就位时为 null ⇒ 弹窗不渲染按钮）。 */
 	openRef: () => ((id: string) => void) | null;
-	/** U11：remote.workspaceFiles 服务未就位时为 null。 */
-	filesRef: () => WorkspaceFilesFace | null;
 	/** Office 预览：remote.officeToPdf 服务未就位时为 null。 */
 	officeRef: () => OfficeToPdfFace | null;
 	onBack: () => void;
 }) {
-	const { t, viewRef, forkRef, openRef, filesRef, officeRef, onBack } = props;
+	const { t, viewRef, forkRef, openRef, officeRef, onBack } = props;
 	const scope = useSyncExternalStore(subscribeScope, getScopeValue);
 	if (scope === null) {
 		return h(
@@ -2527,7 +2520,6 @@ function TaskPageHost(props: {
 		viewSession: viewRef(),
 		forkSession: forkRef(),
 		openHostSession: openRef(),
-		workspaceFiles: filesRef(),
 		officeToPdf: officeRef(),
 	});
 }
@@ -2610,36 +2602,8 @@ export function apply(ctx: ClientContext): void {
 			};
 		}
 	});
-	// U11 产出物预览：remote.workspaceFiles（@deepseek-ai/dsh-api-workspace-files 的挂载点）。
-	// ⚠️ 注入键必须带 dotted 'remote.workspaceFiles'（真机根因 2026-09-28）：官方 client 模块
-	// inject = ['resources','remote','remote.workspaceFiles']——dotted 键 = 「等命名空间挂上 remote
-	// 才启动」；只注 'remote' 的话回调在 remote 服务就位瞬间即触发，此刻 workspaceFiles 尚未挂上
-	// ⇒ 探测永久失败 ⇒ 一切文件链接降级纯文本（真机「没有一个能点」的根因）。
-	// 访问双保险：dotted 注入值优先，退回 remote 属性（官方 apply 体即 ctx.remote.workspaceFiles）。
-	let workspaceFiles: WorkspaceFilesFace | null = null;
-	console.info("[task-dispatch:client] 等待 remote.workspaceFiles 就位…");
-	ctx.inject(["remote", "remote.workspaceFiles"], (sub) => {
-		const rec = sub as unknown as Record<string, unknown>;
-		const remote = rec.remote as Record<string, unknown> | undefined;
-		const wf = rec["remote.workspaceFiles"] ?? remote?.workspaceFiles;
-		if (
-			wf !== null &&
-			wf !== undefined &&
-			typeof (wf as WorkspaceFilesFace).read === "function"
-		) {
-			workspaceFiles = wf as WorkspaceFilesFace;
-			console.info(
-				"[task-dispatch:client] remote.workspaceFiles 已就位：文件预览与文件链接启用",
-			);
-		} else {
-			// 真机排障锚点：链接全部降级纯文本时先看这行（连同 remote 自身的键清单）。
-			console.warn(
-				`[task-dispatch:client] remote.workspaceFiles 未就位：文件预览降级（remote 键=[${remote === undefined ? "remote 服务缺席" : Object.keys(remote).join(",")}]）`,
-			);
-		}
-	});
 	// Office 预览（doc/docx/ppt/pptx）：remote.officeToPdf —— 官方把 Office 转成 PDF，我方再走既有 PDF 渲染。
-	// 与 workspaceFiles 同款 dotted 注入（'remote' + 'remote.officeToPdf'）：只注 'remote' 会在命名空间
+	// 同款 dotted 注入（'remote' + 'remote.officeToPdf'）：只注 'remote' 会在命名空间
 	// 刚挂上时就触发，此刻 officeToPdf 还没挂 ⇒ 探测永久失败（2026-09-28 真机同款根因）。
 	// ⚠️ 宿主没装文档预览服务（dsh-office-to-pdf）时该服务根本不存在 ⇒ 回调不触发 ⇒ 保持 null
 	// ⇒ Office 文件呈现「Office 预览不可用」（与官方提示同款），**不会**崩、也不会误报成「二进制不支持」。
@@ -2777,7 +2741,6 @@ export function apply(ctx: ClientContext): void {
 						viewRef: () => viewSession,
 						forkRef: () => forkSession,
 						openRef: () => openHostSession,
-						filesRef: () => workspaceFiles,
 						officeRef: () => officeToPdf,
 						onBack: () => {
 							selectPanel(null);

@@ -2021,11 +2021,15 @@ try {
 			(k) => clientJs.includes(`'${k}'`) || clientJs.includes(`"${k}"`),
 		),
 	);
+	// 2026-11-06：会话弹窗渲染整体移交核心（dsh-plugin-core/adv/session）⇒ 自绘回退类已删，
+	// 回退改由核心的 dshpc-sv-* 承担（本仓不再维护第二套）。
 	check(
-		"官方类缺失时回退自绘类（dsh-tdt-sv-body/col/flowitem 仍在）",
-		clientJs.includes("dsh-tdt-sv-body") &&
-			clientJs.includes("dsh-tdt-sv-col") &&
-			clientJs.includes("dsh-tdt-sv-flowitem"),
+		"官方类缺失时的回退由核心承担（dshpc-sv-frame / -scroll / -chat 在 bundle，本仓自绘类已删）",
+		clientJs.includes("dshpc-sv-frame") &&
+			clientJs.includes("dshpc-sv-scroll") &&
+			clientJs.includes("dshpc-sv-chat") &&
+			!clientJs.includes("dsh-tdt-sv-body") &&
+			!clientJs.includes("dsh-tdt-sv-col"),
 	);
 	// 主界面任务列表重建（2026-09-30，design/main-panel-design.md）
 	check(
@@ -2148,10 +2152,11 @@ try {
 		"超时 fetch 收敛到共用叶子模块（http.ts 已内联进 bundle）",
 		clientJs.includes("fetchWithTimeout"),
 	);
+	// 2026-11-06：`/api/present.host` 探测随自绘会话弹窗一起删除（该提示只服务于自绘交付卡的
+	// 「桌面不可用」空态；核心弹窗不消费它，本仓点文件走页面级预览，不需要该提示）。
 	check(
-		"present.host 走超时封装（不再裸 fetch：端口一挂不再永久 pending）",
-		clientJs.includes('fetchWithTimeout("/api/present.host"') &&
-			!clientJs.includes('fetch("/api/present.host"'),
+		"present.host 探测已随自绘会话弹窗删除（不再有裸 fetch 永久 pending）",
+		!clientJs.includes("/api/present.host"),
 	);
 	check(
 		"轮询那条仍持有 controller（卸载 abort 与超时是两种需求，刻意不合并）",
@@ -2470,9 +2475,12 @@ try {
 		"bundle 含开分支确认框（forkConfirmText，必须先确认再 fork）",
 		clientJs.includes("forkConfirmText"),
 	);
+	// 2026-11-06：确认框改由核心 SessionViewModal 自带（官方 Modal 外壳 dshpc-overlay，文案键在核心字典）。
 	check(
-		"确认框挂官方 Modal 组件（dsh-tdt-sv-forkmodal，弃自绘弹窗）",
-		clientJs.includes("dsh-tdt-sv-forkmodal"),
+		"开分支确认框挂核心（官方 Modal 外壳 dshpc-overlay + forkConfirmTitle）",
+		clientJs.includes("dshpc-overlay") &&
+			clientJs.includes("forkConfirmTitle") &&
+			!clientJs.includes("dsh-tdt-sv-forkmodal"),
 	);
 	check(
 		"消息行分支带 atSeq（从该条消息截断开分支）",
@@ -2481,8 +2489,8 @@ try {
 	// 重试/轮次失败/限长三件套（官方 MessageItem 逐字照抄，2026-09-27 用户反馈对齐官方样式）：
 	// 折叠摘要「已重试模型请求 (n/m) · Ns」+ 展开重试延迟/失败原因；轮次失败 = 红点+红标题+灰原因+右侧机器码。
 	check(
-		"重试行挂官方 retryRow 类（MessageItem.retryRow，缺失回退自绘）",
-		clientJs.includes("retryRow") && clientJs.includes("dsh-tdt-sv-retry"),
+		"重试行挂官方 retryRow 类（MessageItem 镜像由核心提供，本仓自绘回退类已删）",
+		clientJs.includes("retryRow") && !clientJs.includes("dsh-tdt-sv-retry"),
 	);
 	check(
 		"重试摘要走官方 retryStatus 模板（retryStatus 文案键在 bundle）",
@@ -2737,9 +2745,12 @@ try {
 			) &&
 				srcOf("task-info.tsx").includes("outputsOf(instance.process_outputs)"),
 		);
+		// 2026-11-06：会话弹窗改核心（bodyFooter 槽位），过程文件桶挂在会话最底端（交付卡网格之后）。
 		check(
-			"会话弹窗过程文件与交付卡同位（tailSlot 内排在交付卡网格之后，且独立判存）",
-			srcOf("session-view.ts").includes("showProc"),
+			"会话弹窗过程文件走核心 bodyFooter 槽位（交付卡网格之后，且独立判存）",
+			srcOf("session-view.ts").includes("bodyFooter") &&
+				srcOf("session-view.ts").includes("DeliverablesGridMirror") &&
+				srcOf("session-view.ts").includes("ProcessFiles"),
 		);
 		check(
 			"过程文件也算「有内容」（执行记录展开箭头与展开区不再只看主文件）",
@@ -2756,13 +2767,13 @@ try {
 			clientJs.includes("dsh-tdt-sv-deliv-grid") &&
 			clientJs.includes("dsh-tdt-sv-deliv-toggle"),
 	);
+	// 2026-11-06：文件链接只看 `onOpenFile`（核心按它决定链接 / 纯文本），不再需要 remote.workspaceFiles
+	// 探测 ⇒ 旧 dotted 注入与诊断日志一并删除；文件面本身仍由核心 `connectFs` + `getFsFace` 提供。
 	check(
-		"workspaceFiles 未就位有诊断日志（真机排障锚点）",
-		clientJs.includes("remote.workspaceFiles 未就位"),
-	);
-	check(
-		"注入键含 dotted remote.workspaceFiles（等命名空间挂载，真机「链接不可点」根因修复）",
-		/inject\(\[.{0,20}remote\.workspaceFiles/.test(clientJs),
+		"文件预览面走核心 FS 路由（getFsFace），旧 remote.workspaceFiles 探测日志已删",
+		clientJs.includes("getFsFace") &&
+			!clientJs.includes("remote.workspaceFiles 未就位") &&
+			!clientJs.includes("等待 remote.workspaceFiles 就位"),
 	);
 	// U11 第三轮（页面级预览 dock）：一份预览面，弹窗与整页共用 + 拖拽调宽 + 崩溃不黑屏 + 记录行产出链接。
 	// 2026-11-06：外壳归核心 openFilePreview，本仓只给挂载点与路径。
@@ -2772,12 +2783,14 @@ try {
 			clientJs.includes("--dshpc-page-inset-right") &&
 			!clientJs.includes("dsh-tdt-sv-preview-dock"),
 	);
-	// U21 起右侧可有两条 dock（预览 + 编辑），让位宽度改成两者之和（预览部分取核心发布的 insets）。
+	// 2026-11-06：弹窗外壳移交核心 ⇒ 让位改由核心遮罩承担（inset right 读 --dshpc-page-inset-right），
+	// 本仓不再自写 overlay right。编辑抽屉与弹窗同屏时由页面自己收（不再拼两个宽度）。
 	check(
-		"弹窗让位右侧 dock（overlay right = 核心预览占宽 + 编辑宽，弹窗不遮盖任何一条）",
-		clientJs.includes(
-			"right:calc(var(--dshpc-page-inset-right,0px) + var(--dsh-tdt-editor-w,0px))",
-		),
+		"弹窗让位右侧 dock（核心遮罩 inset right 读 --dshpc-page-inset-right，本仓自写 overlay 已删）",
+		clientJs.includes("inset:0 var(--dshpc-page-inset-right,0px) 0 0") &&
+			!clientJs.includes(
+				"right:calc(var(--dshpc-page-inset-right,0px) + var(--dsh-tdt-editor-w,0px))",
+			),
 	);
 	check(
 		"预览栏宽度 / 拖拽 / 关闭归核心（本地 clampPreviewWidth / 自建 resizer 已删）",
@@ -2786,18 +2799,15 @@ try {
 			clientJs.includes("dshpc-dock__resizer"),
 	);
 	// U28（真机 2026-10-03）：PDF 预览是 <iframe>（独立文档），指针进去后父文档收不到 pointermove
-	// ⇒ 向右拖（缩小）卡死；点别处强行释放时 clientX 偏右 ⇒ 宽度被夹到 PREVIEW_MIN ⇒ 弹回最小。
+	// ⇒ 向右拖（缩小）卡死。2026-11-06 起拖拽整体归核心 PanelDock（dshpc-dock--resizing 禁 iframe 指针）。
 	check(
-		"拖拽调宽期间禁用 iframe 指针事件（dsh-tdt-resizing，防 PDF iframe 吞事件）",
-		clientJs.includes("dsh-tdt-resizing") &&
-			/\.dsh-tdt-root\.dsh-tdt-resizing iframe\{pointer-events:none/.test(
-				clientJs,
-			),
+		"拖拽调宽期间禁用 iframe 指针事件已移交核心（dshpc-dock--resizing，本仓 dsh-tdt-resizing 已删）",
+		/dshpc-dock\.dshpc-dock--resizing iframe\{pointer-events:none/.test(clientJs) &&
+			!clientJs.includes("dsh-tdt-resizing"),
 	);
 	check(
-		"拖拽结束撤销 resizing 标记（helper 内 classList.remove(rootClass)，避免残留禁事件）",
-		clientJs.includes("dsh-tdt-resizing") &&
-			/classList\.remove\([a-zA-Z$]+\.rootClass\)/.test(clientJs),
+		"拖拽结束撤销 resizing 标记由核心 PanelDock 负责（本仓不再维护第二套 helper）",
+		clientJs.includes("dshpc-dock--resizing"),
 	);
 	// U30 HTML 预览（2026-11-06 起预览体整体由核心 HtmlPreview 提供：禁标签/禁属性/CSP 逐条照官方）。
 	check(
@@ -4450,16 +4460,15 @@ console.log("\n[9] 依赖判定：上游最近一条必须 succeeded");
 			client.includes("padding:0 0 18px"),
 		);
 		check(
-			"顶部输入区：**不自带滚动条**（已搬进 column 内与会话同滚，全弹窗只一个滚动条；用户 2026-10-03）",
+			"顶部输入区：**不自带滚动条**（走核心 bodyHeader 槽位，与会话同滚，全弹窗只一个滚动条；用户 2026-10-03）",
 			!/\.dsh-tdt-sv-tfc\{[^}]*max-height/.test(client) &&
 				!/\.dsh-tdt-sv-tfc\{[^}]*overflow-y/.test(client) &&
-				/ChatViewFrame,\s*\{[\s\S]{0,400}TaskFileContextPanel/.test(client),
+				/bodyHeader[\s\S]{0,80}TaskFileContextPanel/.test(client),
 		);
+		// 2026-11-06：顶部区改挂核心 bodyHeader（间距归核心槽位）⇒ 本仓不再写「抵消 column 兄弟间距」规则。
 		check(
-			"顶部输入区：抵消 column 兄弟间距（顶部区自带 padding-bottom，紧随的消息不再加 margin-top）",
-			client.includes(
-				"dsh-tdt-sv-tfc~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:0;}",
-			),
+			"顶部输入区：不再自写「抵消 column 兄弟间距」规则（自绘 flowitem 容器已删）",
+			!client.includes("dsh-tdt-sv-flowitem"),
 		);
 		check(
 			"顶部输入区：文件**横向排**（用户 2026-10-03 二次点名「不能竖着一溜」）+ 组间细线分隔",
@@ -4553,18 +4562,15 @@ console.log("\n[9] 依赖判定：上游最近一条必须 succeeded");
 			client.includes("data-noclick") &&
 				client.includes(".dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}"),
 		);
-		// 会话区纵向间距：官方类命中与否必须一致（2026-10-03 修 18px 跳变）。
+		// 会话区纵向间距：2026-11-06 起 frame / scroll / body 全由核心 owning，本仓不再写纵向规则。
 		check(
-			"会话区纵向单一真源：frame 钩子独占上下（17/17 减半）+ scroll 钩子归零官方纵向（双类名压过 CSS module）",
-			client.includes(
-				".dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:17px;padding-bottom:17px;}",
-			) &&
-				client.includes(
-					".dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}",
-				),
+			"会话区纵向间距归核心（本仓不自写 frame / scroll / body 纵向规则）",
+			!client.includes(".dsh-tdt-sv-frame") &&
+				!client.includes(".dsh-tdt-sv-scroll") &&
+				!client.includes(".dsh-tdt-sv-body{"),
 		);
 		check(
-			"会话区：body 兜底类不再抢纵向 padding（曾盖掉 frame 补足 ⇒ 差 18px）",
+			"会话区：body 兜底类不再被本仓覆盖（纵向 padding 只有核心一处真源）",
 			!client.includes(
 				".dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px",
 			),
@@ -5753,11 +5759,14 @@ console.log("\n[14] runtime-index");
 				!edJs.includes("editorRecordsPending") &&
 				!edJs.includes("执行记录待接"),
 		);
+		// 2026-11-06：会话弹窗外壳归核心 ⇒ 让位只认核心遮罩的 --dshpc-page-inset-right；
+		// 本仓不再拼「预览 + 编辑」两个宽度（旧 overlay 规则已随自绘弹窗删除）。
 		check(
-			"会话弹窗让位两条分栏（right = 核心预览占宽 + 编辑宽）",
-			edJs.includes(
-				"right:calc(var(--dshpc-page-inset-right,0px) + var(--dsh-tdt-editor-w,0px))",
-			),
+			"会话弹窗让位归核心遮罩（本仓自写 right = 预览 + 编辑宽的规则已删）",
+			edJs.includes("inset:0 var(--dshpc-page-inset-right,0px) 0 0") &&
+				!edJs.includes(
+					"right:calc(var(--dshpc-page-inset-right,0px) + var(--dsh-tdt-editor-w,0px))",
+				),
 		);
 		// 开关位置 / 宽度守则看源码（产物里顺序不好断言），与 §19 同源。
 		const edSrc = readFileSync(
