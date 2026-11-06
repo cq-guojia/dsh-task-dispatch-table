@@ -90,8 +90,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 .dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
 /* 来源 / 状态标记：方括号**放在文件名前面**。与文件名同字号，只靠颜色弱化。 */
 .dsh-tdt-sv-tfc-note{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);white-space:nowrap;flex:none;}
-.dsh-tdt-sv-tfc-more{border-radius:var(--dshpc-radius-sm,6px);min-width:0;color:var(--dshpc-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);display:inline-flex;}
-.dsh-tdt-sv-tfc-more:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg-2);}
 .dsh-tdt-sv-tfc-none{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);}
 `;
 

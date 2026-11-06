@@ -1,7 +1,7 @@
 # 核心控件 `Picker` / `DateTimePicker` / `FieldHint` / `notify`（源码级事实）
 
 - **类型**：外部事实（`dsh-plugin-core` 的 UI 基础控件）
-- **适用版本**：`dsh-plugin-core@0.35.0`（`dist/ui/inputs/Picker.js`、`DateTimePicker.js`、`ModelPicker.js`、`WorkspacePicker.js`、`InputGroup.js`、`picker-css.generated.js`、`dist/ui/display/FieldHint.js`、`Card.js`、`StripCard.js`、`dist/ui/feedback/Toast.js`；均为 `dist/ui/index.d.ts` 的导出面）
+- **适用版本**：`dsh-plugin-core@0.35.1`（`dist/ui/inputs/Picker.js`、`DateTimePicker.js`、`ModelPicker.js`、`WorkspacePicker.js`、`InputGroup.js`、`picker-css.generated.js`、`dist/ui/display/FieldHint.js`、`Card.js`、`StripCard.js`、`dist/ui/feedback/Toast.js`；均为 `dist/ui/index.d.ts` 的导出面）
 - **状态**：已核实（2026-11-06，读实现源码，非试错）
 - **来源**：`node_modules/dsh-plugin-core/dist/ui/…`
 - **配套**：[`plugin-core-dock.md`](plugin-core-dock.md)、[`plugin-core-session.md`](plugin-core-session.md)、[`../../design/ui-style-guide.md`](../ui-style-guide.md) §二「唯一实现表」
@@ -97,6 +97,7 @@
 | searchable | **默认开**（关掉要显式 `searchable:false`） |
 | `translate` | 类型是 `dsh-plugin-core/utils` 的 `Translate`；本仓 `t` 键集更大、类型不兼容 ⇒ `import { t as coreT } from 'dsh-plugin-core/utils'` |
 | 宽度 | 核心不提供定宽档；按使用点给根 `className`（本仓编辑器 `.dsh-tdt-ed-model{width:140px}`）。**注意最小宽度**：`cascade` 是两个触发器并排，父容器需给 `min-width:0` 与网格分栏 |
+| **`size` 漏传（核心 bug，0.35.1）** | `cascade` 只给**模型**下拉传 `size`（`ModelPicker.js:95`），**供应商**下拉没传（`ModelPicker.js:73-83`）⇒ 两个框差一档。本仓设置页已传 `size:'lg'`，但供应商框仍是默认小号。**已登记给核心（何心）；本仓不做 CSS 补丁**，核心补上后自动一致 |
 
 本仓两处用法：编辑器提示词区 = `grouped`（`task-editor.tsx`，`modelGroupsOf` 把自有模型列表转 `PickerGroup[]`）；设置页默认模型 = `cascade`（`settings-config-block.tsx`，`''` 时清空 `defaultProvider` / `defaultModel` 两段）。
 
@@ -119,7 +120,7 @@
 | 值口径 | `workspaceId`（单选 `string`；`mode:'multiple'` 时 `string[]`） |
 | `allowDefault` | 默认提供「所有工作区」项（只在单选出现）；选中发 `''` |
 | `searchable` | **默认关**（要就显式 `true`） |
-| 未采用原因 | 本仓任务定义里存的是**工作区标题**（`target.workspace`），不是 workspaceId；换成该控件要改写值语义与数据面。本轮改为给核心 `Picker` 开 `searchable:true`，保持值语义不变。**若将来任务定义改存 workspaceId，应改接它** |
+| 未采用原因 | 本仓任务定义**已改存 workspaceId**（2026-11-06，见 [`dsh-workspace-identity.md`](dsh-workspace-identity.md)），但编辑器除 `id` / `title` 外还依赖 `path` 与 `anchorSessionId`（选择工作区文件时的会话锚点，见 [`dsh-capabilities.md`](dsh-capabilities.md) §workspaceFiles）⇒ 核心控件不下发这两个字段，仍用自有 `Picker`（`searchable:true`）承载。**若核心将来允许调用方附带自定义字段，应改接它** |
 
 ## 九、`InputGroup` / `PrefixedInput`（两种「名字 + 输入框」形态的区别）
 

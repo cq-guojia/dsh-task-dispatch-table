@@ -27,7 +27,6 @@ export const TASK_EDITOR_CSS = `
 /* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
 .dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
 .dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--dshpc-border,rgba(128,128,128,.35));position:relative;}
-.dsh-tdt-ed-label{font-size:var(--dshpc-font-sm);font-weight:600;color:var(--dshpc-fg,#1f2328);}
 .dsh-tdt-ed-hint{margin:4px 0 0;font-size:var(--dshpc-font-sm);line-height:1.5;color:var(--dshpc-fg-2,rgba(128,128,128,.95));}
 /* 删除任务：红色危险钮（用户 2026-09-30：放在「保存」旁，醒目但仍是描边形态）。 */
 .dsh-tdt-ed-danger{color:var(--dshpc-danger,#e5484d)!important;border-color:var(--dshpc-danger,#e5484d)!important;}
@@ -35,7 +34,8 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-section{margin-bottom:16px;}
 .dsh-tdt-ed-section:last-child{margin-bottom:0;}
 /* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
-.dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--dshpc-border,rgba(128,128,128,.35));border-radius:var(--dshpc-radius-lg,10px);background:var(--dshpc-surface-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
+/* 卡片皮肤（底 / 边 / 圆角 / 内距）全归核心 Surface；本类只留语义态（用户 2026-11-06）。 */
+.dsh-tdt-ed-card{box-sizing:border-box;transition:border-color .15s ease;}
 .dsh-tdt-ed-card:focus-within{border-color:var(--dshpc-business,#4d6bfe);}
 /* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
 .dsh-tdt-ed-card--error{border-color:var(--dshpc-danger,#e5484d);background:var(--dshpc-danger,rgba(229,72,77,.08));}
@@ -51,7 +51,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-ver-note{display:block;font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-2,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
    核心 Picker 的根是 inline-block（max-width:100%），这里给行内子项放行收缩（min-width:0），
@@ -70,7 +69,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
-.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--dshpc-radius-md,8px);background:0 0;color:var(--dshpc-fg,#1f2328);font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;text-align:left;}
 /* 展开指示：官方 chevron-down（TurnTriggerNodeView 同款），展开 rotate 180°。 */
 .dsh-tdt-ed-advchevron{flex:none;color:var(--dshpc-fg-2,rgba(128,128,128,.95));transition:transform .15s ease;}
 .dsh-tdt-ed-advchevron-open{transform:rotate(180deg);}
@@ -87,11 +85,9 @@ export const TASK_EDITOR_CSS = `
    吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
    核心 Picker 的根是 inline-block flex 子项 ⇒ 必须给 min-width:0 才能收缩，否则整行被撑爆。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
-/* 附件行（用户 2026-10-06）：背景 / 圆角放这里而不是内联——内联 background 会压过 :hover。
-   整行可点开预览的行给 hover 反馈：背景亮一档（与 chip hover 同档 --dshpc-chip-bg-hover）。 */
-.dsh-tdt-ed-attrow{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
-.dsh-tdt-ed-attrow--view{cursor:pointer;}
-.dsh-tdt-ed-attrow--view:hover{background:var(--dshpc-chip-bg-hover,rgba(38,49,72,.12));}
+/* 附件行（2026-11-06 改接核心，与查看档附件同款）：只有排布，不画皮肤 ——
+   文件名 / 来源标签 / 移除钮分别由核心 Chip、Chip(xs)、IconButton(danger) 承载。 */
+.dsh-tdt-ed-attline{display:flex;align-items:center;gap:6px;min-width:0;}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
@@ -102,23 +98,17 @@ export const TASK_EDITOR_CSS = `
    字段行 / 「上次执行」明细的皮肤**不在这里** —— 那是域 domain:task-info（与卡片展开区共用同一份）。 */
 .dsh-tdt-ed-view{display:flex;flex-direction:column;gap:18px;}
 /* 块标题行：默认左对齐（标签 + 内联状态/标记都在左），只有提示词的操作组靠右（margin-left:auto）。 */
-.dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 /* 块标题 = **标签**（图标 + 文字）；竖线已承担视觉分隔，这里去掉灰底只留文字。 */
-.dsh-tdt-ed-view-tag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:0;background:transparent;color:var(--dshpc-fg);font-size:var(--dshpc-font-xs);font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
 /* 标题前的短竖线标（品牌色，方角）：只修饰 icon，不包整块（用户 2026-10-05 修正：整块长线太丑）。 */
-.dsh-tdt-ed-view-tag::before{content:'';flex:none;width:3px;height:14px;background:var(--dshpc-business);border-radius:0;}
 .dsh-tdt-ed-view-block{display:flex;flex-direction:column;min-width:0;}
 .dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
 /* 草稿标记 chip（r13：灰色不明显 ⇒ **警告色**——红太强，用 warning 橙：橙字 + 极浅橙底）。 */
-.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--dshpc-radius-xs,4px);background:rgba(240,166,60,.14);color:var(--dshpc-warning,#b7791f);font-size:var(--dshpc-font-xs);white-space:nowrap;}
 /* 提示词操作组（源码 / 预览 + 展开 / 收起）：整组靠右、不折行（仅此一组 margin-left:auto，
    其余块的标题 / 状态 / 「修改没保存」保持居左，2026-10-05 修正 space-between 把它们挤到最右）。 */
-.dsh-tdt-ed-view-head-actions{display:flex;align-items:center;gap:6px;flex:none;margin-left:auto;}
 /* 展开 / 收起 小箭头：复用 chevron-down，收起态翻转 180°（与高级设置收折头同款）。 */
 .dsh-tdt-ed-view-expchevron{flex:none;color:var(--dshpc-fg-3,rgba(128,128,128,.8));transition:transform .15s ease;}
 .dsh-tdt-ed-view-expchevron-open{transform:rotate(180deg);}
 /* 提示词文档区：极淡底（明暗自适应，约 3% 前景色混合）、无左 / 右框、无圆角，包住整段文档。 */
-.dsh-tdt-ed-view-promptbox{background:color-mix(in srgb,var(--dshpc-fg) 3%,transparent);padding:8px 10px;margin-top:8px;}
 /* 提示词默认**约 5 行**截断（用户 2026-10-05）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
 .dsh-tdt-ed-view-prompt{min-width:0;max-height:100px;overflow:hidden;}
 .dsh-tdt-ed-view-prompt--open{max-height:none;}

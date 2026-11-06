@@ -10,7 +10,7 @@ import { isSafeAttachmentRef } from './attachment-allowlist.js';
 // 「cron / once → 时刻」纯核已于 2026-10-05 抽出至 [`./schedule-next.ts`](./schedule-next.ts)
 //（零 node 依赖，客户端 bundle 与服务端**同一份**）。这里 import 供内部使用（firstSlotOnDay 等），
 // 并 re-export 保持既有调用面（runtime-index / scheduler / index）零改动。
-import { filterSlotsBySchedule, logicalDateOf, nextSlotAfter, onceScheduledAt, scheduledSlotsFor, } from './schedule-next.js';
+import { logicalDateOf, onceScheduledAt, scheduledSlotsFor, } from './schedule-next.js';
 export { filterSlotsBySchedule, logicalDateOf, nextSlotAfter, onceScheduledAt, scheduledSlotsFor, } from './schedule-next.js';
 /** ISO 8601 时长（如 PT4H），只支持 H/M/S 组合——窗口与新鲜度够用。 */
 const isoDuration = z.string().regex(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, 'ISO 8601 时长，如 PT4H');
@@ -51,7 +51,8 @@ export const taskDefinitionSchema = z.object({
         ui: z.record(z.string(), z.unknown()).optional(),
     }),
     target: z.object({
-        // 工作区（非工作目录，决策 22）：按 registry 的 title 精确匹配、id 兜底；目录由工作区 path 派生。
+        // 工作区（非工作目录，决策 22）：存 workspace id（宿主创建时的随机 UUID，重命名不变）；
+        // 老任务存的是 title，执行 / 保存时按标题解析成功后**就地改存 id**（用户 2026-11-06 向下兼容）。
         workspace: z.string().min(1),
         /** 派发模型（决策 22 漏斗第①层）：provider 与 model 成对；都留空则漏到插件配置 / 宿主默认。 */
         provider: z.string().optional(),
@@ -236,13 +237,19 @@ export function applyIdentity(def) {
  * ④ 前置任务必须指向已存在的任务（**停用可以、不存在不行**）。
  * `title` / `code` **不做**格式与唯一性校验（决策 30：它们只是人读字段）。
  */
-export function validateDefinitionForSave(def, existingIds) {
+export function validateDefinitionForSave(def, existingIds, knownWorkspaces) {
     const prompt = typeof def.target?.prompt === 'string' ? def.target.prompt.trim() : '';
     if (prompt === '')
         return { ok: false, error: '提示词不能为空' };
     const workspace = typeof def.target?.workspace === 'string' ? def.target.workspace.trim() : '';
     if (workspace === '')
         return { ok: false, error: '工作区不能为空' };
+    // 工作区必须**现在真实存在**（按 id 或 title 任一命中）：只判非空会让「工作区被改名 / 删除后
+    // 表单里留着的旧值」照样保存成功，等到执行时才报「工作区未找到」。registry 未就绪（降级）时
+    // 不传该集合 = 跳过（不能拿「拿不到列表」当成「工作区不存在」）。
+    if (knownWorkspaces !== undefined && !knownWorkspaces.has(workspace)) {
+        return { ok: false, error: `工作区不存在或已被重命名 / 删除：「${workspace}」，请重新选择工作区` };
+    }
     const cron = typeof def.schedule?.cron === 'string' && def.schedule.cron.trim() !== '' ? def.schedule.cron.trim() : undefined;
     const once = typeof def.schedule?.once === 'string' && def.schedule.once.trim() !== '' ? def.schedule.once.trim() : undefined;
     if (cron === undefined && once === undefined)
@@ -370,6 +377,38 @@ export function setEnabledDefinitionInline(raw, id, enabled) {
     if (row.enabled === enabled)
         return { json: raw, changed: false, error: null };
     row.enabled = enabled;
+    return { json: JSON.stringify(rows, null, 2), changed: true, error: null };
+}
+/**
+ * 把一条任务的 `target.workspace` 从「工作区标题」改存为「工作区 id」（用户 2026-11-06：
+ * 向下兼容自愈 —— 老任务存标题，执行时按标题解析成功后就地写成 id，下次改名不再失联）。
+ * 定义不存在 / 表非法 / 值没变 ⇒ 原样返回（不落库）。
+ */
+export function setWorkspaceDefinitionInline(raw, id, workspace) {
+    const text = raw.trim();
+    let data;
+    if (text === '')
+        return { json: raw, changed: false, error: 'task-not-found' };
+    try {
+        data = JSON.parse(text);
+    }
+    catch {
+        return { json: raw, changed: false, error: '现有任务表不是合法 JSON，无法修改' };
+    }
+    if (!Array.isArray(data))
+        return { json: raw, changed: false, error: '现有任务表不是数组，无法修改' };
+    const rows = data;
+    const row = rows.find(item => item !== null && typeof item === 'object' && item.id === id);
+    if (row === undefined)
+        return { json: raw, changed: false, error: 'task-not-found' };
+    const target = row.target;
+    if (target === null || typeof target !== 'object' || Array.isArray(target)) {
+        return { json: raw, changed: false, error: '任务缺少 target，无法修改工作区' };
+    }
+    const targetObj = target;
+    if (targetObj.workspace === workspace)
+        return { json: raw, changed: false, error: null };
+    targetObj.workspace = workspace;
     return { json: JSON.stringify(rows, null, 2), changed: true, error: null };
 }
 /** 把 ISO 8601 时长解析成毫秒。 */

@@ -14,19 +14,10 @@ import { applyStyle } from './ui'
 export const TASK_INFO_DOMAIN = 'domain:task-info'
 
 const TASK_INFO_CSS = [
-  // ── 「任务会话」（用户 2026-10-03 四次修订 · 定稿）────────────────────────
-  // **不要虚线、不要边框 / 白框**；= 图标包一个**灰色小标签框**（提示可查看）+ 会话名，hover 整体变蓝。
-  // ⚠️ ① `border: 0` 必须先清掉**按钮默认边框**（否则会留一圈白框）；
-  //    ② color 必须写在 class（inline 会盖掉 :hover，鼠标上去就不变色）。
-  '.dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--dshpc-fg); transition: color var(--dshpc-dur) var(--dshpc-ease); }',
-  // hover **只让文字变蓝**：放大镜和它的灰框都保持原样（用户 2026-10-03）。图标框自带固定色 ⇒ 不跟随文字变色。
-  '.dsh-tdt-info-session:hover { color: var(--dshpc-business); }',
-  '.dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--dshpc-radius-xs); background: var(--dshpc-chip-bg); color: var(--dshpc-fg-2); }',
+  // ── 「任务会话」：放大镜走核心 Button 的 `icon` 槽（2026-11-06），18px 自绘灰底座已删 ──
   // ── 前置任务名可点（查看档入口，用户 2026-10-05）────────────────────────
   // 与「任务会话」同款做法：整体是个按钮、清掉默认外壳、hover 只让文字变蓝。
   // ⚠️ 序号徽标（18×18 小方块）在按钮**内部**，`:hover` 只改文字色 ⇒ 徽标保持灰底不跟着变。
-  '.dsh-tdt-info-dep { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; padding: 0; font: inherit; font-size: var(--dshpc-font-sm); color: var(--dshpc-fg); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-width: 0; text-align: left; transition: color var(--dshpc-dur) var(--dshpc-ease); }',
-  '.dsh-tdt-info-dep:hover { color: var(--dshpc-business); }',
   // ── 纸表格「标签—值」两栏 ───────────────────────────────────────────────
   // 整栏**共用一个 grid** ⇒ 标签列按当前语言最长标签**自动定宽**（中文≈48px、英文≈95px），
   // 零留白且各行对齐。原固定 66px 在英文下被「Preceding tasks」撑爆、溢出去压到值上（用户 2026-10-03 反馈）。
@@ -36,8 +27,13 @@ const TASK_INFO_CSS = [
   // ⚠️ **行高必须两格同一个**（用户 2026-10-03 反馈「字全贴上面那条线」）：grid 是 `align-items: stretch`，
   // 格子高度由行内最高的那格决定 ⇒ label 若继承宿主行高（与 value 的 `--dshpc-line-md` 不等），矮的那格内容
   // 会被顶对齐、看着贴上边线。统一成 `--dshpc-line-md` 后：单行 = 上下居中；值多行时标签与值第一行齐平。
-  '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }',
+  // ⚠️ **光学居中**（用户 2026-11-06 二次反馈「每行数据离上缝近、离下缝远」）：宿主字体的字形在行盒里偏上，
+  // 只靠上下等内边距看着仍贴上缝 ⇒ 把总内边距 12px 拆成上 9 / 下 3，字形整体下移 3px 落回视觉中心，
+  // 行高不变（仍是 12px 内边距 + `--dshpc-line-md` 行盒）。
+  '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 9px 0 3px; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }',
   '.dsh-tdt-info-label { padding-right: 12px; }',
+  // 附件用的是核心 `Chip`（20px 高 = `--dshpc-line-md`）；补一条 `vertical-align` 让它与标签同基线居中。
+  '.dsh-tdt-info-file { vertical-align: middle; }',
   // 每栏**最底下那一条线**去掉（用户 2026-10-03 二次修订）：判据不是写死某一行（如 Token），而是由
   // DOM 实际决定 —— 左栏最后一块就是字段区；右栏**有产出物时最后一块是产出物区** ⇒ 字段区末行
   // 只有"它后面没别的块"（`:last-child`）时才去缝，否则会把 Token 的线也去掉、让字段区与产出物断线。
@@ -46,10 +42,10 @@ const TASK_INFO_CSS = [
   // 卡片展开区「上次执行」、执行记录 tab、右侧栏查看档三处共用同一个 `StatusIcon`（task-info.tsx）。
   '.dsh-tdt-rec-ic-ok { color: var(--dshpc-success); }',
   '.dsh-tdt-rec-ic-bad { color: var(--dshpc-danger); }',
-  '.dsh-tdt-rec-ic-run { color: var(--dshpc-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }',
+  // 转圈动画归核心 Loader；本类只定色（用户 2026-11-06）。
+  '.dsh-tdt-rec-ic-run { color: var(--dshpc-accent); }',
   '@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }',
   '.dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--dshpc-border-strong); border-radius: 50%; }',
-  '@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }',
 ].join('\n')
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。卡片展开区与查看档渲染前都调用它。 */

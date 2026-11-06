@@ -16,7 +16,7 @@
  */
 import { createElement as h, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { t as coreT } from 'dsh-plugin-core/utils'
-import { Button, ensureControlsStyle, Input, ModelPicker, notify, SectionHead, type PickerGroup } from './ui'
+import { Button, Chip, ensureControlsStyle, Input, ModelPicker, notify, SectionHead, type PickerGroup } from './ui'
 import { fetchConfig, postConfig, fetchModelOptions, type ModelOption, type SettingsConfigValue } from './settings-data'
 import { HelpButton } from './task-editor'
 import { ensureTaskEditorStyle } from './task-editor-css'
@@ -57,11 +57,6 @@ const gridStyle: CSSProperties = {
 const headStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 'var(--dshpc-space-1)', marginBottom: 'var(--dshpc-space-2)' }
 const labelStyle: CSSProperties = { fontSize: 'var(--dshpc-font-md)', fontWeight: 600, minWidth: 0 }
 const badgesStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 'var(--dshpc-space-2)', marginLeft: 'auto', flex: 'none' }
-const customStyle: CSSProperties = { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-business)' }
-const resetStyle: CSSProperties = {
-  background: 'none', border: 'none', padding: 0, font: 'inherit',
-  fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-2)', cursor: 'pointer',
-}
 
 interface FieldProblem {
   /** 出错的字段名（描红定位用）。 */
@@ -299,8 +294,8 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
         // 「自定义」徽章 +「恢复默认」：**没改过就整个不出现**（用户 2026-10-08）。
         custom
           ? h('span', { style: badgesStyle },
-              h('span', { style: customStyle }, t('settingsCustom')),
-              h('button', { type: 'button', style: resetStyle, onClick: () => { resetField(f) } }, t('settingsResetDefault')),
+              h(Chip, { size: 'xs', tone: 'business' }, t('settingsCustom')),
+              h(Button, { variant: 'link', size: 'sm', onClick: () => { resetField(f) } }, t('settingsResetDefault')),
             )
           : null,
       ),

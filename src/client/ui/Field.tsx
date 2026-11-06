@@ -2,9 +2,9 @@
  * 下拉选择 —— 核心 `Picker` 的薄包装（2026-11-06）。
  *
  * 触发器 / 弹层 / 分组 / 搜索 / 空态 / 跑马灯 / 键盘与明暗全部归核心；
- * 本仓只补核心 `Picker` 尚未提供的两点：
- *  - `error` 校验描红：外层 `className` + 一条皮肤规则（`.dsh-tdt-picker--error`）；
- *  - `title` 悬停提示：外层 `span` 兜底（核心没有该 prop）。
+ * 本仓只补核心 `Picker` 尚未提供的一点：
+ *  - `error` 校验描红：外层 `className` + 一条皮肤规则（`.dsh-tdt-picker--error`）。
+ * 悬停提示**不在这里**（2026-11-06：全站原生 title 清退；需要的调用方在真 DOM 外套官方 `Tooltip`）。
  * 空列表 ⇒ 禁用并显示业务空态文案（不塞假值）。
  */
 import { createElement as h, type ReactElement, type ReactNode } from 'react'
@@ -34,8 +34,6 @@ export interface SelectFieldProps {
   icon?: ReactNode
   /** 禁用。 */
   disabled?: boolean
-  /** 悬停提示。 */
-  title?: string
   /** 定宽（数字 = px）。 */
   width?: number | string
   /** 最大宽（数字 = px）。 */
@@ -82,10 +80,5 @@ export function SelectField(props: SelectFieldProps): ReactElement {
     ...(props.searchable === true ? { searchable: true } : {}),
   })
 
-  return props.title === undefined
-    ? picker
-    : h('span', {
-      title: props.title,
-      style: props.block === true ? { display: 'block' } : { display: 'inline-flex', minWidth: 0 },
-    }, picker)
+  return picker
 }

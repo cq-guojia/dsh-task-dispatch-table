@@ -5,11 +5,12 @@
  *  ① 按 `scope`（工作区）与 `excludeIds` 过滤候选；
  *  ② 「全部任务」作为**第一个普通选项**（`value: ''`）传进去（用户 2026-11-05 拍板，核心零改动）；
  *  ③ 停用任务照常可选，只在 `label` 尾部拼 `disabledTag`（不加字段）；
- *  ④ 已选项掉出作用域 ⇒ 仍留在列表里 + 触发器前置 `!` 告警（`title` 给说明），不静默清空。
+ *  ④ 已选项掉出作用域 ⇒ 仍留在列表里 + 触发器前置 `!` 告警（官方 `Tooltip` 给说明），不静默清空。
  *
  * 搜索：核心按 `label` + `keywords` 子串匹配；这里把任务 UUID 放进 `keywords`（只搜不显示）。
  */
 import { createElement as h, useMemo } from 'react'
+import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import { Picker, type PickerOption, type FieldSize } from 'dsh-plugin-core/ui'
 import { t as coreT } from 'dsh-plugin-core/utils'
 
@@ -100,7 +101,11 @@ export function TaskPicker(props: TaskPickerProps): ReturnType<typeof h> {
     disabled: props.disabled,
     ariaLabel: props.ariaLabel,
     icon: outOfScope
-      ? h('span', { style: { color: 'var(--dshpc-warning)', fontWeight: 600 }, title: props.outOfScopeHint }, '!')
+      // 告警说明走官方 `Tooltip`（2026-11-06：不再用原生 title）；没给说明就只留标记本身。
+      ? props.outOfScopeHint === undefined
+        ? h('span', { style: { color: 'var(--dshpc-warning)', fontWeight: 600 } }, '!')
+        : h(Tooltip, { label: props.outOfScopeHint, side: 'bottom' },
+          h('span', { style: { color: 'var(--dshpc-warning)', fontWeight: 600 } }, '!'))
       : undefined,
     translate: (key, vars) => {
       if (key === 'pickerSearch') return props.searchPlaceholder

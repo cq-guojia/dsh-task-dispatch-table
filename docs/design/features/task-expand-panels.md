@@ -63,10 +63,10 @@
   - **不再显示提示词**（用户原话：展开区显示提示词没有意义）。未来会由大模型读附件 + 前置任务后生成 2~3 句「任务简介」替代，**本期不做**。
 - **右栏（只看「上次执行」一条，用户 2026-10-03 拍板简化）**：成功就显成功、失败就显失败；用与左栏同一套「标签—值」网格排布：
   - 状态（官方图标 + 短名，绿 / 红 / 中性）。
-  - **任务会话**（紧跟在状态下面，用户 2026-10-03 定稿）：**小放大镜图标包一个灰色小标签框**（`.dsh-tdt-info-session-icon`，18×18、图标 12px、`--dshpc-chip-bg`）+ **会话名**；**无虚线、无边框**（`<button>` 默认边框必须先 `border: 0` 清掉，否则留一圈白框）；hover 整体变蓝（`--dshpc-business`；⚠️ color 必须写在 class，inline 会盖掉 `:hover`）；会话名过长走跑马灯（`MarqueeText`）；点开走统一 `onOpenSession`。**不再用独立的「查看会话」按钮**。
+  - **任务会话**（紧跟在状态下面，用户 2026-10-03 定稿；2026-11-06 改接核心）：**放大镜 = 核心 `IconButton`（`background: var(--dshpc-chip-bg)` 给灰色底座、`size sm` 24×24、图标 12px、`title: ''` 压掉原生气泡）** + 会话名走核心 `Button link`；无虚线、无边框；会话名过长走跑马灯（`MarqueeText`）；点开走统一 `onOpenSession`。**不再用独立的「查看会话」按钮**，也不再自绘 18px 底座。
   - **时间四件套**：计划执行（`scheduled_at`）/ 实际开始（`dispatched_at`）/ 结束时间（`finished_at`）/ **执行时长**（结束−开始，标签 `infoDuration`）——均含秒（用户 2026-10-03：空间够，四个都放）。
   - Token（hover 看输入/输出/缓存明细）、备注（失败 / 未执行原因）。
-  - **产出物文件清单**：每行「图标 + 文件名」，**hover 有底色**（基础层 `.dsh-tdt-filechip--block`（2026-10-04 从 `.dsh-tdt-info-out` 收编），走 CSS class——inline 会盖掉 `:hover`）；点开走统一 `openFile` 预览入口。
+  - **产出物文件清单**：每行「图标 + 文件名」，**hover 有底色**（**核心 `.dshpc-filechip--block`**，2026-11-06 由本仓类改接核心；底色走核心 class）；点开走统一 `openFile` 预览入口。
 - **数据**：切到该 tab 时按 `taskId` 用 `fetchInstances` 取最近一条终态实例（`statuses: succeeded/failed/skipped/unknown`，`limit: 1`），客户端派生。**会话名**由服务端在 `/tasks/instances` 出口按 `sessionTitleOf(scheduled_at, 快照标题 ?? 当前任务标题, attempt)` **单源重建**（与派发时 `sessionTitle.rename` 同一函数；旧行无快照回退当前标题）。
 - **执行记录 tab**：仍只负责查询（状态下拉 / 时间范围 / 条数），不承担「上次执行」展示。
 - **纸表格的「线」与行高**（2026-10-03 定稿，用户三轮真机反馈后收口；过程见 [`../../worklog/info-panel-line-alignment.md`](../../worklog/info-panel-line-alignment.md)）：

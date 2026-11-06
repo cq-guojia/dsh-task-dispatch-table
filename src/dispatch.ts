@@ -26,10 +26,12 @@ export class DispatchPreconditionError extends Error {
 }
 
 /**
- * 工作区名 → 工作区实体（决策 22：target.workspace 语义是**工作区**，不是工作目录；
- * 目录由实体 path 派生）。registry 无按 name 查询 API，遍历 list() 比对：
- * title 精确匹配优先，id 兜底。匹配不到即抛错 ⇒ 任务判失败，绝不落到「未分组」或随便找个目录跑。
- * （Loop A 落库前的前置检查用；Loop B 发动走 resolveWorkspaceByPath——快照里存的是 path。）
+ * 工作区标识 → 工作区实体（决策 22：target.workspace 语义是**工作区**，不是工作目录；
+ * 目录由实体 path 派生）。**新任务存 id**（宿主随机 UUID，改名不变）；老任务存 title，
+ * 所以先按 title 精确匹配、再按 id 兜底（用户 2026-11-06 向下兼容）。
+ * registry 无按 name 查询 API，只能遍历 list()。匹配不到即抛错 ⇒ 任务判失败，
+ * 绝不落到「未分组」或随便找个目录跑。（Loop A 落库前的前置检查用；Loop B 发动走
+ * resolveWorkspaceByPath——快照里存的是 path。）
  */
 export function resolveWorkspace(ctx: HostContext, name: string): HostWorkspace {
   const workspaces = ctx.workspaceRegistry.list()

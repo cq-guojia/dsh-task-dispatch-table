@@ -37,6 +37,7 @@ import {
 	IconPlusOutlineRegular,
 	MarkdownText,
 	Switch,
+	Tooltip,
 } from "@deepseek-ai/dsh-client-ui-primitives";
 import CodeMirror from "@uiw/react-codemirror";
 import {
@@ -91,21 +92,28 @@ import {
 	type DateTimeOutput,
 	type EditorOption,
 	FieldHint,
+	FIELD_LABEL_STYLE,
 	IconButton,
 	MarqueeText,
 	ModelPicker,
 	notify as coreNotify,
 	NumberInput,
 	Segmented,
+	SectionHead,
 	SelectField,
 	Button as TdtButton,
+	Chip,
 	Checkbox,
 	confirmModal,
 	InputGroup,
 	Modal,
+	Surface,
+	surfaceClass,
 	Textarea,
 	type PickerGroup,
 } from "./ui";
+// 工作区展示名（定义里存 id，界面显示当前标题）。
+import { workspaceLabelOf } from "./workspace-options";
 
 /**
  * 「?」说明钮 —— 核心 `FieldHint` 的薄包装（2026-11-06）。
@@ -564,6 +572,7 @@ export interface FieldProblem {
 export function validateTaskDraft(
 	draft: TaskEditorDraft,
 	t: Translate,
+	knownWorkspaces?: ReadonlySet<string>,
 ): FieldProblem[] {
 	const problems: FieldProblem[] = [];
 	// ⓪ 必填：任务名称（用户 2026-09-30 明确要求：列表里要靠名字认任务，不能空着保存）。
@@ -573,6 +582,10 @@ export function validateTaskDraft(
 	// ① 必填：工作区（target.workspace .min(1)）。
 	if (draft.workspace.trim() === "") {
 		problems.push({ field: "workspace", message: t("vWorkspaceRequired") });
+	} else if (knownWorkspaces !== undefined && !knownWorkspaces.has(draft.workspace)) {
+		// ①b 工作区必须**当前存在**（用户 2026-11-06）：只判非空会把「改名 / 删除后残留的旧值」
+		// 放过；列表拿不到（降级）时不传该集合，交由服务端兜底。
+		problems.push({ field: "workspace", message: t("vWorkspaceUnknown") });
 	}
 	// ② 必填：提示词（target.prompt .min(1)）；「按任务手册」模式由 manual 兜底，不在此查。
 	if (draft.promptSource !== "manual" && draft.prompt.trim() === "") {
@@ -1295,20 +1308,27 @@ function ConfirmDialog(props: {
 			: null,
 		props.bullets !== undefined && props.bullets.length > 0
 			? h(
-					"ul",
+					Surface,
 					{
-						style: {
-							listStyle: "none",
-							margin: "0 0 14px",
-							padding: "10px 12px",
-							borderRadius: "var(--dshpc-radius-md,8px)",
-							background: "var(--dshpc-surface-1,rgba(128,128,128,.08))",
-							display: "flex",
-							flexDirection: "column",
-							gap: "6px",
-						},
+						tone: "subtle",
+						border: "none",
+						radius: "md",
+						padding: "sm",
+						style: { marginBottom: "14px" },
 					},
-					...props.bullets.map((b) =>
+					h(
+						"ul",
+						{
+							style: {
+								listStyle: "none",
+								margin: 0,
+								padding: 0,
+								display: "flex",
+								flexDirection: "column",
+								gap: "6px",
+							},
+						},
+						...props.bullets.map((b) =>
 						h(
 							"li",
 							{
@@ -1333,7 +1353,8 @@ function ConfirmDialog(props: {
 							h("span", null, b),
 						),
 					),
-				)
+				),
+			)
 			: null,
 		needAck
 			? h(Checkbox, {
@@ -1572,8 +1593,7 @@ function PromptEditorModal(props: {
 									"div",
 									{
 										style: {
-											padding: "16px 12px",
-											fontSize: "var(--dshpc-font-sm)",
+															fontSize: "var(--dshpc-font-sm)",
 											color: "var(--dshpc-fg-2)",
 											lineHeight: "1.6",
 										},
@@ -1668,17 +1688,22 @@ function PromptEditorModal(props: {
 																			},
 																			t("editorUseShort"),
 																		),
-																		h(IconButton, {
-																			variant: "danger",
-																			size: "sm",
-																			icon: h(IconCloseOutlineRegular, {
-																				size: 12,
+																		h(
+																			Tooltip,
+																				{ label: t("editorDeleteVersion"), side: "top" },
+																			h(IconButton, {
+																				variant: "danger",
+																				size: "sm",
+																				icon: h(IconCloseOutlineRegular, {
+																					size: 12,
+																				}),
+																				label: t("editorDeleteVersion"),
+																					title: "",
+																				onClick: () => {
+																					askDeleteVersion(v.file);
+																				},
 																			}),
-																			label: t("editorDeleteVersion"),
-																			onClick: () => {
-																				askDeleteVersion(v.file);
-																			},
-																		}),
+																		),
 																	)
 																: null,
 														),
@@ -1920,7 +1945,13 @@ export function TaskEditorDrawer(props: {
 	}, [saveError]);
 	// 保存前的客户端校验总览（用户 2026-09-30：点保存才判定；判定后问题逐项列出、对应框描红，随用户修正实时消退）。
 	const [showErrors, setShowErrors] = useState(false);
-	const fieldProblems = showErrors ? validateTaskDraft(draft, tt) : [];
+	// 当前真实存在的工作区值（用户 2026-11-06：保存前必须验证工作区，不能「有值就 OK」）。
+	// 列表为空 = 降级 / 拿不到，交给服务端兜底，不做本地误杀。
+	const knownWorkspaces =
+		props.workspaces.length === 0
+			? undefined
+			: new Set(props.workspaces.map((option) => option.value));
+	const fieldProblems = showErrors ? validateTaskDraft(draft, tt, knownWorkspaces) : [];
 	const fieldErrorMap: Record<string, string> = {};
 	for (const p of fieldProblems)
 		if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message;
@@ -2229,24 +2260,21 @@ export function TaskEditorDrawer(props: {
 	// ① 提示词卡（主视觉）：提示词一律手输（版本管理由插件负责，P 待做）；
 	// 选文件 / 上传不再属于提示词，挪到下方独立的「附加文件」框（决策：提示词只手输）。
 	const promptCard = h(
-		"div",
-		{ className: "dsh-tdt-ed-card" },
-		h(
-			"div",
-			{ className: "dsh-tdt-ed-card-head" },
-			h("div", { className: "dsh-tdt-ed-label" }, t("editorPrompt")),
-			h(
+		Surface,
+		{ className: "dsh-tdt-ed-card", padding: "md" },
+		h(SectionHead, {
+			title: t("editorPrompt"),
+			right: h(
 				Button,
 				{
 					variant: "ghost",
 					size: "sm",
-					title: t("editorOpenEditor"),
 					"aria-label": t("editorOpenEditor"),
 					onClick: openEditorPanel,
 				},
 				t("editorOpenEditor"),
 			),
-		),
+		}),
 		h(Textarea, {
 			id: "dsh-tdt-ed-source-inline-panel",
 			value: draft.prompt,
@@ -2266,6 +2294,7 @@ export function TaskEditorDrawer(props: {
 			"div",
 			{ className: "dsh-tdt-ed-card-foot" },
 			h(SelectField, {
+				// 定义里存 id；不在候选项里就不选（保存校验会拦住，让用户重选）。
 				value: draft.workspace,
 				options: workspaces,
 				onChange: (value) => {
@@ -2281,18 +2310,26 @@ export function TaskEditorDrawer(props: {
 				searchable: true,
 			}),
 			// 权限：紧挨工作区（用户 2026-09-29：选完工作区就定权限，两者同一件事的前后脚）。
-			h(SelectField, {
-				value: draft.permission,
-				options: permissionOptions,
-				onChange: (value) => {
-					patch({ permission: value as PermissionMode });
-				},
-				placeholder: t("editorPermDefault"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorPermission"),
-				title: t("editorPermissionHint"),
-				width: PROMPT_SELECT_BASE,
-			}),
+			// 悬停说明走官方 `Tooltip`（2026-11-06：不再用 SelectField 的原生 title 兜底）。
+			h(
+				Tooltip,
+				{ label: t("editorPermissionHint"), side: "top" },
+				h(
+					"span",
+					{ style: { display: "inline-flex", minWidth: 0 } },
+					h(SelectField, {
+						value: draft.permission,
+						options: permissionOptions,
+						onChange: (value) => {
+							patch({ permission: value as PermissionMode });
+						},
+						placeholder: t("editorPermDefault"),
+						emptyLabel: t("editorNoOptions"),
+						ariaLabel: t("editorPermission"),
+						width: PROMPT_SELECT_BASE,
+					}),
+				),
+			),
 			h("span", { className: "dsh-tdt-ed-spacer" }),
 			// 选模型 = 核心 `ModelPicker` 分组态（一组 = 一个供应商）；「默认模型」是核心内置首项。
 			// ⚠️ 候选为空但草稿里**已经有模型**（宿主没接上 llm ⇒ degraded 时常发生）⇒ `modelGroupsOf`
@@ -2484,23 +2521,19 @@ export function TaskEditorDrawer(props: {
 			: { path: abs, anchorSessionId: anyAnchor };
 	};
 	const attachmentsCard = h(
-		"div",
+		Surface,
 		{
 			className: `dsh-tdt-ed-card${problemsByField("attachments") ? " dsh-tdt-ed-card--error" : ""}`,
+			padding: "md",
 		},
-		h(
-			"div",
-			{ className: "dsh-tdt-ed-card-head" },
-			h(
-				"div",
-				{
-					className: "dsh-tdt-ed-label",
-					style: { display: "flex", alignItems: "center", gap: "4px" },
-				},
+		h(SectionHead, {
+			title: h(
+				"span",
+				{ style: { display: "inline-flex", alignItems: "center", gap: "4px" } },
 				t("editorAttachments"),
 				h(HelpButton, { hint: t("editorAttachmentsHint") }),
 			),
-		),
+		}),
 		// 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
 		draft.attachments.length === 0
 			? null
@@ -2521,88 +2554,61 @@ export function TaskEditorDrawer(props: {
 					draft.attachments.map((att) => {
 						const target = previewTargetOf(att);
 						const canView = target !== null && onOpenFile !== undefined;
+						// 附件件与查看档**同一实现**（用户 2026-11-06：两处必须一样）：
+						// 文件名 = 核心 Chip（可点开预览时给 onClick）、来源 = 核心 Chip(xs)、移除 = 核心 IconButton(danger)。
+						// 行内只留排布（.dsh-tdt-ed-attline），底色 / 圆角 / hover 全归核心。
+						const icon =
+							att.isDir === true
+								? h(IconFolderCloseRegular, { size: 14 })
+								: h(FileTypeIcon, { path: att.name, size: 14 });
+						const name = h(MarqueeText, {
+							text: att.name,
+							style: { maxWidth: "40ch", minWidth: 0 },
+						});
 						return h(
 							"div",
-							{
-								key: att.id,
-								className: `dsh-tdt-ed-attrow${canView ? " dsh-tdt-ed-attrow--view" : ""}`,
-								title: canView ? t("editorAttachmentView") : undefined,
-								onClick: canView
-									? () => {
-											onOpenFile?.(target!.anchorSessionId, target!.path);
-										}
-									: undefined,
-							},
+							{ key: att.id, className: "dsh-tdt-ed-attline" },
+							canView
+								? h(
+										Chip,
+										{
+											onClick: () => {
+												onOpenFile?.(target!.anchorSessionId, target!.path);
+											},
+										},
+										icon,
+										name,
+									)
+								: h(Chip, null, icon, name),
 							h(
-								"span",
-								{
-									style: {
-										flex: "none",
-										display: "flex",
-										alignItems: "center",
-									},
-								},
-								att.isDir === true
-									? h(IconFolderCloseRegular, { size: 16 })
-									: h(FileTypeIcon, { path: att.name, size: 16 }),
-							),
-							// 文件名占据左侧所有可用空间，把「上传/链接」标签和「移除」按钮顶到最右边；
-							// 自己保留 flex-shrink，容器窄时自动截断成省略号，不会挤变形按钮（用户 2026-10-03）。
-							h(
-								"span",
-								{
-									className: "dsh-tdt-ellipsis",
-									style: {
-										flex: "1 1 auto",
-										minWidth: 0,
-										fontSize: "var(--dshpc-font-md)",
-									},
-								},
-								att.name,
-							),
-							h(
-								"span",
-								{
-									title: att.ref,
-									style: {
-										flex: "none",
-										fontSize: "var(--dshpc-font-xs)",
-										color: "var(--dshpc-fg-2)",
-										borderRadius: "var(--dshpc-radius-xs)",
-										padding: "1px 6px",
-										background: "var(--dshpc-hover,rgba(38,49,72,.06))",
-									},
-								},
+								Chip,
+								{ size: "xs" },
 								att.kind === "link"
 									? t("editorAttachmentLink")
 									: t("editorAttachmentUpload"),
 							),
-							// 移除按钮保留（用户 2026-10-06），声明不收缩 / 不折行，确保不会被文件名挤到换行或压扁；
-							// 点击要拦冒泡，否则会先删附件又触发整行的「查看」。
-							h(
-								Button,
-								{
-									variant: "ghost",
-									size: "sm",
-									onClick: (event: { stopPropagation: () => void }) => {
-										event.stopPropagation();
-										patch({
-											attachments: draft.attachments.filter(
-												(a) => a.id !== att.id,
-											),
-										});
-										setUploadPaths((prev) => {
-											const next = { ...prev };
-											delete next[att.id];
-											return next;
-										});
-									},
-									title: t("editorAttachmentRemove"),
-									"aria-label": t("editorAttachmentRemove"),
-									style: { flex: "none", whiteSpace: "nowrap" },
+							h(IconButton, {
+								variant: "danger",
+								size: "sm",
+								icon: h(IconCloseOutlineRegular, { size: 14 }),
+								label: t("editorAttachmentRemove"),
+								// 气泡不是必要信息（叉号自明）⇒ 连同默认原生 title 一起压掉。
+								title: "",
+								onClick: (event: { stopPropagation: () => void }) => {
+									event.stopPropagation();
+									patch({
+										attachments: draft.attachments.filter(
+											(a) => a.id !== att.id,
+										),
+									});
+									setUploadPaths((prev) => {
+										const next = { ...prev };
+										delete next[att.id];
+										return next;
+									});
 								},
-								t("editorAttachmentRemove"),
-							),
+								style: { flex: "none" },
+							}),
 						);
 					}),
 				),
@@ -2613,16 +2619,13 @@ export function TaskEditorDrawer(props: {
 			{ style: { display: "flex", gap: "10px", alignItems: "stretch" } },
 			h(
 				"div",
-				{
-					style: {
-						flex: "1 1 auto",
-						border: `1px dashed var(--dshpc-border-heavy)`,
-						borderRadius: "var(--dshpc-radius-md)",
-						padding: "16px 12px",
-						textAlign: "center",
-						cursor: uploading ? "default" : "pointer",
-						background: "var(--dshpc-surface-1)",
-					},
+					{
+						className: surfaceClass({ tone: "plain", border: "dashed", radius: "md", padding: "md" }),
+						style: {
+							flex: "1 1 auto",
+							textAlign: "center",
+							cursor: uploading ? "default" : "pointer",
+						},
 					onClick: () => {
 						if (!uploading) fileInputRef.current?.click();
 					},
@@ -2674,6 +2677,12 @@ export function TaskEditorDrawer(props: {
 						"aria-haspopup": "dialog",
 						"aria-expanded": pickerOpen,
 						onClick: openPicker,
+						className: surfaceClass({
+							tone: "plain",
+							border: "dashed",
+							radius: "md",
+							padding: "sm",
+						}),
 						style: {
 							display: "flex",
 							flexDirection: "column",
@@ -2681,10 +2690,6 @@ export function TaskEditorDrawer(props: {
 							justifyContent: "center",
 							gap: "6px",
 							width: "92px",
-							padding: "8px",
-							border: `1px dashed var(--dshpc-border-heavy)`,
-							borderRadius: "var(--dshpc-radius-md)",
-							background: "var(--dshpc-surface-1)",
 							cursor: "pointer",
 							color: "var(--dshpc-fg)",
 						},
@@ -2713,79 +2718,75 @@ export function TaskEditorDrawer(props: {
 	// ② 执行频率卡：**单次 / 周期 / 间隔** 三档 + 时区 / 有效期。
 	//    「单次」不是第四种排期，它就是「周期档的频率 = 单次」——所以切到单次时把 periodFreq 设成 once，
 	//    而在周期档里把频率改成别的，顶部会自动回到「周期」（值是从 periodFreq 推导的，无需额外回写）。
-	const scheduleCard = h(
-		"div",
-		{
-			className: `dsh-tdt-ed-card${problemsByField("schedule") ? " dsh-tdt-ed-card--error" : ""}`,
-		},
-		h(
-			"div",
-			{ className: "dsh-tdt-ed-card-head", style: { marginBottom: "12px" } },
-			h(
-				"div",
-				{
-					className: "dsh-tdt-ed-label",
-					style: { display: "flex", alignItems: "center", gap: "4px" },
-				},
-				t("editorSchedule"),
-				h(HelpButton, { hint: t("editorScheduleHint") }),
-			),
-			h(
-				"div",
-				{
-					style: {
-						display: "flex",
-						alignItems: "center",
-						gap: "8px",
-						flex: "none",
+		const scheduleCard = h(
+			Surface,
+			{
+				className: `dsh-tdt-ed-card${problemsByField("schedule") ? " dsh-tdt-ed-card--error" : ""}`,
+				padding: "md",
+			},
+			h(SectionHead, {
+				title: h(
+					"span",
+					{ style: { display: "flex", alignItems: "center", gap: "4px" } },
+					t("editorSchedule"),
+					h(HelpButton, { hint: t("editorScheduleHint") }),
+				),
+				right: h(
+					"div",
+					{
+						style: {
+							display: "flex",
+							alignItems: "center",
+							gap: "8px",
+							flex: "none",
+						},
 					},
-				},
-				h(Segmented<string>, {
-					id: "dsh-tdt-ed-schedule",
-					value: scheduleTab,
-					size: "md",
-					bordered: false,
-					tone: "business",
-					items: [
-						{ value: "once", label: t("editorFreqOnce") },
-						{ value: "periodic", label: t("editorSchedulePeriodic") },
-						{ value: "interval", label: t("editorScheduleInterval") },
-					],
-					onChange: (value: string) => {
-						// 智能默认（用户 2026-09-30）：切到「单次 / 间隔」时，若表单里那个时刻**已经过去**，就换成
-						// 「现在 + 1 小时再取整点」（22:10 ⇒ 次日 00:00；8:50 ⇒ 10:00）—— 免得一进表单就是个过期时刻
-						//（原先写死「今天 09:00」）。**已填的未来时刻不覆盖**；周期档（每天/每周…）不参与。
-						// ⚠️ **只在「新建」态替换**（2026-09-30 验收评审抓到的必修项）：编辑既有任务时点一下档位，
-						// 就会把人家填好的时刻换成「明天整点」，保存即写回 `schedule.start` / `once` —— 间隔任务的
-						// 锚点是创建时刻（必然在过去）⇒ 被改后 `filterSlotsBySchedule` 会丢掉所有早于 `start` 的刻度
-						// ⇒ **当天直接不再跑、相位也变了**。
-						const notPast = (): Partial<TaskEditorDraft> =>
-							mode === "create" && isPastMoment(draft.date, draft.time)
-								? smartDefaultMoment()
-								: {};
-						if (value === "once") {
+					h(Segmented<string>, {
+						id: "dsh-tdt-ed-schedule",
+						value: scheduleTab,
+						size: "md",
+						bordered: false,
+						tone: "business",
+						items: [
+							{ value: "once", label: t("editorFreqOnce") },
+							{ value: "periodic", label: t("editorSchedulePeriodic") },
+							{ value: "interval", label: t("editorScheduleInterval") },
+						],
+						onChange: (value: string) => {
+							// 智能默认（用户 2026-09-30）：切到「单次 / 间隔」时，若表单里那个时刻**已经过去**，就换成
+							// 「现在 + 1 小时再取整点」（22:10 ⇒ 次日 00:00；8:50 ⇒ 10:00）—— 免得一进表单就是个过期时刻
+							//（原先写死「今天 09:00」）。**已填的未来时刻不覆盖**；周期档（每天/每周…）不参与。
+							// ⚠️ **只在「新建」态替换**（2026-09-30 验收评审抓到的必修项）：编辑既有任务时点一下档位，
+							// 就会把人家填好的时刻换成「明天整点」，保存即写回 `schedule.start` / `once` —— 间隔任务的
+							// 锚点是创建时刻（必然在过去）⇒ 被改后 `filterSlotsBySchedule` 会丢掉所有早于 `start` 的刻度
+							// ⇒ **当天直接不再跑、相位也变了**。
+							const notPast = (): Partial<TaskEditorDraft> =>
+								mode === "create" && isPastMoment(draft.date, draft.time)
+									? smartDefaultMoment()
+									: {};
+							if (value === "once") {
+								patch({
+									scheduleKind: "periodic",
+									periodFreq: "once",
+									...notPast(),
+								});
+								return;
+							}
+							if (value === "interval") {
+								patch({ scheduleKind: "interval", ...notPast() });
+								return;
+							}
+							// 回到「周期」：原来停在一次性的话，落到每天（否则保持原频率）。
 							patch({
 								scheduleKind: "periodic",
-								periodFreq: "once",
-								...notPast(),
+								periodFreq:
+									draft.periodFreq === "once" ? "daily" : draft.periodFreq,
 							});
-							return;
-						}
-						if (value === "interval") {
-							patch({ scheduleKind: "interval", ...notPast() });
-							return;
-						}
-						// 回到「周期」：原来停在一次性的话，落到每天（否则保持原频率）。
-						patch({
-							scheduleKind: "periodic",
-							periodFreq:
-								draft.periodFreq === "once" ? "daily" : draft.periodFreq,
-						});
-					},
-					label: t("editorSchedule"),
-				}),
-			),
-		),
+						},
+						label: t("editorSchedule"),
+					}),
+				),
+			}),
 		draft.scheduleKind === "interval"
 			? h(
 					"div",
@@ -2999,44 +3000,34 @@ export function TaskEditorDrawer(props: {
 		});
 		setDepTaskId(""); // 工作区保留，方便连着加同工作区的第二个、第三个。
 	};
-	const depsBlock = h(
-		"div",
-		{ className: "dsh-tdt-ed-card" },
-		h(
-			"div",
-			{ className: "dsh-tdt-ed-card-head" },
-			h(
-				"div",
-				{
-					className: "dsh-tdt-ed-label",
-					style: { display: "flex", alignItems: "center", gap: "4px" },
-				},
-				t("editorDeps"),
-				h(HelpButton, { hint: t("editorDepsHint"), maxWidth: 320 }),
-			),
-		),
+		const depsBlock = h(
+			Surface,
+			{ className: "dsh-tdt-ed-card", padding: "md" },
+			h(SectionHead, {
+				title: h(
+					"span",
+					{ style: { display: "flex", alignItems: "center", gap: "4px" } },
+					t("editorDeps"),
+					h(HelpButton, { hint: t("editorDepsHint"), maxWidth: 320 }),
+				),
+			}),
 		// 上：已选前置任务列表；空 = 上传投放区同款虚线占位框（灰字居中，主行 + 次行提示）。
 		h(
 			"div",
 			{ style: { marginBottom: "10px" } },
 			draft.deps.length === 0
-				? h(
-						"div",
-						{
-							// 空态 = 上传投放区（上方附件卡）同款虚线框，同一组 --dshpc-* token 保证观感一致。
-							style: {
-								border: `1px dashed var(--dshpc-border-heavy)`,
-								borderRadius: "var(--dshpc-radius-md)",
-								padding: "16px 12px",
-								textAlign: "center",
-								background: "var(--dshpc-surface-1)",
-							},
-						},
-						h(
-							"div",
-							{ style: { fontSize: "var(--dshpc-font-md)" } },
-							t("editorDepEmpty"),
-						),
+							? h(
+								"div",
+								{
+									// 空态 = 上传投放区（上方附件卡）同款虚线框，同一组 --dshpc-* token 保证观感一致。
+									className: surfaceClass({ tone: "plain", border: "dashed", radius: "md", padding: "md" }),
+									style: { textAlign: "center" },
+								},
+								h(
+									"div",
+									{ style: { fontSize: "var(--dshpc-font-md)" } },
+									t("editorDepEmpty"),
+								),
 						h(
 							"div",
 							{
@@ -3084,11 +3075,10 @@ export function TaskEditorDrawer(props: {
 												},
 											})
 										: h(
-												"button",
+												TdtButton,
 												{
-													type: "button",
-													className: "dsh-tdt-info-dep",
-													title: t("infoViewTask"),
+													variant: "link",
+													size: "sm",
 													style: {
 														flex: "1 1 auto",
 														minWidth: 0,
@@ -3124,7 +3114,6 @@ export function TaskEditorDrawer(props: {
 													deps: draft.deps.filter((d) => d.task !== dep.task),
 												});
 											},
-											title: t("editorDepRemove"),
 											"aria-label": t("editorDepRemove"),
 										},
 										t("editorDepRemove"),
@@ -3181,7 +3170,6 @@ export function TaskEditorDrawer(props: {
 					size: "sm",
 					icon: h(IconPlusOutlineRegular, { size: 14 }),
 					disabled: depTaskId === "",
-					title: depTaskId === "" ? t("editorDepTaskPh") : t("editorDepAdd"),
 					onClick: addDep,
 					// 三段式右段：定宽、居右（flex 布局里排最后即贴右），文字图标居中。
 					// 88 → 72px（用户 2026-09-29：窄一点，把宽度让给中间的任务名）。
@@ -3210,39 +3198,44 @@ export function TaskEditorDrawer(props: {
 	const advancedBlock = h(
 		"div",
 		{ className: "dsh-tdt-ed-section" },
-		h(
-			"div",
-			{ className: "dsh-tdt-ed-card" },
 			h(
-				"button",
-				{
-					className: "dsh-tdt-ed-advhead",
-					type: "button",
-					"aria-expanded": advancedOpen,
-					onClick: () => {
-						setAdvancedOpen(!advancedOpen);
-					},
-				},
-				h(
-					"span",
+				Surface,
+				{ className: "dsh-tdt-ed-card", padding: "md" },
+			h(
+					TdtButton,
 					{
-						className: "dsh-tdt-ed-label",
-						style: { display: "inline-flex", alignItems: "center", gap: "4px" },
+						variant: "ghost",
+						size: "sm",
+						block: true,
+						"aria-expanded": advancedOpen,
+						onClick: () => {
+							setAdvancedOpen(!advancedOpen);
+						},
+						iconRight: h(IconChevronDownOutlineRegular, {
+							size: 12,
+							className: advancedOpen
+								? "dsh-tdt-ed-advchevron-open"
+								: "dsh-tdt-ed-advchevron",
+						}),
+						style: { justifyContent: "space-between" },
 					},
-					t("editorAdvanced"),
-					// 「?」说明气泡：span 塞进按钮内（button 嵌 button 非法），点击拦截不触发展开。
-					h(HelpButton, {
-						hint: t("editorAdvancedHelp"),
-						insideClickable: true,
-					}),
-				),
-				h(IconChevronDownOutlineRegular, {
-					size: 12,
-					className: advancedOpen
-						? "dsh-tdt-ed-advchevron-open"
-						: "dsh-tdt-ed-advchevron",
-				}),
-			),
+					h(
+						"span",
+						{
+							style: {
+								display: "inline-flex",
+								alignItems: "center",
+								gap: "4px",
+							},
+						},
+						t("editorAdvanced"),
+						// 「?」说明气泡：span 塞进按钮内（button 嵌 button 非法），点击拦截不触发展开。
+						h(HelpButton, {
+							hint: t("editorAdvancedHelp"),
+							insideClickable: true,
+						}),
+					),
+					),
 			advancedOpen
 				? h(
 						"div",
@@ -3254,7 +3247,7 @@ export function TaskEditorDrawer(props: {
 							h(
 								"div",
 								{ className: "dsh-tdt-ed-row" },
-								h("span", { className: "dsh-tdt-ed-label" }, t("editorRetry")),
+								h("span", { style: FIELD_LABEL_STYLE }, t("editorRetry")),
 								h(Segmented, {
 									id: "dsh-tdt-ed-retry",
 									value: draft.maxAttempts,
@@ -3468,9 +3461,6 @@ export function TaskEditorDrawer(props: {
 											checked: draft.enabled,
 											onChange: handleToggleEnabled,
 											label: t("editorEnabled"),
-											title: draft.enabled
-												? t("editorEnabledOn")
-												: t("editorEnabledOff"),
 										}),
 										h(
 											"span",
@@ -3485,13 +3475,18 @@ export function TaskEditorDrawer(props: {
 												: t("editorEnabledStateOff"),
 										),
 									),
-							h(IconButton, {
-								variant: "plain",
-								size: "md",
-								icon: h(IconCloseOutlineRegular, { size: 16 }),
-								label: t("editorClose"),
-								onClick: requestClose,
-							}),
+							h(
+								Tooltip,
+								{ label: t("editorClose"), side: "bottom" },
+								h(IconButton, {
+									variant: "plain",
+									size: "md",
+									icon: h(IconCloseOutlineRegular, { size: 16 }),
+									label: t("editorClose"),
+									title: "",
+									onClick: requestClose,
+								}),
+							),
 						),
 					),
 					// 正文：查看档 = 只读人话视图（自己取「上次执行」）；编辑档 = 表单（或其上的全屏子面板）。
@@ -3507,6 +3502,8 @@ export function TaskEditorDrawer(props: {
 									// 任务 id 只在编辑态有 ⇒ 新建态给空串，查看档据此**不发**「上次执行」请求（任务还不存在）。
 									taskId: mode === "edit" ? (currentTaskId ?? "") : "",
 									tasks,
+									// 定义里存工作区 id ⇒ 查看档显示当前标题（老任务存标题时也会原样显示）。
+									workspaceLabel: (value) => workspaceLabelOf(workspaces, value),
 									resolvedAttachments,
 									onOpenSession,
 									onOpenFile,
@@ -3591,7 +3588,7 @@ export function TaskEditorDrawer(props: {
 													return;
 												}
 												// 保存前先本地查必填 / 排期冲突：问题字段描红（持续态）+ 一次性 Toast 列全部问题。
-												const problems = validateTaskDraft(draft, tt);
+												const problems = validateTaskDraft(draft, tt, knownWorkspaces);
 												if (problems.length > 0) {
 													setShowErrors(true);
 													problemsSeq.current += 1;

@@ -45,8 +45,10 @@ import { sortRows } from '../task-sort.js'
 // 取数层（2026-10-06 从本页面文件归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
 import { debugLogOrder, dueLoadingMs, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 import { ensureTaskEditorStyle } from './task-editor-css'
+// 工作区展示名（定义里存 id，卡片显示当前标题）。
+import { workspaceLabelOf } from './workspace-options'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, Card, confirmModal, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, Table, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TableColumn, type TableRow, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { applyStyle, Button, Card, Chip, confirmModal, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, Surface, Table, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TableColumn, type TableRow, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
@@ -209,14 +211,13 @@ function StatusRail(props: { row: TaskOverviewRow; t: Translate }) {
       : row.lastStatus === 'skipped'
         ? t('statusRailLastSkipped')
         : t('statusRailRunning')
-  return h('span', {
-    title: hint,
+  return h(Tooltip, { label: hint, side: 'top' }, h('span', {
     style: {
       display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
       borderRadius: 'var(--dshpc-radius-xs)', background: color,
       transition: `background var(--dshpc-dur) var(--dshpc-ease)`,
     },
-  })
+  }))
 }
 
 /**
@@ -353,7 +354,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
 
 // ── 卡片 ───────────────────────────────────────────────────────────────
 
-// ⚠️ 不带 `color`（r13 修）：标题可点后走 `.dsh-tdt-info-dep` 的 hover 变蓝——inline color 会把 :hover 压死
+// ⚠️ 不带 `color`（r13 修）：标题可点后走核心 Button `link` 的 hover 变蓝——inline color 会把 :hover 压死
 //（鼠标移上去不变色的根因）；纯文本分支继承根色（--dshpc-fg），观感不变。
 const titleStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, lineHeight: 'var(--dshpc-line-md)' }
 const metaStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', lineHeight: 'var(--dshpc-line-sm)', marginTop: '2px' }
@@ -487,8 +488,10 @@ function TaskExpandPanel(props: {
   onViewTask?: (id: string) => void
   /** 即时拉一次 overview（来自顶层 `useTaskOverview`）：任务跑完时让左栏「下次预计执行」同步刷新。 */
   refresh: () => void
+  /** 工作区候选（值 = id、文本 = 标题）：基础信息里显示当前标题。 */
+  workspaces: readonly EditorOption[]
 }) {
-  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props
+  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh, workspaces } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
   /**
    * 事件推送计数（2026-10-07 补缺口）：`row` 的运行态字段只覆盖「终态 / 在飞翻转」，
@@ -692,7 +695,8 @@ function TaskExpandPanel(props: {
       scheduleLine,
       // 预计执行：社交化相对时间（LiveText 每秒自刷）+ 具体时刻，见 `renderNextExec`。
       nextSlot: renderNextExec(row.nextSlotAt, t),
-      workspace: row.workspace,
+      // 展示用当前工作区标题（定义里存的是 id，用户 2026-11-06）。
+      workspace: workspaceLabelOf(workspaces, row.workspace),
       model: modelText,
       retry: String(row.retryMax),
       window: row.schedule.window,
@@ -828,47 +832,58 @@ function TaskExpandPanel(props: {
                         style: instance.status === 'succeeded' ? { color: 'var(--dshpc-success)' } : statusStyleOf(instance.status),
                       }, statusTextOf(instance.status, t)),
                     ),
-                    // ② 计划执行：YY-MM-DD HH:mm（完整时刻进 hover）。
-                    planned: h('span', { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at)),
+                    // ② 计划执行：YY-MM-DD HH:mm（完整时刻走官方 Tooltip，不用原生 title）。
+                    planned: h(Tooltip, { label: formatStamp(instance.scheduled_at), side: 'top' },
+                      h('span', null, formatPlanStamp(instance.scheduled_at))),
                     // ③ 实际开始：HH:mm:ss（未派发 ⇒ '-'）。
-                    actual: h('span', { title: instance.dispatched_at === null ? undefined : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at)),
+                    actual: instance.dispatched_at === null
+                      ? h('span', null, formatClock(instance.dispatched_at))
+                      : h(Tooltip, { label: formatStamp(instance.dispatched_at), side: 'top' },
+                        h('span', null, formatClock(instance.dispatched_at))),
                     // ④ 执行时长：H:MM:SS（有小时）/ MM:SS。
                     duration: formatDurationHms(durMs),
-                    // ⑤ 消耗 token：总量 K/M 格式，hover 看输入/输出/缓存明细。
+                    // ⑤ 消耗 token：总量 K/M 格式，hover 看输入/输出/缓存明细（官方 Tooltip）。
                     tokens: instance.token_in === null && instance.token_out === null
                       ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, '-')
-                      : h('span', { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))),
-                    // ⑥ 备注：错误 / 未执行的原因。超长省略号，hover 看全文；走最浅的灰。
+                      : h(Tooltip, { label: formatTokenDetail(instance), side: 'top' },
+                        h('span', null, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))),
+                      ),
+                    // ⑥ 备注：错误 / 未执行的原因。超长省略号，hover 看全文（官方 Tooltip）；走最浅的灰。
                     note: instance.note === null || instance.note === undefined || instance.note === ''
                       ? null
-                      : h('span', {
-                        title: instance.note,
-                        className: 'dsh-tdt-ellipsis',
-                        style: { display: 'block', color: 'var(--dshpc-fg-3)' },
-                      }, instance.note),
+                      : h(Tooltip, { label: instance.note, side: 'top', maxWidth: 360 },
+                        h('span', {
+                          className: 'dsh-tdt-ellipsis',
+                          style: { display: 'block', color: 'var(--dshpc-fg-3)' },
+                        }, instance.note),
+                      ),
                     // ⑦ 产出物（倒数第二列）：官方文件类型图标 ≤3 个；>3 收「…」（点开会话看完整）。
                     outputs: outputs.length === 0
                       ? null
                       : h('span', { style: outputCellStyle },
                         outputs.slice(0, 3).map(output => h(Tooltip, {
                           key: output, label: baseNameOf(output), side: 'top',
-                        }, h('button', {
-                          type: 'button', className: 'dsh-tdt-chip',
+                        }, h(IconButton, {
+                          variant: 'plain', size: 'md',
+                          icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: output, size: 16 }),
+                          label: baseNameOf(output),
+                          // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
+                          title: '',
                           style: { cursor: canOpenFile ? 'pointer' : 'default' },
-                          onClick: (event: { stopPropagation(): void }) => {
+                          onClick: (event) => {
                             event.stopPropagation()
                             if (canOpenFile && openFile !== undefined && sid !== null) openFile(sid, output)
                           },
-                        }, output.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: output, size: 16 })))),
+                        }))),
                         outputs.length > 3
-                          ? h('button', {
-                            type: 'button', 'aria-label': t('viewSession'),
-                            className: 'dsh-tdt-chip dsh-tdt-chip--label',
-                            onClick: (event: { stopPropagation(): void }) => {
-                              event.stopPropagation()
-                              if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid)
-                            },
-                          }, '…')
+                          // Chip 的 onClick 不收事件 ⇒ 外层 span 只负责 stopPropagation（别把整行展开）。
+                          ? h('span', { 'aria-label': t('viewSession'), onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+                            h(Chip, {
+                              size: 'xs',
+                              onClick: () => {
+                                if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid)
+                              },
+                            }, '…'))
                           : null,
                       ),
                     // ⑧ 会话记录（最后一列）：小按钮「查看」。
@@ -887,6 +902,8 @@ function TaskExpandPanel(props: {
                   cells: {
                     status: {
                       colSpan: 8,
+                      // 整行跨 8 列后仍按「第一列」的对齐走 ⇒ 必须显式居左，否则日志会被居中。
+                      align: 'left',
                       content: h('div', { role: 'presentation' },
                         eventsError !== null
                           ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${eventsError}`)
@@ -1056,8 +1073,10 @@ function TaskCard(props: {
   refOf: (el: HTMLElement | null) => void
   /** 即时拉 overview：任务跑完时左栏「下次预计执行」同步刷新（见 TaskExpandPanel）。 */
   refresh: () => void
+  /** 工作区候选（值 = id、文本 = 标题）：卡片基础信息与筛选共用同一份口径。 */
+  workspaces: readonly EditorOption[]
 }) {
-  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, onToggleEnabled, refOf, refresh } = props
+  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, onToggleEnabled, refOf, refresh, workspaces } = props
   // 排期人话与编辑器「预计执行」**同一份实现**（`schedule-text.ts`，优先吃结构化 ui）⇒ 两处必然一致。
   const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
@@ -1095,11 +1114,9 @@ function TaskCard(props: {
           // 点名字时掐掉冒泡、改为打开该任务的查看档；未接 onViewTask 时保持纯文本（不装可点）。
           onViewTask === undefined
             ? h('div', { style: { ...titleStyle, flex: '0 1 auto', minWidth: 0 } }, h(MarqueeText, { text: row.title }))
-            : h('button', {
-              type: 'button',
-              className: 'dsh-tdt-info-dep',
-              title: t('infoViewTask'),
-              style: { ...titleStyle, flex: '0 1 auto', minWidth: 0, textAlign: 'left' },
+            : h(Button, {
+              variant: 'link', size: 'sm',
+              style: { ...titleStyle, flex: '0 1 auto', minWidth: 0, textAlign: 'left', height: 'auto' },
               onClick: (event: { stopPropagation: () => void }) => {
                 event.stopPropagation()
                 onViewTask(row.id)
@@ -1134,7 +1151,6 @@ function TaskCard(props: {
             checked: row.enabled,
             onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
             label: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
-            title: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
           }),
         ),
         // 箭头同样要拦：否则点箭头会先触发自己的 onClick、再冒泡到主行触发第二次 ⇒ 展开后立刻又收起。
@@ -1145,6 +1161,8 @@ function TaskCard(props: {
             // 事件时间线」），语义完全对不上——卡片展开的是**本任务的设置**，不是某次执行的事件时间线，
             // 悬停冒出一句驴唇不对马嘴的提示（用户 2026-09-30 真机点名）。图标本身自明，只留无障碍名。
             label: t('listExpandHint'),
+            // `title: ''` 压掉 IconButton 默认的原生 title（2026-11-06：全站原生 title 清退）。
+            title: '',
             onClick: onToggleOpen,
             'aria-expanded': open,
             style: { transform: open ? 'rotate(180deg)' : 'none' },
@@ -1153,7 +1171,7 @@ function TaskCard(props: {
       ),
     ),
       // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
-      open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh }) : null,
+      open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh, workspaces }) : null,
     ),
   )
 }
@@ -1312,12 +1330,13 @@ export function TaskListView(props: {
           ? null
           : rows.length === 0
             // 真·零任务：虚线引导卡（图标 + 主文案 + 小提示 + 新建按钮）。圆角取 --dshpc-radius-md，与 Button/输入框一致。
-            ? h('div', { style: {
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                margin: '24px auto 0', padding: '48px 32px', textAlign: 'center',
-                border: '1px dashed var(--dshpc-border-heavy)', borderRadius: 'var(--dshpc-radius-md)',
-                background: 'var(--dshpc-surface-1)',
-              } },
+            ? h(Surface, {
+                tone: 'plain', border: 'dashed', radius: 'md', padding: 'lg',
+                style: {
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  margin: '24px auto 0', padding: '48px 32px', textAlign: 'center',
+                },
+              },
               h('div', { style: { color: 'var(--dshpc-fg-3)' } },
                 h(IconAlarmClockOutlineRegular, { size: 40 })),
               h('div', { style: { marginTop: '12px', fontSize: 'var(--dshpc-font-lg)', fontWeight: 600 } }, t('listEmptyTitle')),
@@ -1342,6 +1361,7 @@ export function TaskListView(props: {
             onOpenFile,
             onOpenSession,
             refresh,
+            workspaces,
             onToggleEnabled: (id: string, enabled: boolean): void => {
               setOptimistic(cur => ({ ...cur, [id]: enabled })) // 点了立刻变，不等请求往返
               // ⚠️ 失败必须**撤掉这条乐观值**（2026-09-30 专家团复核）：失败时服务端没变、也不会 bump rev

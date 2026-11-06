@@ -9,7 +9,7 @@ import { isSafeAttachmentRef } from './attachment-allowlist.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition, TaskDefinitionInput } from './tasks.js'
 import {
-  ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, sessionTitleOf, setEnabledDefinitionInline, taskDefinitionSchema, titleOf,
+  ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, sessionTitleOf, setEnabledDefinitionInline, setWorkspaceDefinitionInline, taskDefinitionSchema, titleOf,
   upsertDefinitionInline, validateDefinitionForSave,
 } from './tasks.js'
 import { parseInstanceSnapshot, TaskStore, type InstanceStatus, type PluginLogKind, type TableFilter, type TableFilterOp } from './store.js'
@@ -406,7 +406,9 @@ function attachmentsWithPaths(
   if (registry === null) return [...rows]
   const byId = new Map(tasks.map(task => [task.id, task]))
   const workspaces = registry.list()
-  const byTitle = new Map(workspaces.map(workspace => [workspace.title, workspace]))
+  // 新任务存 id；link 附件的来源工作区也随迁移改存 id ⇒ 两种键都认。
+  const byKey = new Map<string, (typeof workspaces)[number]>()
+  for (const workspace of workspaces) { byKey.set(workspace.id, workspace); byKey.set(workspace.title, workspace) }
   const anchorOf = (workspace: (typeof workspaces)[number] | undefined): string | undefined => {
     const sessions = workspace?.sessionIds
     return sessions !== undefined && sessions.length > 0 ? sessions[sessions.length - 1] : undefined
@@ -418,7 +420,7 @@ function attachmentsWithPaths(
     const items = task?.attachments ?? []
     if (task === undefined || items.length === 0) return row
     const attachments = items.map(item => {
-      const source = item.kind === 'link' ? byTitle.get(item.workspace ?? '') : byTitle.get(task.target.workspace)
+      const source = item.kind === 'link' ? byKey.get(item.workspace ?? '') : byKey.get(task.target.workspace)
       const anchorSessionId = anchorOf(source) ?? anyAnchor
       const absPath = item.kind === 'upload'
         ? (assets === null ? null : attachmentAbsPath(assets, task.id, item.ref))
@@ -431,11 +433,6 @@ function attachmentsWithPaths(
   })
 }
 
-/**
- * 构造本插件的 webServer 路由（快照读 + 任务表写）。
- * @param runtimeRef - 宿主运行时数据 store（apply 内共用同一份）。
- * @param persistTasksInline - 任务表保存回调（写回 config profile）。
- */
 /**
  * 整批 `tasksInline` 的**最小结构校验**：必须是「对象数组」（空串 = 清空，允许）。
  *
@@ -457,6 +454,39 @@ function checkTasksInlineShape(raw: string): string | null {
   return null
 }
 
+/**
+ * 整批 `tasksInline` 的**工作区存在性校验**（用户 2026-11-06）：整批 JSON 编辑同样不许把
+ * 「已经不存在的工作区」存进去（**只认 id**；老任务由执行期自愈，不在这里翻译）。
+ * 返回 null = 全部可解析；否则返回第一条人话错误（含任务名，便于用户定位）。
+ */
+function checkTasksInlineWorkspaces(raw: string, registry: HostWorkspaceRegistry | null): string | null {
+  if (registry === null) return null
+  const text = raw.trim()
+  if (text === '') return null
+  let data: unknown
+  try { data = JSON.parse(text) } catch { return null } // 形状闸门已先跑，这里不重复报
+  if (!Array.isArray(data)) return null
+  // 只认 id：整批保存同样不做标题→id 翻译（老任务由执行期解析成功后写回）。
+  const known = new Set(registry.list().map(workspace => workspace.id))
+  for (const item of data) {
+    const task = item as { id?: unknown; title?: unknown; target?: unknown }
+    const target = task.target
+    if (target === null || typeof target !== 'object') continue
+    const workspace = (target as { workspace?: unknown }).workspace
+    if (typeof workspace !== 'string' || workspace === '' || known.has(workspace)) continue
+    const name = typeof task.title === 'string' && task.title !== ''
+      ? task.title
+      : (typeof task.id === 'string' ? task.id : '未命名任务')
+    return `任务「${name}」选中的工作区已不存在（可能被重命名或删除）：${workspace}`
+  }
+  return null
+}
+
+/**
+ * 构造本插件的 webServer 路由（快照读 + 任务表写）。
+ * @param runtimeRef - 宿主运行时数据 store（apply 内共用同一份）。
+ * @param persistTasksInline - 任务表保存回调（写回 config profile）。
+ */
 const makeDispatchRoutes = (
   runtimeRef: { tasksInline: string; debugSnapshot: string },
   persistTasksInline: (json: string) => Promise<void>,
@@ -641,6 +671,9 @@ const makeDispatchRoutes = (
           // 它们此前会「保存成功」并落盘 ⇒ 运行时整表解析失败 ⇒ 任务表消失且**已持久化**（2026-10-07 审计）。
           const shape = checkTasksInlineShape(parsed.tasksInline)
           if (shape !== null) return writeJson(res, 422, { ok: false, error: shape })
+          // 工作区是核心：整批保存也要验「真实存在」，不能有值就放行（用户 2026-11-06）。
+          const workspaceProblem = checkTasksInlineWorkspaces(parsed.tasksInline, getRegistry())
+          if (workspaceProblem !== null) return writeJson(res, 422, { ok: false, error: workspaceProblem })
           const { json, changed, assigned, error } = ensureIdsInInlineJson(parsed.tasksInline, existingUuidIds(runtimeRef.tasksInline))
           if (error !== null) return writeJson(res, 422, { ok: false, error })
           runtimeRef.tasksInline = json
@@ -668,7 +701,13 @@ const makeDispatchRoutes = (
         }
         const def = checked.data as TaskDefinitionInput
         const existing = existingUuidIds(runtimeRef.tasksInline)
-        const validation = validateDefinitionForSave(def, existing)
+        // 工作区存在性（用户 2026-11-06）：保存只认 **id**；不在真实列表里就直接 422，
+        // 让用户回下拉重选（不在这里做标题→id 的兼容翻译）。
+        const registryForSave = getRegistry()
+        const knownWorkspaces = registryForSave === null
+          ? undefined
+          : new Set(registryForSave.list().map(workspace => workspace.id))
+        const validation = validateDefinitionForSave(def, existing, knownWorkspaces)
         if (validation.ok !== true) return writeJson(res, 422, { ok: false, error: validation.error })
 
         // ② 身份：带 UUID 且命中现有表 ⇒ 修改；否则**一律服务端生成新 id**——
@@ -916,14 +955,15 @@ const makeDispatchRoutes = (
       const llm = getLlm()
       const workspaces = registry === null
         ? []
-        // value 用 **title**：`resolveWorkspace`（src/dispatch.ts:33-35）就是按 title 精确匹配、id 兜底。
+        // value 用 **id**（用户 2026-11-06：改名不失效）；`resolveWorkspace` 仍按 title 匹配、id 兜底，
+        // 所以老任务存标题照样能执行。title 只作显示名与搜索用。
         // anchorSessionId = 该工作区最近一个会话（entity.sessionIds 末位，官方 0.2.0-rc.1 已核实；
         // 含归档会话槽位 ⇒ scope 解析无需激活 agent）——客户端「选择工作区文件」的浏览锚点。
         // 没有会话的工作区不下发该字段（客户端显示「无历史会话」空态，不造假会话）。
         : registry.list().map(workspace => {
           const sessions = workspace.sessionIds
           const anchorSessionId = sessions !== undefined && sessions.length > 0 ? sessions[sessions.length - 1] : undefined
-          return { title: workspace.title, path: workspace.path, anchorSessionId }
+          return { id: workspace.id, title: workspace.title, path: workspace.path, anchorSessionId }
         })
       const models: { provider: string; id: string; name: string }[] = []
       try {
@@ -1775,6 +1815,15 @@ export function apply(ctx: HostContext, config: unknown): void {
       config: pluginConfig,
       // 附加文件存在性校验（Loop A）：资产根随 statePath 定格，未就绪 ⇒ 跳过 upload 型校验。
       assets: () => assetsRef,
+      // 老任务存工作区标题 ⇒ 执行时按标题解析成功后就地改存 id 并落盘（用户 2026-11-06 向下兼容）。
+      healWorkspaceId: (taskId, workspaceId) => {
+        const healed = setWorkspaceDefinitionInline(runtime.tasksInline, taskId, workspaceId)
+        if (healed.error !== null || !healed.changed) return
+        runtime.tasksInline = healed.json
+        void persistTasksInline(healed.json)
+        resyncTaskMap?.()
+        teeLogger.info(`任务 ${taskId} 的工作区已由标题改存 id（${workspaceId}）`)
+      },
     })
     schedulerRef = scheduler
 

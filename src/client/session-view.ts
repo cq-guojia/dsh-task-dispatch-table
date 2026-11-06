@@ -25,8 +25,9 @@ import {
   type UiConversationFace,
 } from 'dsh-plugin-core/adv/session'
 import { ensureArchiveSessionStyle } from './archive-session-css'
-// 标题任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
+// 标题任务名可点（r12）走核心 Button `link` 档。
 import { ensureTaskInfoStyle } from './task-info-css'
+import { Button } from './ui'
 import { DeliverablesGridMirror, type DeliveredFileFace } from './mirror/Deliverables'
 import { ProcessFiles } from './process-files'
 import { interpolateTranslate, type Translate } from './locales'
@@ -155,8 +156,8 @@ export function SessionViewModal(props: {
     tt('sessionViewerTitle'),
     ' · ',
     taskId !== undefined && onOpenTask !== undefined && headingTask !== undefined
-      ? h('button', {
-        type: 'button', className: 'dsh-tdt-info-dep', title: t('infoViewTask'),
+      ? h(Button, {
+        variant: 'link', size: 'sm',
         style: { fontSize: 'inherit' },
         onClick: () => { onOpenTask(taskId) },
       }, headingTask)

@@ -28,7 +28,7 @@ import {
   type TaskInfoBaseView,
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
-import { Button, CodeViewer, Segmented } from './ui'
+import { Button, Chip, CodeViewer, SectionHead, Segmented, Surface } from './ui'
 // 事件推送（2026-10-06 补缺口）：查看档的「上次执行」原来只在挂载/换任务时取一次 ⇒ 页面开着时
 // 该任务跑完是看不见的（它上面没有会带它重取的父级，父级 `runSig` 那条只覆盖卡片里的 info/records/logs）。
 import { useEvents, useResync } from './event-subscribe'
@@ -53,6 +53,8 @@ export function TaskViewPanel(props: {
   taskId: string
   /** 任务表（真数据）：把前置任务的 id 反查成人读名字。 */
   tasks: EditorTaskOption[]
+  /** 工作区展示名（定义里存 id，界面要显示当前标题）；不给 ⇒ 原样显示。 */
+  workspaceLabel?: ((value: string) => string) | undefined
   /** 点「任务会话」打开归档会话（不给 ⇒ 该行不可点）。 */
   onOpenSession?: ((sessionId: string) => void) | undefined
   /** 点产出物打开文件预览（不给 ⇒ 该行不可点）。 */
@@ -136,7 +138,9 @@ export function TaskViewPanel(props: {
     // 预计执行：社交化相对时间（LiveText 每秒自刷）+ 具体时刻，与卡片同款（`renderNextExec`）。
     nextSlot: renderNextExec(nextExecIso, t),
     // 空字段一律给「未填」占位，不留白、也不编造。
-    workspace: draft.workspace.trim() === '' ? t('editorViewNotFilled') : draft.workspace,
+    workspace: draft.workspace.trim() === ''
+      ? t('editorViewNotFilled')
+      : (props.workspaceLabel?.(draft.workspace) ?? draft.workspace),
     model: draft.model.trim() === '' ? t('listFieldModelDefault') : draft.model,
     retry: draft.maxAttempts.trim() === '' ? t('editorViewNotFilled') : draft.maxAttempts,
     window: draft.window,
@@ -173,30 +177,33 @@ export function TaskViewPanel(props: {
   const isShort = hasPrompt && draft.prompt.length <= PROMPT_SHORT_MAX
   // 草稿标记（r12 用户拍板：不放头部任务名旁——名字可能很长；挂「任务配置」标题旁，文案精简正式）。
   const draftChip = mode === 'create' || dirty
-    ? h('span', { className: 'dsh-tdt-ed-view-chip' }, mode === 'create' ? t('editorViewNewTag') : t('editorViewDraftTag'))
+    ? h(Chip, { size: 'xs', tone: 'warning' }, mode === 'create' ? t('editorViewNewTag') : t('editorViewDraftTag'))
     : null
 
   return h('div', { className: 'dsh-tdt-ed-view' },
     // ① 任务配置（标签—值纸表格；与卡片展开区同一份渲染）
     h('section', { className: 'dsh-tdt-ed-view-block' },
-      h('div', { className: 'dsh-tdt-ed-view-head' },
-        // 块标题 = **标签**（浅底 chip：图标 + 文字；r13 用户：纯文字没提示作用）。
-        h('span', { className: 'dsh-tdt-ed-view-tag' },
-          h(IconPlanOutlineRegular, { size: 12 }), t('infoSectionConfig')),
-        draftChip,
-      ),
+      h(SectionHead, {
+        accent: 'business',
+        icon: h(IconPlanOutlineRegular, { size: 12 }),
+        title: t('infoSectionConfig'),
+        right: draftChip,
+      }),
       h('div', { className: 'dsh-tdt-info-cfg' }, taskInfoBaseFields({ t, view, onOpenFile, onViewTask })),
     ),
     // ② 上次执行（状态色块 + 状态文字 ⇒ 一眼看出成败；明细复用共享层的 `lastRunFields`）
     h('section', { className: 'dsh-tdt-ed-view-block' },
-      h('div', { className: 'dsh-tdt-ed-view-head' },
-        h('span', { className: 'dsh-tdt-ed-view-tag' },
-          h(IconClockOutlineRegular, { size: 12 }), t('infoLastRun')),
-        last === null ? null : h('span', { className: 'dsh-tdt-ed-view-badge', style: { background: infoStatusColorOf(last.status) } }),
-        last === null ? null : h('span', {
-          style: { fontSize: 'var(--dshpc-font-sm)', fontWeight: 600, color: infoStatusColorOf(last.status) },
-        }, statusTextOf(last.status, t)),
-      ),
+      h(SectionHead, {
+        accent: 'business',
+        icon: h(IconClockOutlineRegular, { size: 12 }),
+        title: h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+          t('infoLastRun'),
+          last === null ? null : h('span', { className: 'dsh-tdt-ed-view-badge', style: { background: infoStatusColorOf(last.status) } }),
+          last === null ? null : h('span', {
+            style: { fontSize: 'var(--dshpc-font-sm)', fontWeight: 600, color: infoStatusColorOf(last.status) },
+          }, statusTextOf(last.status, t)),
+        ),
+      }),
       error !== null
         ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${error}`)
         : !loaded
@@ -212,11 +219,12 @@ export function TaskViewPanel(props: {
     // ③ 提示词（最下；约 5 行截断；右侧操作组 = 源码/预览 + 展开/收起，全部**就地生效**，不做全屏）。
     //   短提示（≤ PROMPT_SHORT_MAX 字）直接整段显示、不截断、也不给展开钮（用户 2026-10-05：短到不用展开）。
     h('section', { className: 'dsh-tdt-ed-view-block' },
-      h('div', { className: 'dsh-tdt-ed-view-head' },
-        h('span', { className: 'dsh-tdt-ed-view-tag' },
-          h(IconThinkOutlineRegular, { size: 12 }), t('editorViewPrompt')),
-        hasPrompt
-          ? h('span', { className: 'dsh-tdt-ed-view-head-actions' },
+      h(SectionHead, {
+        accent: 'business',
+        icon: h(IconThinkOutlineRegular, { size: 12 }),
+        title: t('editorViewPrompt'),
+        right: hasPrompt
+          ? h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
             // 源码 / 预览（重用基础层 `Segmented`；源码 = 只读代码视图，不可编辑）。
             h(Segmented, {
               id: 'dsh-tdt-ed-view-promptmode',
@@ -244,10 +252,10 @@ export function TaskViewPanel(props: {
             )),
           )
           : null,
-      ),
+      }),
       // 文档区：极淡底包住整段（源码 / 预览 都是一份文档 / 代码），与上方标签拉开距离（r13 续）。
       hasPrompt
-        ? h('div', { className: 'dsh-tdt-ed-view-promptbox' },
+        ? h(Surface, { tone: 'subtle', border: 'none', radius: 'sm', padding: 'sm', style: { marginTop: 8 } },
           h('div', { className: `dsh-tdt-ed-view-prompt${promptOpen || isShort ? ' dsh-tdt-ed-view-prompt--open' : ''}` },
             promptMode === 'source'
               ? h(CodeViewer, { text: draft.prompt, path: 'prompt.md', t: coreT })

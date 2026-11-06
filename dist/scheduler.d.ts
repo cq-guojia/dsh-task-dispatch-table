@@ -79,4 +79,9 @@ export declare function createScheduler(opts: {
     assets?: () => AssetPaths | null;
     /** 主界面运行态内存索引（2026-09-30）；未装配则跳过（不影响调度）。 */
     runtime?: RuntimeIndex;
+    /**
+     * 老任务存的工作区是**标题**（用户 2026-11-06）：按标题解析成功后就地改存 id 并落盘。
+     * 未传 ⇒ 只解析不改写（目录模式 / 测试）。
+     */
+    healWorkspaceId?: (taskId: string, workspaceId: string) => void;
 }): Scheduler;

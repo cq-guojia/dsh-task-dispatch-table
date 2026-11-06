@@ -12,7 +12,7 @@
 // 拿不到就整块不渲染（返回 null），绝不显示假文件。
 import { createElement as h, useState } from 'react'
 import { FileTypeIcon, IconChevronDownOutlineRegular, IconChevronUpOutlineRegular, IconFolderCloseRegular } from '@deepseek-ai/dsh-client-ui-primitives'
-import { MarqueeText, ensureControlsStyle } from './ui'
+import { Button, MarqueeText, ensureControlsStyle } from './ui'
 import { baseNameOf } from './format'
 import type { Translate } from './locales'
 
@@ -39,35 +39,33 @@ export function ProcessFiles(props: {
     className: className === undefined ? 'dsh-tdt-proc' : `dsh-tdt-proc ${className}`,
     'data-process-files': true,
   },
-    h('button', {
-      type: 'button',
-      className: 'dsh-tdt-proc-head',
+    h(Button, {
+      variant: 'ghost',
+      size: 'sm',
+      block: true,
       'aria-expanded': open,
       onClick: () => { setOpen((value) => !value) },
-    },
-      h('span', null, t('procFilesTitle', { count: list.length })),
-      open ? h(IconChevronUpOutlineRegular, { size: 12 }) : h(IconChevronDownOutlineRegular, { size: 12 }),
-    ),
+      iconRight: open ? h(IconChevronUpOutlineRegular, { size: 12 }) : h(IconChevronDownOutlineRegular, { size: 12 }),
+      style: { justifyContent: 'space-between', fontSize: 'var(--dshpc-font-sm)', fontWeight: 400 },
+    }, t('procFilesTitle', { count: list.length })),
     open
       ? h('div', { className: 'dsh-tdt-proc-list' },
         list.map((path) => {
-          // 与既有文件行同一口径：行内文件按钮基础层 `.dsh-tdt-filechip--inline`（图标 + 名字 + 跑马灯）。
+          // 内联文件件（宽度跟内容走）：走核心 `.dshpc-filechip--inline`（2026-11-06 改接，不再自绘 hover）。
           const body = [
             isDirPath(path) ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
-            h(MarqueeText, { text: baseNameOf(path), title: path, style: { maxWidth: '40ch', minWidth: 0 } }),
+            h(MarqueeText, { text: baseNameOf(path), style: { maxWidth: '40ch', minWidth: 0 } }),
           ]
           return onOpen === undefined
             ? h('span', {
               key: path,
-              className: 'dsh-tdt-filechip dsh-tdt-filechip--inline',
-              title: path,
+              className: 'dshpc-filechip dshpc-filechip--inline',
               'data-noclick': true,
             }, ...body)
             : h('button', {
               key: path,
               type: 'button',
-              className: 'dsh-tdt-filechip dsh-tdt-filechip--inline',
-              title: path,
+              className: 'dshpc-filechip dshpc-filechip--inline',
               onClick: () => { onOpen(path) },
             }, ...body)
         }),

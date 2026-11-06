@@ -123,7 +123,7 @@
 | `--dshpc-focus` | `--dsw-alias-state-business-primary` | 键盘焦点环。⚠️ **不用 `--dsw-focus-ring-color`**：宿主已把它定义为 `transparent`，`var()` 兜底不会生效 ⇒ 焦点环会隐身 |
 
 > ✅ **变量名已逐一核实**（2026-10-01，宿主 0.2.0-rc.2，解包 theme + primitives + conversation + chat + renderer 五包）：上表每个宿主变量都有真源定义，圆角 / 字号 / 语义色真值见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §主题与设计变量。**外部事实只有一个真源在那份文档，本文只记「我们映射成什么」。**
-
+>
 > ⚠️ **2026-11-05 迁移的观感漂移**（核心 `0.33.3` 实测）：`hover/active` 由「映射宿主 alias」改为固定 rgba（亮色 ≈6% → 10% / 18%，暗色 14% / 24%）；`business` 暗色段固定 `#4c6bd8`、不跟随宿主品牌色。属核心基线取舍，本仓接受；若要回退需推动核心或本仓局部覆盖（待用户拍板）。
 
 ### 4.3 几何 / 排版 / 动效 token
@@ -160,6 +160,7 @@ body[data-ds-dark-theme]{
 定义在 body 上零调用点成本；token 名统一带 `--dshpc-` 前缀，不会和宿主变量打架。
 
 两条硬规则：
+
 1. **默认段优先**：能用 `--dsw-alias-*` 表达的，一律不要写覆盖段（alias 自己随主题变）。
 2. **覆盖段只允许出现在 核心 token 层**，且只覆盖「固定中性面 / 反色面」这类语义（现有 7 处 `body[data-ds-dark-theme]` 全部收编到这里）。
 
@@ -235,23 +236,36 @@ body[data-ds-dark-theme]{
 
 | 控件 | variant 轴 | size 轴（全部映射 24/28/32） | 唯一实现位置 |
 |---|---|---|---|
-| 按钮 | `primary` / `outline` / `ghost` / `danger`（+ 修饰类 `--link` / `--danger-ink`）。**链接型文字钮 = `ghost` + `--link`**（无边框 / 链接色 / hover 下划线）—— 2026-10-04 起执行记录页前置格的「查看会话」在消费它（本轮**只消费、未新增资产**） | sm / md / lg（默认 lg） | `ui/Button.tsx` + `ui/controls-css.ts` ✅ |
-| 图标钮 | `plain`（默认）/ `outline` / `danger` | sm / md / lg（默认 lg） | `ui/Button.tsx`（`IconButton`）✅ |
+| 按钮 | 核心 `Button`：`primary` / `outline` / `ghost` / `link` / `toolbar`。**行内文字链 = `link`**（无边框 / 链接色 / hover 下划线），支持 `icon` / `iconRight` / `block` | sm / md / lg | 核心 `dsh-plugin-core/ui` 的 `Button` ✅ **2026-11-06 全站改接**（本仓不再自绘按钮皮肤） |
+| 图标钮 | 核心 `IconButton`：`plain`（默认）/ `outline` / `danger`；**`background` 可给底色**（不传=无底，hover 由核心按该色压深） | sm / md / lg | 核心 `dsh-plugin-core/ui` 的 `IconButton` ✅ **2026-11-06 改接**；基础信息「任务会话」放大镜用它给**灰色底座**（`background: var(--dshpc-chip-bg)` + `title: ''`），不再自绘 18px 底 |
 | 输入框 / 前缀框 / 数字框 | 输入框 `error`（描红）；数字框显式 ±、`inputWidth` 可调宽度 | sm / md / lg（默认 lg） | `ui/Field.tsx` ✅ |
 | 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽；跑马灯由核心默认启用） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，核心 `Picker` 薄包装）✅ |
 | **任务选择器（带搜索）** | 见 §5.4：在 `SelectField` 之上加**搜索框 + 最近 N 条/更多 + 外部作用域** | sm / md / lg（默认 lg） | `ui/TaskPicker.tsx` ✅ **2026-10-04 落码**（执行记录总查询页在用；不许业务文件自己拼 Input + Menu） |
-| **产出物图标 chip** | 见 §5.5：28×28 上的官方文件类型图标（**只给图标**，名字走 `title`），**底板平时透明、hover 才浮出** | —（固定 28，同 `sm` 行高观感） | `ui/controls-css.ts` 的 `.dsh-tdt-chip` ✅ **2026-10-04 收编**：卡片「执行记录」面板 + 执行记录总查询页共用；此前两页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，同一页面里谁后注册谁生效、互相污染 |
-| **行式文件按钮** | 见 §5.6：一行一个文件 = 「官方文件类型图标（14px）+ 文件名（溢出省略号）」，**平时透明、hover 才出浅底** | `--block` / `--inline` | `ui/controls-css.ts` 的 `.dsh-tdt-filechip` ✅ **2026-10-04 收编**（原 `task-list.tsx` 的 `.dsh-tdt-info-out`）：卡片「上次执行」产出物清单 / 附件区 / 执行记录页展开区三处共用 |
+| **产出物图标 chip** | 见 §5.5：28×28 上的官方文件类型图标（**只给图标**，全名走官方 `Tooltip` / 跑马灯，**不挂原生 title**），**底板平时透明、hover 才浮出** | —（固定 28，同 `sm` 行高观感） | `ui/controls-css.ts` 的 `.dsh-tdt-chip` ✅ **2026-10-04 收编**：卡片「执行记录」面板 + 执行记录总查询页共用；此前两页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，同一页面里谁后注册谁生效、互相污染 |
+| **行式文件按钮** | 见 §5.6：一行一个文件 = 「官方文件类型图标（14px）+ 文件名（溢出省略号 / 跑马灯）」，**平时透明、hover 才出浅底**，左右内边距 6px，`disabled` 灰字不可点 | `--block` / `--inline` | **核心 `.dshpc-filechip`**（核心 P2 的全站唯一实现，随 `Button` / `IconButton` 的样式注入一并生效）✅ **2026-11-06 改接**：产出物清单 / 附件行 / 过程文件 / 执行记录展开区四类使用点直接挂核心类名；本仓 `.dsh-tdt-filechip` 已删，**不许再自绘第二份皮肤** |
 | 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | 核心 `dsh-plugin-core/ui` 的 `DateTimePicker`（单值 / 区间）✅ **2026-11-06 改接**；⚠️ 无纯时分档 |
 | 提示（Toast） | success / error / info / warning | — | 核心 `notify` / `showToast`（Sonner，共享 Toaster）✅ **2026-11-06 改接** |
 | Loading（浮动加载 pill） | — | — | `ui/Loading.tsx` + `ui/loading-css.ts` ✅ |
-| 卡 / 浮层外壳 | — | — | ✅ 编辑器内容卡 `.dsh-tdt-ed-card` 单一可复用类；**外壳（会话弹窗 / 任务编辑分栏）自 2026-11-06 起归核心**（`adv/session` 的 `dshpc-*` 与 `PanelDock` 的 `dshpc-dock__panel`），本仓 `.dsh-tdt-ed-panel` 已删（U20 #4 + 2026-11-06；见 [`ui-style-guide.md`](ui-style-guide.md) §三） |
+| 卡 / 浮层外壳 | — | — | **容器皮肤（底 / 边 / 圆角 / 内距）归核心 `Surface`**（圆角契约唯一真源：容器档 12px）；需要点击 / 拖拽、`Surface` 接不了事件的容器用 `surfaceClass({...})` 取核心类名挂到自建元素上（**不许复制数值**）。浮层外壳见 `adv/session` 与 `PanelDock` ✅ **2026-11-06 改接** |
+| 区块头 | 核心 `SectionHead`（`icon` / `title` / `right` / `accent`） | — | 核心 `dsh-plugin-core/ui` 的 `SectionHead` ✅ **2026-11-06 改接**（编辑卡 / 查看档块标题不再手拼 `.dsh-tdt-ed-card-head` / `.dsh-tdt-ed-view-tag`） |
+| 标签 / 徽标 | 核心 `Chip`（`tone` / `size` / `minWidth`）；⚠️ 无 `title` / `disabled`，`onClick` 不收事件 | xs / sm | 核心 `dsh-plugin-core/ui` 的 `Chip` ✅ **2026-11-06 改接**（状态标签 / 附件类型 / 草稿标记 / 自定义徽标；需停用或 `stopPropagation` 的场合仍保留本地实现，见 §5.3） |
+| 加载指示 | 核心 `Loader`（`ring` / `blocks` × xs~xl），颜色走 `currentColor` | — | 核心 `dsh-plugin-core/ui` 的 `Loader` ✅ **2026-11-06 改接**（运行态转圈不再自写 `@keyframes`） |
+| 多行文本 | 核心 `Textarea` | — | 核心 `dsh-plugin-core/ui` 的 `Textarea` ✅ **2026-11-06 改接**（JSON 逃生口不再用原生 `<textarea>`） |
 
 ### 5.3 官方件策略（**优先用官方的，但观感只覆盖一次**）
 
 - **优先官方件**：`Switch` / `Input` / `Menu` / `Button` / `Tooltip` / `Modal` / `StateDot` —— 它们自带明暗自适应与可访问性，能用就用。**分段（单选 / 多选 / 单段）统一用自研 `Segmented`**，不优先官方 `SegmentedControl`（官方仅支持单选、且指示器算式脆弱，已被自研件取代）。
 - **覆盖集中一处**：官方件的观感偏差（如「Switch 打开要绿」「Input 高度 32→26」）只在 `official-skins.ts` 写一次；选择器统一带 `role` / 标签提升特异性（现有两条注释已确立的做法：`task-editor-css.ts:30`、`task-list.tsx:124` —— 与注入顺序无关）。
+- **核心没有的（2026-11-06 全量审计结论）**：以下控件核心无对应实现，保留本仓自写，待核心补齐再改接 ——
+  标签—值「信息纸」（Descriptions）、执行记录时间轴 / 记录行、日历网格与日格、
+  可点数字/序号徽标（depmark）、虚线态 Chip（「计划」）、状态小圆点、可点击的虚线容器（`Surface` 无 `onClick`，需外层包一层）、
+  `Chip` 缺 `title` / `disabled` / 事件参数（需 `stopPropagation` 的会话标签只能用本地实现）。
+- **悬停提示统一口径（2026-11-06 立）**：**全站 DOM 元素禁止原生 `title`**（浏览器自带灰框，观感与核心不一致）。
+  确有必要的悬停说明一律用官方 `Tooltip`（`@deepseek-ai/dsh-client-ui-primitives`，核心也用它的注入位渲染），
+  `Tooltip` 的子元素必须是**可挂 ref 的真实 DOM**（`Button` / `Chip` / `Picker` 等核心组件 ⇒ 外面包一层 `span`）；
+  纯展示、文字已完整、`MarqueeText` 已能滚动看全名的场合**直接删掉提示**，不补气泡。
+  ⚠️ 核心 `IconButton` 默认把 `label` 写成原生 `title` ⇒ 不想要气泡时必须显式传 `title: ''`。
 - **已知覆盖限制**（写进手册，避免再踩）：
   - `SegmentedControl` 指示器靠 `--dsh-segment-count/index` 算位置（**已核实：两个变量由官方组件 JS 内联写在 tablist 上**，官方基线 = padding 4px / gap 2px / 段高 28 / 字 13，出处 `@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2` `lib/SegmentedControl.module.css`）⇒ 外部改 padding 必须同步改算式（本仓 `task-editor-css.ts:104-106` 正是这么覆写的）⇒ **新体系不再覆写官方指示器，改自绘统一体**。
   - `Input`：`className` 落外层 `.wrap`、`style` 落内层 `<input>`（`primitives.d.ts:172`）。
@@ -324,19 +338,20 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string
 | 不可点 | `:disabled` 保持透明 + 灰色 + `cursor:default`（无会话 / 预览面未就位时不给假入口） |
 | 收编原因 | 该皮肤原本在 `task-list.tsx`（`.dsh-tdt-rec-out`）与执行记录页（**同名不同皮**：一个带文件名 + `--dshpc-plate`，一个 28×28 图标 + `--dshpc-chip-bg`）各写一份，两份 CSS 都注入同一页面 ⇒ 后注册者覆盖前者、两页外观互相污染 |
 
-### 5.6 行式文件按钮（图标 + 文件名，2026-10-04 收编，**全站唯一实现**）
+### 5.6 行式文件按钮（图标 + 文件名，2026-11-06 改接核心）
 
-用户 2026-10-04 点名：「这个产出物，你可以去参考那个……在任务配置里面点开一个任务，不是有附加文件吗？……本来它就有一个框，是鼠标移上去才显示的。」
+用户 2026-11-06 点名：「你右边那个『产出和其他产出』文件的，鼠标移上去的效果又是自己手搓的吧？为什么不用核心？」
 
 | 项 | 口径 |
 |---|---|
-| 落点 | 同 §5.5（`ui/controls-css.ts` 的 `BUTTON_CSS` 段） |
-| 类名 | `.dsh-tdt-filechip` + 形态修饰类 `--block`（撑满父宽、一项一行）/ `--inline`（内容宽、跟在文字后头） |
-| 底色 | **平时透明、`:hover` 才出 `--dshpc-chip-bg`**（原 `.dsh-tdt-info-out` 的观感，用户 2026-10-03 定的） |
+| 落点 | **核心 `dsh-plugin-core` 的 `.dshpc-filechip`**（核心 P2 已给全站唯一实现，随 `Button` / `IconButton` 的样式包注入；本仓不再保留副本） |
+| 类名 | `.dshpc-filechip` + 形态修饰类 `--block`（撑满父宽、一项一行）/ `--inline`（内容宽、跟在文字后头） |
+| 底色 | **平时透明、`:hover` 才出 `--dshpc-hover`**；左右内边距 6px（hover 底色不贴文字） |
 | 尺寸 | 图标 `FileTypeIcon size 14`；`--block`：`gap 6px` / `padding 4px 6px` / `font-size --dshpc-font-xs`；`--inline`：`gap 4px` / `padding 2px 6px` / `font-size --dshpc-font-sm`；圆角 `--dshpc-radius-xs` |
-| 不可点 | `:disabled` 保持透明 + 灰色（不预览就不可点，不给假入口） |
-| 收编原因 | 该皮肤原只写在 `task-list.tsx` 的 `TASK_LIST_CSS`（`.dsh-tdt-info-out`），执行记录页展开区要用同一种观感 ⇒ 上提基础层，避免再出现「各写一份外观」（同名不同皮的坑刚踩过） |
-| 三处共用 | 卡片基础信息右栏「上次执行」产出物清单（`--block`）、附件区（`--inline`）、执行记录页展开区（`--block`） |
+| 不可点 | `button` 加 `disabled` ⇒ 灰字、不预览（不给假入口） |
+| 使用点 | 卡片基础信息右栏产出物清单（`--block`）、过程文件 / 执行记录展开区（`--inline`） |
+| 附件行 | **不走本类**：附件是核心 `Chip`（灰面 pill，见 §5.2 标签行）；查看档与编辑页**同一实现** |
+| 本仓旧实现 | `.dsh-tdt-filechip` 已删（`ui/controls-css.ts` 只留一句「已改接核心」注释），**不许再写第二份** |
 
 ---
 

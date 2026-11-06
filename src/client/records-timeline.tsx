@@ -42,16 +42,18 @@ import { baseNameOf, formatDateTime, formatDurationHms, formatPlanStamp, formatT
 import { resolvedDepsOf, type ResolvedDependency } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { ProcessFiles } from './process-files'
+// 工作区标识口径（id ↔ 标题）唯一实现（用户 2026-11-06 存 id + 向下兼容）。
+import { workspaceLabelOf } from './workspace-options'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
-  Button, ensureRunningStyle, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, StripCard, TaskPicker, type CardAccent,
+  Button, Chip, ensureRunningStyle, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, StripCard, TaskPicker, type CardAccent,
   applyStyle,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
 import { useEvents, useResync } from './event-subscribe'
 import { RUN_EVENT_TYPES } from '../event-catalog.js'
 import { interpolateTranslate, type Translate } from './locales'
-// 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
+// 任务名可点（r12）走核心 Button `link` 档。
 import { ensureTaskInfoStyle } from './task-info-css'
 import { renderNextExec } from './time-text'
 
@@ -142,9 +144,6 @@ const RECORDS_CSS = `
   background:var(--dshpc-fg-3);color:var(--dshpc-on-signal);
   font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);white-space:nowrap;}
 /* 标签底色按语义取实面色（块底的浅底已归核心 StripCard，这里只服务这枚小牌子）。 */
-.dsh-tdt-rec-tag--bad{background:var(--dshpc-danger);}
-.dsh-tdt-rec-tag--warn{background:var(--dshpc-warning);}
-.dsh-tdt-rec-tag--busy{background:var(--dshpc-business);}
 /* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
 .dsh-tdt-rec-tag--planned{background:transparent;color:var(--dshpc-business);border:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;}
@@ -190,7 +189,6 @@ const RECORDS_CSS = `
 /* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --dshpc-hover）；框内任务名 hover **不变色**
    （整框已给反馈，名字再变蓝是多余——用户 2026-10-05；只在此作用域关掉 .dsh-tdt-info-dep 的 hover 蓝）。 */
 .dsh-tdt-rec-dep--click:hover{background:var(--dshpc-chip-bg-hover);}
-.dsh-tdt-rec-dep .dsh-tdt-info-dep:hover{color:var(--dshpc-fg);}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
 .dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}
@@ -516,10 +514,10 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                 })))
             : h(Tooltip, { label, side: 'top' },
               h('span', { style: { flex: '0 1 auto', minWidth: 0, display: 'flex' } },
-                h('button', {
-                  type: 'button',
-                  className: 'dsh-tdt-info-dep',
-                  style: { minWidth: 0 },
+                h(Button, {
+                  variant: 'link', size: 'sm',
+                  // 整行点击已是反馈，名字再变蓝是多余（用户 2026-10-05）：色随文，只留可点。
+                  style: { minWidth: 0, color: 'inherit', fontSize: 'inherit' },
                   onClick: (event: { stopPropagation: () => void }) => {
                     event.stopPropagation()
                     onViewTask(row.task_id)
@@ -589,21 +587,23 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               key: path,
               label: baseNameOf(path),
               side: 'top',
-            }, h('button', {
-              type: 'button',
-              className: 'dsh-tdt-chip',
+            }, h(IconButton, {
+              variant: 'plain',
+              size: 'md',
+              icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
+              label: baseNameOf(path),
+              // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
+              title: '',
               disabled: !canOpenFile,
-              onClick: (event: { stopPropagation(): void }) => {
+              onClick: (event) => {
                 event.stopPropagation()
                 if (canOpenFile) openFile?.(sid as string, path)
               },
-            }, path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 })))),
+            }))),
             outputs.length > 3
-              ? h('button', {
-                type: 'button',
-                className: 'dsh-tdt-chip dsh-tdt-chip--label',
-                onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onToggle(row.id) },
-              }, `+${outputs.length - 3}`)
+              // Chip 的 onClick 不收事件 ⇒ 外层 span 只负责 stopPropagation（别把整行展开）。
+              ? h('span', { onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+                h(Chip, { size: 'xs', onClick: () => { onToggle(row.id) } }, `+${outputs.length - 3}`))
               : null,
           ),
         // 只有这个按钮开会话（没有会话就不出现 —— 不给假入口；块本身仍可展开）。
@@ -612,7 +612,10 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         plannedTagNode,
         statusTag === null
           ? null
-          : h('span', { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text),
+          : h(Chip, {
+            size: 'xs',
+            tone: statusTag.tone === 'bad' ? 'danger' : statusTag.tone === 'warn' ? 'warning' : statusTag.tone === 'busy' ? 'business' : 'neutral',
+          }, statusTag.text),
         canOpenSession
           ? h(Button, {
             variant: 'outline',
@@ -632,6 +635,8 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               size: 'sm',
               icon: h(IconChevronDownOutlineRegular, { size: 14 }),
               label: t('listExpandHint'),
+              // 气泡不是必要信息（箭头自明）⇒ 连同 IconButton 默认的原生 title 一起压掉（2026-11-06）。
+              title: '',
               onClick: () => { onToggle(row.id) },
               'aria-expanded': open,
               style: { transform: open ? 'rotate(180deg)' : 'none' },
@@ -652,15 +657,14 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
             outputs.map(path => h('button', {
               key: path,
               type: 'button',
-              title: path,
-              // 与附件区同款：行内（--inline，不占整行）+ 行式文件按钮基础层唯一实现
-              className: 'dsh-tdt-filechip dsh-tdt-filechip--inline',
+              // 与附件区同款：行内（核心 `--inline`，不占整行），hover 灰底归核心
+              className: 'dshpc-filechip dshpc-filechip--inline',
               disabled: !canOpenFile,
               onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
             },
               path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
               // 文件名**限宽 40ch + 超长跑马灯**（与卡片附件区同一口径；用户：设个最大宽度，超过了就跑马灯）
-              h(MarqueeText, { text: baseNameOf(path), title: path, style: { maxWidth: '40ch', minWidth: 0 } }),
+              h(MarqueeText, { text: baseNameOf(path), style: { maxWidth: '40ch', minWidth: 0 } }),
             )),
           ),
         // 过程文件（次级）：跟在主文件那排之后，同样可点开预览。
@@ -702,9 +706,8 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                         ? h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
                           h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task)))
                         : h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
-                          h('button', {
-                            type: 'button',
-                            className: 'dsh-tdt-info-dep',
+                          h(Button, {
+                            variant: 'link', size: 'sm',
                             style: { minWidth: 0, fontSize: 'inherit' },
                             onClick: (event: { stopPropagation(): void }) => {
                               event.stopPropagation()
@@ -726,21 +729,25 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                   h('div', { className: 'dsh-tdt-rec-depright' },
                     depOuts.length === 0
                       ? null
-                      : h('span', { className: 'dsh-tdt-rec-chiprow', title: t('colOutputs') },
+                      : h('span', { className: 'dsh-tdt-rec-chiprow' },
                         // ≤上限全显；**超出就少显示一个、末位换成「…」**（用户 2026-10-05：点它进那次上游的会话看全量）。
                         depOuts.slice(0, depOuts.length > DEP_OUT_MAX ? DEP_OUT_MAX - 1 : DEP_OUT_MAX).map(path => h(Tooltip, {
                           key: path,
                           label: baseNameOf(path),
                           side: 'top',
-                        }, h('button', {
-                          type: 'button',
-                          className: 'dsh-tdt-chip',
+                        }, h(IconButton, {
+                          variant: 'plain',
+                          size: 'md',
+                          icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
+                          label: baseNameOf(path),
+                          // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
+                          title: '',
                           disabled: !depCanOpen,
-                          onClick: (event: { stopPropagation(): void }) => {
+                          onClick: (event) => {
                             event.stopPropagation()
                             if (depCanOpen) openFile?.(depSid as string, path)
                           },
-                        }, path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 })))),
+                        }))),
                         depOuts.length > DEP_OUT_MAX
                           ? h('button', {
                             type: 'button',
@@ -1143,7 +1150,8 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
                   key: row.id,
                   row,
                   label: titleById.get(row.task_id) ?? row.task_id,
-                  workspace: workspaceOf(row),
+                  // 展示当前标题（定义里存 id）；查不到的工作区（历史执行）原样显示路径末段。
+                  workspace: workspaceLabelOf(workspaces, workspaceOf(row)),
                   t,
                   tt,
                   // 前置清单来自实例快照（JSON 字符串）；原样传，条目内用 resolvedDepsOf 解析（零请求）。

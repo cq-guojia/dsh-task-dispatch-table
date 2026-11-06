@@ -132,7 +132,7 @@ export interface SaveValidation {
  * ④ 前置任务必须指向已存在的任务（**停用可以、不存在不行**）。
  * `title` / `code` **不做**格式与唯一性校验（决策 30：它们只是人读字段）。
  */
-export declare function validateDefinitionForSave(def: TaskDefinitionInput, existingIds: ReadonlySet<string>): SaveValidation;
+export declare function validateDefinitionForSave(def: TaskDefinitionInput, existingIds: ReadonlySet<string>, knownWorkspaces?: ReadonlySet<string>): SaveValidation;
 export interface UpsertResult {
     json: string;
     mode: 'create' | 'update';
@@ -167,6 +167,17 @@ export interface SetEnabledResult {
  * 定义不存在 ⇒ error（404 语义）；值没变 ⇒ changed=false（不落库不审计）。
  */
 export declare function setEnabledDefinitionInline(raw: string, id: string, enabled: boolean): SetEnabledResult;
+export interface SetWorkspaceResult {
+    json: string;
+    changed: boolean;
+    error: string | null;
+}
+/**
+ * 把一条任务的 `target.workspace` 从「工作区标题」改存为「工作区 id」（用户 2026-11-06：
+ * 向下兼容自愈 —— 老任务存标题，执行时按标题解析成功后就地写成 id，下次改名不再失联）。
+ * 定义不存在 / 表非法 / 值没变 ⇒ 原样返回（不落库）。
+ */
+export declare function setWorkspaceDefinitionInline(raw: string, id: string, workspace: string): SetWorkspaceResult;
 /** 把 ISO 8601 时长解析成毫秒。 */
 export declare function durationMs(iso: string): number;
 /** 用 Intl 验证 IANA 时区名（schedule.timezone 缺省 = 宿主时区）。 */

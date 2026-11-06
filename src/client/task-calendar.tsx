@@ -38,6 +38,8 @@ import { calendarLabelsOf } from './editor-fields'
 import { interpolateTranslate, type Translate } from './locales'
 import type { TaskOverviewRow } from './task-overview'
 import { IconClockOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+// 工作区展示名（定义里存 id，日历显示当前标题）。
+import { workspaceLabelOf } from './workspace-options'
 
 // ── 样式（走基础层注入器；只消费 var(--dshpc-*)，不自建 <style>、不硬编码色值）──
 const CALENDAR_CSS = `
@@ -150,8 +152,6 @@ const CALENDAR_CSS = `
 
 .dsh-tdt-cal-time{font-variant-numeric:tabular-nums;}
 /* 拉开区里可点的名字（任务名 / 前置任务名）：链接色 + hover 下划线，与执行记录页「任务名可点」同观感 */
-.dsh-tdt-cal-link{border:0;background:none;padding:0;font:inherit;color:var(--dshpc-business);cursor:pointer;text-align:left;}
-.dsh-tdt-cal-link:hover{text-decoration:underline;}
 /* 拉开区里的小字标注（「计划」/ 条数）—— 与格内标签类重名会互相打架，故单独命名 */
 .dsh-tdt-cal-mini{flex:none;font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);}
 /* 面板头里的日期小字行：时钟图标 + 日期 · 星期 · N 条（与执行记录页同款）。 */
@@ -369,11 +369,6 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   const workspaceOf = useCallback((id: string): string => {
     return rowsRef.current.find(item => item.id === id)?.workspace ?? ''
   }, [])
-  /** 可点的任务名（点 ⇒ 右侧栏查看档；没给 onViewTask ⇒ 降级纯文本）。 */
-  const nameNode = useCallback((id: string, name: string): ReturnType<typeof h> =>
-    onViewTask !== undefined
-      ? h('button', { key: id, type: 'button', className: 'dsh-tdt-cal-link', title: name, onClick: () => { onViewTask(id) } }, name)
-      : h('span', { key: id }, name), [onViewTask])
 
   // 按本地日分桶（与执行记录页同一抉择：用 `scheduled_at` 的本地日，不用 `logical_date`）。
   const byDay = useMemo(() => {
@@ -530,7 +525,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
           updated_at: item.entry.scheduledAt,
         },
         label: item.entry.title,
-        workspace: workspaceOf(item.entry.taskId),
+        workspace: workspaceLabelOf(workspaces, workspaceOf(item.entry.taskId)),
         t,
         tt,
         snapshot: null,
@@ -552,7 +547,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       key: item.row.id,
       row: item.row,
       label: item.name,
-      workspace: workspaceOf(item.row.task_id),
+      workspace: workspaceLabelOf(workspaces, workspaceOf(item.row.task_id)),
       t,
       tt,
       snapshot: snapshots.get(item.row.id) ?? null,
@@ -574,32 +569,32 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       // ── 一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（与月份同一行、居右）──
       h('div', { className: 'dsh-tdt-cal-nav' },
         // 双箭头（两个并排 chevron）= 走一年；左/右各一个。
-        h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.prevYear, title: calLabels.prevYear,
+        h(Tooltip, { label: calLabels.prevYear, side: 'top' }, h(IconButton, {
+          variant: 'plain', size: 'md', label: calLabels.prevYear, title: '',
           icon: h('span', { style: { display: 'inline-flex', alignItems: 'center' } },
             h('span', { style: { display: 'inline-flex' } }, h(IconChevronLeftOutlineRegular, { size: 15 })),
             h('span', { style: { display: 'inline-flex', marginLeft: -9 } }, h(IconChevronLeftOutlineRegular, { size: 15 }))),
           onClick: () => { stepYear(-1) },
-        }),
+        })),
         // 单箭头 = 走一个月。
-        h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.prevMonth, title: calLabels.prevMonth,
+        h(Tooltip, { label: calLabels.prevMonth, side: 'top' }, h(IconButton, {
+          variant: 'plain', size: 'md', label: calLabels.prevMonth, title: '',
           icon: h(IconChevronLeftOutlineRegular, { size: 16 }),
           onClick: () => { stepMonth(-1) },
-        }),
+        })),
         h('span', { className: 'dsh-tdt-cal-title' }, calLabels.monthTitle(y, m)),
-        h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.nextMonth, title: calLabels.nextMonth,
+        h(Tooltip, { label: calLabels.nextMonth, side: 'top' }, h(IconButton, {
+          variant: 'plain', size: 'md', label: calLabels.nextMonth, title: '',
           icon: h(IconChevronRightOutlineRegular, { size: 16 }),
           onClick: () => { stepMonth(1) },
-        }),
-        h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.nextYear, title: calLabels.nextYear,
+        })),
+        h(Tooltip, { label: calLabels.nextYear, side: 'top' }, h(IconButton, {
+          variant: 'plain', size: 'md', label: calLabels.nextYear, title: '',
           icon: h('span', { style: { display: 'inline-flex', alignItems: 'center' } },
             h('span', { style: { display: 'inline-flex' } }, h(IconChevronRightOutlineRegular, { size: 15 })),
             h('span', { style: { display: 'inline-flex', marginLeft: -9 } }, h(IconChevronRightOutlineRegular, { size: 15 }))),
           onClick: () => { stepYear(1) },
-        }),
+        })),
         h(Button, { variant: 'outline', size: 'sm', onClick: goToday }, calLabels.today),
         h('div', { className: 'dsh-tdt-cal-right' },
           h(SelectField, {

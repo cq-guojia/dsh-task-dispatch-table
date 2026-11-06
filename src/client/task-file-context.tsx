@@ -20,7 +20,7 @@
 // · 目录用官方文件夹图标；**跨工作区的目录不可点**（当前会话的工作区列不出它 ⇒ 点了必报错）。
 import { createElement as h, useState } from 'react'
 import { FileTypeIcon, IconFolderCloseRegular } from '@deepseek-ai/dsh-client-ui-primitives'
-import { MarqueeText } from './ui'
+import { Button, MarqueeText } from './ui'
 import { formatDateTime } from './format'
 import type { ResolvedDependency } from '../deps.js'
 import type { Translate } from './locales'
@@ -139,8 +139,8 @@ function FileChip(props: { file: FileLine }): ReturnType<typeof h> {
   return h(clickable ? 'button' : 'span', {
     className: 'dsh-tdt-sv-tfc-file',
     ...(clickable
-      ? { type: 'button' as const, title: file.title, 'aria-label': file.title, onClick: file.onClick }
-      : { title: file.title, 'data-noclick': true }),
+      ? { type: 'button' as const, 'aria-label': file.title, onClick: file.onClick }
+      : { 'data-noclick': true }),
   },
     h('span', { className: 'dsh-tdt-sv-tfc-icon' },
       // 目录：官方 FileTypeIcon 按扩展名分类，尾斜杠 ⇒ 空扩展名 ⇒ 通用文件图标（不是文件夹）
@@ -151,7 +151,7 @@ function FileChip(props: { file: FileLine }): ReturnType<typeof h> {
     // 保证 `]` 和文件名之间不留缝。
     h('span', { className: 'dsh-tdt-sv-tfc-namewrap' },
       file.note === undefined ? null : h('span', { className: 'dsh-tdt-sv-tfc-note' }, `[${file.note}]`),
-      h(MarqueeText, { text: file.label, title: file.title, style: { minWidth: 0, flex: '1 1 auto' } }),
+      h(MarqueeText, { text: file.label, style: { minWidth: 0, flex: '1 1 auto' } }),
     ),
   )
 }
@@ -167,9 +167,8 @@ function FileLines(props: { files: readonly FileLine[]; t: Translate }): ReturnT
     shown.map((file, index) => h(FileChip, { key: `${file.key}#${index}`, file })),
     // 「全部 N 个」也排在**同一个横向流**里（末位），不另起一行。
     collapsible
-      ? h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-tfc-more',
+      ? h(Button, {
+          variant: 'link', size: 'sm',
           'aria-expanded': expanded,
           onClick: () => { setExpanded(value => !value) },
         }, t(expanded ? 'tfcCollapse' : 'tfcMore', { count: files.length }))
@@ -244,7 +243,7 @@ function ReceivedGroup(props: {
             // 方块**宽高相等**（width=height=14px，恒正方形，1～2 位数字都居中不撑长）；
             // 9px 小号数字不变。
             h('span', { className: 'dsh-tdt-sv-tfc-seq' }, String(index + 1)),
-            h('span', { className: 'dsh-tdt-sv-tfc-name', title: item.task }, item.taskTitle),
+            h('span', { className: 'dsh-tdt-sv-tfc-name' }, item.taskTitle),
             h('span', { className: 'dsh-tdt-sv-tfc-meta' }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt })),
           ),
           all.length === 0
@@ -259,9 +258,8 @@ function ReceivedGroup(props: {
         )
       }),
       collapsible
-        ? h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-tfc-more',
+        ? h(Button, {
+            variant: 'link', size: 'sm',
             'aria-expanded': expanded,
             onClick: () => { setExpanded(value => !value) },
           }, t(expanded ? 'tfcCollapse' : 'tfcMoreTasks', { count: ordered.length }))

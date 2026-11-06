@@ -29,6 +29,9 @@ export {
   Segmented,
   Button,
   IconButton,
+  Chip,
+  Surface,
+  surfaceClass,
   Input,
   PrefixedInput,
   NumberInput,
@@ -37,6 +40,7 @@ export {
   LiveText,
   Textarea,
   Loading,
+  Loader,
   RunningBlocks,
   FIELD_ANCHOR_STYLE,
   FIELD_LABEL_STYLE,
@@ -56,6 +60,8 @@ export {
   type LoadingProps,
   type TextareaProps,
   type SectionHeadProps,
+  type ChipProps,
+  type SurfaceProps,
   type DayCell,
 } from 'dsh-plugin-core/ui'
 export type { DayCell as CalendarCell } from 'dsh-plugin-core/ui'

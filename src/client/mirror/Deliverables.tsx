@@ -50,7 +50,6 @@ function DeliveredFileCard(props: {
       ? h('button', {
           type: 'button',
           className: ocOr('Deliverables', 'cardPreview', 'dsh-tdt-sv-deliv-cardpreview'),
-          title: file.path,
           'aria-label': t('deliverPreviewCard', { name: file.path }),
           onClick: (event: ReactMouseEvent<HTMLButtonElement>) => { event.stopPropagation(); onPreview() },
         })

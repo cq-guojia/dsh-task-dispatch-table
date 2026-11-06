@@ -15,10 +15,10 @@ import { createElement as h, Fragment, type ReactNode } from 'react'
 import { baseNameOf, formatDateTime, formatDurationHms, formatTokenCount, formatTokenDetail } from './format'
 import {
   FileTypeIcon, IconCheckCircleFillRegular, IconCloseCircleFillRegular,
-  IconFolderCloseRegular, IconLoadingOutlineRegular, IconSearchOutlineRegular,
+  IconFolderCloseRegular, IconSearchOutlineRegular, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
-import { MarqueeText } from './ui'
+import { Button, Chip, IconButton, Loader, MarqueeText } from './ui'
 import { outputsOf, type InstanceRow } from './query'
 import { ProcessFiles } from './process-files'
 import { statusTextOf } from './status-text'
@@ -80,7 +80,7 @@ export function StatusIcon(props: { status: string }): ReturnType<typeof h> {
   const status = props.status
   if (status === 'succeeded') return h(IconCheckCircleFillRegular, { size: 15, className: 'dsh-tdt-rec-ic-ok' })
   if (status === 'failed' || status === 'skipped') return h(IconCloseCircleFillRegular, { size: 15, className: 'dsh-tdt-rec-ic-bad' })
-  if (status === 'running' || status === 'dispatched') return h(IconLoadingOutlineRegular, { size: 15, className: 'dsh-tdt-rec-ic-run' })
+  if (status === 'running' || status === 'dispatched') return h(Loader, { variant: 'ring', size: 'sm', className: 'dsh-tdt-rec-ic-run' })
   return h('span', { className: 'dsh-tdt-rec-ic-idle' })
 }
 
@@ -187,7 +187,7 @@ export function taskInfoBaseFields(props: {
       label: t('listSectionAttachments'),
       children: view.attachments.length === 0
         ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, t('listNone'))
-        : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '2px 10px' } },
+        : h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 10px' } },
           view.attachments.map(item => {
             const absPath = item.path
             const anchor = item.anchorSessionId
@@ -198,19 +198,19 @@ export function taskInfoBaseFields(props: {
             // 用 MarqueeText：文字只在我自己的裁剪盒里跑，图标是隔壁 flex 项，跑马灯永远不会压到图标。
             const name = h(MarqueeText, {
               text: item.name,
-              title: item.name,
               style: { maxWidth: '40ch', minWidth: 0 },
             })
+            // 附件件 = 核心 `Chip`（2026-11-06 用户点名：原来那只是手搓按钮）：
+            // 20px 高与纸表格行高 `--dshpc-line-md` 相等 ⇒ 标签与值自然对齐（不再顶到上边线）。
             // 服务端已给出绝对路径 + 预览锚点会话时，附件可点开预览（同一 openFile 入口）；
-            // 缺任一个（老版本 / 拿不到锚点）⇒ 退回纯展示，绝不造假。
-            return absPath !== undefined && absPath !== null && anchor !== undefined && anchor !== null && onOpenFile !== undefined
-              ? h('button', {
-                // 行式文件按钮 = 基础层唯一实现（2026-10-04 收编；--inline = 内容宽、跟在文字后头）
-                key, type: 'button', title: absPath,
-                className: 'dsh-tdt-filechip dsh-tdt-filechip--inline',
-                onClick: () => { onOpenFile(anchor, absPath) },
+            // 缺任一个（老版本 / 拿不到锚点）⇒ 退回不可点的 Chip（`Chip` 无 `disabled`，不给 `onClick` 即可）。
+            const canOpen = absPath !== undefined && absPath !== null && anchor !== undefined && anchor !== null && onOpenFile !== undefined
+            return canOpen
+              ? h(Chip, {
+                key, className: 'dsh-tdt-info-file',
+                onClick: (): void => { onOpenFile(anchor, absPath) },
               }, icon, name)
-              : h('span', { key, style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } }, icon, name)
+              : h(Chip, { key, className: 'dsh-tdt-info-file' }, icon, name)
           }),
         ),
     }),
@@ -222,25 +222,21 @@ export function taskInfoBaseFields(props: {
         // 名字可点（用户 2026-10-05）⇒ 右侧栏以**查看档**打开它（入口见 `onViewTask`）。
         : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
           view.depends.map((dep, index) => {
-            const seq = h('span', {
-              style: {
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
-                minWidth: '18px', height: '18px', padding: '0 4px', boxSizing: 'border-box',
-                borderRadius: 'var(--dshpc-radius-xs)', background: 'var(--dshpc-chip-bg)',
-                color: 'var(--dshpc-fg-2)', fontSize: 'var(--dshpc-font-xs)',
-                fontVariantNumeric: 'tabular-nums',
-              },
-            }, String(index + 1))
+            const seq = h(Chip, { size: 'xs', minWidth: 18 }, String(index + 1))
             const label = `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`
-            // 可点：整体是按钮、hover 变蓝（`.dsh-tdt-info-dep`，与「任务会话」那行同款做法）。
+            // 可点：整体是核心 Button `link` 档、hover 变蓝（与「任务会话」那行同款做法）。
+            // 名字可能被省略 ⇒ 悬停全文走官方 `Tooltip`（不再用原生 title，2026-11-06）。
+            const nameText = h(Tooltip, { label: dep.title, side: 'top', maxWidth: 280 },
+              h('span', { className: 'dsh-tdt-ellipsis' }, label))
             return onViewTask === undefined
               ? h('span', {
                 key: dep.id, style: { display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0 },
-              }, seq, h('span', { className: 'dsh-tdt-ellipsis', title: dep.title }, label))
-              : h('button', {
-                key: dep.id, type: 'button', className: 'dsh-tdt-info-dep', title: t('infoViewTask'),
+              }, seq, nameText)
+              : h(Button, {
+                key: dep.id, variant: 'link', size: 'sm',
                 onClick: () => { onViewTask(dep.id) },
-              }, seq, h('span', { className: 'dsh-tdt-ellipsis' }, label))
+                style: { display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0 },
+              }, seq, nameText)
           }),
         ),
     }),
@@ -275,11 +271,19 @@ export function lastRunFields(props: {
     : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))
   const note = instance.note === null || instance.note === undefined ? '' : instance.note
   const timeOf = (iso: string | null): string => iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
-  // 「任务会话」：**无虚线、无边框**——小放大镜图标包一个**灰色小标签框**（提示可查看）+ 会话名，hover 整体变蓝。
-  // 颜色 / 图标框都在 class 里（inline 会盖掉 :hover）。会话名由服务端按 `sessionTitleOf` 单源下发；
-  // 缺名（旧行）退回会话 id，仍可点。
+  // 「任务会话」：放大镜走核心 `IconButton` 的 `background`（用户 2026-11-06：
+  // **要的就是灰色底座**，核心有这个能力）—— 底座、圆角、hover 压深全部由核心决定，不自绘。
+  // 会话名由服务端按 `sessionTitleOf` 单源下发，缺名（旧行）退回会话 id，仍可点。
   const sessionName = instance.session_title ?? sid ?? ''
-  const sessionIcon = h('span', { className: 'dsh-tdt-info-session-icon' }, h(IconSearchOutlineRegular, { size: 10 }))
+  // `IconButton` 必传 label（同时会写成原生 title）⇒ 明确传空 title 压掉悬停气泡。
+  const sessionButton = h(IconButton, {
+    variant: 'plain', size: 'sm',
+    icon: h(IconSearchOutlineRegular, { size: 12 }),
+    label: t('infoSession'), title: '',
+    background: 'var(--dshpc-chip-bg)', color: 'var(--dshpc-fg-2)',
+    disabled: !canOpenSession,
+    onClick: sid !== null && onOpenSession !== undefined ? () => { onOpenSession(sid) } : undefined,
+  })
   const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } }, h(MarqueeText, { text: sessionName }))
   const sessionLinkStyle: Record<string, string | number> = {
     display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', boxSizing: 'border-box',
@@ -288,12 +292,17 @@ export function lastRunFields(props: {
   }
   const sessionChip = sid === null || sessionName === ''
     ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, '—')
-    : canOpenSession
-      ? h('button', {
-        type: 'button', className: 'dsh-tdt-info-session', title: sessionName, style: sessionLinkStyle,
-        onClick: () => { onOpenSession(sid) },
-      }, sessionIcon, sessionLabel)
-      : h('span', { style: sessionLinkStyle, title: sessionName }, sessionIcon, sessionLabel)
+    : h('div', {
+      // 块级 flex + 最小行高：24px 的核心图标钮被行高（--dshpc-line-md）居中，不会把整行撑高。
+      style: { display: 'flex', alignItems: 'center', gap: '2px', minWidth: 0, minHeight: 'var(--dshpc-line-md)' },
+    },
+      sessionButton,
+      canOpenSession
+        ? h(Button, {
+          variant: 'link', size: 'sm', style: sessionLinkStyle,
+          onClick: () => { onOpenSession(sid) },
+        }, sessionLabel)
+        : h('span', { style: sessionLinkStyle }, sessionLabel))
   // 根容器包住「字段区 + 产出物区」两块 ⇒ CSS 才能按**整栏实际最后一块**判末行。
   return h('div', { className: 'dsh-tdt-info-rec-body' },
     h('div', { className: 'dsh-tdt-info-rec-fields' },
@@ -314,8 +323,23 @@ export function lastRunFields(props: {
       InfoField({ label: t('colPlanned'), children: timeOf(instance.scheduled_at) }),
       InfoField({ label: t('colActualStart'), children: timeOf(instance.dispatched_at) }),
       InfoField({ label: t('infoFinishedAt'), children: timeOf(instance.finished_at) }),
-      dur === null ? null : InfoField({ label: t('infoDuration'), children: formatDurationHms(dur) }),
-      tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: formatTokenDetail(instance) }, tokens) }),
+      // 执行时长 + Token 合成一行（用户 2026-11-06：两排太占地方）。
+      // 只缺一项时就只剩那一项，仍按原标签显示；两项都在 = `执行时长 15:44 · Token 4.2M`。
+      dur === null
+        ? (tokens === null
+          ? null
+          : InfoField({ label: t('colTokens'), children: h(Tooltip, { label: formatTokenDetail(instance), side: 'top' }, h('span', null, tokens)) }))
+        : (tokens === null
+          ? InfoField({ label: t('infoDuration'), children: formatDurationHms(dur) })
+          : InfoField({
+            label: t('infoDuration'),
+            children: h('span', null,
+              formatDurationHms(dur),
+              h('span', { style: { color: 'var(--dshpc-fg-3)', margin: '0 6px' } }, '·'),
+              h(Tooltip, { label: formatTokenDetail(instance), side: 'top' },
+                h('span', null, `${t('colTokens')} ${tokens}`)),
+            ),
+          })),
       note === ''
         ? null
         : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--dshpc-danger)' } }, note) }),
@@ -326,14 +350,14 @@ export function lastRunFields(props: {
         h('div', { style: { marginBottom: '6px', fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('colOutputs')),
         h('div', { style: { display: 'flex', flexDirection: 'column' } },
           outputs.map(output => h('button', {
-            key: output, type: 'button', title: output,
-            // 行式文件按钮 = 基础层唯一实现（2026-10-04 收编；--block = 撑满父宽、一项一行）
-            className: 'dsh-tdt-filechip dsh-tdt-filechip--block',
+            key: output, type: 'button',
+            // 行式文件按钮 = **核心 `.dshpc-filechip--block`**（2026-11-06 改接：hover 灰底、左右内边距都归核心）
+            className: 'dshpc-filechip dshpc-filechip--block',
             disabled: !canOpenFile,
             onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },
           },
             output.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: output, size: 14 }),
-            h('span', { className: 'dsh-tdt-ellipsis' }, baseNameOf(output)),
+            h(MarqueeText, { text: baseNameOf(output), style: { flex: '1 1 auto', minWidth: 0 } }),
           )),
         ),
       ),

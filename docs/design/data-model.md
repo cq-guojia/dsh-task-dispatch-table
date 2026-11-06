@@ -23,7 +23,7 @@
 | `schedule.once` | string? | `YYYY-MM-DDTHH:mm`；按 `timezone` 墙上时间解释，仅该日派发一次，跑完自动停。**与 `cron` 互斥**（一次性任务用，决策 18）。**窗口内才作数**（2026-09-30 拍板 A）：`once + window` 之内迟到照旧补跑，**出窗口即过期作废**，并补一条 `skipped`（事件 `expired-once`）留痕 | 决策 18 / 拍板 A |
 | `schedule.timezone` | string? | 缺省用宿主时区；**logical date 的归属判定靠它** | 决策 9 |
 | `schedule.window` | string | ISO 8601 时长（如 `PT4H`）；计划时刻 + 窗口 = 当日截止线，过窗 → `skipped` 并切次日 | 决策 10 |
-| `target.workspace` | string | 派发到哪个**工作区**（按 registry 的 `title` 精确匹配、`id` 兜底；**不是工作目录**——cwd 由工作区实体的 `path` 派生）。匹配不到 ⇒ 实例判失败，不派发 | 决策 4 / 22 |
+| `target.workspace` | string | 派发到哪个**工作区**（**存 `workspace.id`**，宿主创建时生成的随机 UUID，重命名不变；**不是工作目录**——cwd 由工作区实体的 `path` 派生）。**兼容**：老任务存的是 `title`，**执行时**按标题解析成功后**就地改存 id**（只此一处，不做启动批量迁移）；保存只认 id，匹配不到 ⇒ 保存失败让用户重选，执行匹配不到 ⇒ 实例判失败、不派发（用户 2026-11-06 拍板） | 决策 4 / 22 / 2026-11-06 |
 | `target.provider` | string? | 派发模型漏斗第①层的 provider；与 `target.model` **成对**，只填一个视为该层未配 | 决策 22 |
 | `target.model` | string? | 派发模型漏斗第①层的 model。两层 `target.*` 都留空则依次漏到：插件配置 `defaultProvider/defaultModel` → 宿主 `agentDefaultModel`（= 用户配的 / 上次用的模型）→ `llm` 首个可用模型；四层全空 ⇒ 实例判失败。**派发时现算，不回写本字段** | 决策 22 |
 | `target.manual` | string? | 任务手册 MD 路径（相对目标工作区），由调度器拼进派发消息 | 决策 12 |
@@ -31,7 +31,7 @@
 | `contract.validStatuses` | string[]? | 回执 `status` 的合法值清单，默认 `["ok"]` | 决策 19 |
 | `retry.maxAttempts` | int? | 默认 1；重试耗尽 → `failed`，下游跳过 | 决策 10 |
 | `depends_on` | object[]? | `{ task, semantics }`，**由下游声明**；`semantics` = `same_period`（同 logical date）/ `latest_success`（上游最近一条必须 succeeded）。⚠️ `freshness` 字段已于**决策 33 删除** | 决策 8/9/33 |
-| `attachments` | object[]? | **附加文件清单**（只记引用，不存内容）：`{ id, name, kind, ref, workspace? }`。`kind='link'` = 工作区已有文件（只记路径、不复制，`workspace` = 来源工作区 title，派发注入时按它把 `ref` 绝对化）；`kind='upload'` = 已上传到插件数据目录的文件，**`ref` = 相对该任务目录的路径**（`attachments/<原始文件名>`，迁移见 §五.3）。同源文件见 §五 | 2026-09-30 |
+| `attachments` | object[]? | **附加文件清单**（只记引用，不存内容）：`{ id, name, kind, ref, workspace? }`。`kind='link'` = 工作区已有文件（只记路径、不复制，`workspace` = 来源工作区 **id**（老数据为 title，按 id/title 两种键解析），派发注入时按它把 `ref` 绝对化）；`kind='upload'` = 已上传到插件数据目录的文件，**`ref` = 相对该任务目录的路径**（`attachments/<原始文件名>`，迁移见 §五.3）。同源文件见 §五 | 2026-09-30 |
 | `schedule.ui` | object? | **结构化排期（编辑态反解用）**：`{ scheduleKind, periodFreq, weekdays[], monthDay, monthMode, quarterMonth, yearMonth, intervalUnit, intervalStep, weekStep }`，与 `cron` / `once` / `start` / `everyNWeeks` **并存**。**执行只读 `cron`/`once`（唯一排期真源），表单反解只读 `schedule.ui`**；两者不一致（用户手改过 cron）⇒ 表单进「自定义 cron」只读态并提示，`schedule.ui` 不回写。✅ 已定双写（见 §5.4） | 2026-09-30 |
 
 **回执机制（决策 19 + 决策 24 改通道；2026-10-10 产出拆双桶）**：agent 跑完调用插件注册的工具 `task_dispatch_table_receipt({ status, outputs?, processOutputs?, note? })` 提交回执——该工具由插件在派发时经 `agentCtx.tools.register` 注册，**只对该任务会话可见**，`execute` 在**插件进程内**直写状态库 `task_events`（`kind='receipt'`，detail 形状 `{ status, outputs, processOutputs, note, session_id }`）。对账**只查库**：取派发时刻之后的最新 receipt，校验 `status ∈ contract.validStatuses` + **两桶**逐一路径在目标工作区**存在**（`output-missing` 的 detail 里带 `bucket: 'main' | 'process'`）。
@@ -169,6 +169,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_log_ts ON plugin_log(ts);
 **口诀**：能挂到任务上的 ⇒ 回 `task_*`；挂不上的 ⇒ 才用 `plugin_log`。
 
 **调用方式**（不要在调用点重复 `level` 样板）：
+
 - 有 `store` 引用 ⇒ `store.logInfo(kind, msg)` / `store.logWarn(kind, msg)` / `store.logError(kind, msg)`；
 - 拿不到 `store`（如模块级函数、inject 作用域外）⇒ `pushNotice(kind, msg)`（`src/index.ts`）。
 
@@ -250,7 +251,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_log_ts ON plugin_log(ts);
 
 **第 1 步的校验清单**（服务端把关，不过即整批 422）：
 
-- `target.prompt` 非空；`target.workspace` 非空（能否解析成工作区由执行期判，保存不严）
+- `target.workspace` **保存时必须是真实工作区的 id**（单条 + 整批 `tasksInline` 都校验；工作区是核心，不能「有值就放行」）——老任务存标题只在**执行期**兼容并写回 id（用户 2026-11-06 拍板）
 - `schedule.cron` 与 `schedule.once` **恰有其一**；周期档必须产得出 cron（含间隔档，见 C1），`once` 档必须匹配 `YYYY-MM-DDTHH:mm`
 - `depends_on[].task` 指向的任务**必须存在**（**停用可以、不存在不行**——表单只列已有任务，只有手改 JSON 才可能踩）
 - `title` / `code` **不做**格式与唯一性校验（决策 30）

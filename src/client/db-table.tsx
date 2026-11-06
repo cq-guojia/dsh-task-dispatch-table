@@ -6,6 +6,7 @@
  * `level` 仍按语义着色（warn 黄 / error 红）。
  */
 import { createElement as h, type CSSProperties } from 'react'
+import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SettingsTableQueryResult } from './settings-data'
 import { Table, type TableColumn, type TableRow } from './ui'
 
@@ -43,9 +44,11 @@ export function DbTable({ table, emptyText }: { table: SettingsTableQueryResult 
     cells: columns.reduce<Record<string, ReturnType<typeof h>>>((acc, col) => {
       const value = row[col]
       const raw = value === null || value === undefined ? '—' : String(value)
-      // 时间列显示缩短值（悬停仍给完整 ISO）；其余定长列超长截断；message 整段换行。
+      // 时间列显示缩短值；其余定长列超长截断；message 整段换行。
+      // 截断过 ⇒ 悬停看全文走官方 `Tooltip`（2026-11-06：不再挂原生 title）。
       const text = col === 'ts' ? shortTs(raw) : (col === 'message' ? raw : (raw.length > 160 ? `${raw.slice(0, 160)}…` : raw))
-      acc[col] = h('span', { style: col === 'level' ? levelStyleOf(raw) : undefined, title: raw }, text)
+      const cell = h('span', { style: col === 'level' ? levelStyleOf(raw) : undefined }, text)
+      acc[col] = text === raw ? cell : h(Tooltip, { label: raw, side: 'top', maxWidth: 360 }, cell)
       return acc
     }, {}),
   }))

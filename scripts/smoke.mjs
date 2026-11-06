@@ -2722,9 +2722,11 @@ try {
 		);
 		check(
 			"过程文件块进产物（dsh-tdt-proc 样式入库 + data-process-files 锚点 + 文案键）",
-			clientJs.includes("dsh-tdt-proc-head") &&
+			clientJs.includes("dsh-tdt-proc-list") &&
 				clientJs.includes("data-process-files") &&
-				clientJs.includes("procFilesTitle"),
+				clientJs.includes("procFilesTitle") &&
+				// 折叠头已改核心 Button（ghost + iconRight），不再有自写 .dsh-tdt-proc-head。
+				!clientJs.includes("dsh-tdt-proc-head"),
 		);
 		check(
 			"过程文件块默认是否展开由 defaultOpen 控制（useState(defaultOpen ?? false)）",
@@ -3096,7 +3098,7 @@ try {
 				/fetchEvents\(id\)/.test(tlSrc) &&
 				/eventsCache/.test(tlSrc) &&
 				/eventsSeqRef\.current = seq/.test(tlSrc) &&
-				/className: 'dsh-tdt-filechip dsh-tdt-filechip--inline'/.test(tlSrc) &&
+				/className: 'dshpc-filechip dshpc-filechip--inline'/.test(tlSrc) &&
 				/events\.length === 0\s*\? null/.test(tlSrc) &&
 				!/\.dsh-tdt-rec-evempty' \}, t\('cardEventsEmpty'\)/.test(tlSrc) &&
 				/className: 'dsh-tdt-rec-evtitle'/.test(tlSrc) &&
@@ -3214,11 +3216,12 @@ try {
 				).includes("recordsStatusPh"),
 		);
 		check(
-			"产出物图标 chip = 基础层唯一实现（`.dsh-tdt-chip` 定义在 controls-css，两页共用）",
-			ctrlSrc.includes(".dsh-tdt-chip{") &&
-				ctrlSrc.includes("--dshpc-chip-bg-hover") &&
-				/className: 'dsh-tdt-chip'/.test(tlSrc) &&
-				/dsh-tdt-chip--label/.test(tlSrc),
+			"产出物图标按钮走核心 IconButton（手搓方形 chip 只留文本 +N / …）",
+			/h\(IconButton, \{[\s\S]{0,260}FileTypeIcon/.test(tlSrc) &&
+				tlSrc.includes("variant: 'plain'") &&
+				tlSrc.includes("dsh-tdt-chip--label") &&
+				// 图标不再用手搓 chip 方块（圆角 / 尺寸归核心 IconButton）。
+				!/className: 'dsh-tdt-chip'/.test(tlSrc),
 		);
 		check(
 			"收编后无同名冲突：全仓只有一份产出物 chip 皮肤（`.dsh-tdt-rec-out` 已不存在）",
@@ -3441,14 +3444,15 @@ try {
 		);
 		check(
 			"第五轮：展开区产出物 = 附件区同款（行内 + 40ch 跑马灯，不占整行；反向：时间轴不再用 --block）",
-			/className: 'dsh-tdt-filechip dsh-tdt-filechip--inline'/.test(tlSrc) &&
+			/className: 'dshpc-filechip dshpc-filechip--inline'/.test(tlSrc) &&
 				/\.dsh-tdt-rec-expouts\{display:flex;flex-wrap:wrap;gap:2px 10px/.test(
 					tlSrc,
 				) &&
-				/h\(MarqueeText, \{ text: baseNameOf\(path\), title: path, style: \{ maxWidth: '40ch', minWidth: 0 \} \}/.test(
+				/h\(MarqueeText, \{ text: baseNameOf\(path\), style: \{ maxWidth: '40ch', minWidth: 0 \} \}/.test(
 					tlSrc,
 				) &&
-				!tlSrc.includes("dsh-tdt-filechip--block"),
+				!tlSrc.includes("title: path") &&
+				!tlSrc.includes("dshpc-filechip--block"),
 		);
 		check(
 			"第五轮：信息行五段都带「标签 + 完整值」的悬停提示（工作区 / 计划执行 / 实际开始 / 时长 / token 消耗）",
@@ -3537,17 +3541,27 @@ try {
 				!locSrc.includes("outputsEmpty"),
 		);
 		check(
-			"第四轮：行式文件按钮收编为基础层唯一实现（旧 `.dsh-tdt-info-out` 全仓已无规则定义）",
-			ctrlSrc.includes(".dsh-tdt-filechip{") &&
-				ctrlSrc.includes(".dsh-tdt-filechip--block") &&
-				ctrlSrc.includes(".dsh-tdt-filechip--inline") &&
+			"行式文件按钮改接核心 `.dshpc-filechip`（本仓不再保留第二份皮肤；三处使用点直接挂核心类名）",
+			!ctrlSrc.includes(".dsh-tdt-filechip") &&
 				!/\.dsh-tdt-info-out\s*\{/.test(ctrlSrc) &&
 				!/\.dsh-tdt-info-out\s*\{/.test(
 					readFileSync(
 						join(process.cwd(), "src", "client", "task-list.tsx"),
 						"utf8",
 					),
-				),
+				) &&
+				readFileSync(
+					join(process.cwd(), "src", "client", "task-info.tsx"),
+					"utf8",
+				).includes("dshpc-filechip dshpc-filechip--block") &&
+				readFileSync(
+					join(process.cwd(), "src", "client", "records-timeline.tsx"),
+					"utf8",
+				).includes("dshpc-filechip dshpc-filechip--inline") &&
+				readFileSync(
+					join(process.cwd(), "src", "client", "process-files.tsx"),
+					"utf8",
+				).includes("dshpc-filechip dshpc-filechip--inline"),
 		);
 	}
 	check(
@@ -3580,8 +3594,9 @@ try {
 	);
 	check(
 		"高级区第二轮：灰条收折头（无内层黑框）+「?」说明 + 官方 chevron 展开图标 + 虚线分隔两拍排版",
-		clientJs.includes("dsh-tdt-ed-advhead") &&
+		clientJs.includes("dsh-tdt-ed-advbody") &&
 			clientJs.includes("editorAdvancedHelp") &&
+			!clientJs.includes("dsh-tdt-ed-advhead") &&
 			clientJs.includes("dsh-tdt-ed-advchevron-open") &&
 			clientJs.includes("dsh-tdt-ed-advitem") &&
 			!clientJs.includes("dsh-tdt-ed-summary"),
@@ -3701,7 +3716,9 @@ const locSrc10 = readFileSync(
 );
 check(
 	"第十轮·硬性规定：只给图标、没有文件名的地方 ⇒ 悬停必须显示**文件名（含后缀）**，走官方 Tooltip",
-	(tlSrc10.match(/label: baseNameOf\(path\)/g) ?? []).length === 2 &&
+	// 2026-11-06：图标钮改核心 IconButton 后，Tooltip label 与 IconButton label（无障碍名）
+	// 两处都要带文件名 ⇒ 每个文件 = 2 处；records 与依赖区各 2 个文件位 = 4。
+	(tlSrc10.match(/label: baseNameOf\(path\)/g) ?? []).length === 4 &&
 		/label: baseNameOf\(output\)/.test(tlListSrc) &&
 		/h\(Tooltip, \{[\s\S]{0,120}label: baseNameOf/.test(tlSrc10),
 );
@@ -3744,23 +3761,23 @@ check(
 	"第十轮：非成功态有**状态标签**，文案走通用**两字短名** statusTextOf（不再另起长名），排在「查看会话」前面",
 	tlSrc10.includes("row.status === 'succeeded'") &&
 		/text: statusTextOf\(row\.status, t\)/.test(tlSrc10) &&
-		tlSrc10.includes("dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}") &&
-		tlSrc10.indexOf("dsh-tdt-rec-tag") <
+		tlSrc10.includes("h(Chip, {") &&
+			tlSrc10.includes("tone: statusTag.tone === 'bad' ? 'danger'") &&
+			!tlSrc10.includes("dsh-tdt-rec-tag--${statusTag.tone}") &&
+		tlSrc10.indexOf("h(Chip, {") <
 			tlSrc10.indexOf("}, t('viewSession'))") &&
 		!/recTag(Failed|Skipped|Running|Unknown)/.test(tlSrc10) &&
 		!/recTag(Failed|Skipped|Running|Unknown)/.test(locSrc10),
 );
 check(
-	"第十一轮：状态标签 = **状态色实底 + 反色字**（色调按语义落 tag 自己的类、字走 --dshpc-on-signal），字号小一号、padding 上下 3 / 左右 8",
-	/\.dsh-tdt-rec-tag\{[^}]*padding:3px 8px;/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-tag\{[^}]*background:var\(--dshpc-fg-3\);color:var\(--dshpc-on-signal\)/.test(
-			tlSrc10,
-		) &&
-		/\.dsh-tdt-rec-tag--bad\{background:var\(--dshpc-danger\);\}/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-tag--warn\{background:var\(--dshpc-warning\);\}/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-tag--busy\{background:var\(--dshpc-business\);\}/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-tag\{[^}]*font-size:var\(--dshpc-font-xs\)/.test(tlSrc10) &&
-		!/\.dsh-tdt-rec-tag\{[^}]*min-width/.test(tlSrc10),
+	"第十一轮：状态标签走核心 Chip（danger/warning/business 语义色），本仓不再自写三档实底 tag",
+		tlSrc10.includes("h(Chip, {") &&
+			tlSrc10.includes("tone: statusTag.tone === 'bad' ? 'danger'") &&
+			!/\.dsh-tdt-rec-tag--bad\{/.test(tlSrc10) &&
+			!/\.dsh-tdt-rec-tag--warn\{/.test(tlSrc10) &&
+			!/\.dsh-tdt-rec-tag--busy\{/.test(tlSrc10) &&
+			// 虚线「计划」态核心无对应 ⇒ 保留本地 tag（仅此一档）。
+			tlSrc10.includes("dsh-tdt-rec-tag--planned")
 );
 check(
 	"第十一轮：状态标签**高度比「查看会话」按钮矮 2px**（同令牌 --dshpc-control-h-sm，减 2）、圆角同档 --dshpc-radius-md",
@@ -6245,18 +6262,24 @@ console.log("\n[14] runtime-index");
 			join(process.cwd(), "src", "client", "task-list.tsx"),
 			"utf8",
 		);
-		const dist = readFileSync(join(process.cwd(), "dist", "client.js"), "utf8");
 		// 基础信息展示层 2026-10-05 上提共享层 ⇒ 字段行 / 产出物行断言改读 `task-info.tsx`（与查看档同一份实现）。
 		const ti = readFileSync(
 			join(process.cwd(), "src", "client", "task-info.tsx"),
 			"utf8",
 		);
 		check(
-			"基础信息右栏定宽（窗口缩放只让左栏变）+ 产出物行 hover 有底色（基础层 `.dsh-tdt-filechip`）",
+			"基础信息右栏定宽（窗口缩放只让左栏变）+ 产出物行走核心行式文件按钮（hover 灰底 + 左右内边距归核心）",
 			ti.includes("flex: 'none', width: '320px'") &&
-				ti.includes("dsh-tdt-filechip--block") &&
-				ti.includes("dsh-tdt-filechip--inline") &&
-				dist.includes("dsh-tdt-filechip:hover"),
+				// 2026-11-06：产出物行改接核心 `.dshpc-filechip--block`（自带 hover 与 6px 内边距）。
+				ti.includes("dshpc-filechip dshpc-filechip--block") &&
+				// 2026-11-06：附件/内联文件件改核心 `Chip`（不再经过手搓的 `--inline`）。
+				ti.includes("h(Chip, {") &&
+				!ti.includes("dsh-tdt-filechip") &&
+				// 本仓不再有第二份行式文件按钮皮肤。
+				!readFileSync(
+					join(process.cwd(), "src", "client", "ui", "controls-css.ts"),
+					"utf8",
+				).includes(".dsh-tdt-filechip"),
 		);
 		const sv = readFileSync(join(process.cwd(), "src", "index.ts"), "utf8");
 		check(
@@ -6303,21 +6326,26 @@ console.log("\n[14] runtime-index");
 			"utf8",
 		);
 		check(
-			"基础信息「任务会话」：灰底小图标框 + 会话名（无虚线 / 无边框），hover 变蓝；不再用独立「查看会话」按钮",
+			"基础信息「任务会话」：放大镜走核心 IconButton 的 background（灰底座归核心）+ 会话名走核心 Button link；不再用独立「查看会话」按钮",
 			ti.includes("t('infoSession')") &&
-				ti.includes("dsh-tdt-info-session") &&
+				ti.includes("variant: 'link'") &&
+				!ti.includes("dsh-tdt-info-session ") &&
 				ti.includes("children: sessionChip") &&
 				ti.includes("session_title") &&
 				ti.includes("MarqueeText, { text: sessionName }") &&
 				ti.includes("IconSearchOutlineRegular") &&
-				// 无虚线 / 无边框；图标包一个灰色小标签框；hover 变蓝。
-				ti.includes("dsh-tdt-info-session-icon") &&
-				tic.includes("background: var(--dshpc-chip-bg)") &&
+				// 2026-11-06 用户点名：**要灰色底座**，走核心 IconButton 的 background（hover 由核心压深）。
+				ti.includes("h(IconButton, {") &&
+				ti.includes("label: t('infoSession')") &&
+				ti.includes("background: 'var(--dshpc-chip-bg)'") &&
+				ti.includes("color: 'var(--dshpc-fg-2)'") &&
+				ti.includes("title: ''") &&
+				ti.includes("icon: h(IconSearchOutlineRegular, { size: 12 })") &&
+				!ti.includes("dsh-tdt-info-session-icon") &&
+				!tic.includes("width: 18px; height: 18px") &&
 				!ti.includes("border-bottom: 1px dashed var(--dshpc-border-strong)") &&
-				tic.includes(
-					".dsh-tdt-info-session:hover { color: var(--dshpc-business)",
-				) &&
-				tic.includes("width: 18px; height: 18px") &&
+				// 原生 title 全站清退：会话名不再挂 title。
+				!ti.includes("title: sessionName") &&
 				// 标签列不再写死宽度：整栏共用 grid + `max-content` 自动定宽（中文窄、英文宽，都不留白不溢出）。
 				tic.includes("grid-template-columns: max-content 1fr") &&
 				// 旧的独立按钮已删；执行时长标签也改了。
@@ -6590,12 +6618,13 @@ console.log("\n[14] runtime-index");
 				tv.includes("IconClockOutlineRegular") &&
 				tv.includes("IconThinkOutlineRegular") &&
 				// r13：块标题 = 标签（浅底 chip）；状态行 = 色点 + 文字（task-info 共享层）；草稿 chip 走警告色。
-				tv.includes("dsh-tdt-ed-view-tag") &&
-				tec.includes(".dsh-tdt-ed-view-tag{") &&
+				tv.includes("h(SectionHead, {") &&
+				tv.includes("accent: 'business'") &&
+				!tec.includes(".dsh-tdt-ed-view-tag{") &&
 				tiS.includes(
 					"view.enabled ? 'var(--dshpc-success)' : 'var(--dshpc-fg-3)'",
 				) &&
-				tec.includes("color:var(--dshpc-warning") &&
+				tv.includes("tone: 'warning'") &&
 				tv.includes("dsh-tdt-ed-view-badge") &&
 				tv.includes("lastRunFields({") &&
 				tv.includes("hideStatus: true"),
@@ -6612,16 +6641,17 @@ console.log("\n[14] runtime-index");
 				!tv.includes("onOpenPromptFullscreen") &&
 				tv.includes("variant: 'outline', size: 'sm'") && // 展开/收起 = 文字钮（与源码/预览同高同右）
 				!tv.includes("dsh-tdt-ed-view-more") && // 底部「查看全部」已移除
-				tec.includes(".dsh-tdt-ed-view-tag::before") &&
-				tec.includes("width:3px") &&
-				tec.includes("var(--dshpc-business)") &&
-				!tec.includes(".dsh-tdt-ed-view-block::before") && // 整块长线已移除（用户 2026-10-05 修正）
+				// 短竖线标归核心 SectionHead 的 accent；整块长线仍不得出现。
+				tv.includes("accent: 'business'") &&
+				!tec.includes(".dsh-tdt-ed-view-tag::before") &&
+				!tec.includes(".dsh-tdt-ed-view-block::before") &&
 				tec.includes(".dsh-tdt-ed-view-prompt{") &&
 				tec.includes("max-height:100px") &&
 				tec.includes(".dsh-tdt-ed-view-prompt--open{max-height:none;}") &&
 				tec.includes(".dsh-tdt-ed-view-expchevron") &&
-				tec.includes(".dsh-tdt-ed-view-promptbox{") &&
-				tec.includes("color-mix(in srgb,var(--dshpc-fg) 3%") &&
+				// 极淡文档底走核心 Surface（本仓不再自写 .dsh-tdt-ed-view-promptbox 皮肤）。
+				!tec.includes(".dsh-tdt-ed-view-promptbox{") &&
+				tv.includes("h(Surface, { tone: 'subtle', border: 'none', radius: 'sm', padding: 'sm'") &&
 				!tec.includes(".dsh-tdt-ed-view-more") &&
 				!lcSrc.includes("editorViewFullscreen"),
 		);
@@ -6753,11 +6783,10 @@ console.log("\n[14] runtime-index");
 
 		check(
 			"入口：卡片展开区「前置任务」行任务名可点（hover 变蓝，与「任务会话」同款做法）",
-			tiS.includes("className: 'dsh-tdt-info-dep'") &&
+			tiS.includes("variant: 'link'") &&
 				tiS.includes("onViewTask(dep.id)") &&
-				ticS.includes(
-					".dsh-tdt-info-dep:hover { color: var(--dshpc-business)",
-				) &&
+				!tiS.includes("dsh-tdt-info-dep") &&
+				!ticS.includes(".dsh-tdt-info-dep:hover") &&
 				lvSrc.includes("onViewTask"),
 		);
 
@@ -7296,16 +7325,24 @@ console.log("\n[14] runtime-index");
 				locSrc.includes("statusRailOff: 'Disabled'"),
 		);
 		check(
-			"【i18n】编辑器校验文案走 `t()`（validateTaskDraft 带 t 席位）",
+			"【i18n】编辑器校验文案走 `t()`（validateTaskDraft 带 t 席位 + 工作区存在性校验）",
 			S("client/task-editor.tsx").includes(
-				"validateTaskDraft(draft: TaskEditorDraft, t: Translate)",
-			) && S("client/task-editor.tsx").includes("t('vTitleRequired')"),
+				"export function validateTaskDraft(",
+			) &&
+				S("client/task-editor.tsx").includes("draft: TaskEditorDraft,") &&
+				S("client/task-editor.tsx").includes("t: Translate") &&
+				S("client/task-editor.tsx").includes(
+					"knownWorkspaces?: ReadonlySet<string>",
+				) &&
+				S("client/task-editor.tsx").includes("vTitleRequired"),
 		);
 		// ⚠️ 带 `{name}` 占位符的文案**必须走插值席位 `tt`**：本页 `t` 是无参形态，传它 ⇒ 占位符原样显示
 		// （本仓前科：docs/worklog/task-file-context.md「传了宿主原始 t ⇒ {count} 原样显示」）。
 		check(
 			"【i18n】含 `{name}` 的校验文案走**插值席位 tt**（否则占位符原样显示成 {name}）",
-			S("client/task-editor.tsx").includes("validateTaskDraft(draft, tt)") &&
+			S("client/task-editor.tsx").includes(
+				"validateTaskDraft(draft, tt, knownWorkspaces)",
+			) &&
 				!/validateTaskDraft\(draft,\s*t\)/.test(S("client/task-editor.tsx")) &&
 				S("client/task-editor.tsx").includes(
 					"const tt = useMemo(() => interpolateTranslate(t), [t])",
@@ -7437,8 +7474,11 @@ console.log("\n[14] runtime-index");
 					"--dshpc-dock-h",
 				]);
 				for (const t of coreOnly) whitelist.add(t);
+				// 核心 0.35.3 起，注释里也会出现 `var(--dshpc-…)` 字样（说明「这条 token 被真机打回过」），
+				// 扫消费方前先剥掉 CSS 注释，否则会把注释里的反例当真实消费（假红）。真实声明 / 使用一个不少。
+				const kitNoComments = kitBundle.replace(/\/\*[\s\S]*?\*\//g, "");
 				const consumed = new Set(
-					[...kitBundle.matchAll(/var\((--dshpc-[a-z0-9-]+)/g)].map(
+					[...kitNoComments.matchAll(/var\((--dshpc-[a-z0-9-]+)/g)].map(
 						(m) => m[1],
 					),
 				);

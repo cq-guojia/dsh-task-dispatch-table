@@ -7,11 +7,11 @@
  *
  * 2026-11-06：分段 / 按钮 / 输入 / 数字步进 / 多行文本 / 跑马灯 / 下拉 / 日期时间 / 小问号
  * 已全部改接核心 `dsh-plugin-core/ui`，对应本地皮肤整段删除。
- * 本文件只剩**核心没有**的三类业务件：产出物 chip / 行式文件按钮、开关选色，外加「过程文件」块。
+ * 本文件只剩**核心没有**的业务件：产出物 chip、开关选色，「过程文件」块。
  */
 import { applyStyle } from "./style";
 
-/** 产出物图标 chip / 行式文件按钮的皮肤规则。 */
+/** 产出物图标 chip 的皮肤规则。 */
 export const BUTTON_CSS = `
 /* ── 产出物「图标 chip」：28×28 方角小底板 + 官方文件类型图标 ──────────────
    用途：产出物列表里**只给图标**的小按钮（卡片「执行记录」面板、执行记录总查询页、展开区都挂它）。
@@ -27,23 +27,11 @@ export const BUTTON_CSS = `
 .dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
 .dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
 
-/* ── 行式文件按钮（图标 + 文件名）：**全站唯一实现** ───────────────────────
-   用途：「产出物 / 附件」那种**一行一个文件**的清单项（基础信息右栏产出物清单、附件区、
-   执行记录页的展开区）。平时透明、**鼠标移上去才出浅底**。
-   两个形态修饰类：
-     --block   撑满父宽（清单里一项一行）
-     --inline  内容宽（跟在文字后头，如附件行） */
-.dsh-tdt-filechip{appearance:none;-webkit-appearance:none;border:0;box-sizing:border-box;display:flex;align-items:center;gap:6px;
-  min-width:0;padding:2px 0;background:transparent;color:var(--dshpc-fg);font-family:inherit;font-size:var(--dshpc-font-md);
-  line-height:var(--dshpc-line-md);text-align:left;cursor:pointer;border-radius:var(--dshpc-radius-sm);
-  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
-.dsh-tdt-filechip:hover:not(:disabled){background:var(--dshpc-chip-bg);}
-.dsh-tdt-filechip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
-.dsh-tdt-filechip:disabled{cursor:default;color:var(--dshpc-fg-3);}
-.dsh-tdt-filechip--block{width:100%;}
-.dsh-tdt-filechip--inline{display:inline-flex;padding:2px 6px;font-size:var(--dshpc-font-sm);}
+/* 行式文件按钮（图标 + 文件名）已改接核心 .dshpc-filechip（2026-11-06）：
+   核心 P2 已提供同名同皮的**全站唯一实现**（--block / --inline 两个形态类，自带 hover 与左右内边距），
+   本仓不再保留第二份，使用点直接挂核心类名。 */
 
-@media (prefers-reduced-motion: reduce){.dsh-tdt-chip,.dsh-tdt-filechip{transition:none;}}
+@media (prefers-reduced-motion: reduce){.dsh-tdt-chip{transition:none;}}
 `;
 
 /** 开关 / 拖拽分隔条的皮肤规则（核心没有的宿主件）。 */
@@ -69,17 +57,23 @@ export const SELECT_CSS = `
 export const PROCESS_FILES_CSS = `
 /* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
    （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
-   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用 .dsh-tdt-filechip--inline。 */
+   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用核心 .dshpc-filechip--inline。 */
 .dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
-.dsh-tdt-proc-head{appearance:none;-webkit-appearance:none;align-self:flex-start;display:inline-flex;align-items:center;
-  gap:6px;padding:2px 6px;border:0;border-radius:var(--dshpc-radius-xs);background:transparent;color:var(--dshpc-fg-3);
-  font:inherit;font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);cursor:pointer;
-  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
-.dsh-tdt-proc-head:hover{background:var(--dshpc-chip-bg);color:var(--dshpc-fg-2);}
-.dsh-tdt-proc-head:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
 .dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
 
-@media (prefers-reduced-motion: reduce){.dsh-tdt-proc-head{transition:none;}}
+`;
+
+/** 1 像素滚动条（用户 2026-11-06：所有区域滚动条统一细线）。 */
+export const SCROLL_CSS = `
+/* ── 1 像素滚动条：本插件界面内**所有**滚动区统一 ───────────────────────────
+   主面板 / 卡片展开区 / 编辑分栏 / 预览分栏全在 .dsh-tdt-root 之内 ⇒ 一条后代选择器全覆盖，
+   使用点不必各自挂类。下拉菜单经 FloatingPortal 挂到 body、不在 root 内；核心 Picker 的列表
+   已自带 .dshpc-scroll-thin（同为 1px），无需重复实现。
+   ⚠️ 只写 ::-webkit-scrollbar：一旦同时写 scrollbar-width，Chrome 会切到规范化滚动条
+   并忽略这里的 1px（核心 panel.css 同款结论）。 */
+.dsh-tdt-root::-webkit-scrollbar, .dsh-tdt-root *::-webkit-scrollbar{width:1px;height:1px;}
+.dsh-tdt-root::-webkit-scrollbar-thumb, .dsh-tdt-root *::-webkit-scrollbar-thumb{background:var(--dshpc-border-heavy);}
+.dsh-tdt-root::-webkit-scrollbar-track, .dsh-tdt-root *::-webkit-scrollbar-track{background:transparent;}
 `;
 
 /** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
@@ -91,6 +85,6 @@ export const CONTROLS_DOMAIN = "controls";
 export function ensureControlsStyle(): void {
 	applyStyle(
 		CONTROLS_DOMAIN,
-		BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS,
+		BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS + SCROLL_CSS,
 	);
 }

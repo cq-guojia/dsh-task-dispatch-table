@@ -100,6 +100,8 @@ import {
 	QuickToolbar,
 	Segmented,
 	setTooltipRenderer,
+	Textarea,
+	surfaceClass,
 	type TaskOption,
 } from "./ui";
 
@@ -225,20 +227,6 @@ const monoFont =
 	"var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 const transition = `background var(--dshpc-dur) var(--dshpc-ease), color var(--dshpc-dur) var(--dshpc-ease), border-color var(--dshpc-dur) var(--dshpc-ease)`;
 
-const textareaStyle: Record<string, string | number> = {
-	width: "100%",
-	boxSizing: "border-box",
-	minHeight: "16em",
-	resize: "vertical",
-	fontFamily: monoFont,
-	fontSize: "var(--dshpc-font-sm)",
-	lineHeight: 1.5,
-	padding: "8px",
-	color: "var(--dshpc-fg)",
-	background: "var(--dshpc-surface-1)",
-	border: `1px solid var(--dshpc-border)`,
-	borderRadius: "var(--dshpc-radius-sm)",
-};
 const hintStyle: Record<string, string | number> = {
 	color: "var(--dshpc-fg-2)",
 	fontSize: "var(--dshpc-font-sm)",
@@ -267,13 +255,9 @@ const cardStyle: Record<string, string | number> = {
 	alignItems: "center",
 	justifyContent: "space-between",
 	gap: "12px",
-	padding: "12px 14px",
-	border: `1px solid var(--dshpc-border)`,
-	borderRadius: "var(--dshpc-radius-sm)",
 	cursor: "pointer",
 	width: "100%",
 	boxSizing: "border-box",
-	background: "transparent",
 	textAlign: "left",
 	color: "var(--dshpc-fg)",
 	transition,
@@ -339,10 +323,7 @@ const preStyle: Record<string, string | number> = {
 	wordBreak: "break-all",
 	maxHeight: "12em",
 	overflow: "auto",
-	background: "var(--dshpc-surface-2)",
 	color: "var(--dshpc-fg)",
-	padding: "8px",
-	borderRadius: "var(--dshpc-radius-sm)",
 };
 const tableStyle: Record<string, string | number> = {
 	borderCollapse: "collapse",
@@ -1214,7 +1195,7 @@ function TaskPage(props: {
 				(res) =>
 					res.json() as Promise<{
 						ok?: boolean;
-						workspaces?: { title?: string; anchorSessionId?: string }[];
+						workspaces?: { id?: string; title?: string; anchorSessionId?: string }[];
 						models?: { provider?: string; id?: string; name?: string }[];
 						/** 后端明示「这批候选可能是残的」（宿主没接上服务）；前端**必须**如实告诉用户。 */
 						degraded?: { workspaces?: boolean; models?: boolean } | null;
@@ -1224,16 +1205,18 @@ function TaskPage(props: {
 				if (!alive || body.ok !== true) return;
 				const workspaceAnchors: Record<string, string> = {};
 				const workspaces: EditorOption[] = (body.workspaces ?? [])
-					// value 用 title：宿主侧 `resolveWorkspace` 就是按 title 精确匹配（src/dispatch.ts:33-35）。
+					// value 用 **id**（用户 2026-11-06：工作区改名不失效）；label 是给人和搜索用的标题。
+					// 老后端没下发 id ⇒ 退回标题（此时口径与旧版一致，不会整排空）。
 					.filter((item) => typeof item.title === "string" && item.title !== "")
 					.map((item) => {
+						const id = typeof item.id === "string" && item.id !== "" ? item.id : item.title as string;
 						if (
 							typeof item.anchorSessionId === "string" &&
 							item.anchorSessionId !== ""
 						) {
-							workspaceAnchors[item.title as string] = item.anchorSessionId;
+							workspaceAnchors[id] = item.anchorSessionId;
 						}
-						return { value: item.title as string, label: item.title as string };
+						return { value: id, label: item.title as string };
 					});
 				const models: EditorOption[] = [
 					{ value: "", label: t("editorFollowHost") },
@@ -1510,7 +1493,7 @@ function TaskPage(props: {
 			sessionId: preview.sessionId,
 			officeToPdf,
 			translate: coreT,
-			workspaces: editorOptions.workspaces.map((item) => item.value),
+			workspaces: editorOptions.workspaces.map((item) => item.label),
 			// 上限仍按「给主区留够 PAGE_MIN_WIDTH」算；面板自身宽度由核心持久化并夹在 min/max 之间。
 			maxWidth: Math.max(
 				320,
@@ -1587,7 +1570,6 @@ function TaskPage(props: {
 								{
 									variant: "outline",
 									size: "md",
-									title: t("backToConversation"),
 									onClick: onBack,
 								},
 								`← ${t("backToConversation")}`,
@@ -1618,7 +1600,6 @@ function TaskPage(props: {
 								{
 									variant: "outline",
 									size: "md",
-									title: t("editorNew"),
 									onClick: () => {
 										openCreate();
 									},
@@ -1715,7 +1696,12 @@ function TaskPage(props: {
 											{ style: hintStyle },
 											hasRaw ? t("debugRaw") : t("debugEmpty"),
 										),
-										hasRaw ? h("pre", { style: preStyle }, raw) : null,
+										hasRaw
+											? h("pre", {
+													className: surfaceClass({ tone: "sunken", border: "none", radius: "sm", padding: "sm" }),
+													style: preStyle,
+												}, raw)
+											: null,
 									)
 								: // ↓ 旧「任务配置」界面（JSON 逃生口 + 只读参数）：主界面重建后由常量关掉，暂不删——
 									// 删了会牵出一串只服务于它的状态；等面板整体收尾（U6 调试债清理）时连状态一起清。
@@ -1813,15 +1799,22 @@ function TaskPage(props: {
 												t("tasksInlineLabel"),
 											),
 											h("p", { style: hintStyle }, t("tasksInlineHint")),
-											h("textarea", {
+											h(Textarea, {
 												id: "dsh-tdt-modal-inline",
 												value: current,
 												disabled: !writable,
-												onChange: (event: { target: { value: string } }) => {
-													setDraft(event.target.value);
+												onChange: (value: string) => {
+													setDraft(value);
 												},
 												spellCheck: false,
-												style: textareaStyle,
+												// 只补功能性布局；皮肤（底 / 边 / 圆角 / 聚焦）归核心。
+												style: {
+													minHeight: "16em",
+													resize: "vertical",
+													fontFamily: monoFont,
+													fontSize: "var(--dshpc-font-sm)",
+													lineHeight: 1.5,
+												},
 											}),
 											// 保存 / 放弃行。失败与 JSON 非法的提示已改接核心 `notify`（2026-11-06），
 											// 不再在这一行里叠浮层 Toast（核心提示统一在屏幕底部弹出）。
@@ -1924,7 +1917,10 @@ function TaskPage(props: {
 											h("h4", { style: sectionTitleStyle }, t("debugWarns")),
 											data.warns.length === 0
 												? h("p", { style: hintStyle }, t("debugNoWarns"))
-												: h("pre", { style: preStyle }, data.warns.join("\n")),
+												: h("pre", {
+														className: surfaceClass({ tone: "sunken", border: "none", radius: "sm", padding: "sm" }),
+														style: preStyle,
+													}, data.warns.join("\n")),
 
 											// 只读运行参数（原来在设置卡片上，卡片精简后挪进来，信息不丢）
 											h(
@@ -2459,7 +2455,6 @@ function TaskPageHost(props: {
 					{
 						variant: "outline",
 						size: "sm",
-						title: t("backToConversation"),
 						onClick: onBack,
 					},
 					`← ${t("backToConversation")}`,
