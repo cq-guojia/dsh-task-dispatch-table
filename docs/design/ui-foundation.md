@@ -246,7 +246,7 @@ body[data-ds-dark-theme]{
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
 | Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
 | Loading（浮动加载 pill） | — | — | `ui/Loading.tsx` + `ui/loading-css.ts` ✅ |
-| 卡 / 浮层外壳 | — | — | ✅ 编辑器侧 `.dsh-tdt-ed-card`/`.dsh-tdt-ed-panel` 本就单一可复用类；镜像层随 §七 边界不抽（U20 #4，2026-10-05；见 [`ui-style-guide.md`](ui-style-guide.md) §三） |
+| 卡 / 浮层外壳 | — | — | ✅ 编辑器内容卡 `.dsh-tdt-ed-card` 单一可复用类；**外壳（会话弹窗 / 任务编辑分栏）自 2026-11-06 起归核心**（`adv/session` 的 `dshpc-*` 与 `PanelDock` 的 `dshpc-dock__panel`），本仓 `.dsh-tdt-ed-panel` 已删（U20 #4 + 2026-11-06；见 [`ui-style-guide.md`](ui-style-guide.md) §三） |
 
 ### 5.3 官方件策略（**优先用官方的，但观感只覆盖一次**）
 

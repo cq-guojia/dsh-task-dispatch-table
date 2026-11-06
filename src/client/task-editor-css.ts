@@ -12,20 +12,11 @@ import { applyStyle } from "./ui";
 export const ED_STYLE_ID = "dsh-task-dispatch-table-task-editor";
 
 export const TASK_EDITOR_CSS = `
-/* 分栏：**占布局的一列**（U21，2026-10-01）——与右侧预览 dock（核心 openFilePreview 的
-   .dshpc-dock__panel）同一套形态：根容器的 flex 成员，sticky + 100vh 让它在页面滚动时
-   保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
-   旧的遮罩层已废：用户要求「别盖住主窗口」。
-   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 520（用户 2026-10-02 定）。
-   ⚠️ **本条不设 z-index**：1040 是它还是「浮层 + 遮罩」那代的遗留值（见 worklog/editor-split-pane.md），
-   改成布局成员后一直没清 ⇒ 会无条件压过宿主 portal 到 body 的弹窗（「系统设置」等）。
-   真机 2026-10-05 去掉，交回 DOM 顺序裁决。 */
-.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;width:var(--dsh-tdt-editor-w,520px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--dshpc-surface-base,var(--dshpc-surface-1,#fff));color:var(--dshpc-fg,#1f2328);border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));box-shadow:var(--dshpc-shadow-2,0 12px 40px rgba(0,0,0,.32));}
-/* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
-   user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
-   见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
-/* 左缘拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index。 */
-.dsh-tdt-ed-resizer{z-index:2;}
+/* 分栏外壳（面板 / 拖拽条 / 宽度 / sticky）已全部归核心 PanelDock（2026-11-06）：
+   .dshpc-dock__panel 就是原来那条 sticky 一列，宽度由核心按 storageKey 记忆，
+   --dshpc-page-inset-right 由核心维护 —— 本仓不再自管分栏宽度与拖拽条。
+   这里只剩**内容本体**：填满核心给的 body 高度，内部自己滚（核心 body 的 overflow 不参与）。 */
+.dsh-tdt-ed-content{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:var(--dshpc-font-lg);font-weight:600;}
 /* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */

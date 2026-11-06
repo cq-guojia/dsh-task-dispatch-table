@@ -42,7 +42,7 @@
 | **月历网格（7 列 × 6 行）** | `ui/DateTime.tsx` 的 `buildMonthCells`（2026-10-05 由私有函数上提为导出） | `const cells = buildMonthCells(y, m)`（`m` 为 **1-based**；返回 `{ iso, day, inMonth, isToday }[]`，固定 42 格） | ✅ **2026-10-05 落码**：日期框的自绘日历与「任务日程」页**共用同一份**（此前只有前者在用，后者不许再写一套网格算法）。⚠️ **格子内容 / 选中日清单的版式是页面私有**（`task-calendar.tsx` 的样式域 `domain:calendar`）⇒ **不进本表**（它不是通用控件）；周表头与月份标题走 `calendarLabelsOf` 单源 |
 | Toast | `toast-css.ts`（`FloatingToast`，含 `closable` 可关闭变体） | `h(FloatingToast, { tone: 'error', … })` | ✅ 唯一（先前 `index.ts` 自绘中性提示条已收编为 `closable` 变体，U20 #5，2026-10-05） |
 | **回到顶部悬浮钮** | `ui/BackToTop.tsx` + `ui/back-to-top-css.ts`（皮肤 `.dsh-tdt-backtotop`） | `h(BackToTop, null)`（默认锚 `dsh-tdt-main`，横向贴主内容列右缘**外侧**、滚过 320px 才显形） | ✅ **2026-10-06 落码**：主面板三个 tab（任务配置 / 执行记录 / 任务日程 …）共用同一个 page 滚动容器，在 `index.ts` 的 page 容器里渲染**一次**即全覆盖，不许各页面各放一份；横向锚定与主内容同进退（与 `Loading` 同源，后者贴右缘内侧） |
-| 卡 / 浮层外壳 | 编辑器侧 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel` 本就单一可复用类（提示词/附件/排期/前置任务卡共用 `ed-card`） | — | ✅ **2026-10-05 收口**（编辑器侧已唯一）；**2026-11-06 起会话弹窗外壳归核心**（`dsh-plugin-core/adv/session` 的 `dshpc-*`），本仓 `mirror/*` 镜像层已删 |
+| 卡 / 浮层外壳 | 编辑器内容卡 `.dsh-tdt-ed-card` 单一可复用类（提示词/附件/排期/前置任务卡共用） | — | ✅ **2026-10-05 收口**（内容卡已唯一）；**2026-11-06 起两种外壳都归核心**：会话弹窗 `dsh-plugin-core/adv/session`（`dshpc-*`）、任务编辑分栏 `PanelDock`（`.dshpc-dock__panel`）——本仓 `.dsh-tdt-ed-panel` 已删，只留内容本体 `.dsh-tdt-ed-content` |
 
 > 表外的控件一旦被写第二遍，就是本手册要拦住的事。
 
@@ -105,9 +105,9 @@
 | # | 事项 | 现状 | 建议 |
 |---|---|---|---|
 | 1 | 省略号三件套 | `overflow:hidden;text-overflow:ellipsis;white-space:nowrap` 全仓约 19 处（会话 CSS 约 14 处） | ✅ **2026-10-05 收口**：`.tsx` 内联三件套 3 处（`task-info` / `task-list` / `task-editor` 附件名）已收编 `.dsh-tdt-ellipsis`；其余是 CSS 类定义（含镜像层 ~14 处），纯 CSS 无法 `@extend`，保留为类定义、语义与 `.dsh-tdt-ellipsis` 一致，属已知遗留 |
-| 2 | 手搓图标钮 | `archive-session-css.ts` 的 `head-btn`(28×28) / `tree-toggle`(20×20) 仍自绘 | ✅ **2026-10-05 收口**：编辑器侧 `.dsh-tdt-ed-help` / `.dsh-tdt-ed-advhead` 本就是**单一定义**（`ed-help` 因官方 Tooltip 需真实 DOM 节点、有意不借 `IconButton` 按钮壳，`task-editor.tsx:89-91` 注释）；镜像层 `head-btn` / `tree-toggle` 随 §七「宿主会话面 1:1 镜像」边界**不抽** |
-| 3 | 6px 拖拽条 | `task-editor-css.ts` 与 `archive-session-css.ts` 各写一遍；**连 CSS 带逻辑两份**：两个 `startResize` 各自实现「拖动调宽 + 拖动禁选」 | ✅ **2026-10-05 收口**：上提 `.dsh-tdt-resizer`（基础层 `ui/controls-css.ts`）+ 共享 `startResizeLayoutWidth()`（`ui/resizer.ts`，含 preventDefault / `body.user-select` 恢复 / rAF 节流 / `rootClass` 切换）；编辑分栏与预览 dock 两处均复用，几何只差 z-index |
-| 4 | 卡 / 浮层外壳 | 同构 **7 处**（`ed-card` / `ed-panel` / `sv-panel` / `sv-stats` / `layer` …） | ✅ **2026-10-05 收口**：编辑器侧 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel` / `.dsh-tdt-ed-section` 本就是**单一可复用类**（提示词/附件/排期/前置任务卡共用 `ed-card`，无重复）；镜像层 7 外壳随 §七 边界**不抽** |
+| 2 | 手搓图标钮 | 编辑器侧 `.dsh-tdt-ed-help` / `.dsh-tdt-ed-advhead` | ✅ **2026-10-05 收口**：这两处本就是**单一定义**（`ed-help` 因官方 Tooltip 需真实 DOM 节点、有意不借 `IconButton` 按钮壳，`task-editor.tsx:89-91` 注释）；会话面的 `head-btn` / `tree-toggle` 已随 2026-11-06 镜像层删除（渲染归核心） |
+| 3 | 6px 拖拽条 | 两条分栏的拖拽条 | ✅ **2026-11-06 收口**：全归核心 `PanelDock`（`.dshpc-dock__resizer` + 核心 `startResizeLayoutWidth`）；本仓 `.dsh-tdt-resizer`、`ui/resizer.ts`、两个自绘 `startResize` 已删（会话弹窗的 `archive-session-css.ts` 早在改接核心时清掉） |
+| 4 | 卡 / 浮层外壳 | 同构 **7 处**（`ed-card` / `ed-panel` / `sv-panel` / `sv-stats` / `layer` …） | ✅ **2026-10-05 收口**：编辑器内容卡 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-section` 本就是单一可复用类（无重复）；**2026-11-06 起 `ed-panel` / `sv-panel` / `sv-stats` / `layer` 随外壳归核心一并删除**（会话弹窗 + 编辑分栏都走核心） |
 | 5 | 手搓中性 Toast | `index.ts` 自绘一个（关钮 + 圆点），与 `FloatingToast` 中性档重复 | ✅ **2026-10-05 收口**：`FloatingToast` 加 `closable` 变体（关闭钮 + 固定底部中央 + 不自动消失），`index.ts` 自绘提示条删，改走 `FloatingToast` 中性可关闭档 |
 | 6 | 缺基础层件 | 无 `Textarea`（提示词框皮肤写在业务 CSS）、无 `Checkbox`（编辑器用裸 `<input type=checkbox>`） | ✅ **2026-10-05 收口**：补 `ui/Textarea` / `ui/Checkbox`（皮肤进基础层 `ui/controls-css.ts`），编辑器手输提示词改 `Textarea`、确认弹窗裸 `checkbox` 改 `Checkbox`，业务 CSS `.dsh-tdt-ed-prompt` 删除 |
 | 7 | token 兜底字面量不统一 | `--dshpc-fg` 兜底 `#1a1a1a` / `#1f2328` 两派；`--dshpc-hover` 兜底 `rgba(128,128,128,.16)` / `rgba(127,127,127,.14)` | ✅ **2026-10-05 收口**：调用点兜底值归一为 核心 token 层 规范值（`--dshpc-fg`→`#1f2328`、`--dshpc-hover`→`rgba(38,49,72,.06)`），`index.ts` 自绘 Toast 的 `rgba(40,40,40,.92)` 误用随 #5 删除 |

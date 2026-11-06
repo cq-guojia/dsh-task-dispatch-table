@@ -53,10 +53,7 @@ export const FIELD_CSS = `
 /* 官方 Switch 包装统一：选中 = success 绿。 */
 .dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
 
-/* 拖拽分隔条（本仓编辑分栏用；预览 dock 的拖拽条已归核心 PanelDock）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
-   z-index 由 .dsh-tdt-ed-resizer 补。 */
-.dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
-.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover,rgba(38,49,72,.06));}
+/* 拖拽分隔条已随两条分栏一起归核心 PanelDock（2026-11-06），本仓不再自绘命中条。 */
 `;
 
 /** 时分的弹层与列（本仓唯一实现：核心暂无「纯时分」档）。 */

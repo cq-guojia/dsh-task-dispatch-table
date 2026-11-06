@@ -2566,11 +2566,9 @@ try {
 			clientJs.includes("IconRefreshOutlineRegular"),
 	);
 	check(
-		"拖拽条高亮 = 6px 浅色半透明带（上提基础层 .dsh-tdt-resizer，编辑分栏 / 预览 dock 共用，2026-10-05）",
-		clientJs.includes("dsh-tdt-resizer") &&
-			clientJs.includes(
-				".dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover",
-			) &&
+		"拖拽条已归核心 PanelDock（本仓 .dsh-tdt-resizer 命中区皮肤已删）",
+		clientJs.includes("dshpc-dock__resizer") &&
+			!clientJs.includes("dsh-tdt-resizer") &&
 			!clientJs.includes(".dsh-tdt-sv-preview-dock:has(") &&
 			!clientJs.includes("border-left-color:rgba(255,255,255,1)"),
 	);
@@ -2917,9 +2915,11 @@ try {
 			!corePanelRule.includes("z-index"),
 	);
 	check(
-		"编辑抽屉不带 z-index（1040 系浮层时代遗留；同上，不压宿主 portal 弹窗）",
-		/\.dsh-tdt-ed-panel\{position:sticky[^}]*\}/.test(clientJs) &&
-			!/\.dsh-tdt-ed-panel\{[^}]*z-index/.test(clientJs),
+		"编辑分栏外壳归核心 PanelDock（自绘 .dsh-tdt-ed-panel / z-index 遗留已删）",
+		clientJs.includes("dsh-tdt-ed-content") &&
+			!clientJs.includes(".dsh-tdt-ed-panel{") &&
+			!clientJs.includes("var(--dsh-tdt-editor-w") &&
+			!/\.dsh-tdt-ed-content\{[^}]*z-index/.test(clientJs),
 	);
 	check(
 		"预览渲染失败降级到错误态（核心 previewRenderFailed / dshpc-fb__note；本地 PreviewBoundary 已随 file-preview.tsx 删除）",
@@ -5746,10 +5746,12 @@ console.log("\n[14] runtime-index");
 				!edJs.includes("dsh-tdt-ed-overlay"),
 		);
 		check(
-			"面板改占布局的一列（sticky + 100vh + flex:0 0 auto，与预览 dock 同套）且宽度走 --dsh-tdt-editor-w",
-			edJs.includes(
-				".dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;",
-			) && edJs.includes("width:var(--dsh-tdt-editor-w,520px)"),
+			"编辑分栏外壳 = 核心 PanelDock（同页双分栏：预览一条 + 任务一条，本仓只留内容本体）",
+			edJs.includes("dsh-tdt-ed-content") &&
+				edJs.includes("dshpc-dock__panel") &&
+				edJs.includes("--dshpc-page-inset-right") &&
+				!edJs.includes(".dsh-tdt-ed-panel{") &&
+				!edJs.includes("var(--dsh-tdt-editor-w"),
 		);
 		check(
 			"「基本信息 / 执行记录」切换已删（id 与三处文案双语全无）",
@@ -5787,10 +5789,17 @@ console.log("\n[14] runtime-index");
 			!edSrc.includes("problemsByField('prompt') !== undefined"),
 		);
 		check(
-			"宽度下限 / 默认 = 520（用户 2026-10-02 定）且给主面板留够最小宽（两条分栏互相当预留）",
-			edSrc.includes("EDITOR_WIDTH_MIN = 520") &&
-				edSrc.includes("EDITOR_WIDTH_DEFAULT = 520") &&
-				edSrc.includes("window.innerWidth - PAGE_MIN_WIDTH - reserved"),
+			"分栏宽度下限 / 默认 = 520（用户 2026-10-02 定）交给核心 dock；主面板保底走 mainMinWidth",
+			readFileSync(
+				join(process.cwd(), "src", "client", "index.ts"),
+				"utf8",
+			).includes(
+				'defaultWidth: 520,\n\t\t\t\tminWidth: 520,\n\t\t\t\tstorageKey: "dsh-tdt-editor"',
+			) &&
+				readFileSync(
+					join(process.cwd(), "src", "client", "index.ts"),
+					"utf8",
+				).includes("{ dock: editorDock, mainMinWidth: PAGE_MIN_WIDTH }"),
 		);
 		// 用户 2026-10-02：最小宽（530）下排期底部行的中文标签被压成两行 ⇒ 标签 nowrap + 三控件 flex:none
 		// 收窄（126→108 / 92→78，延迟下拉定宽 80）+ flexWrap 兜底，规则是「宁可换行，也不折标签 / 不切框内字」。
@@ -5813,31 +5822,18 @@ console.log("\n[14] runtime-index");
 				"utf8",
 			).includes("editorTaskStart: '开始时间'"),
 		);
-		// 用户 2026-10-02：拖拽会顺手选中一片文字 ⇒ pointerdown preventDefault + 拖动期间全域禁选。
+		// 2026-11-06：拖拽调宽 / 指针手势 / 命中区全部归核心 PanelDock，本仓不再自绘拖拽条。
 		check(
-			"拖拽调宽不再选中文字（2026-11-06 起走核心 startResizeLayoutWidth）+ 本仓只留命中区皮肤",
-			(() => {
-				const barrel = readFileSync(
+			"拖拽调宽归核心 PanelDock（本仓自绘 resizer / startResizeLayoutWidth 皮肤已删）",
+			!edJs.includes(".dsh-tdt-ed-resizer") &&
+				!edJs.includes(".dsh-tdt-resizer{") &&
+				!existsSync(
+					join(process.cwd(), "src", "client", "ui", "resizer.ts"),
+				) &&
+				readFileSync(
 					join(process.cwd(), "src", "client", "ui", "index.ts"),
 					"utf8",
-				);
-				const css = readFileSync(
-					join(process.cwd(), "src", "client", "ui", "controls-css.ts"),
-					"utf8",
-				);
-				return (
-					/startResizeLayoutWidth,[^']*from 'dsh-plugin-core\/ui'/.test(
-						barrel,
-					) &&
-					!existsSync(
-						join(process.cwd(), "src", "client", "ui", "resizer.ts"),
-					) &&
-					edJs.includes(".dsh-tdt-ed-resizer{z-index:2") &&
-					css.includes(
-						".dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize",
-					)
-				);
-			})(),
+				).includes("createPanelDock"),
 		);
 	}
 

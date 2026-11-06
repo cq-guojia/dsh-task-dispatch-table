@@ -73,9 +73,9 @@
 | 项 | 结论 |
 |---|---|
 | 唯一预览面 | 页面级预览 = 核心 `openFilePreview`（`dsh-plugin-core/adv/explorer`）的右侧分栏，mount = `#dsh-tdt-root`；弹窗与整页**共用这一份**（核心负责 flex 行、主区伸展、关闭还原） |
-| 推压方式 | 核心 PanelDock 把根容器补成横向 flex 行、主区伸展 ⇒ **整页被真正挤窄**（不是被盖住）；核心在 `documentElement` 发布 `--dshpc-page-inset-right`，弹窗 overlay `right = calc(该变量 + --dsh-tdt-editor-w)` 让位 ⇒ 弹窗不遮盖任何分栏 |
+| 推压方式 | 核心 PanelDock 把根容器补成横向 flex 行、主区伸展 ⇒ **整页被真正挤窄**（不是被盖住）；核心在 `documentElement` 发布 `--dshpc-page-inset-right`（**同页多个 dock 求和**），会话弹窗 overlay 的 `inset` 直接消费它 ⇒ 弹窗不遮盖任何分栏 |
 | 生命周期 | 预览 state 在 `TaskPage` 上 ⇒ **关弹窗不影响预览**，预览可独立收回（头部关闭钮） |
-| 与编辑分栏并存（U21，2026-10-01） | 新增/编辑任务自 2026-10-01 起也是同一套「占布局的分栏」（`--dsh-tdt-editor-w`）⇒ 右侧**可能同时有两条分栏**，互不干涉、不互斥；两条各自的宽度互相当对方的预留（都要给主面板留够最小宽），全屏会话弹窗让位宽度 = 两者之和 |
+| 与编辑分栏并存（U21，2026-10-01；2026-11-06 双 dock） | 新增 / 编辑任务也是**核心 PanelDock 的一条分栏** ⇒ 右侧可能同时有两条（预览 + 任务），互不干涉、不互斥；两条是独立 dock 实例，核心求和发布让位宽度，会话弹窗自动让位两条之和。本仓打开预览时按编辑 dock 的当前宽度算 `maxWidth`（避免把主区挤到最小宽以下） |
 | 统一入口 | `openFile(sessionId, path)`：弹窗内（工具卡路径 / 正文 fileMentions / 交付卡）经 `onOpenFile(path)` 上提；整页（执行记录行的产出物）直调 ⇒ **两处同一个入口、同一份引擎**（决策 39 ③） |
 | 宽度可调 | 归核心 PanelDock：左缘拖拽条 `dshpc-dock__resizer`，宽度由核心夹取并持久化（本仓不再存宽度 state / localStorage） |
 | 崩溃隔离 | 核心 `FilePreview` 自带错误态（`previewRenderFailed`）；本仓不再包 `PreviewBoundary` |

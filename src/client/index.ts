@@ -66,7 +66,6 @@ import {
 import { SettingsPage } from "./settings-page";
 import { TaskCalendarView } from "./task-calendar";
 import {
-	clampEditorWidth,
 	definitionToDraft,
 	draftToDefinitionJson,
 	type EditorHistory,
@@ -76,10 +75,8 @@ import {
 	type HistorySnapshot,
 	type HistoryVersion,
 	PAGE_MIN_WIDTH,
-	readEditorWidth,
 	type TaskEditorDraft,
 	TaskEditorDrawer,
-	writeEditorWidth,
 } from "./task-editor";
 import {
 	type AttachedFileView,
@@ -97,7 +94,11 @@ import {
 import { ensureToastStyle, FloatingToast } from "./toast-css";
 import {
 	Button,
+	createPanelDock,
+	DockPanel,
 	ensureUiBase,
+	PanelDock,
+	type PanelDockController,
 	QuickToolbar,
 	Segmented,
 	type TaskOption,
@@ -111,6 +112,8 @@ const LOCALE_NS = SETTINGS_NS;
 const PANEL_ID = SETTINGS_NS;
 /** 旧「任务配置」界面（JSON 逃生口 + 只读参数）开关：主界面重建后关闭，待面板收尾时连状态一起清。 */
 const LEGACY_CONFIG_VIEW = false;
+/** 编辑分栏在核心 PanelDock 里的组名（预览 dock 是另一条、另一个控制器，同名也不冲突）。 */
+const EDITOR_PANEL_ID = "task-editor";
 /** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 let runtimeT: Translate = (key) => key;
 
@@ -533,21 +536,6 @@ const encodeModelValue = (provider: string, id: string): string =>
 // ── U11 页面级预览 dock（弹窗与整页共用同一个预览面） ──
 
 /**
- * 页面右侧已被核心分栏占掉的宽度（px）。
- *
- * 预览 dock 现在完全由核心 `openFilePreview` 的 `PanelDock` 管（宽度、拖拽、开合都由它），
- * 核心把「右侧已占宽」发布在 documentElement 的 `--dshpc-page-inset-right`（PanelDock.js 的
- * `publishInset`）。本仓只消费这个约定变量，不再自己存一份宽度 state。
- */
-function pageInsetRight(): number {
-	const raw = document.documentElement.style
-		.getPropertyValue("--dshpc-page-inset-right")
-		.trim();
-	const value = Number.parseFloat(raw);
-	return Number.isFinite(value) ? Math.round(value) : 0;
-}
-
-/**
  * 实例行的产出物（决策 32③写回的列：JSON 数组，兼容逗号串）。
  * 2026-10-10 起 `outputs`（主文件）与 `process_outputs`（过程文件）**同一形状**，共用这一个解析器。
  */
@@ -730,10 +718,26 @@ function TaskPage(props: {
 	} | null>(null);
 	const [editorSaving, setEditorSaving] = useState(false);
 	const [editorError, setEditorError] = useState<string | null>(null);
-	/** 编辑分栏宽度（真源在这里：另一个 dock 与全屏会话弹窗都要拿它算可用宽度）。 */
-	const [editorWidth, setEditorWidth] = useState<number>(() =>
-		readEditorWidth(),
+	/**
+	 * 编辑分栏的控制器（用户 2026-11-06：分栏外壳也用核心控件）。
+	 * 同页双分栏：预览 dock 由核心 `openFilePreview` 自己开一条，这条专门放任务新建 / 查看；
+	 * 宽度记忆 / 拖拽夹宽 / 收起耳朵 / `--dshpc-page-inset-right` 全由核心 PanelDock 维护。
+	 */
+	const editorDock = useMemo<PanelDockController>(
+		() =>
+			createPanelDock({
+				maxPanels: 1,
+				defaultWidth: 520,
+				minWidth: 520,
+				storageKey: "dsh-tdt-editor",
+			}),
+		[],
 	);
+	// 显隐归状态：editor 有值即开（重复 open 幂等）、无值即关；收起后再点任务会重新展开。
+	useEffect(() => {
+		if (editor === null) editorDock.close(EDITOR_PANEL_ID);
+		else editorDock.open(EDITOR_PANEL_ID);
+	}, [editor, editorDock]);
 
 	// U11 页面级预览 dock（用户 2026-09-28 拍板）：**唯一一份**预览面，固定在屏幕最右侧并
 	// 把整页（含会话弹窗）往左推；弹窗与整页共用它，关弹窗不影响它，它自己可完整收回。
@@ -746,33 +750,8 @@ function TaskPage(props: {
 		seq: number;
 	} | null>(null);
 	const previewHandleRef = useRef<FilePreviewHandle | null>(null);
-	// 两条分栏各自当前占掉的宽度（0 = 收起）：**互为对方的预留**，用来给主面板留够最小宽度
-	// （用户 2026-10-01 Q3：两条同时打开时也要保证主窗口，不只是单边）。
-	// 预览宽度归核心 PanelDock 管，这里读它发布的 `--dshpc-page-inset-right`。
-	const previewTaken = preview === null ? 0 : pageInsetRight();
-	const editorTaken = editor === null ? 0 : editorWidth;
-	/** 编辑分栏宽度变化回调（拖拽松手）：落 state + 持久化。 */
-	const changeEditorWidth = useCallback((next: number): void => {
-		setEditorWidth(next);
-		writeEditorWidth(next);
-	}, []);
-	/**
-	 * 编辑分栏宽度的可用上限要减去预览 dock 已占的宽度（预览开合 / 视口变化时重夹）
-	 * ⇒ 主面板始终拿得到最小宽度 760（不足时按下限兜住，宁可主面板出横向滚动条）。
-	 */
-	useEffect(() => {
-		const reClamp = (): void => {
-			setEditorWidth((cur) => {
-				const next = clampEditorWidth(cur, previewTaken);
-				return next === cur ? cur : next;
-			});
-		};
-		reClamp();
-		window.addEventListener("resize", reClamp);
-		return () => {
-			window.removeEventListener("resize", reClamp);
-		};
-	}, [previewTaken, editorTaken]);
+	// 宽度不再由本页记账：两条分栏各自归核心 PanelDock（宽度记忆 + 拖拽夹宽 + 让位变量）。
+	// 打开预览时按编辑分栏**当前宽度**给它留出上限（dock 快照里有值，取不到就用默认 520）。
 	// U11 单一入口：整页（记录行产出物）与弹窗（文件链接 / 交付卡）全走它 ⇒ 预览面只有一份。
 	// 文件面已由核心 `connectFs` 接上（宿主 `serveFsRoute` 同一路由），不再依赖 remote.workspaceFiles。
 	const canPreview = getFsFace() !== undefined;
@@ -1511,6 +1490,12 @@ function TaskPage(props: {
 	// 本仓只给「包住主区的挂载点 + 路径」。重复点同一个文件靠 seq 让 effect 再跑一次（回到请求的路径）。
 	useEffect(() => {
 		if (preview === null) return;
+		// 编辑分栏此刻占掉的宽度：直接从核心 dock 快照读（未拖过则回默认 520）。
+		const editorTaken =
+			editor === null
+				? 0
+				: (editorDock.getSnapshot().widths[EDITOR_PANEL_ID] ??
+					editorDock.defaults.defaultWidth);
 		previewHandleRef.current = openFilePreview({
 			mount: "#dsh-tdt-root",
 			path: preview.path,
@@ -1545,17 +1530,15 @@ function TaskPage(props: {
 	// UI 基础层：token 表与注入器都由核心（dsh-plugin-core/design）提供，这里只确保已注入。
 	// 业务规则已全部消费 --dshpc-*；本仓不再自建 token 表。
 	ensureUiBase();
-	// 根容器 = 横向分栏：内容区（整页 + 会话弹窗层）flex:1，右侧编辑分栏占一份宽度
-	// （`--dsh-tdt-editor-w`，收起时为 0）。预览 dock 由核心 PanelDock 自己插进这一行。
-	// dock 是布局成员而非浮层 ⇒ 整页被真正挤窄、滚动条不被遮盖（用户 2026-09-28 要求「分栏压过来，不是盖上去」；
-	// 2026-10-01 U21 编辑弹窗也改成同一形态）。
+	// 根容器 = 横向分栏：内容区（整页 + 会话弹窗层）flex:1；右侧两条分栏都由核心 PanelDock 插入这一行
+	// （预览由 openFilePreview 自己开，编辑由下面那条 PanelDock 开 ⇒ 同页双分栏，宽度各自记忆、让位变量求和）。
+	// dock 是布局成员而非浮层 ⇒ 整页被真正挤窄、滚动条不被遮盖（用户 2026-09-28 要求「分栏压过来，不是盖上去」）。
 	return h(
 		"div",
 		{
 			id: "dsh-tdt-root",
 			className: "dsh-tdt-root",
 			style: {
-				["--dsh-tdt-editor-w" as string]: `${editorTaken}px`,
 				display: "flex",
 				alignItems: "flex-start",
 				minHeight: "100%",
@@ -2089,87 +2072,101 @@ function TaskPage(props: {
 					},
 				})
 			: null,
-		// 新建 / 编辑任务分栏（右侧**占布局的一列**：主窗口被推窄、不被遮盖；与预览 dock 可同时存在）。
+		// 新建 / 编辑任务分栏：外壳 = 核心 PanelDock（同页双分栏：预览一条、任务一条）。
 		// 工作区 / 模型 = `GET /options` 的真实目录（P1）；前置任务 = 现有任务表（真数据）。
-		editor !== null
-			? h(TaskEditorDrawer, {
-					key: editor.id,
-					t,
-					overview,
-					mode: editor.mode,
-					draft: editor.draft,
-					width: editorWidth,
-					onWidthChange: changeEditorWidth,
-					reserved: previewTaken,
-					onChange: (next: TaskEditorDraft) => {
-						setEditor({ ...editor, draft: next });
-					},
-					workspaces: editorOptions.workspaces,
-					models: editorOptions.models,
-					tasks: editorTasks,
-					currentTaskId: editor.mode === "edit" ? editor.id : undefined,
-					// 左列表拨片 → 右抽屉联动（2026-10-05）：把本任务 id 交给抽屉，让它从共享 store 取 enabled 同步。
-					syncTaskId: editor.id,
-					onClose: () => {
-						setEditor(null);
-					},
-					onSave: (draft: TaskEditorDraft) => {
-						void saveEditor(draft);
-					},
-					onDelete:
-						editor.mode === "edit"
-							? () => {
-									void deleteEditorTask();
-								}
-							: undefined,
-					saveError: editorError,
-					history: editor.history,
-					onRestoreVersion: (file: string) => {
-						void restoreVersion(file);
-					},
-					onDeleteVersion: (file: string) => {
-						void deleteVersion(file);
-					},
-					onToggleEnabled: (enabled: boolean) =>
-						toggleTaskEnabled(editor.id, enabled),
-					// ── 查看 / 编辑两档（用户 2026-10-05）──────────────────────────────
-					// 打开时停哪一档由 state 决定（卡片「编辑」/「＋新建」= edit；前置任务名点进来 = view）。
-					initialView: editor.view,
-					// 脏状态由抽屉单向上报（真源在抽屉内），这里只存进 ref 供「未保存冲突」判定用。
-					onDirtyChange: (next: boolean) => {
-						editorDirtyRef.current = next;
-					},
-					// 未保存时切看别的任务：抽屉内联确认层（绝不引官方 Modal）。
-					pendingView,
-					onConfirmPendingView: confirmPendingView,
-					onCancelPendingView: () => {
-						setPendingView(null);
-					},
-					// 未保存时切去编辑另一个任务：同一套抽屉内联确认层（三选）。
-					pendingEdit,
-					onConfirmPendingEdit: confirmPendingEdit,
-					onCancelPendingEdit: () => {
-						setPendingEdit(null);
-					},
-					// 查看档里「任务会话 / 产出物」可点：走 U11 单一入口，未就位时 undefined ⇒ 降级不可点。
-					onOpenSession:
-						viewSession !== null
-							? (sessionId: string) => {
-									void openView(sessionId);
-								}
-							: undefined,
-					onOpenFile: canPreview ? openFile : undefined,
-					// 查看档里点前置任务名 ⇒ 打开那个任务的查看档（r12：与卡片展开区口径一致）。
-					onViewTask: openViewer,
-					// r13：附件可点 ⇒ 传该任务在 overview 里的服务端解析结果（绝对路径 + 锚点会话，按 kind+name 配对）。
-					resolvedAttachments:
-						editor.mode === "edit"
-							? overview.rows.find((item) => item.id === editor.id)?.attachments
-							: undefined,
-					officeToPdf,
-					workspaceAnchors: editorOptions.workspaceAnchors,
-				})
-			: null,
+		h(
+			PanelDock,
+			{ dock: editorDock, mainMinWidth: PAGE_MIN_WIDTH },
+			h(
+				DockPanel,
+				{
+					id: EDITOR_PANEL_ID,
+					// 内容自带头部与关闭钮（含未保存确认层）⇒ 核心不出头、不出 ✕。
+					header: null,
+					closable: false,
+					closeButton: "none",
+					ariaLabel: t("editorEdit"),
+					width: 520,
+					minWidth: 520,
+				},
+				editor !== null
+					? h(TaskEditorDrawer, {
+							key: editor.id,
+							t,
+							overview,
+							mode: editor.mode,
+							draft: editor.draft,
+							onChange: (next: TaskEditorDraft) => {
+								setEditor({ ...editor, draft: next });
+							},
+							workspaces: editorOptions.workspaces,
+							models: editorOptions.models,
+							tasks: editorTasks,
+							currentTaskId: editor.mode === "edit" ? editor.id : undefined,
+							// 左列表拨片 → 右抽屉联动（2026-10-05）：把本任务 id 交给抽屉，让它从共享 store 取 enabled 同步。
+							syncTaskId: editor.id,
+							onClose: () => {
+								setEditor(null);
+							},
+							onSave: (draft: TaskEditorDraft) => {
+								void saveEditor(draft);
+							},
+							onDelete:
+								editor.mode === "edit"
+									? () => {
+											void deleteEditorTask();
+										}
+									: undefined,
+							saveError: editorError,
+							history: editor.history,
+							onRestoreVersion: (file: string) => {
+								void restoreVersion(file);
+							},
+							onDeleteVersion: (file: string) => {
+								void deleteVersion(file);
+							},
+							onToggleEnabled: (enabled: boolean) =>
+								toggleTaskEnabled(editor.id, enabled),
+							// ── 查看 / 编辑两档（用户 2026-10-05）──────────────────────────────
+							// 打开时停哪一档由 state 决定（卡片「编辑」/「＋新建」= edit；前置任务名点进来 = view）。
+							initialView: editor.view,
+							// 脏状态由抽屉单向上报（真源在抽屉内），这里只存进 ref 供「未保存冲突」判定用。
+							onDirtyChange: (next: boolean) => {
+								editorDirtyRef.current = next;
+							},
+							// 未保存时切看别的任务：抽屉内联确认层（绝不引官方 Modal）。
+							pendingView,
+							onConfirmPendingView: confirmPendingView,
+							onCancelPendingView: () => {
+								setPendingView(null);
+							},
+							// 未保存时切去编辑另一个任务：同一套抽屉内联确认层（三选）。
+							pendingEdit,
+							onConfirmPendingEdit: confirmPendingEdit,
+							onCancelPendingEdit: () => {
+								setPendingEdit(null);
+							},
+							// 查看档里「任务会话 / 产出物」可点：走 U11 单一入口，未就位时 undefined ⇒ 降级不可点。
+							onOpenSession:
+								viewSession !== null
+									? (sessionId: string) => {
+											void openView(sessionId);
+										}
+									: undefined,
+							onOpenFile: canPreview ? openFile : undefined,
+							// 查看档里点前置任务名 ⇒ 打开那个任务的查看档（r12：与卡片展开区口径一致）。
+							onViewTask: openViewer,
+							// r13：附件可点 ⇒ 传该任务在 overview 里的服务端解析结果（绝对路径 + 锚点会话，按 kind+name 配对）。
+							resolvedAttachments:
+								editor.mode === "edit"
+									? overview.rows.find((item) => item.id === editor.id)?.attachments
+									: undefined,
+							officeToPdf,
+							workspaceAnchors: editorOptions.workspaceAnchors,
+						})
+					: null,
+			),
+		),
 	);
 }
 

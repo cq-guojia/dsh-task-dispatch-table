@@ -56800,10 +56800,7 @@ window.__ModuleLoader__.load({
 /* 官方 Switch 包装统一：选中 = success 绿。 */
 .dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
 
-/* 拖拽分隔条（本仓编辑分栏用；预览 dock 的拖拽条已归核心 PanelDock）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
-   z-index 由 .dsh-tdt-ed-resizer 补。 */
-.dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
-.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover,rgba(38,49,72,.06));}
+/* 拖拽分隔条已随两条分栏一起归核心 PanelDock（2026-11-06），本仓不再自绘命中条。 */
 `;
 		/** 时分的弹层与列（本仓唯一实现：核心暂无「纯时分」档）。 */
 		const DATETIME_CSS = `
@@ -74988,20 +74985,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		//#endregion
 		//#region src/client/task-editor-css.ts
 		const TASK_EDITOR_CSS = `
-/* 分栏：**占布局的一列**（U21，2026-10-01）——与右侧预览 dock（核心 openFilePreview 的
-   .dshpc-dock__panel）同一套形态：根容器的 flex 成员，sticky + 100vh 让它在页面滚动时
-   保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
-   旧的遮罩层已废：用户要求「别盖住主窗口」。
-   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 520（用户 2026-10-02 定）。
-   ⚠️ **本条不设 z-index**：1040 是它还是「浮层 + 遮罩」那代的遗留值（见 worklog/editor-split-pane.md），
-   改成布局成员后一直没清 ⇒ 会无条件压过宿主 portal 到 body 的弹窗（「系统设置」等）。
-   真机 2026-10-05 去掉，交回 DOM 顺序裁决。 */
-.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;width:var(--dsh-tdt-editor-w,520px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--dshpc-surface-base,var(--dshpc-surface-1,#fff));color:var(--dshpc-fg,#1f2328);border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));box-shadow:var(--dshpc-shadow-2,0 12px 40px rgba(0,0,0,.32));}
-/* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
-   user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
-   见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
-/* 左缘拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index。 */
-.dsh-tdt-ed-resizer{z-index:2;}
+/* 分栏外壳（面板 / 拖拽条 / 宽度 / sticky）已全部归核心 PanelDock（2026-11-06）：
+   .dshpc-dock__panel 就是原来那条 sticky 一列，宽度由核心按 storageKey 记忆，
+   --dshpc-page-inset-right 由核心维护 —— 本仓不再自管分栏宽度与拖拽条。
+   这里只剩**内容本体**：填满核心给的 body 高度，内部自己滚（核心 body 的 overflow 不参与）。 */
+.dsh-tdt-ed-content{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dshpc-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:var(--dshpc-font-lg);font-weight:600;}
 /* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */
@@ -76404,39 +76392,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				label: t("editorWeekdayLabel")
 			}));
 		}
-		/** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
-		const EDITOR_WIDTH_KEY = "dsh-tdt-editor-width";
-		/** 最小宽度（用户 2026-10-02：560 偏宽 → 试 500 → 试 530 → 定 520）。 */
-		const EDITOR_WIDTH_MIN = 520;
-		const EDITOR_WIDTH_DEFAULT = 520;
-		/**
-		* 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
-		* 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
-		* 下限保住 520，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
-		* @param value - 目标宽度。
-		* @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
-		*/
-		function clampEditorWidth(value, reserved = 0) {
-			const avail = window.innerWidth - 760 - reserved;
-			const max = Math.max(EDITOR_WIDTH_MIN, Math.min(Math.floor(window.innerWidth * .9), Math.floor(avail)));
-			return Math.min(Math.max(Math.round(value), EDITOR_WIDTH_MIN), max);
-		}
-		/** 读上次宽度（无效 / 越界一律回默认）。 */
-		function readEditorWidth(reserved = 0) {
-			try {
-				const raw = window.localStorage.getItem(EDITOR_WIDTH_KEY);
-				const value = raw === null ? NaN : Number(raw);
-				return Number.isFinite(value) ? clampEditorWidth(value, reserved) : EDITOR_WIDTH_DEFAULT;
-			} catch {
-				return EDITOR_WIDTH_DEFAULT;
-			}
-		}
-		/** 宽度写盘（隐私模式抛错就忽略；宽度是纯本地偏好，丢了回默认宽度）。 */
-		function writeEditorWidth(value) {
-			try {
-				window.localStorage.setItem(EDITOR_WIDTH_KEY, String(value));
-			} catch {}
-		}
 		/**
 		* 提示词卡底部三下拉的**定宽**（用户 2026-10-02）：
 		* 以「权限」为基准 120px，工作区 / 模型 = 1.5 倍 = 180px。
@@ -76888,7 +76843,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceAnchors, officeToPdf, currentTaskId, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
 			/**
 			* 带 `{name}` 占位符的文案席位（复用 locales 的替换器；本页 `t` 是**无参**形态）。
 			* ⚠️ 声明位置必须**早于** `validateTaskDraft` 的调用点（约 1332 / 2311）：那条校验用到
@@ -77061,42 +77016,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					window.removeEventListener("keydown", onKey);
 				};
 			}, [requestClose, confirmDiscard]);
-			/**
-			* 左缘拖拽调宽（U21：与预览 dock 同一套手势）：拖动期间**只改 CSS 变量**
-			* `--dsh-tdt-editor-w`（不重渲染整页），松手才回调父 state + 落 localStorage。
-			*
-			* 拖拽为什么会「选中文字」（用户 2026-10-02）：pointerdown 的默认动作会开一次**文本选区**，
-			* 指针扫过主窗口的文字时选区跟着扩 ⇒ 看着像在拖选。两道闸：
-			*   ① `preventDefault()`：掐掉 pointerdown 的默认动作（连带后面的兼容 mousedown），选区压根不起；
-			*   ② 拖动期间给 `document.body` 上 `user-select:none`（window pointerup 恢复）：即使有别处
-			*      已存在的选区，拖动过程中也不会再变，也不会刷出高亮。
-			*/
-			const startResize = (0, react$1.useCallback)((start) => {
-				start.preventDefault?.();
-				const startX = start.clientX;
-				const startWidth = width;
-				const next = (clientX) => clampEditorWidth(startWidth + (startX - clientX), reserved);
-				const body = document.body;
-				const prevUserSelect = body.style.userSelect;
-				body.style.userSelect = "none";
-				window.getSelection()?.removeAllRanges();
-				const onMove = (event) => {
-					const root = document.getElementById("dsh-tdt-root");
-					if (root !== null) root.style.setProperty("--dsh-tdt-editor-w", `${next(event.clientX)}px`);
-				};
-				const onUp = (event) => {
-					window.removeEventListener("pointermove", onMove);
-					window.removeEventListener("pointerup", onUp);
-					body.style.userSelect = prevUserSelect;
-					onWidthChange(next(event.clientX));
-				};
-				window.addEventListener("pointermove", onMove);
-				window.addEventListener("pointerup", onUp);
-			}, [
-				width,
-				reserved,
-				onWidthChange
-			]);
 			/** 周几的**单字**标签（方块上显示；`editorWeekdayShorts` 里以 `|` 分隔，两种语言各自给全）。 */
 			const weekdayShorts = (0, react$1.useMemo)(() => t("editorWeekdayShorts").split("|"), [t]);
 			const weekdayLabels = (0, react$1.useMemo)(() => ({
@@ -78114,17 +78033,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					onConfirmPendingEdit?.();
 				}
 			}) : null);
-			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-ed-panel",
+			return (0, react$1.createElement)("div", {
+				className: "dsh-tdt-ed-content",
 				role: "dialog",
 				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit")
-			}, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-resizer dsh-tdt-ed-resizer",
-				title: t("previewResize"),
-				onPointerDown: (event) => {
-					startResize(event);
-				}
-			}), panelInner, confirmDiscard ? (0, react$1.createElement)(ConfirmDiscard, {
+			}, panelInner, confirmDiscard ? (0, react$1.createElement)(ConfirmDiscard, {
 				t,
 				onStay: () => {
 					setConfirmDiscard(false);
@@ -78133,7 +78046,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					setConfirmDiscard(false);
 					onClose();
 				}
-			}) : null));
+			}) : null);
 		}
 		//#endregion
 		//#region src/client/settings-config-block.tsx
@@ -80891,6 +80804,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		const LOCALE_NS = SETTINGS_NS;
 		/** 主面板 id：`main` 槽的 key 与 `sidebar.panellist` 条目的 id 必须一致，选中才对得上。 */
 		const PANEL_ID = SETTINGS_NS;
+		/** 编辑分栏在核心 PanelDock 里的组名（预览 dock 是另一条、另一个控制器，同名也不冲突）。 */
+		const EDITOR_PANEL_ID = "task-editor";
 		/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 		let runtimeT = (key) => key;
 		const monoFont = "var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
@@ -81082,18 +80997,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
 		const encodeModelValue = (provider, id) => `${provider}/${id}`;
 		/**
-		* 页面右侧已被核心分栏占掉的宽度（px）。
-		*
-		* 预览 dock 现在完全由核心 `openFilePreview` 的 `PanelDock` 管（宽度、拖拽、开合都由它），
-		* 核心把「右侧已占宽」发布在 documentElement 的 `--dshpc-page-inset-right`（PanelDock.js 的
-		* `publishInset`）。本仓只消费这个约定变量，不再自己存一份宽度 state。
-		*/
-		function pageInsetRight() {
-			const raw = document.documentElement.style.getPropertyValue("--dshpc-page-inset-right").trim();
-			const value = Number.parseFloat(raw);
-			return Number.isFinite(value) ? Math.round(value) : 0;
-		}
-		/**
 		* 实例行的产出物（决策 32③写回的列：JSON 数组，兼容逗号串）。
 		* 2026-10-10 起 `outputs`（主文件）与 `process_outputs`（过程文件）**同一形状**，共用这一个解析器。
 		*/
@@ -81205,34 +81108,23 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [editor, setEditor] = (0, react$1.useState)(null);
 			const [editorSaving, setEditorSaving] = (0, react$1.useState)(false);
 			const [editorError, setEditorError] = (0, react$1.useState)(null);
-			/** 编辑分栏宽度（真源在这里：另一个 dock 与全屏会话弹窗都要拿它算可用宽度）。 */
-			const [editorWidth, setEditorWidth] = (0, react$1.useState)(() => readEditorWidth());
+			/**
+			* 编辑分栏的控制器（用户 2026-11-06：分栏外壳也用核心控件）。
+			* 同页双分栏：预览 dock 由核心 `openFilePreview` 自己开一条，这条专门放任务新建 / 查看；
+			* 宽度记忆 / 拖拽夹宽 / 收起耳朵 / `--dshpc-page-inset-right` 全由核心 PanelDock 维护。
+			*/
+			const editorDock = (0, react$1.useMemo)(() => createPanelDock({
+				maxPanels: 1,
+				defaultWidth: 520,
+				minWidth: 520,
+				storageKey: "dsh-tdt-editor"
+			}), []);
+			(0, react$1.useEffect)(() => {
+				if (editor === null) editorDock.close(EDITOR_PANEL_ID);
+				else editorDock.open(EDITOR_PANEL_ID);
+			}, [editor, editorDock]);
 			const [preview, setPreview] = (0, react$1.useState)(null);
 			const previewHandleRef = (0, react$1.useRef)(null);
-			const previewTaken = preview === null ? 0 : pageInsetRight();
-			const editorTaken = editor === null ? 0 : editorWidth;
-			/** 编辑分栏宽度变化回调（拖拽松手）：落 state + 持久化。 */
-			const changeEditorWidth = (0, react$1.useCallback)((next) => {
-				setEditorWidth(next);
-				writeEditorWidth(next);
-			}, []);
-			/**
-			* 编辑分栏宽度的可用上限要减去预览 dock 已占的宽度（预览开合 / 视口变化时重夹）
-			* ⇒ 主面板始终拿得到最小宽度 760（不足时按下限兜住，宁可主面板出横向滚动条）。
-			*/
-			(0, react$1.useEffect)(() => {
-				const reClamp = () => {
-					setEditorWidth((cur) => {
-						const next = clampEditorWidth(cur, previewTaken);
-						return next === cur ? cur : next;
-					});
-				};
-				reClamp();
-				window.addEventListener("resize", reClamp);
-				return () => {
-					window.removeEventListener("resize", reClamp);
-				};
-			}, [previewTaken, editorTaken]);
 			const canPreview = getFsFace() !== void 0;
 			const openFile = (0, react$1.useCallback)((sessionId, path) => {
 				if (!canPreview) return;
@@ -81734,6 +81626,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const hasRaw = raw.trim() !== "";
 			(0, react$1.useEffect)(() => {
 				if (preview === null) return;
+				const editorTaken = editor === null ? 0 : editorDock.getSnapshot().widths[EDITOR_PANEL_ID] ?? editorDock.defaults.defaultWidth;
 				previewHandleRef.current = openFilePreview({
 					mount: "#dsh-tdt-root",
 					path: preview.path,
@@ -81757,7 +81650,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-root",
 				className: "dsh-tdt-root",
 				style: {
-					["--dsh-tdt-editor-w"]: `${editorTaken}px`,
 					display: "flex",
 					alignItems: "flex-start",
 					minHeight: "100%"
@@ -81891,15 +81783,23 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				onDone: () => {
 					setSuccessToast(null);
 				}
-			}) : null, editor !== null ? (0, react$1.createElement)(TaskEditorDrawer, {
+			}) : null, (0, react$1.createElement)(PanelDock, {
+				dock: editorDock,
+				mainMinWidth: 760
+			}, (0, react$1.createElement)(DockPanel, {
+				id: EDITOR_PANEL_ID,
+				header: null,
+				closable: false,
+				closeButton: "none",
+				ariaLabel: t("editorEdit"),
+				width: 520,
+				minWidth: 520
+			}, editor !== null ? (0, react$1.createElement)(TaskEditorDrawer, {
 				key: editor.id,
 				t,
 				overview,
 				mode: editor.mode,
 				draft: editor.draft,
-				width: editorWidth,
-				onWidthChange: changeEditorWidth,
-				reserved: previewTaken,
 				onChange: (next) => {
 					setEditor({
 						...editor,
@@ -81951,7 +81851,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				resolvedAttachments: editor.mode === "edit" ? overview.rows.find((item) => item.id === editor.id)?.attachments : void 0,
 				officeToPdf,
 				workspaceAnchors: editorOptions.workspaceAnchors
-			}) : null);
+			}) : null)));
 		}
 		/**
 		* 设置页卡片：**只留一行「标题 + 描述 + 箭头」**，点一下切到整页（布局服务 selectPanel）。

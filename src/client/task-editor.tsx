@@ -1,6 +1,7 @@
 // 浏览器侧：新建 / 编辑任务的**右侧分栏**（用户 2026-10-01 拍板形态，U21）：
-// 占布局的分栏（把主窗口往左推窄），不再是从右边浮出来盖住页面的浮层——
-// 与 U11 预览 dock 同一套形态（根容器的 flex 成员，`sticky + 100vh + flex:0 0 auto`）。
+// 占布局的分栏（把主窗口往左推窄），不再是从右边浮出来盖住页面的浮层。
+// 2026-11-06：外壳改挂核心 `PanelDock`（与 U11 预览 dock 同一套分栏控件，核心支持同页双分栏）——
+// 本文件只负责面板**内容**，拖拽 / 宽度记忆 / 收起 / `--dshpc-page-inset-right` 全部归核心。
 //
 // 2026-10-01 U21：
 //   ① 头部「基本信息 / 执行记录」切换删除 ⇒ 编辑界面只管表单，不再展示执行记录
@@ -1099,51 +1100,12 @@ function IntervalControls(props: {
 
 // ─────────────────────── 弹窗本体 ───────────────────────
 
-/** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
-const EDITOR_WIDTH_KEY = "dsh-tdt-editor-width";
-/** 最小宽度（用户 2026-10-02：560 偏宽 → 试 500 → 试 530 → 定 520）。 */
-const EDITOR_WIDTH_MIN = 520;
-const EDITOR_WIDTH_DEFAULT = 520;
-/** 主面板的最小宽度（≥1120 的列永远不被压到出横向滚动条）。与新一分栏同时开时也要保住。 */
-export const PAGE_MIN_WIDTH = 760;
-
 /**
- * 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
- * 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
- * 下限保住 520，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
- * @param value - 目标宽度。
- * @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
+ * 主面板的最小宽度（≥1120 的列永远不被压到出横向滚动条）。
+ * 2026-11-06 起交给核心 `PanelDock` 的 `mainMinWidth`：分栏宽度 / 拖拽 / 记忆 / 让位变量全部归核心，
+ * 本仓不再自己算宽度上下限（旧 `clampEditorWidth` / `readEditorWidth` / `writeEditorWidth` 已删）。
  */
-export function clampEditorWidth(value: number, reserved = 0): number {
-	const avail = window.innerWidth - PAGE_MIN_WIDTH - reserved;
-	const max = Math.max(
-		EDITOR_WIDTH_MIN,
-		Math.min(Math.floor(window.innerWidth * 0.9), Math.floor(avail)),
-	);
-	return Math.min(Math.max(Math.round(value), EDITOR_WIDTH_MIN), max);
-}
-
-/** 读上次宽度（无效 / 越界一律回默认）。 */
-export function readEditorWidth(reserved = 0): number {
-	try {
-		const raw = window.localStorage.getItem(EDITOR_WIDTH_KEY);
-		const value = raw === null ? Number.NaN : Number(raw);
-		return Number.isFinite(value)
-			? clampEditorWidth(value, reserved)
-			: EDITOR_WIDTH_DEFAULT;
-	} catch {
-		return EDITOR_WIDTH_DEFAULT;
-	}
-}
-
-/** 宽度写盘（隐私模式抛错就忽略；宽度是纯本地偏好，丢了回默认宽度）。 */
-export function writeEditorWidth(value: number): void {
-	try {
-		window.localStorage.setItem(EDITOR_WIDTH_KEY, String(value));
-	} catch {
-		/* 隐私模式忽略 */
-	}
-}
+export const PAGE_MIN_WIDTH = 760;
 
 /**
  * 提示词卡底部三下拉的**定宽**（用户 2026-10-02）：
@@ -1988,15 +1950,6 @@ export function TaskEditorDrawer(props: {
 	 * 没有锚点就退化成核心的根节点选择面（工作区清单 + 盘符），不造会话、不阻断开。
 	 */
 	workspaceAnchors?: Record<string, string>;
-	/**
-	 * 分栏宽度（受控，真源在 TaskPage）：侧栏是根容器的 flex 成员，宽度要能被 TaskPage
-	 * 拿去给另一条侧栏（预览）与全屏会话弹窗算可用宽度，不能困在本组件里。
-	 */
-	width: number;
-	/** 宽度变化（拖拽**松手**时才回调，此时才落 state + localStorage）。 */
-	onWidthChange: (next: number) => void;
-	/** 右侧**另一条**分栏（预览 dock）当前占掉的宽度；用于给主面板留够最小宽度（Q3）。 */
-	reserved: number;
 }): ReactElement {
 	const {
 		t,
@@ -2019,9 +1972,6 @@ export function TaskEditorDrawer(props: {
 		workspaceAnchors,
 		officeToPdf,
 		currentTaskId,
-		width,
-		onWidthChange,
-		reserved,
 		initialView,
 		onDirtyChange,
 		pendingView,
@@ -2270,46 +2220,8 @@ export function TaskEditorDrawer(props: {
 		};
 	}, [requestClose, confirmDiscard]);
 
-	/**
-	 * 左缘拖拽调宽（U21：与预览 dock 同一套手势）：拖动期间**只改 CSS 变量**
-	 * `--dsh-tdt-editor-w`（不重渲染整页），松手才回调父 state + 落 localStorage。
-	 *
-	 * 拖拽为什么会「选中文字」（用户 2026-10-02）：pointerdown 的默认动作会开一次**文本选区**，
-	 * 指针扫过主窗口的文字时选区跟着扩 ⇒ 看着像在拖选。两道闸：
-	 *   ① `preventDefault()`：掐掉 pointerdown 的默认动作（连带后面的兼容 mousedown），选区压根不起；
-	 *   ② 拖动期间给 `document.body` 上 `user-select:none`（window pointerup 恢复）：即使有别处
-	 *      已存在的选区，拖动过程中也不会再变，也不会刷出高亮。
-	 */
-	const startResize = useCallback(
-		(start: { clientX: number; preventDefault?: () => void }): void => {
-			start.preventDefault?.();
-			const startX = start.clientX;
-			const startWidth = width;
-			const next = (clientX: number): number =>
-				clampEditorWidth(startWidth + (startX - clientX), reserved);
-			const body = document.body;
-			const prevUserSelect = body.style.userSelect;
-			body.style.userSelect = "none";
-			window.getSelection()?.removeAllRanges();
-			const onMove = (event: PointerEvent): void => {
-				const root = document.getElementById("dsh-tdt-root");
-				if (root !== null)
-					root.style.setProperty(
-						"--dsh-tdt-editor-w",
-						`${next(event.clientX)}px`,
-					);
-			};
-			const onUp = (event: PointerEvent): void => {
-				window.removeEventListener("pointermove", onMove);
-				window.removeEventListener("pointerup", onUp);
-				body.style.userSelect = prevUserSelect;
-				onWidthChange(next(event.clientX));
-			};
-			window.addEventListener("pointermove", onMove);
-			window.addEventListener("pointerup", onUp);
-		},
-		[width, reserved, onWidthChange],
-	);
+	// 左缘拖拽调宽 / 宽度记忆 / 收起耳朵：全部由核心 PanelDock 承担（2026-11-06），
+	// 本组件不再自己处理指针手势与 CSS 变量（`--dsh-tdt-editor-w` 已随自建外壳删除）。
 
 	/** 周几的**单字**标签（方块上显示；`editorWeekdayShorts` 里以 `|` 分隔，两种语言各自给全）。 */
 	const weekdayShorts = useMemo(() => t("editorWeekdayShorts").split("|"), [t]);
@@ -3960,46 +3872,31 @@ export function TaskEditorDrawer(props: {
 					// r13：查看档「全屏查看」已按用户要求撤掉（改为提示词块内就地「源码 / 预览 + 展开 / 收起」）。
 				);
 
-	// U21：不再有遮罩层 —— 分栏是根容器（`#dsh-tdt-root`）的布局成员，主窗口被推窄而不是被盖住，
-	// 因此关闭路径只有 ✕ / Esc / 取消钮三条（原来那条「点遮罩空白关闭」随遮罩一起取消）。
+	// 外壳（面板 / 拖拽调宽 / 宽度记忆 / 收起）已交给核心 `PanelDock`（见 index.ts 的 DockPanel），
+	// 这里只返回**内容本体**：填满核心给的 body，自带滚动（body 的 overflow 不参与滚动）。
+	// 关闭路径仍是 ✕ / Esc / 取消钮三条。
 	return h(
-		Fragment,
-		null,
-		h(
-			"div",
-			{
-				className: "dsh-tdt-ed-panel",
-				// 非模态：主窗口此刻仍可见可点（这话原来写 aria-modal=true 就不成立了）。
-				role: "dialog",
-				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit"),
-			},
-			h("div", {
-				className: "dsh-tdt-resizer dsh-tdt-ed-resizer",
-				title: t("previewResize"),
-				onPointerDown: (event: {
-					clientX: number;
-					preventDefault: () => void;
-				}) => {
-					startResize(event);
-				},
-			}),
-			panelInner,
-			// 关闭确认（分栏内联层，绝对定位盖住整条分栏）：改过才出现；
-			// 「继续编辑」⇒ 留在原处，「放弃更改」⇒ 真正关分栏。
-			// 原来它挂在遮罩层里（遮罩是全屏 fixed，天然 covers-all）；撤遮罩后改挂面板自身
-			// —— 面板已是 position:relative，覆盖范围就是分栏本体。
-			confirmDiscard
-				? h(ConfirmDiscard, {
-						t,
-						onStay: () => {
-							setConfirmDiscard(false);
-						},
-						onLeave: () => {
-							setConfirmDiscard(false);
-							onClose();
-						},
-					})
-				: null,
-		),
+		"div",
+		{
+			className: "dsh-tdt-ed-content",
+			// 非模态：主窗口此刻仍可见可点（这话原来写 aria-modal=true 就不成立了）。
+			role: "dialog",
+			"aria-label": mode === "create" ? t("editorNew") : t("editorEdit"),
+		},
+		panelInner,
+		// 关闭确认（分栏内联层，绝对定位盖住整块内容）：改过才出现；
+		// 「继续编辑」⇒ 留在原处，「放弃更改」⇒ 真正关分栏。
+		confirmDiscard
+			? h(ConfirmDiscard, {
+					t,
+					onStay: () => {
+						setConfirmDiscard(false);
+					},
+					onLeave: () => {
+						setConfirmDiscard(false);
+						onClose();
+					},
+				})
+			: null,
 	);
 }

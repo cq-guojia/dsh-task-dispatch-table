@@ -82,7 +82,11 @@ export {
   type TimeQuery,
 } from './time-range'
 export { QuickToolbar } from 'dsh-plugin-core/ui'
-export { startResizeLayoutWidth, type ResizeOptions } from 'dsh-plugin-core/ui'
+// 分栏控件（2026-11-06：编辑分栏与预览 dock 都用核心 PanelDock，同页可开双分栏）。
+export {
+  createPanelDock, DockPanel, PanelDock,
+  type DockCloseReason, type DockPanelProps, type PanelDockController, type PanelDockOptions,
+} from 'dsh-plugin-core/ui'
 // 全局秒级心跳 + 每秒自刷新文本（2026-10-06 从 task-info.tsx 归位；见 design/client-refresh-disposition.md §三 A1/A2）。
 export { subscribeTicker, useNowMs } from './ticker'
 // 运行态视觉（色/类名/注入器）。
