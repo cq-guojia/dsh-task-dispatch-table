@@ -59111,9 +59111,9 @@ window.__ModuleLoader__.load({
 .dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
 .dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
 
-/* 行式文件按钮（图标 + 文件名）已改接核心 .dshpc-filechip（2026-11-06）：
-   核心 P2 已提供同名同皮的**全站唯一实现**（--block / --inline 两个形态类，自带 hover 与左右内边距），
-   本仓不再保留第二份，使用点直接挂核心类名。 */
+/* 文件行（图标 + 文件名）统一走核心 **Button ghost**（2026-11-06 用户拍板：
+   「一个图标后面跟着文字」——产出物 / 其他产出 / 过程文件 / 执行记录展开区 / 附件全站同一套皮肤，
+   圆角、hover、内边距全归核心按钮；本仓不再保留第二份文件行皮肤。 */
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-chip{transition:none;}}
 `;
@@ -59138,7 +59138,7 @@ window.__ModuleLoader__.load({
 		const PROCESS_FILES_CSS = `
 /* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
    （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
-   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用核心 .dshpc-filechip--inline。 */
+   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行 = 核心 Button ghost（图标 + 文字，全站同一套）。 */
 .dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
 .dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
 
@@ -59490,30 +59490,29 @@ window.__ModuleLoader__.load({
 					fontSize: "var(--dshpc-font-sm)",
 					fontWeight: 400
 				}
-			}, t("procFilesTitle", { count: list.length })), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-proc-list" }, list.map((path) => {
-				const body = [isDirPath$1(path) ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+			}, t("procFilesTitle", { count: list.length })), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-proc-list" }, list.map((path) => (0, react$1.createElement)(Button$2, {
+				key: path,
+				variant: "ghost",
+				size: "sm",
+				icon: isDirPath$1(path) ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 14
-				}), (0, react$1.createElement)(MarqueeText, {
-					text: baseNameOf(path),
-					style: {
-						maxWidth: "40ch",
-						minWidth: 0
-					}
-				})];
-				return onOpen === void 0 ? (0, react$1.createElement)("span", {
-					key: path,
-					className: "dshpc-filechip dshpc-filechip--inline",
-					"data-noclick": true
-				}, ...body) : (0, react$1.createElement)("button", {
-					key: path,
-					type: "button",
-					className: "dshpc-filechip dshpc-filechip--inline",
-					onClick: () => {
-						onOpen(path);
-					}
-				}, ...body);
-			})) : null);
+				}),
+				disabled: onOpen === void 0,
+				onClick: onOpen === void 0 ? void 0 : () => {
+					onOpen(path);
+				},
+				style: {
+					flex: "0 0 auto",
+					maxWidth: "100%"
+				}
+			}, (0, react$1.createElement)(MarqueeText, {
+				text: baseNameOf(path),
+				style: {
+					maxWidth: "40ch",
+					minWidth: 0
+				}
+			})))) : null);
 		}
 		//#endregion
 		//#region src/client/workspace-options.ts
@@ -59584,7 +59583,6 @@ window.__ModuleLoader__.load({
 			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
 			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 9px 0 3px; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }",
 			".dsh-tdt-info-label { padding-right: 12px; }",
-			".dsh-tdt-info-file { vertical-align: middle; }",
 			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }",
 			".dsh-tdt-rec-ic-ok { color: var(--dshpc-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--dshpc-danger); }",
@@ -60150,18 +60148,23 @@ window.__ModuleLoader__.load({
 				},
 				"aria-expanded": open,
 				style: { transform: open ? "rotate(180deg)" : "none" }
-			})) : null)), open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)("button", {
+			})) : null)), open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)(Button$2, {
 				key: path,
-				type: "button",
-				className: "dshpc-filechip dshpc-filechip--inline",
+				variant: "ghost",
+				size: "sm",
+				icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path,
+					size: 14
+				}),
 				disabled: !canOpenFile,
 				onClick: () => {
 					if (canOpenFile) openFile?.(sid, path);
+				},
+				style: {
+					flex: "0 0 auto",
+					maxWidth: "100%"
 				}
-			}, path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path,
-				size: 14
-			}), (0, react$1.createElement)(MarqueeText, {
+			}, (0, react$1.createElement)(MarqueeText, {
 				text: baseNameOf(path),
 				style: {
 					maxWidth: "40ch",
@@ -67198,28 +67201,12 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-tfc-name{color:var(--dshpc-fg,#1f2328);font-size:var(--dshpc-font-sm);font-weight:500;line-height:var(--dshpc-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
 .dsh-tdt-sv-tfc-meta{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);white-space:nowrap;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
-/* 文件**横向排**：从左到右、排满换行。
-   ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
-.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
-/* chip 宽度**跟内容走**：flex:0 0 auto（不 grow、不平分）；**不设最小宽度**。
-   唯一约束是 label 的 max-width：超长才出省略号 + 跑马灯。 */
-.dsh-tdt-sv-tfc-file{border-radius:var(--dshpc-radius-sm,6px);color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);flex:0 0 auto;display:flex;text-align:left;}
-button.dsh-tdt-sv-tfc-file{cursor:pointer;}
-button.dsh-tdt-sv-tfc-file:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg);}
-button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-focus,#3b5bdb);outline:none;}
-/* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
-.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
-.dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--dshpc-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-/* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层）。
-   唯一长度约束：**无最小宽度**（「只有一个字 a.txt 就只显示 a.txt」），**最大 40ch**。
-   ⚠️ ch 按「0」的宽度算，中文文件名实际更宽一点，属可接受偏差。 */
-.dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}
+/* 文件**横向排**：从左到右、排满换行；行件本身是核心 Button（图标 + 文字），这里只管排布。 */
+.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px 6px;min-width:0;display:flex;}
 /* 前置任务序号徽标（用户 2026-10-03 四次点名定稿）：**顶替原来那条 4px 竖线**，
    宽高**相等**的方块，字号取 var(--dshpc-font-sm) —— 与主界面「前置任务」正文同一字号变量。
    方块 16px 容纳 12px 数字 + 一点余量；底色 chip-bg（比 plate 亮一档），字色 fg-2。 */
 .dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:16px;height:16px;padding:0;border-radius:4px;background:var(--dshpc-chip-bg,rgba(128,128,128,.12));color:var(--dshpc-fg-2,rgba(128,128,128,.95));font-size:var(--dshpc-font-sm);line-height:1;font-variant-numeric:tabular-nums;}
-/* 标记 + 文件名的无缝容器：标记紧贴文件名，右方括号与名字之间**不留间距**。 */
-.dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
 /* 来源 / 状态标记：方括号**放在文件名前面**。与文件名同字号，只靠颜色弱化。 */
 .dsh-tdt-sv-tfc-note{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-none{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);}
@@ -67458,23 +67445,28 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		function FileChip(props) {
 			const { file } = props;
 			const clickable = file.onClick !== void 0;
-			return (0, react$1.createElement)(clickable ? "button" : "span", {
-				className: "dsh-tdt-sv-tfc-file",
-				...clickable ? {
-					type: "button",
-					"aria-label": file.title,
-					onClick: file.onClick
-				} : { "data-noclick": true }
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-icon" }, file.isDir ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path: file.iconPath,
-				size: 14
-			})), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-namewrap" }, file.note === void 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-note" }, `[${file.note}]`), (0, react$1.createElement)(MarqueeText, {
+			return (0, react$1.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				icon: file.isDir ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path: file.iconPath,
+					size: 14
+				}),
+				disabled: !clickable,
+				onClick: file.onClick,
+				"aria-label": file.title,
+				style: {
+					flex: "0 0 auto",
+					minWidth: 0,
+					maxWidth: "100%"
+				}
+			}, file.note === void 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-note" }, `[${file.note}]`), (0, react$1.createElement)(MarqueeText, {
 				text: file.label,
 				style: {
 					minWidth: 0,
 					flex: "1 1 auto"
 				}
-			})));
+			}));
 		}
 		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。**横向排**（`flex-wrap`，排满换行）。 */
 		function FileLines(props) {
@@ -77478,7 +77470,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					display: "flex",
 					flexWrap: "wrap",
 					alignItems: "center",
-					gap: "2px 10px"
+					gap: "2px 10px",
+					marginTop: "-3px"
 				} }, view.attachments.map((item) => {
 					const absPath = item.path;
 					const anchor = item.anchorSessionId;
@@ -77494,23 +77487,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 							minWidth: 0
 						}
 					});
-					return absPath !== void 0 && absPath !== null && anchor !== void 0 && anchor !== null && onOpenFile !== void 0 ? (0, react$1.createElement)(Chip, {
+					const canOpen = absPath !== void 0 && absPath !== null && anchor !== void 0 && anchor !== null && onOpenFile !== void 0;
+					return (0, react$1.createElement)(Button$2, {
 						key,
-						className: "dsh-tdt-info-file",
-						onClick: () => {
+						variant: "ghost",
+						size: "sm",
+						icon,
+						disabled: !canOpen,
+						onClick: canOpen ? () => {
 							onOpenFile(anchor, absPath);
+						} : void 0,
+						style: {
+							maxWidth: "100%",
+							minWidth: 0
 						}
-					}, icon, name) : (0, react$1.createElement)(Chip, {
-						key,
-						className: "dsh-tdt-info-file"
-					}, icon, name);
+					}, name);
 				}))
 			}), InfoField({
 				label: t("listSectionDepends"),
 				children: view.depends.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
 					display: "flex",
 					flexDirection: "column",
-					gap: "4px"
+					gap: "4px",
+					marginTop: "-3px"
 				} }, view.depends.map((dep, index) => {
 					const seq = (0, react$1.createElement)(Chip, {
 						size: "xs",
@@ -77601,7 +77600,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				alignItems: "center",
 				gap: "2px",
 				minWidth: 0,
-				minHeight: "var(--dshpc-line-md)"
+				minHeight: "var(--dshpc-line-md)",
+				marginTop: "-3px"
 			} }, sessionButton, canOpenSession ? (0, react$1.createElement)(Button$2, {
 				variant: "link",
 				size: "sm",
@@ -77659,18 +77659,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			} }, t("colOutputs")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column"
-			} }, outputs.map((output) => (0, react$1.createElement)("button", {
+			} }, outputs.map((output) => (0, react$1.createElement)(Button$2, {
 				key: output,
-				type: "button",
-				className: "dshpc-filechip dshpc-filechip--block",
+				variant: "ghost",
+				size: "sm",
+				block: true,
+				icon: output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path: output,
+					size: 14
+				}),
 				disabled: !canOpenFile,
 				onClick: () => {
 					if (canOpenFile && onOpenFile !== void 0 && sid !== null) onOpenFile(sid, output);
-				}
-			}, output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path: output,
-				size: 14
-			}), (0, react$1.createElement)(MarqueeText, {
+				},
+				style: { justifyContent: "flex-start" }
+			}, (0, react$1.createElement)(MarqueeText, {
 				text: baseNameOf(output),
 				style: {
 					flex: "1 1 auto",
@@ -79148,7 +79151,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				padding: "md"
 			}, (0, react$1.createElement)(SectionHead, {
 				title: t("editorPrompt"),
-				right: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				right: (0, react$1.createElement)(Button$2, {
 					variant: "ghost",
 					size: "sm",
 					"aria-label": t("editorOpenEditor"),
@@ -79364,9 +79367,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				return (0, react$1.createElement)("div", {
 					key: att.id,
 					className: "dsh-tdt-ed-attline"
-				}, canView ? (0, react$1.createElement)(Chip, { onClick: () => {
-					onOpenFile?.(target.anchorSessionId, target.path);
-				} }, icon, name) : (0, react$1.createElement)(Chip, null, icon, name), (0, react$1.createElement)(Chip, { size: "xs" }, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react$1.createElement)(IconButton, {
+				}, (0, react$1.createElement)(Button$2, {
+					variant: "ghost",
+					size: "sm",
+					icon,
+					disabled: !canView,
+					onClick: canView ? () => {
+						onOpenFile?.(target.anchorSessionId, target.path);
+					} : void 0,
+					style: {
+						minWidth: 0,
+						maxWidth: "100%"
+					}
+				}, name), (0, react$1.createElement)(Chip, { size: "xs" }, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react$1.createElement)(IconButton, {
 					variant: "danger",
 					size: "sm",
 					icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),

@@ -242,7 +242,7 @@ body[data-ds-dark-theme]{
 | 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽；跑马灯由核心默认启用） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，核心 `Picker` 薄包装）✅ |
 | **任务选择器（带搜索）** | 见 §5.4：在 `SelectField` 之上加**搜索框 + 最近 N 条/更多 + 外部作用域** | sm / md / lg（默认 lg） | `ui/TaskPicker.tsx` ✅ **2026-10-04 落码**（执行记录总查询页在用；不许业务文件自己拼 Input + Menu） |
 | **产出物图标 chip** | 见 §5.5：28×28 上的官方文件类型图标（**只给图标**，全名走官方 `Tooltip` / 跑马灯，**不挂原生 title**），**底板平时透明、hover 才浮出** | —（固定 28，同 `sm` 行高观感） | `ui/controls-css.ts` 的 `.dsh-tdt-chip` ✅ **2026-10-04 收编**：卡片「执行记录」面板 + 执行记录总查询页共用；此前两页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，同一页面里谁后注册谁生效、互相污染 |
-| **行式文件按钮** | 见 §5.6：一行一个文件 = 「官方文件类型图标（14px）+ 文件名（溢出省略号 / 跑马灯）」，**平时透明、hover 才出浅底**，左右内边距 6px，`disabled` 灰字不可点 | `--block` / `--inline` | **核心 `.dshpc-filechip`**（核心 P2 的全站唯一实现，随 `Button` / `IconButton` 的样式注入一并生效）✅ **2026-11-06 改接**：产出物清单 / 附件行 / 过程文件 / 执行记录展开区四类使用点直接挂核心类名；本仓 `.dsh-tdt-filechip` 已删，**不许再自绘第二份皮肤** |
+| **文件行（图标 + 文字）** | 见 §5.6：一行一个文件 = 「官方文件类型图标（14px）+ 文件名（溢出省略号 / 跑马灯）」，**平时透明、hover 才出浅底**，圆角 / 内边距 / 不可点灰字全归核心 | `sm`（24px 高；`block` 撑满父宽） | **核心 `Button`（`variant: 'ghost'`）** ✅ **2026-11-06 二次收口**：产出物清单 / 其他产出 / 过程文件 / 执行记录展开区 / 附件行 / 会话文件行**全站同一种**（用户原话「一个图标后面跟着文字」）；本仓 `.dsh-tdt-filechip` 与核心 `.dshpc-filechip` **都不再用**，**不许再自绘第二份皮肤** |
 | 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | 核心 `dsh-plugin-core/ui` 的 `DateTimePicker`（单值 / 区间）✅ **2026-11-06 改接**；⚠️ 无纯时分档 |
 | 提示（Toast） | success / error / info / warning | — | 核心 `notify` / `showToast`（Sonner，共享 Toaster）✅ **2026-11-06 改接** |
@@ -338,20 +338,20 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string
 | 不可点 | `:disabled` 保持透明 + 灰色 + `cursor:default`（无会话 / 预览面未就位时不给假入口） |
 | 收编原因 | 该皮肤原本在 `task-list.tsx`（`.dsh-tdt-rec-out`）与执行记录页（**同名不同皮**：一个带文件名 + `--dshpc-plate`，一个 28×28 图标 + `--dshpc-chip-bg`）各写一份，两份 CSS 都注入同一页面 ⇒ 后注册者覆盖前者、两页外观互相污染 |
 
-### 5.6 行式文件按钮（图标 + 文件名，2026-11-06 改接核心）
+### 5.6 文件行（图标 + 文件名，2026-11-06 二次收口：核心 `Button` ghost）
 
-用户 2026-11-06 点名：「你右边那个『产出和其他产出』文件的，鼠标移上去的效果又是自己手搓的吧？为什么不用核心？」
+用户 2026-11-06 两次点名：「红框这个是哪来的样式？核心哪有这种样式？」「一个图标后面跟着文字
+……你所有用到这种文件的，全是用这种样式好吗？」⇒ **文件行 = 核心按钮的形态，不是 chip / pill，也不是任何自绘灰底**。
 
 | 项 | 口径 |
 |---|---|
-| 落点 | **核心 `dsh-plugin-core` 的 `.dshpc-filechip`**（核心 P2 已给全站唯一实现，随 `Button` / `IconButton` 的样式包注入；本仓不再保留副本） |
-| 类名 | `.dshpc-filechip` + 形态修饰类 `--block`（撑满父宽、一项一行）/ `--inline`（内容宽、跟在文字后头） |
-| 底色 | **平时透明、`:hover` 才出 `--dshpc-hover`**；左右内边距 6px（hover 底色不贴文字） |
-| 尺寸 | 图标 `FileTypeIcon size 14`；`--block`：`gap 6px` / `padding 4px 6px` / `font-size --dshpc-font-xs`；`--inline`：`gap 4px` / `padding 2px 6px` / `font-size --dshpc-font-sm`；圆角 `--dshpc-radius-xs` |
-| 不可点 | `button` 加 `disabled` ⇒ 灰字、不预览（不给假入口） |
-| 使用点 | 卡片基础信息右栏产出物清单（`--block`）、过程文件 / 执行记录展开区（`--inline`） |
-| 附件行 | **不走本类**：附件是核心 `Chip`（灰面 pill，见 §5.2 标签行）；查看档与编辑页**同一实现** |
-| 本仓旧实现 | `.dsh-tdt-filechip` 已删（`ui/controls-css.ts` 只留一句「已改接核心」注释），**不许再写第二份** |
+| 落点 | **核心 `dsh-plugin-core/ui` 的 `Button`**：`variant: 'ghost'` + `size: 'sm'`（24px 高） |
+| 形态 | `icon` = 官方文件类型图标（文件 `FileTypeIcon size 14` / 目录 `IconFolderCloseRegular size 14`）；children = 文件名（超长用 `MarqueeText` 限宽 40ch 跑马灯） |
+| 底色 / 圆角 | **全归核心按钮**：平时透明、`:hover` 浅底，圆角 `--dshpc-radius-md`（用户：「圆角都用核心那种 button、icon 的圆角规格」）；**不许在行上写 `border-radius` / `background` / hover 规则** |
+| 撑满 | 一项一行的清单（产出物）用 `block: true` + `style: { justifyContent: 'flex-start' }`；跟文字后头 / 自动换行的用 `sm` 行内形态（`style: { flex: '0 0 auto', maxWidth: '100%' }`） |
+| 不可点 | 传核心 `disabled` ⇒ 灰字、不可点（不给假入口）；**不再用 `data-noclick` 自绘透明度** |
+| 使用点（**必须同一实现**） | 卡片基础信息产出物清单、`ProcessFiles`（过程文件 / 其他产出）标题与展开行、执行记录展开区产出物、基础信息附件行、会话文件上下文行、编辑页附件行 |
+| 本仓旧实现 | `.dsh-tdt-filechip` 已删；核心 `.dshpc-filechip` 也**弃用**（观感不像按钮，用户 2026-11-06 退回）。`ui/controls-css.ts` 只留一句「已走核心 Button」注释 |
 
 ---
 

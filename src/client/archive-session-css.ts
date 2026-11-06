@@ -66,28 +66,12 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-tfc-name{color:var(--dshpc-fg,#1f2328);font-size:var(--dshpc-font-sm);font-weight:500;line-height:var(--dshpc-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
 .dsh-tdt-sv-tfc-meta{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);white-space:nowrap;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
-/* 文件**横向排**：从左到右、排满换行。
-   ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
-.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
-/* chip 宽度**跟内容走**：flex:0 0 auto（不 grow、不平分）；**不设最小宽度**。
-   唯一约束是 label 的 max-width：超长才出省略号 + 跑马灯。 */
-.dsh-tdt-sv-tfc-file{border-radius:var(--dshpc-radius-sm,6px);color:var(--dshpc-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);flex:0 0 auto;display:flex;text-align:left;}
-button.dsh-tdt-sv-tfc-file{cursor:pointer;}
-button.dsh-tdt-sv-tfc-file:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));color:var(--dshpc-fg);}
-button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-focus,#3b5bdb);outline:none;}
-/* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
-.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
-.dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--dshpc-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-/* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层）。
-   唯一长度约束：**无最小宽度**（「只有一个字 a.txt 就只显示 a.txt」），**最大 40ch**。
-   ⚠️ ch 按「0」的宽度算，中文文件名实际更宽一点，属可接受偏差。 */
-.dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}
+/* 文件**横向排**：从左到右、排满换行；行件本身是核心 Button（图标 + 文字），这里只管排布。 */
+.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px 6px;min-width:0;display:flex;}
 /* 前置任务序号徽标（用户 2026-10-03 四次点名定稿）：**顶替原来那条 4px 竖线**，
    宽高**相等**的方块，字号取 var(--dshpc-font-sm) —— 与主界面「前置任务」正文同一字号变量。
    方块 16px 容纳 12px 数字 + 一点余量；底色 chip-bg（比 plate 亮一档），字色 fg-2。 */
 .dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:16px;height:16px;padding:0;border-radius:4px;background:var(--dshpc-chip-bg,rgba(128,128,128,.12));color:var(--dshpc-fg-2,rgba(128,128,128,.95));font-size:var(--dshpc-font-sm);line-height:1;font-variant-numeric:tabular-nums;}
-/* 标记 + 文件名的无缝容器：标记紧贴文件名，右方括号与名字之间**不留间距**。 */
-.dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
 /* 来源 / 状态标记：方括号**放在文件名前面**。与文件名同字号，只靠颜色弱化。 */
 .dsh-tdt-sv-tfc-note{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-none{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);}

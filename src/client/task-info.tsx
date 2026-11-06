@@ -187,7 +187,9 @@ export function taskInfoBaseFields(props: {
       label: t('listSectionAttachments'),
       children: view.attachments.length === 0
         ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, t('listNone'))
-        : h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 10px' } },
+        // 控件行同样要回正 3px：值格的「上 9 / 下 3」光学内边距是为**字形**准备的，24px 的核心按钮
+        // 没有字形、会被这层不对称内边距整体压低（用户 2026-11-06 实测：离上缝远、离下缝近）。
+        : h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 10px', marginTop: '-3px' } },
           view.attachments.map(item => {
             const absPath = item.path
             const anchor = item.anchorSessionId
@@ -200,17 +202,16 @@ export function taskInfoBaseFields(props: {
               text: item.name,
               style: { maxWidth: '40ch', minWidth: 0 },
             })
-            // 附件件 = 核心 `Chip`（2026-11-06 用户点名：原来那只是手搓按钮）：
-            // 20px 高与纸表格行高 `--dshpc-line-md` 相等 ⇒ 标签与值自然对齐（不再顶到上边线）。
-            // 服务端已给出绝对路径 + 预览锚点会话时，附件可点开预览（同一 openFile 入口）；
-            // 缺任一个（老版本 / 拿不到锚点）⇒ 退回不可点的 Chip（`Chip` 无 `disabled`，不给 `onClick` 即可）。
+            // 附件件 = **核心 Button（ghost，图标 + 文字）**（2026-11-06 二次收口：用户点名「一个图标后面跟着文字」，
+            // 不许再用 pill / 自绘灰框）。服务端给出绝对路径 + 预览锚点会话才可点（同一 openFile 入口），
+            // 缺任一个（老版本 / 拿不到锚点）⇒ `disabled`，不给假入口。
             const canOpen = absPath !== undefined && absPath !== null && anchor !== undefined && anchor !== null && onOpenFile !== undefined
-            return canOpen
-              ? h(Chip, {
-                key, className: 'dsh-tdt-info-file',
-                onClick: (): void => { onOpenFile(anchor, absPath) },
-              }, icon, name)
-              : h(Chip, { key, className: 'dsh-tdt-info-file' }, icon, name)
+            return h(Button, {
+              key, variant: 'ghost', size: 'sm', icon,
+              disabled: !canOpen,
+              onClick: canOpen ? (): void => { onOpenFile(anchor, absPath) } : undefined,
+              style: { maxWidth: '100%', minWidth: 0 },
+            }, name)
           }),
         ),
     }),
@@ -220,7 +221,7 @@ export function taskInfoBaseFields(props: {
         ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, t('listNone'))
         // 每个前置任务前面带 **1、2、3 序号**（用户 2026-10-03：不然像两段莫名其妙的话摆在这儿）。
         // 名字可点（用户 2026-10-05）⇒ 右侧栏以**查看档**打开它（入口见 `onViewTask`）。
-        : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+        : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '-3px' } },
           view.depends.map((dep, index) => {
             const seq = h(Chip, { size: 'xs', minWidth: 18 }, String(index + 1))
             const label = `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`
@@ -294,7 +295,12 @@ export function lastRunFields(props: {
     ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, '—')
     : h('div', {
       // 块级 flex + 最小行高：24px 的核心图标钮被行高（--dshpc-line-md）居中，不会把整行撑高。
-      style: { display: 'flex', alignItems: 'center', gap: '2px', minWidth: 0, minHeight: 'var(--dshpc-line-md)' },
+      // ⚠️ 字段格是「上 9 / 下 3」的光学内边距（为了让字形落回视觉中心）⇒ 内容整体比行心低 3px；
+      // 图标钮必须**反向拉回 3px**，否则它离上缝远、离下缝近（用户 2026-11-06 二次点名）。
+      style: {
+        display: 'flex', alignItems: 'center', gap: '2px', minWidth: 0,
+        minHeight: 'var(--dshpc-line-md)', marginTop: '-3px',
+      },
     },
       sessionButton,
       canOpenSession
@@ -349,16 +355,17 @@ export function lastRunFields(props: {
       : h('div', { style: { marginTop: '14px' } },
         h('div', { style: { marginBottom: '6px', fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('colOutputs')),
         h('div', { style: { display: 'flex', flexDirection: 'column' } },
-          outputs.map(output => h('button', {
-            key: output, type: 'button',
-            // 行式文件按钮 = **核心 `.dshpc-filechip--block`**（2026-11-06 改接：hover 灰底、左右内边距都归核心）
-            className: 'dshpc-filechip dshpc-filechip--block',
+          outputs.map(output => h(Button, {
+            key: output,
+            // 文件行 = **核心 Button 的 ghost 档**（图标 + 文字，与「其他产出」标题同一套皮肤）：2026-11-06 用户点名
+            // 「红框那个是哪来的样式？核心哪有这种样式？……要不然你就用 button 的样式」。
+            variant: 'ghost', size: 'sm', block: true,
+            icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: output, size: 14 }),
             disabled: !canOpenFile,
             onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },
-          },
-            output.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: output, size: 14 }),
-            h(MarqueeText, { text: baseNameOf(output), style: { flex: '1 1 auto', minWidth: 0 } }),
-          )),
+            // block + icon 默认会为了让「图标 + 文案」整体居中而补右内边距；这里要左对齐成清单行。
+            style: { justifyContent: 'flex-start' },
+          }, h(MarqueeText, { text: baseNameOf(output), style: { flex: '1 1 auto', minWidth: 0 } }))),
         ),
       ),
     // 过程文件（次级）：与产出物清单同一份数据源，上次执行处默认展开。

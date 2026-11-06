@@ -27,9 +27,9 @@ export const BUTTON_CSS = `
 .dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
 .dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
 
-/* 行式文件按钮（图标 + 文件名）已改接核心 .dshpc-filechip（2026-11-06）：
-   核心 P2 已提供同名同皮的**全站唯一实现**（--block / --inline 两个形态类，自带 hover 与左右内边距），
-   本仓不再保留第二份，使用点直接挂核心类名。 */
+/* 文件行（图标 + 文件名）统一走核心 **Button ghost**（2026-11-06 用户拍板：
+   「一个图标后面跟着文字」——产出物 / 其他产出 / 过程文件 / 执行记录展开区 / 附件全站同一套皮肤，
+   圆角、hover、内边距全归核心按钮；本仓不再保留第二份文件行皮肤。 */
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-chip{transition:none;}}
 `;
@@ -57,7 +57,7 @@ export const SELECT_CSS = `
 export const PROCESS_FILES_CSS = `
 /* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
    （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
-   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用核心 .dshpc-filechip--inline。 */
+   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行 = 核心 Button ghost（图标 + 文字，全站同一套）。 */
 .dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
 .dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
 

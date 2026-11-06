@@ -2265,7 +2265,9 @@ export function TaskEditorDrawer(props: {
 		h(SectionHead, {
 			title: t("editorPrompt"),
 			right: h(
-				Button,
+				// 全屏编辑 = **核心 Button**（2026-11-06 用户点名核实：这不是手搓，之前误用了宿主 primitives 的
+				// 同形按钮，圆角与全站基础层不一致；改用 `dsh-plugin-core/ui` 的 Button）。
+				TdtButton,
 				{
 					variant: "ghost",
 					size: "sm",
@@ -2554,9 +2556,9 @@ export function TaskEditorDrawer(props: {
 					draft.attachments.map((att) => {
 						const target = previewTargetOf(att);
 						const canView = target !== null && onOpenFile !== undefined;
-						// 附件件与查看档**同一实现**（用户 2026-11-06：两处必须一样）：
-						// 文件名 = 核心 Chip（可点开预览时给 onClick）、来源 = 核心 Chip(xs)、移除 = 核心 IconButton(danger)。
-						// 行内只留排布（.dsh-tdt-ed-attline），底色 / 圆角 / hover 全归核心。
+						// 附件件与查看档 / 产出物清单**同一实现**（用户 2026-11-06：「所有用到这种文件的，
+						// 全是用这种样式」）：文件名 = 核心 Button（ghost，图标 + 文字）、来源 = 核心 Chip(xs)、
+						// 移除 = 核心 IconButton(danger)。行内只留排布（.dsh-tdt-ed-attline），底色 / 圆角 / hover 全归核心。
 						const icon =
 							att.isDir === true
 								? h(IconFolderCloseRegular, { size: 14 })
@@ -2568,18 +2570,22 @@ export function TaskEditorDrawer(props: {
 						return h(
 							"div",
 							{ key: att.id, className: "dsh-tdt-ed-attline" },
-							canView
-								? h(
-										Chip,
-										{
-											onClick: () => {
+							h(
+								TdtButton,
+								{
+									variant: "ghost",
+									size: "sm",
+									icon,
+									disabled: !canView,
+									onClick: canView
+										? () => {
 												onOpenFile?.(target!.anchorSessionId, target!.path);
-											},
-										},
-										icon,
-										name,
-									)
-								: h(Chip, null, icon, name),
+											}
+										: undefined,
+									style: { minWidth: 0, maxWidth: "100%" },
+								},
+								name,
+							),
 							h(
 								Chip,
 								{ size: "xs" },

@@ -3098,7 +3098,8 @@ try {
 				/fetchEvents\(id\)/.test(tlSrc) &&
 				/eventsCache/.test(tlSrc) &&
 				/eventsSeqRef\.current = seq/.test(tlSrc) &&
-				/className: 'dshpc-filechip dshpc-filechip--inline'/.test(tlSrc) &&
+				/variant: 'ghost', size: 'sm'/.test(tlSrc) &&
+				!/dshpc-filechip/.test(tlSrc) &&
 				/events\.length === 0\s*\? null/.test(tlSrc) &&
 				!/\.dsh-tdt-rec-evempty' \}, t\('cardEventsEmpty'\)/.test(tlSrc) &&
 				/className: 'dsh-tdt-rec-evtitle'/.test(tlSrc) &&
@@ -3443,8 +3444,8 @@ try {
 				),
 		);
 		check(
-			"第五轮：展开区产出物 = 附件区同款（行内 + 40ch 跑马灯，不占整行；反向：时间轴不再用 --block）",
-			/className: 'dshpc-filechip dshpc-filechip--inline'/.test(tlSrc) &&
+			"第五轮：展开区产出物 = 附件区同款核心 Button（图标 + 文字 + 40ch 跑马灯，不占整行；反向：不再用行式文件按钮类）",
+			/variant: 'ghost', size: 'sm'/.test(tlSrc) &&
 				/\.dsh-tdt-rec-expouts\{display:flex;flex-wrap:wrap;gap:2px 10px/.test(
 					tlSrc,
 				) &&
@@ -3452,7 +3453,7 @@ try {
 					tlSrc,
 				) &&
 				!tlSrc.includes("title: path") &&
-				!tlSrc.includes("dshpc-filechip--block"),
+				!tlSrc.includes("dshpc-filechip"),
 		);
 		check(
 			"第五轮：信息行五段都带「标签 + 完整值」的悬停提示（工作区 / 计划执行 / 实际开始 / 时长 / token 消耗）",
@@ -3541,7 +3542,7 @@ try {
 				!locSrc.includes("outputsEmpty"),
 		);
 		check(
-			"行式文件按钮改接核心 `.dshpc-filechip`（本仓不再保留第二份皮肤；三处使用点直接挂核心类名）",
+			"文件行统一走核心 Button ghost（产出物 / 其他产出 / 过程文件 / 执行记录展开区；本仓不再保留第二份文件行皮肤）",
 			!ctrlSrc.includes(".dsh-tdt-filechip") &&
 				!/\.dsh-tdt-info-out\s*\{/.test(ctrlSrc) &&
 				!/\.dsh-tdt-info-out\s*\{/.test(
@@ -3553,15 +3554,15 @@ try {
 				readFileSync(
 					join(process.cwd(), "src", "client", "task-info.tsx"),
 					"utf8",
-				).includes("dshpc-filechip dshpc-filechip--block") &&
+				).includes("variant: 'ghost', size: 'sm'") &&
 				readFileSync(
 					join(process.cwd(), "src", "client", "records-timeline.tsx"),
 					"utf8",
-				).includes("dshpc-filechip dshpc-filechip--inline") &&
+				).includes("variant: 'ghost', size: 'sm'") &&
 				readFileSync(
 					join(process.cwd(), "src", "client", "process-files.tsx"),
 					"utf8",
-				).includes("dshpc-filechip dshpc-filechip--inline"),
+				).includes("variant: 'ghost', size: 'sm'"),
 		);
 	}
 	check(
@@ -4498,11 +4499,11 @@ console.log("\n[9] 依赖判定：上游最近一条必须 succeeded");
 				),
 		);
 		check(
-			"顶部输入区：chip **按内容宽**（flex:0 0 auto、**无最小宽度**）+ label 40ch 上限（用户三次点名）",
-			client.includes("min-width:0;max-width:100%") &&
-				client.includes("flex:0 0 auto;display:flex") &&
+			"顶部输入区：文件行 = 核心 Button ghost（宽度跟内容走、**无最小宽度**）+ 文件名 40ch 上限（用户三次点名）",
+			client.includes("max-width:40ch") &&
 				!client.includes("min-width:10ch") &&
-				client.includes("max-width:40ch"),
+				!client.includes("dsh-tdt-sv-tfc-file{") &&
+				/flex:\s*"0 0 auto"/.test(client),
 		);
 		check(
 			"主界面「基础信息 · 附加文件」文件名**同样限宽 40ch**（原先完全不限，超长撑爆整行）",
@@ -4512,9 +4513,8 @@ console.log("\n[9] 依赖判定：上游最近一条必须 succeeded");
 		check(
 			"顶部输入区：文件名跑马灯走全站唯一实现 MarqueeText（不自己造第二套）",
 			client.includes("MarqueeText") &&
-				client.includes(
-					"dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}",
-				),
+				client.includes("dshpc-mq") &&
+				!client.includes("dsh-tdt-sv-tfc-label"),
 		);
 		check(
 			"顶部输入区：前置任务标记 = **宽高相等的方块序号**，字号与基础信息「前置任务」行同源（var(--dshpc-font-sm)）",
@@ -4537,8 +4537,8 @@ console.log("\n[9] 依赖判定：上游最近一条必须 succeeded");
 		);
 		check(
 			"顶部输入区：来源 / 状态标记方括号**前置**（[链接]foo.md），不再挂右侧像按钮",
-			client.includes("dsh-tdt-sv-tfc-namewrap") &&
-				client.includes("dsh-tdt-sv-tfc-note"),
+			client.includes("dsh-tdt-sv-tfc-note") &&
+				!client.includes("dsh-tdt-sv-tfc-namewrap"),
 		);
 		check(
 			"顶部输入区：前置任务一排两个（窄容器降一列，用容器宽度判据）",
@@ -4575,9 +4575,9 @@ console.log("\n[9] 依赖判定：上游最近一条必须 succeeded");
 			client.includes("IconFolderCloseRegular"),
 		);
 		check(
-			"顶部输入区：跨区目录 / 未解析路径降级不可点（data-noclick 淡一档）",
-			client.includes("data-noclick") &&
-				client.includes(".dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}"),
+			"顶部输入区：跨区目录 / 未解析路径降级不可点（核心 Button 的 disabled，不给假入口）",
+			/disabled:\s*!clickable/.test(client) &&
+				!client.includes("data-noclick"),
 		);
 		// 会话区纵向间距：2026-11-06 起 frame / scroll / body 全由核心 owning，本仓不再写纵向规则。
 		check(
@@ -6268,14 +6268,13 @@ console.log("\n[14] runtime-index");
 			"utf8",
 		);
 		check(
-			"基础信息右栏定宽（窗口缩放只让左栏变）+ 产出物行走核心行式文件按钮（hover 灰底 + 左右内边距归核心）",
+			"基础信息右栏定宽（窗口缩放只让左栏变）+ 附件与产出物行统一走核心 Button ghost（圆角 / hover / 内边距全归核心）",
 			ti.includes("flex: 'none', width: '320px'") &&
-				// 2026-11-06：产出物行改接核心 `.dshpc-filechip--block`（自带 hover 与 6px 内边距）。
-				ti.includes("dshpc-filechip dshpc-filechip--block") &&
-				// 2026-11-06：附件/内联文件件改核心 `Chip`（不再经过手搓的 `--inline`）。
-				ti.includes("h(Chip, {") &&
+				// 2026-11-06：附件与产出物行都改核心 Button ghost（图标 + 文字）。
+				ti.includes("variant: 'ghost', size: 'sm'") &&
+				!ti.includes("dshpc-filechip") &&
 				!ti.includes("dsh-tdt-filechip") &&
-				// 本仓不再有第二份行式文件按钮皮肤。
+				// 本仓不再有第二份文件行皮肤。
 				!readFileSync(
 					join(process.cwd(), "src", "client", "ui", "controls-css.ts"),
 					"utf8",

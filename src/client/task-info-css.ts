@@ -32,8 +32,6 @@ const TASK_INFO_CSS = [
   // 行高不变（仍是 12px 内边距 + `--dshpc-line-md` 行盒）。
   '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 9px 0 3px; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }',
   '.dsh-tdt-info-label { padding-right: 12px; }',
-  // 附件用的是核心 `Chip`（20px 高 = `--dshpc-line-md`）；补一条 `vertical-align` 让它与标签同基线居中。
-  '.dsh-tdt-info-file { vertical-align: middle; }',
   // 每栏**最底下那一条线**去掉（用户 2026-10-03 二次修订）：判据不是写死某一行（如 Token），而是由
   // DOM 实际决定 —— 左栏最后一块就是字段区；右栏**有产出物时最后一块是产出物区** ⇒ 字段区末行
   // 只有"它后面没别的块"（`:last-child`）时才去缝，否则会把 Token 的线也去掉、让字段区与产出物断线。

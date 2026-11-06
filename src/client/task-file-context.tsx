@@ -136,23 +136,20 @@ interface FileLine {
 function FileChip(props: { file: FileLine }): ReturnType<typeof h> {
   const { file } = props
   const clickable = file.onClick !== undefined
-  return h(clickable ? 'button' : 'span', {
-    className: 'dsh-tdt-sv-tfc-file',
-    ...(clickable
-      ? { type: 'button' as const, 'aria-label': file.title, onClick: file.onClick }
-      : { 'data-noclick': true }),
+  // 文件行 = 核心 Button 的 ghost 档（图标 + 文字，与产出物清单 / 附件区同一套皮肤；2026-11-06 全站收口）。
+  // 不可点（路径没解析出来 / 跨工作区目录）⇒ `disabled`，不给假入口。
+  return h(Button, {
+    variant: 'ghost',
+    size: 'sm',
+    icon: file.isDir ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: file.iconPath, size: 14 }),
+    disabled: !clickable,
+    onClick: file.onClick,
+    'aria-label': file.title,
+    style: { flex: '0 0 auto', minWidth: 0, maxWidth: '100%' },
   },
-    h('span', { className: 'dsh-tdt-sv-tfc-icon' },
-      // 目录：官方 FileTypeIcon 按扩展名分类，尾斜杠 ⇒ 空扩展名 ⇒ 通用文件图标（不是文件夹）
-      // ⇒ 目录单独用官方文件夹图标（与文件浏览器目录行同源）。
-      file.isDir ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: file.iconPath, size: 14 })),
-    // 来源标记**紧贴文件名前面**、用方括号（用户 2026-10-03：`[链接]foo.md`）——
-    // 原来挂在最右边（正文与标记之间被 flex 撑开）⇒ 越看越像个按钮。与文件名同一 Flex 无间距容器，
-    // 保证 `]` 和文件名之间不留缝。
-    h('span', { className: 'dsh-tdt-sv-tfc-namewrap' },
-      file.note === undefined ? null : h('span', { className: 'dsh-tdt-sv-tfc-note' }, `[${file.note}]`),
-      h(MarqueeText, { text: file.label, style: { minWidth: 0, flex: '1 1 auto' } }),
-    ),
+    // 来源标记**紧贴文件名前面**、用方括号（用户 2026-10-03：`[链接]foo.md`），与文件名不留缝。
+    file.note === undefined ? null : h('span', { className: 'dsh-tdt-sv-tfc-note' }, `[${file.note}]`),
+    h(MarqueeText, { text: file.label, style: { minWidth: 0, flex: '1 1 auto' } }),
   )
 }
 

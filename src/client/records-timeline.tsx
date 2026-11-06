@@ -654,18 +654,16 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         outputs.length === 0
           ? null
           : h('div', { className: 'dsh-tdt-rec-expouts' },
-            outputs.map(path => h('button', {
+            outputs.map(path => h(Button, {
               key: path,
-              type: 'button',
-              // 与附件区同款：行内（核心 `--inline`，不占整行），hover 灰底归核心
-              className: 'dshpc-filechip dshpc-filechip--inline',
+              // 文件行 = 核心 Button 的 ghost 档（图标 + 文字；2026-11-06 全站收口，不再用行式文件按钮类）。
+              variant: 'ghost', size: 'sm',
+              icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
               disabled: !canOpenFile,
               onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
-            },
-              path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
+              style: { flex: '0 0 auto', maxWidth: '100%' },
               // 文件名**限宽 40ch + 超长跑马灯**（与卡片附件区同一口径；用户：设个最大宽度，超过了就跑马灯）
-              h(MarqueeText, { text: baseNameOf(path), style: { maxWidth: '40ch', minWidth: 0 } }),
-            )),
+            }, h(MarqueeText, { text: baseNameOf(path), style: { maxWidth: '40ch', minWidth: 0 } }))),
           ),
         // 过程文件（次级）：跟在主文件那排之后，同样可点开预览。
         h(ProcessFiles, {
