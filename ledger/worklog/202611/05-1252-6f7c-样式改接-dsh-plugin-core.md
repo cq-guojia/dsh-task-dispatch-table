@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 16:20:46 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 17:14:06 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -57,8 +57,15 @@
 
 ## Next
 
-**2026-11-07 用户叫停：本任务未完成，不再由本 agent 推进。** 用户原话「不是这个任务做完了，是你太笨了，我不想让你做」。
-未完成项原样保留在 `To Do`（P1 剩余项、P2 Modal/Confirm/Alert、P3 文件浏览、P5 业务样式、P6 文档回写、收尾统计）；接手者先读 `To Do` 与「中止（2026-11-07）」节，**不得按「完成」结案**。
+2026-11-07 用户回来继续，按「一个一个来改」推进；本轮先做「新建 / 编辑任务」分栏（见 Process「续做（2026-11-07）」）。
+
+**下一个具体动作**：等用户把核心的「行条目」控件补上（`dsh-plugin-core/ui`，API 建议见 Process 续做节），再在
+`src/client/task-editor.tsx` 的 `.dsh-tdt-ed-attline`（附件行）与 `.dsh-tdt-ed-depitem`（前置任务条目）两处
+一次性换成同一控件：整行常态底色 + hover 提亮 + 整行 onClick（附件行 = 看文件），右侧 actions 槽放核心
+`IconButton` / `Chip`；同步删 `task-editor-css.ts` 里这两类条目残留的皮肤规则，并补冒烟反断言。
+
+⚠️ `To Do` 的历史勾选项与 `Process` 实际落地记录不同步（P1 / P3 / P5 / P6 多数已做但仍标 `[ ]`），
+**别照单重做**；逐项以 `Process` 各节为准。本任务**仍未结案**（用户未说「结束 / 取消」）。
 
 ## Process
 
@@ -606,6 +613,46 @@ h(ChatViewFrame, {
 - 台账状态保持 `doing`，**未结案**（用户未说「结束 / 取消」）。
 - 验证现状：`typecheck` / `build` 通过；`smoke` 741 过 / 11 既有失败（与基线一致，无新增失败）。
 
+## 续做（2026-11-07）：编辑分栏改接 + 交核心清单
+
+用户重新接手本任务，第一轮只改「新建 / 编辑任务」分栏。
+
+| 项 | 落地 |
+|---|---|
+| 前置任务选择 | 两级（工作区 → 任务）合并为**一个核心 `Picker` 分组下拉**：`ui/Field.tsx` 加可选 `groups` 透传；`depGroups` 按真源工作区分组、空组 `.filter(...)` 滤掉；`searchable:true`；触发器吃掉整行剩余宽度，右侧「添加」仍定宽 72px / gap 8px；删 `depWs` state / `.dsh-tdt-ed-deppick-ws` / `editorDepPickWsFirst` 文案键 |
+| 按钮收口 | `task-editor.tsx` 里的 `Button` 原本是 `@deepseek-ai/dsh-client-ui-primitives` 的官方件（7 处），`TdtButton` 才是核心件 ⇒ 删官方导入、`TdtButton` 别名全量改回 `Button`（`./ui`）；全分栏只剩核心 Button / IconButton |
+| 选择工作区文件 | 原生 `<button>` 改核心 `Button(outline)`（虚线走 `borderStyle:dashed` 保留设计语言）；核心 Button 不透传外部 ref（`dist/ui/actions/Button.js:170`）⇒ `pickerAnchorRef` 改挂外层 div、类型 `HTMLDivElement` |
+| 前置任务移除 | 文字「移除」→ 核心 `IconButton(danger, sm)` + 叉图标（与附件行小叉同款） |
+| 高级设置 | 整行 `Button(ghost, block)` → 普通 div（不绑点击、不整行高亮）+ 右侧核心 `IconButton(plain, sm)` 箭头，只有箭头 hover 提亮；`insideClickable` 不再需要 |
+| 配置预览 | 官方 `Button(outline)` → 核心 `Button(secondary, sm)`（灰底、无描边） |
+
+**验证**：`typecheck` ✅ · `build` ✅ · `smoke` **742 过 / 11 既有失败**（无新增失败，比基线多 1 条通过断言）·
+`koc-codelint` 8 条全为既有 B 类 biome 告警，落点均不在本轮改动行内。
+
+**本轮明确没做**（按用户「老规矩：核心不好使就告诉我，我先把核心去改」）：附加文件行 / 前置任务条目的
+「整行带底色 + hover 提亮 + 整行可点」。核心 0.35.3 **没有行条目控件**（源码级事实已回写
+`docs/design/external/plugin-core-controls.md` §十二）；手写 CSS 顶替违反硬要求 1 与「不做降级兜底」的
+长期约定 ⇒ 等核心补完再一次性换，避免又一轮返工。
+
+### 交核心的改动清单（本轮新增；全部可选、向后兼容）
+
+建议 `dsh-plugin-core/ui` 新增「行条目」控件（`ListRow` / `RowItem`）：
+
+| 字段 | 语义 |
+|---|---|
+| `size?: 'sm'\|'md'\|'lg'` | **默认 `md`**（用户明确「不能用小号，得用中号」） |
+| `icon?: ReactNode` / `label: ReactNode` | 左侧文件 / 文件夹图标 + 名字 |
+| `actions?: ReactNode` | 右侧槽，可放多个 `IconButton` / `Chip`（移除叉、来源标签） |
+| `onClick?: () => void` | 整行点击（槽内按钮自行 `stopPropagation`） |
+| 常态底色 + `:hover` 提亮 | 走 `--dshpc-hover` / `--dshpc-active`，不是「只有 hover 才出底」 |
+| `selected?: boolean` | 「很多时候我要选一条」⇒ 预留选中档 |
+
+用途：附加文件清单、前置任务清单这类「一行一条、整行可点、右侧带操作」的场景。核心补上后两处一起换成
+同一控件，本仓自留样式继续减少。
+
+**核心不必改**：`Picker` 的空组隐藏（调用方过滤即可）、分组下拉宽度（`width:'100%'` 已有）、
+搜索框（`searchable:true` 已有）、`secondary` 灰底无描边（已有）。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -630,3 +677,4 @@ h(ChatViewFrame, {
 - 2026-11-06 15:34:27 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 2026-11-06 二轮审计落地：会话放大镜改核心 IconButton(background=chip-bg) 恢复灰底座；字段行 padding 9/3 光学居中；行式文件按钮全站改核心 .dshpc-filechip（本仓 .dsh-tdt-filechip 已删）；编辑页附件行与查看档统一为 Chip + Chip(xs) + IconButton(danger)；typecheck/build/smoke 741 通过/11 既有失败不变
 - 2026-11-06 16:16:39 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 文件行全站收口为核心 Button ghost（task-info/process-files/records-timeline/编辑页附件/会话文件行），新增 3px 控件回正；全屏编辑改用核心 Button；core 0.35.3 smoke 741/11 回基线，typecheck/build 过
 - 2026-11-06 16:20:46 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 用户 2026-11-07 叫停（非完成）：worklog 记「中止」、未完成项保留、台账保持 doing 不结案；按 worklog 签入本轮最后一批改动
+- 2026-11-06 17:14:06 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 编辑分栏第一轮：前置任务两级选择合并为核心分组 Picker（空组过滤+搜索+撑满行），清退官方 primitives Button 与原生 button，高级设置箭头/前置任务移除改核心 IconButton，配置预览改 secondary 灰底；typecheck/build 过、smoke 742 过/11 既有；核心缺行条目控件，建议 API 见 worklog 续做节与 external/plugin-core-controls.md §十二，附件行等核心补完再换
