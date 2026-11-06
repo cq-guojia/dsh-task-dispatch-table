@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 16:16:39 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 16:20:46 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -53,9 +53,12 @@
 - [ ] P6 文档回写：`ui-style-guide.md` / `ui-foundation.md` / `external/session-view-ui-map.md` / `features.md`
 - [ ] 收尾统计：替换前 / 后本项目自留样式行数与类名数量，确认「样式很少」；build + smoke + typecheck + 专家复核
 
+> ⚠️ 2026-11-07 用户叫停：本任务**未完成**，以上未勾选项原样保留（原因见「中止（2026-11-07）」节）。
+
 ## Next
 
-P1 第二项：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/IconButton 为下一项，改调 `dsh-plugin-core/ui` 的 `Button` / `IconButton`（先核对 variant/size 映射与 `controls-css` 的皮肤），完成后立即跑一次独立专家复核；后面按列表逐项推进。
+**2026-11-07 用户叫停：本任务未完成，不再由本 agent 推进。** 用户原话「不是这个任务做完了，是你太笨了，我不想让你做」。
+未完成项原样保留在 `To Do`（P1 剩余项、P2 Modal/Confirm/Alert、P3 文件浏览、P5 业务样式、P6 文档回写、收尾统计）；接手者先读 `To Do` 与「中止（2026-11-07）」节，**不得按「完成」结案**。
 
 ## Process
 
@@ -594,6 +597,15 @@ h(ChatViewFrame, {
 
 **验证**：`typecheck` ✅ · `build` ✅ · `smoke` **741 过 / 11 失败**（11 项与改动前同一批既有失败：records 门槛、DateTimePicker、Office 预览、底栏两档、查看档只读、store 同步、未保存拦截、r13、默认档映射、设置快照、页面覆盖）· `koc-codelint` **21 条**（全部落在未改动行，无本轮新增；顺带清掉 2 条 markdown 与 1 条死变量）。
 
+## 中止（2026-11-07）
+
+- **这不是「任务完成」**：用户明确「不是这个任务做完了，是你太笨了，我不想让你做，听懂了吗？」。
+- 叫停原因：本轮「文件行 / 附件行 / 垂直居中 / 全屏编辑」四项改动交付后，用户判断质量不达预期，终止本 agent 继续推进。
+- 本轮最后一批已落地的改动（供接手者参考）：文件行全站收口为核心 `Button`（ghost + 图标 + 文字，覆盖 `task-info.tsx` / `process-files.tsx` / `records-timeline.tsx` / `task-editor.tsx` 附件行 / `task-file-context.tsx`）；含控件的值格整行 `-3px` 回正；编辑页「全屏编辑」改核心 `Button`；`dsh-plugin-core` 升至 **0.35.3**。核心 `.dshpc-filechip` 与本仓 `.dsh-tdt-filechip` 均弃用。
+- 未完成项见 `To Do`（P1 剩余、P2 Modal/Confirm/Alert、P3、P5、P6、收尾统计）。
+- 台账状态保持 `doing`，**未结案**（用户未说「结束 / 取消」）。
+- 验证现状：`typecheck` / `build` 通过；`smoke` 741 过 / 11 既有失败（与基线一致，无新增失败）。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -617,3 +629,4 @@ h(ChatViewFrame, {
 - 2026-11-06 14:47:21 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P6 查看档细节审计：产出物行 padding 2px 6px；附件改核心 Chip 修垂直居中；会话放大镜走核心 Button icon 槽删 18px 底座；全站原生 title 清退 30 处（必要处改官方 Tooltip、IconButton title:''）；typecheck/build 过，smoke 741/11 既有，codelint 21 无新增；文档 ui-foundation §5.2/§5.3 已回写
 - 2026-11-06 15:34:27 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 2026-11-06 二轮审计落地：会话放大镜改核心 IconButton(background=chip-bg) 恢复灰底座；字段行 padding 9/3 光学居中；行式文件按钮全站改核心 .dshpc-filechip（本仓 .dsh-tdt-filechip 已删）；编辑页附件行与查看档统一为 Chip + Chip(xs) + IconButton(danger)；typecheck/build/smoke 741 通过/11 既有失败不变
 - 2026-11-06 16:16:39 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 文件行全站收口为核心 Button ghost（task-info/process-files/records-timeline/编辑页附件/会话文件行），新增 3px 控件回正；全屏编辑改用核心 Button；core 0.35.3 smoke 741/11 回基线，typecheck/build 过
+- 2026-11-06 16:20:46 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 用户 2026-11-07 叫停（非完成）：worklog 记「中止」、未完成项保留、台账保持 doing 不结案；按 worklog 签入本轮最后一批改动
