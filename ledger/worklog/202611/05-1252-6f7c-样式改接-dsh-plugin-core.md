@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 14:10:55 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 14:47:21 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -576,6 +576,24 @@ h(ChatViewFrame, {
 
 **验证**：`typecheck` ✅ · `build` ✅ · `smoke` 741 / 11（11 项均为既有失败）· `koc-codelint` 16 条（均落在未改动行，无本轮新增）。
 
+## P6（2026-11-06）查看档细节审计：内边距 / 垂直居中 / 核心图标 / 原生 title 清退
+
+**用户原话**：「『上次执行』下面有一个产出的文件……产出那个鼠标移上去，它为什么没有内边距呢？那个文件是贴着左边的……那个小放大镜的 icon 核心也有用核心的……附加文件，鼠标移上去，那个按钮又是手搓的吧？不是核心吧？……还有哪些地方有那种特别原生的、加了 title 的（就是鼠标移上去那种提示），全部给我干了……有必要加的地方，用核心里面有鼠标移上去的提示。」
+
+| 问题 | 根因 | 处理 |
+|---|---|---|
+| 产出物行 hover 无内边距、贴左 | `.dsh-tdt-filechip` 基础层写的是 `padding:2px 0`，只有 `--inline` 补了横距 ⇒ `--block`（产出物清单）横向为 0 | 基础层改 `padding:2px 6px`（`ui/controls-css.ts`），两种形态共用；smoke 加回归断言 |
+| 「附加文件」行垂直不居中 | 手搓的附件按钮自带 `2px` 上下 padding，比标签文字行（`--dshpc-line-md`=20px）高 ⇒ 行高被撑大、标签顶到上边 | 附件件改核心 `Chip`（高 20px，恰好等于 `line-md`），容器补 `align-items:center`、Chip 补 `vertical-align:middle` |
+| 附件按钮「不是核心」 | 同上：`button` + `.dsh-tdt-filechip--inline` 手搓 | 改核心 `Chip`（可点给 `onClick`，不可点不给；`Chip` 无 `disabled`） |
+| 会话前小放大镜自绘 18px 灰底座 | `.dsh-tdt-info-session-icon` 自写 | 删底座 + 删 CSS；放大镜走核心 `Button variant='link'` 的 **`icon` 槽**（不再自己定 10px / 18px） |
+| 全站原生 `title`（浏览器灰框） | 各处分件自挂 `title`；且核心 `IconButton` 默认把 `label` 写成原生 title | **一律清退**（约 30 处）：纯展示 / 文字已完整 / `MarqueeText` 已能跑马灯 ⇒ 直接删；确有必要的截断值 / 纯图标钮 / 告警标记 ⇒ 官方 `Tooltip`；所有 `IconButton` 显式 `title: ''` |
+
+**改动落点**：`task-info.tsx`（附件 Chip / 会话 icon 槽 / dep·token 的 Tooltip / 产出物 MarqueeText）、`task-info-css.ts`（删 session-icon、加 info-file 垂直对齐）、`controls-css.ts`（filechip 内边距）、`task-list.tsx`（状态竖条 Tooltip、计划/实际/Token/备注 Tooltip、IconButton `title:''`）、`records-timeline.tsx` / `process-files.tsx` / `task-file-context.tsx`（删原生 title，保留手搓 chip）、`task-editor.tsx`（权限提示改官方 Tooltip、删各处 title、两个纯图标钮包 Tooltip）、`task-calendar.tsx`（年/月翻页图标钮包 Tooltip，删死代码 `nameNode`）、`ui/Field.tsx`（删 `title` prop 兜底）、`ui/TaskPicker.tsx`（`!` 告警改 Tooltip）、`db-table.tsx`（截断单元格改 Tooltip）、`index.ts` / `session-view.ts` / `mirror/Deliverables.tsx`（删标题）。
+
+**核心缺口（已写入 `docs/design/ui-foundation.md` §5.3）**：核心没有通用 `Tooltip` 组件，只能走官方 `@deepseek-ai/dsh-client-ui-primitives` 的 `Tooltip`（子元素必须可挂 ref ⇒ 核心组件外包一层 `span`）；`Chip` 无 `title` / `disabled` / 事件参数 ⇒ 需停用或 `stopPropagation` 的场景仍留本仓实现。
+
+**验证**：`typecheck` ✅ · `build` ✅ · `smoke` **741 过 / 11 失败**（11 项与改动前同一批既有失败：records 门槛、DateTimePicker、Office 预览、底栏两档、查看档只读、store 同步、未保存拦截、r13、默认档映射、设置快照、页面覆盖）· `koc-codelint` **21 条**（全部落在未改动行，无本轮新增；顺带清掉 2 条 markdown 与 1 条死变量）。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -596,3 +614,4 @@ h(ChatViewFrame, {
 - 2026-11-06 13:13:11 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P5 工作区身份改存 id（向下兼容）：① 新增 tasks.migrateWorkspaceIds / setWorkspaceDefinitionInline；② 启动迁移 + 单条保存 + 整批 tasksInline 保存统一改存 workspace.id 并校验真实存在；③ 调度 Loop A / 手动执行按标题解析成功后就地写回 id；④ client 下拉 value=id、显示走 workspaceLabelOf、TaskPicker/日历/列表筛选归一；⑤ 新增 external/dsh-workspace-identity.md（id=randomUUID，rename 不变，删除重建换 id）。验证：typecheck/build 通过，smoke 741/752（11 条既有失败）。
 - 2026-11-06 13:38:07 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 更正上条：撤销启动式批量迁移与保存期标题归一，兼容只在执行期；任务右侧「执行时长 + Token」并成一行；本插件所有区域滚动条统一 1px（.dsh-tdt-root 后代规则，下拉走核心 .dshpc-scroll-thin）；typecheck/build/smoke(741过11既有败) 全过
 - 2026-11-06 14:10:55 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 2026-11-06 全量审计手搓 UI：编辑卡/查看档块头改核心 Surface+SectionHead，状态标签/附件类型/草稿标记改 Chip，文字链/重置/更多改 Button link，运行态转圈改 Loader，JSON 逃生口改 Textarea；清理 11 处旧皮肤规则；typecheck/build/smoke 741 过（11 条既有失败）
+- 2026-11-06 14:47:21 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P6 查看档细节审计：产出物行 padding 2px 6px；附件改核心 Chip 修垂直居中；会话放大镜走核心 Button icon 槽删 18px 底座；全站原生 title 清退 30 处（必要处改官方 Tooltip、IconButton title:''）；typecheck/build 过，smoke 741/11 既有，codelint 21 无新增；文档 ui-foundation §5.2/§5.3 已回写
