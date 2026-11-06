@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-05 23:29:55 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 00:36:26 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -155,6 +155,47 @@ P1 第二项：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/Ico
 
 **提交状态**：本轮改动（代码 + 文档 + 本 worklog）尚未 commit / push，等用户确认。
 
+### 2026-11-06 · P1 全量收口 + P3 文件浏览/预览改接（代码完成，待拍板 P2/P4）
+
+**P1 小控件（全部改接核心，本地实现删除）**
+
+| 控件 | 现状 |
+|---|---|
+| Segmented / Button / IconButton | 核心 `dsh-plugin-core/ui`；周几多选挂核心 `dshpc-seg--weekday`；本地 `ui/Segmented.tsx`、`ui/Button.tsx` 已删 |
+| Input / PrefixedInput / NumberInput | 核心（默认 `size='sm'`=24，4 个调用点显式补 `size`）；本地整段删 |
+| Textarea / Checkbox / MarqueeText / SectionHead / LiveText | 核心；本地同名文件全删 |
+| Loading / RunningBlocks | 核心（`anchorId` 显式 `'dsh-tdt-main'`）；本地 `ui/Loading.tsx` + `loading-css.ts` 删 |
+| CodeViewer | 核心 `dsh-plugin-core/ui/code-viewer`（`t` 必传 `coreT`）；本地 `CodeViewer.tsx` / `cm-themes.ts` / `lang.ts` 删 |
+| QuickToolbar | 核心（替代本地 `BackToTop.tsx` + `back-to-top-css.ts`，已删） |
+| 拖拽调宽 | 核心 `startResizeLayoutWidth`（本地 `ui/resizer.ts` 已删） |
+| 控件皮肤 | `controls-css.ts` 311 → 130 行：删分段/按钮/输入/跑马灯/日历整段；只留核心没有的产出物 chip、时分列、下拉锚点、过程文件块 |
+
+**P3 文件浏览 / 文件预览（全量切核心 `dsh-plugin-core/adv/explorer`）**
+
+- 新增 `src/fs-route.ts`（`FS_ROUTE = '/api/task-dispatch-table/fs'`）作为唯一路径真源。
+- 宿主 `src/index.ts`：`serveFsRoute(ctx, { path: FS_ROUTE })`（核心 `dsh-plugin-core/host`，注册 `kind:'prefix'` 只读 fs 路由）。
+- 客户端 `src/client/index.ts`：`connectFs({ path: FS_ROUTE })` + `connectHost(ctx)`（工作区快照源）。
+- `src/client/file-browser.tsx` 重写为 ~100 行薄壳：只做「会话/工作区 → 绝对根路径」与 dock 外壳 + 拖拽，浏览/预览/面包屑/源码/HTML/Office 全部交核心 `FileBrowser`（`files: getFsFace()`、`onPick(picked)` 透传 `workspaceRel`）。
+- **删除** `src/client/file-preview.tsx`（752 行）。
+- **删除** `archive-session-css.ts` 中已死的预览/浏览规则 91 行（`sv-preview-head/body/titlebar/crumbbar/tree/cm-*` 等，逐类名核对无引用后删除），只留 dock 外壳三条。
+
+**验证**：`npm run build` ✅ · `npm run typecheck` ✅ · `npm run smoke` **753 项 / 0 失败** · `koc-codelint` 仅剩 B 类（存量：`records-timeline.tsx` / `task-calendar.tsx` / `src/index.ts` / `format.ts` 的未用变量、Markdown 表格格式、`session-view.ts:402` 的 forEach 返回值告警），L0/L5 无 FAIL；本次改接新增的未用导入（`Field.tsx` / `DateTime.tsx` / `index.ts` / `task-editor.tsx` / `task-list.tsx`）已全部清掉。
+
+**冒烟断言同步**：全部从本地实现改为核心等价物（`dshpc-cv__editor` / `dshpc-cv__copy` / `dshpc-fb__frame` / `dshpc-fb__banner` / `dshpc-fb__text` / `previewRenderFailed` / `SOURCE_MAX_BYTES` / `new Blob([full]).size >= props.maxBytes` / `languageForPath` / `PickedPath.workspaceRel`），并加反向断言「本地旧类已不存在」。
+
+**两处核心缺口（阻塞，待用户拍板；本仓不静默删功能）**
+
+1. **Toast**：核心 `notify/showToast` 是全局 Sonner 式，只有 `variant/durationMs/position/actions/onDismiss`；**无锚定（贴某控件上方）、无 sticky（常驻不自动消失）、无 closeButton（Toast.js:38 明确不开）、无 `dismiss` 导出（id 不返回）**。本仓 `FloatingToast` 现有 5+ 处依赖 `sticky`（JSON 校验常驻）/ `closable`（会话启动失败，用户手动关）语义，直接替换会退化。
+   - 选项 A：接受行为变化，全部改核心全局提示（常驻类改成定时消失）；
+   - 选项 B：让核心补 `notify` 的 `sticky` + 可编程 `dismiss(id)` + 可选 closeButton；
+   - 选项 C：Toast 保留本地（唯一例外，登记进 ui-style-guide 已知例外）。
+2. **会话预览**：核心 `adv/session` 的 `SessionViewModal` **明确不搬**本仓「接收/随附输入区、交付文件 / 过程文件、标题任务名入口、冷读探测、U11 页面级预览 dock」（源码注释第 5 条）。它也不导出可嵌入的 ChatView，无法做「核心会话体 + 本地业务块」组合；直接替换会丢功能。
+   - 选项 A：接受功能丢失，会话预览整体换核心；
+   - 选项 B：让核心加 `outputs` / `headerSlot` / `children` 之类插槽，本仓再换；
+   - 选项 C：本仓保留业务外壳（会话体仍镜像官方），只把可替换的子件改核心。
+
+**文档回写状态**：`ui-foundation` / `ui-style-guide` 的 P1 条目已在前序轮完成；本轮 P3（adv/explorer 改接、fs 路由、session/toast 缺口）尚待用户拍板后与结论一并回写 `docs/design/external/`。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -164,3 +205,4 @@ P1 第二项：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/Ico
 - 2026-11-05 13:22:50 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P0 地基完成：接入 dsh-plugin-core@0.33.3、删除 ui/tokens.ts、--tdt-→--dshpc-（35 文件 1333 处）、style.ts 改核心 kit 薄壳、冒烟 +token 白名单守卫；两轮专家复核 9 项返工全部闭环；typecheck/build/smoke 751/0
 - 2026-11-05 14:25:17 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 讨论完毕并拍板：Picker 加 limit（搜索同样分页）+ keywords（单个字符串）；DateTimePicker 加 presets + width（触发器总宽）；「全部任务」作普通首项（核心零改）；token 基线跟随核心。交核心清单 C1–C4 定稿，worklog 提交推送 b9dae9e；TaskPicker/TimeRange 等核心新版发布后再接。
 - 2026-11-05 23:29:55 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 核心 0.34.0 交付 C1–C4；TaskPicker/TimeRange 改接核心薄包装完成（src/client/ui/TaskPicker.tsx、ui/TimeRange.tsx），删自绘浮层与 15 条 CSS，typecheck/build/smoke 751/0；专家复核 6 项闭环、文档 4 篇已回写；改动待提交
+- 2026-11-06 00:36:26 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P1 全量改接核心完成（本地控件/CSS 删除）；P3 文件浏览与预览整体切 dsh-plugin-core/adv/explorer（新增 fs 路由、file-preview.tsx 752 行删除、死 CSS 91 行删除），build/typecheck/smoke 753/0；P2 Toast 与 P4 会话预览因核心缺能力待拍板
