@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 14:47:21 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 15:34:27 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -615,3 +615,4 @@ h(ChatViewFrame, {
 - 2026-11-06 13:38:07 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 更正上条：撤销启动式批量迁移与保存期标题归一，兼容只在执行期；任务右侧「执行时长 + Token」并成一行；本插件所有区域滚动条统一 1px（.dsh-tdt-root 后代规则，下拉走核心 .dshpc-scroll-thin）；typecheck/build/smoke(741过11既有败) 全过
 - 2026-11-06 14:10:55 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 2026-11-06 全量审计手搓 UI：编辑卡/查看档块头改核心 Surface+SectionHead，状态标签/附件类型/草稿标记改 Chip，文字链/重置/更多改 Button link，运行态转圈改 Loader，JSON 逃生口改 Textarea；清理 11 处旧皮肤规则；typecheck/build/smoke 741 过（11 条既有失败）
 - 2026-11-06 14:47:21 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P6 查看档细节审计：产出物行 padding 2px 6px；附件改核心 Chip 修垂直居中；会话放大镜走核心 Button icon 槽删 18px 底座；全站原生 title 清退 30 处（必要处改官方 Tooltip、IconButton title:''）；typecheck/build 过，smoke 741/11 既有，codelint 21 无新增；文档 ui-foundation §5.2/§5.3 已回写
+- 2026-11-06 15:34:27 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 2026-11-06 二轮审计落地：会话放大镜改核心 IconButton(background=chip-bg) 恢复灰底座；字段行 padding 9/3 光学居中；行式文件按钮全站改核心 .dshpc-filechip（本仓 .dsh-tdt-filechip 已删）；编辑页附件行与查看档统一为 Chip + Chip(xs) + IconButton(danger)；typecheck/build/smoke 741 通过/11 既有失败不变
