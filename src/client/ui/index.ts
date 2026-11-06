@@ -36,7 +36,6 @@ export {
   SectionHead,
   LiveText,
   Textarea,
-  Checkbox,
   Loading,
   RunningBlocks,
   FIELD_ANCHOR_STYLE,
@@ -56,7 +55,6 @@ export {
   type FieldSize,
   type LoadingProps,
   type TextareaProps,
-  type CheckboxProps,
   type SectionHeadProps,
   type DayCell,
 } from 'dsh-plugin-core/ui'
@@ -66,6 +64,19 @@ import type { SegmentedProps } from 'dsh-plugin-core/ui'
 /** 段定义单项（核心 `Segmented` 的 items 元素；核心未单独导出该类型）。 */
 export type SegmentedItem<T extends string = string> = SegmentedProps<T>['items'][number]
 export { FieldHint, type FieldHintProps } from 'dsh-plugin-core/ui'
+// 核心提示气泡的注入位：插件启动时把官方 `Tooltip` 交给 core（不注入 ⇒ 问号只有图标、悬停无气泡）。
+export { setTooltipRenderer, type TooltipRenderProps } from 'dsh-plugin-core/ui'
+// 弹窗 / 确认框：**全站唯一实现**（核心命令式 `confirmModal` / `alertModal`，自带惰性 mount）。
+export {
+  confirmModal, alertModal, Modal, Checkbox,
+  type ConfirmOptions, type AlertOptions, type ModalProps, type ConfirmTone, type CheckboxProps,
+} from 'dsh-plugin-core/ui'
+// 表格：核心 `Table`（Plain 档：无横线、竖浅分隔线、行悬浮淡蓝）。
+export {
+  Table,
+  type TableProps, type TableColumn, type TableRow, type TableCell, type TableCellSpec,
+  type TableAlign, type TableDensity, type TableBorders,
+} from 'dsh-plugin-core/ui'
 export { DateTimePicker, type DateTimeOutput } from 'dsh-plugin-core/ui'
 // 「名字 + 输入框」同格组合：核心 InputGroup（label 与输入框同格灰底）。
 export { InputGroup, type InputGroupProps, type InputGroupAction } from 'dsh-plugin-core/ui'

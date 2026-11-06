@@ -57,8 +57,11 @@ export const TASK_EDITOR_CSS = `
    核心 Picker 的根是 inline-block（max-width:100%），这里给行内子项放行收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 选模型（核心 ModelPicker 分组态）：比工作区小一档，最小宽度下先让出空间（用户 2026-11-06 真机反馈）。 */
-.dsh-tdt-ed-model{width:140px;}
+/* 选模型（核心 ModelPicker 分组态）：比工作区小一档，最小宽度下先让出空间（用户 2026-11-06 真机反馈）。
+   触发器必须填满定宽根，否则值短时触发器缩到 min-width(120)、右缘留白 ⇒ 看着没靠右；
+   margin-left:auto 兜底，让它在任何排布下都贴右缘（用户 2026-11-06）。 */
+.dsh-tdt-ed-model{width:140px;margin-left:auto;}
+.dsh-tdt-ed-model .dshpc-picker__trigger{width:100%;}
 /* 设置页「供应商 + 模型」联动态：两个下拉**等宽定住**（核心 __row 默认 flex，按内容自适应会跳宽）。 */
 .dsh-tdt-model-pair .dshpc-picker__row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2);}
 .dsh-tdt-model-pair .dshpc-picker__row > .dshpc-picker{width:100%;min-width:0;}

@@ -275,7 +275,8 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
           degraded: groups.length === 0,
           defaultLabel: t('settingsDefaultOption'),
           placeholder: t('editorFollowHost'),
-          size: 'md',
+          // 与其他表单行统一档位（lg = 32），不许比其他框小一号（用户 2026-11-06）。
+          size: 'lg',
           className: invalid ? 'dsh-tdt-picker--error' : undefined,
           onChange: (next: string) => {
             if (next === '') {

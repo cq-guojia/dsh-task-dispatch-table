@@ -89,6 +89,6 @@ export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProper
     error !== null
       ? h('div', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-danger)', marginBottom: 'var(--dshpc-space-2)' } }, error)
       : null,
-    h(DbTable, { table: result, t, emptyText: t('settingsLogEmpty') }),
+    h(DbTable, { table: result, emptyText: t('settingsLogEmpty') }),
   )
 }

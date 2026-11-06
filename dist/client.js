@@ -244,6 +244,15 @@ window.__ModuleLoader__.load({
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/input-group-css.generated.js
 		const INPUT_GROUP_CSS = "\n/* ── 组合输入框 InputGroup ─────────────────────────────────────────────\n   输入框 + 后置按钮（一枚或多枚）+ 可选前置标题，焊成一体。\n   与 SplitGroup 同一套外观口径：外框 / 圆角 / 相邻 1px 分隔 / 整体聚焦圈都由外壳画，\n   内件（.dshpc-input / .dshpc-btn / .dshpc-iconbtn）把自己的边框、圆角、外圈交出来。\n\n   高度默认吃 --dshpc-control-h-*（sm 24 / md 28 / lg 32）；调用方要自定义就在根节点\n   内联 height，这里让内件 height:100% 跟上 —— 内件档位高度只有 0,1,0，被本文件的\n   0,2,0 压掉，不会出现「外壳变高了、里面的框还是 32」。\n   （⚠️ 别改成不写 height:100% 只靠 stretch：input 有确定高度时 flex 不会拉伸它。） */\n/* min-width：输入格是 flex:1，没有它时 inline-flex 按占位文字宽收得很窄（搜索框 + 按钮的典型用法会难看）。\n   要更宽 / 更窄由调用方在外面套壳或给 className，不许在这里写死 max-width。 */\n.dshpc-igroup{display:inline-flex;align-items:stretch;min-width:200px;max-width:100%;box-sizing:border-box;overflow:hidden;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);}\n.dshpc-igroup--sm{height:var(--dshpc-control-h-sm);}\n.dshpc-igroup--md{height:var(--dshpc-control-h-md);}\n.dshpc-igroup--lg{height:var(--dshpc-control-h-lg);}\n.dshpc-igroup--error{border-color:var(--dshpc-danger);}\n/* 整体聚焦：内件自己的焦点圈交出来，由外壳画一整圈（各画各的会变成格内半圈） */\n.dshpc-igroup:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n\n/* 前置标题：与输入框同格，灰底区分（与 SplitGroup 左格同一口径） */\n.dshpc-igroup__label{display:inline-flex;align-items:center;flex:none;padding:0 8px;white-space:nowrap;\n  background:var(--dshpc-surface-sunken);color:var(--dshpc-fg-2);\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}\n.dshpc-igroup--md .dshpc-igroup__label,.dshpc-igroup--lg .dshpc-igroup__label{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n\n/* 输入格：交出边框 / 圆角 / 底色 / 焦点圈；宽度交给 flex（原生 width:100% 会和 flex-basis 打架） */\n.dshpc-igroup > .dshpc-input{flex:1 1 auto;width:auto;min-width:0;height:100%;border:0;border-radius:0;background:transparent;}\n.dshpc-igroup > .dshpc-input:focus{box-shadow:none;}\n\n/* 按钮格：交出边框与圆角；实心底色保留（右侧「确定」该有重量）。\n   纯图标钮本身是固定宽的方块，这里改成按高度撑出的正方形，自定义高度时才不会变成竖长条。 */\n.dshpc-igroup > .dshpc-btn,.dshpc-igroup > .dshpc-iconbtn{flex:none;height:100%;border-radius:0;}\n.dshpc-igroup > .dshpc-iconbtn{width:auto;aspect-ratio:1;}\n.dshpc-igroup > .dshpc-btn{border:0;}\n\n/* 分隔线：相邻兄弟的左描边，不额外插 DOM。后两条是给「清过边框」的格子补回来的，\n   必须写成 0,2,0 且写在上面的 border:0 之后 —— 否则被 border:0 压掉，格子之间没分隔。 */\n.dshpc-igroup > * + *{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n.dshpc-igroup > * + .dshpc-input{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n.dshpc-igroup > * + .dshpc-btn{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n";
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/table-css.generated.js
+		const TABLE_BASE_CSS = "/* ── 表格基础层（结构 + 交互 + 空态）─────────────────────────────────────\n   外观分档 = 分组件 + 分文件：本文件只放所有外观共用的部分；\n   表头底色、分隔线、悬浮 / 选中色由皮肤文件负责（table-plain.css 是第一档）。\n   皮肤选择器一律挂在 .dshpc-table--<skin> 下，与基础层不同名 —— 注入顺序不影响胜负\n   （test/css-contract.test.mjs 禁止跨常量同名选择器）。\n   圆角裁剪 / 横向滚动归调用方容器，本层不设 overflow；也不做表头吸顶：\n   分组表头是多行，统一 top:0 会在滚动时互相盖住（要吸顶请在外层容器处理）。 */\n\n.dshpc-table{--dshpc-table-pad-x:var(--dshpc-space-3);--dshpc-table-head-h:44px;--dshpc-table-row-h:48px;\n  width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;box-sizing:border-box;\n  color:var(--dshpc-fg);font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n\n/* 密度三档：只改行高与水平内距，配色与分隔线归皮肤。compact / comfortable 各一行，\n   新增档位在此追加；列级 padding 走内联 style 覆盖（不在这里再开一套变量）。\n   默认水平内距 12px（space-3）—— 参考稿的色块间距，16px 偏松。 */\n.dshpc-table--density-compact{--dshpc-table-pad-x:var(--dshpc-space-2);--dshpc-table-head-h:36px;--dshpc-table-row-h:36px;}\n.dshpc-table--density-comfortable{--dshpc-table-pad-x:var(--dshpc-space-4);--dshpc-table-head-h:52px;--dshpc-table-row-h:60px;}\n\n.dshpc-table__head-cell,.dshpc-table__cell{box-sizing:border-box;padding:var(--dshpc-space-1) var(--dshpc-table-pad-x);\n  text-align:left;vertical-align:middle;font-weight:400;}\n\n/* 表头 44 / 数据行 48 是 default 档（参考稿密度）；height 在 table-cell 上是最小高，\n   多行内容会自动把行撑高，不会被截断。 */\n.dshpc-table__head-cell{height:var(--dshpc-table-head-h);font-size:var(--dshpc-font-sm);font-weight:600;color:var(--dshpc-fg-2);}\n.dshpc-table__head-cell--group{text-align:center;}\n.dshpc-table__cell{height:var(--dshpc-table-row-h);}\n\n.dshpc-table__head-cell--center,.dshpc-table__cell--center{text-align:center;}\n.dshpc-table__head-cell--right,.dshpc-table__cell--right{text-align:right;}\n\n.dshpc-table__row{transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease);}\n/* 只有传了 onRowClick 的行才是可点的（数据属性由组件按此打）。 */\n.dshpc-table__row[data-interactive='true']{cursor:pointer;}\n.dshpc-table__row:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px;}\n\n/* 斑马纹是通用能力（表级 striped 开关），放在基础层：底色取 token，各档皮肤不必各自实现。\n   选择器刻意只到 3 个类级别（表级 + 行 + :nth-child）；皮肤层的行态规则带 __body 上下文\n   + 属性选择器，必然是 4 级 ⇒ 与注入顺序无关地压过它。\n   2026-10-30 真机事故：这里曾写满 4 级（多了一个 __body），与选中的 4 级相同 ⇒ 基础层\n   比皮肤后注入，偶数行永远被斑马纹盖住（「单数行能选中、双数行点了没反应」）。 */\n.dshpc-table--striped .dshpc-table__row:nth-child(even){background:var(--dshpc-plate);}\n\n/* 分组通栏：一个表格里放多个板块（工作区 A / 工作区 B）时，每组先来一行横跨全部列的大标题，\n   然后才是这一组自己的表头与数据行。结构 + 底色归基础层（只用 token，各档皮肤共同成立）；\n   通栏底走 --dshpc-table-banner-bg（与表头互换的那一档，2026-10-30 用户定）；\n   通栏与组表头之间画一条线（用户 2026-10-30：那之间也要有 border）；\n   组与组之间用通栏顶线隔开，第一组顶部不画（外框已经在那儿，画了就成双线）。 */\n.dshpc-table__group-cell{height:var(--dshpc-table-head-h);padding:var(--dshpc-space-1) var(--dshpc-table-pad-x);\n  box-sizing:border-box;background:var(--dshpc-table-banner-bg);border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  text-align:left;vertical-align:middle;font-size:var(--dshpc-font-sm);font-weight:600;color:var(--dshpc-fg);}\n.dshpc-table__group-body:first-of-type .dshpc-table__group-cell{border-top:0;}\n\n/* 通栏标题的固定标签（短竖线）与排版由 SectionHead 自带（4px 圆头），本层不再画。 */\n\n.dshpc-table__empty{height:80px;padding:0 var(--dshpc-space-4);text-align:center;\n  color:var(--dshpc-fg-3);font-size:var(--dshpc-font-sm);}\n\n/* 加载态行（加载更多 / 没有更多 / 整表加载）：单元格自身不画边框（底部状态行的顶线由皮肤补），内容居中；\n   整表加载默认占位 160px（可由 loadingHeight 覆盖），底部那行只占一行高。 */\n.dshpc-table__state-cell{padding:0;border:0;text-align:center;vertical-align:middle;}\n.dshpc-table__state{display:flex;align-items:center;justify-content:center;\n  gap:var(--dshpc-space-2);min-height:40px;padding:var(--dshpc-space-1) var(--dshpc-table-pad-x);\n  box-sizing:border-box;color:var(--dshpc-fg-3);font-size:var(--dshpc-font-sm);}\n.dshpc-table__state--full{flex-direction:column;min-height:160px;gap:var(--dshpc-space-3);font-size:var(--dshpc-font-sm);}\n.dshpc-table__state-text{line-height:1;}\n/* 底部哨兵：零高、无边框、无内容，只给 IntersectionObserver 一个落点。 */\n.dshpc-table__sentinel>td{height:0;padding:0;border:0;line-height:0;}\n\n/* 内建分页的外壳：表格在上、分页条在下，间距走 space-3（分页条自己管左右对齐）。 */\n.dshpc-table-frame{display:flex;flex-direction:column;gap:var(--dshpc-space-3);}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/table-plain-css.generated.js
+		const TABLE_PLAIN_CSS = "/* ── 外观一 · Plain（第一个样式：白卡片上的轻量表格）─────────────────────\n   特征：外框 + 灰底表头（含下边线，双行分组表头也清楚）、竖向分隔线、\n   数据行只保留极淡底线（不画重横线）、行悬浮淡蓝、选中行淡蓝底 + 左侧 3px 蓝竖条。\n   选择器全部挂在 .dshpc-table--plain 下，和基础层不同名（注入顺序无关）。\n   竖分隔线按列声明（格子上的 data-divider），不用相邻兄弟选择器 —— 后者会让每行首格\n   永远没有左线（用户 2026-10-30 真机看到的 Name 左侧缺线），且单元格跨列后会画错位置。\n   后续外观照此另建：table-grid.css / table-zebra.css，各自一个组件、各自 import 自己那份。 */\n\n/* 外框四态：all 四边 / x 只有左右 / y 只有上下 / none 全不要。\n   组件总会按 borders 属性和上对应 class，故这里不存在「无 class 的裸表」。\n   「不要左右两条边」就是 borders='y'。 */\n.dshpc-table--plain.dshpc-table--borders-all{border:1px solid var(--dshpc-border);}\n.dshpc-table--plain.dshpc-table--borders-x{border-left:1px solid var(--dshpc-border);\n  border-right:1px solid var(--dshpc-border);}\n.dshpc-table--plain.dshpc-table--borders-y{border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);}\n.dshpc-table--plain.dshpc-table--borders-none{border:0;}\n\n/* 表头：中性灰底 + 下边线。底色走 --dshpc-table-head-bg（= --dshpc-surface-sunken，\n   与通栏那层灰同源；2026-10-30 用户二次定案：表头 / 通栏互换底色）；下边线兜住分组表头的第二层。 */\n.dshpc-table--plain .dshpc-table__head-cell{\n  background:var(--dshpc-table-head-bg);\n  border-bottom:1px solid var(--dshpc-border);\n}\n.dshpc-table--plain .dshpc-table__head-cell--group{color:var(--dshpc-fg-3);}\n\n/* 表头多色：列级 headerTone 打到 data-header-tone，浅底 + 同色文字。\n   色值全部来自 token（soft 底 / 实色字），暗色主题自动跟随，不写死任何 hex。\n   这组规则比上方灰底规则多一个属性选择器，必然覆盖默认灰底。 */\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='business']{background:var(--dshpc-business-soft);color:var(--dshpc-business);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='success']{background:var(--dshpc-success-soft);color:var(--dshpc-success);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='warning']{background:var(--dshpc-warning-soft);color:var(--dshpc-warning);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='danger']{background:var(--dshpc-danger-soft);color:var(--dshpc-danger);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='purple']{background:var(--dshpc-purple-soft);color:var(--dshpc-purple);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='pink']{background:var(--dshpc-pink-soft);color:var(--dshpc-pink);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='cyan']{background:var(--dshpc-cyan-soft);color:var(--dshpc-cyan);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='teal']{background:var(--dshpc-teal-soft);color:var(--dshpc-teal);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='orange']{background:var(--dshpc-orange-soft);color:var(--dshpc-orange);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='indigo']{background:var(--dshpc-indigo-soft);color:var(--dshpc-indigo);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='rose']{background:var(--dshpc-rose-soft);color:var(--dshpc-rose);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='slate']{background:var(--dshpc-slate-soft);color:var(--dshpc-slate);}\n\n/* 竖分隔线：按列声明，**默认不画**。组件只给 divider: true 的列打 data-divider='left'，\n   首列恒不画（那是外框的位置）。默认表格 = 只有横线、没有一条竖线；\n   要「列间有线」就给对应列 divider:true。 */\n.dshpc-table--plain .dshpc-table__head-cell[data-divider='left'],\n.dshpc-table--plain .dshpc-table__cell[data-divider='left']{border-left:1px solid var(--dshpc-border);}\n\n/* 数据行之间的极淡底线：只帮眼睛「分行」，不回到粗横线表格的老样子。 */\n.dshpc-table--plain .dshpc-table__row + .dshpc-table__row .dshpc-table__cell{\n  border-top:1px solid var(--dshpc-border-faint);\n}\n\n/* 底部状态行（加载更多 / 到底）：整行通栏，与上方数据行之间补一条实线。\n   只补顶线：左右两条不由这一格重复画 —— borders=all / x 时表级外框已经兜住；\n   borders=y / none 本来就没有左右边。整表加载占位行不加（表头已有下边线，再加就成双线）。 */\n.dshpc-table--plain .dshpc-table__state-row--footer .dshpc-table__state-cell{\n  border-top:1px solid var(--dshpc-border);\n}\n\n/* 没有左右外框时（borders=y）底部状态行下面那条表底线也去掉：\n   状态行只留上方一条实线，否则图标 / 文案下方还多一条孤线（2026-10-31 用户定）。\n   borders=none 本来就没有底边，无需在此重复。 */\n.dshpc-table--plain.dshpc-table--borders-y.dshpc-table--foot-no-bottom{border-bottom:0;}\n\n/* 行悬浮：只在可点行上给反馈，静态表格不误导用户以为能点。\n   底色是极淡中性灰（--dshpc-table-row-hover：亮色一层淡黑 ≈1.5%，暗色一层淡白 ≈3%）——\n   2026-10-30 用户：hover 要特别淡的灰、不要淡蓝（第二次又要求再浅一半）。带 __body 上下文是为了压过基础层的斑马纹（见 table.css）。 */\n.dshpc-table--plain .dshpc-table__body .dshpc-table__row[data-interactive='true']:hover{background:var(--dshpc-table-row-hover);}\n\n/* 选中行：淡蓝底 + 左侧蓝竖条。用背景渐变画条，避免 tr 上伪元素 / 定位的兼容问题；\n   两条选择器同一份声明：悬浮态（多一个属性 + 伪类）不会盖掉选中态。\n   底色用 business-soft（比悬浮再明确一档但仍是浅色），条本身才是「选中」的信号。\n   特异性 4 级，高于基础层的斑马纹（3 级）⇒ 偶数行也能正常选中。 */\n.dshpc-table--plain .dshpc-table__body .dshpc-table__row[data-selected='true'],\n.dshpc-table--plain .dshpc-table__body .dshpc-table__row[data-selected='true'][data-interactive='true']:hover{\n  background:linear-gradient(to right,var(--dshpc-business) 3px,var(--dshpc-business-soft) 3px);\n}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/navigation/pagination-css.generated.js
+		const PAGINATION_CSS = "/* ── 分页（‹ Previous 1 2 3 … 36 Next ›）────────────────────────────────────\n   当前页 = 蓝色圆角方块 + 白字（实心面的字必须走 --dshpc-on-signal，不许用主题反色）；\n   其余页码是纯文字按钮，悬浮只给极淡中性底。对齐由 --left / --center / --right 三个修饰决定，\n   组件默认 right。颜色全部走 token，明暗自动跟随宿主。 */\n\n.dshpc-pagination{display:flex;align-items:center;gap:var(--dshpc-space-2);flex-wrap:wrap;\n  font-size:var(--dshpc-font-sm);line-height:1;color:var(--dshpc-fg-2);}\n\n.dshpc-pagination--left{justify-content:flex-start;}\n.dshpc-pagination--center{justify-content:center;}\n.dshpc-pagination--right{justify-content:flex-end;}\n\n.dshpc-pagination__total{color:var(--dshpc-fg-3);margin-inline-end:var(--dshpc-space-1);}\n\n.dshpc-pagination__pages{display:flex;align-items:center;gap:2px;}\n\n/* 页码 / 上下页 = 核心 Button（当前页 info 实心蓝、其余 ghost），箭头 = 全站唯一 Chevron。\n   这里只补尺寸与间距，不重画按钮皮肤；两级选择器压过 .dshpc-btn--md 的内距。 */\n.dshpc-pagination .dshpc-pagination__page{padding:0 6px;min-width:28px;}\n.dshpc-pagination .dshpc-pagination__nav{padding:0 var(--dshpc-space-2);}\n\n.dshpc-pagination__ellipsis{display:inline-flex;align-items:center;justify-content:center;\n  min-width:28px;height:28px;color:var(--dshpc-fg-3);}\n\n.dshpc-pagination__simple{min-width:64px;text-align:center;font-variant-numeric:tabular-nums;\n  color:var(--dshpc-fg);}\n\n/* 简洁模式只留箭头：文字标签隐藏，箭头仍然可见（无障碍名还在 aria-label 上）。 */\n.dshpc-pagination--simple .dshpc-pagination__text{display:none;}\n\n/* 每页条数下拉 = 核心 Picker（箭头是全站唯一的 Chevron）：只收窄不参与伸缩。 */\n.dshpc-pagination__size{flex:none;}\n";
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/display/section-head-css.generated.js
 		const SECTION_HEAD_CSS = "/* 分区标题行：标签（可选，画出来的短竖线）/ icon + 标题 + 右侧控件。 */\n.dshpc-section-head{display:flex;align-items:center;gap:var(--dshpc-space-2);\n  margin-bottom:var(--dshpc-space-3);}\n.dshpc-section-head--flush{margin-bottom:0;}\n\n.dshpc-section-head__bar{flex:none;width:4px;height:1em;border-radius:999px;\n  font-size:var(--dshpc-font-lg);background:var(--dshpc-fg-2);}\n\n.dshpc-section-head__icon{display:inline-flex;align-items:center;flex:none;\n  line-height:var(--dshpc-line-lg);color:var(--dshpc-fg-3);}\n\n.dshpc-section-head__title{font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);\n  font-weight:600;color:var(--dshpc-fg);flex:none;}\n\n.dshpc-section-head__right{flex:1;display:flex;align-items:center;\n  justify-content:flex-end;gap:var(--dshpc-space-2);min-width:0;}\n";
 		//#endregion
@@ -460,6 +469,14 @@ window.__ModuleLoader__.load({
 		function isThenable(value) {
 			if (value === null || value === void 0) return false;
 			return typeof value.then === "function";
+		}
+		/**
+		* 回调的返回值算不算「成功」（命令式弹窗据此决定关不关）：
+		* 只有明确的 `false` 表示这次没成 —— `true` / `undefined` / 别的都照常关。
+		* 用返回值表达业务失败，消费方就不必在调用点包 try/catch（错误自己处理、自己提示）。
+		*/
+		function isSuccess(value) {
+			return value !== false;
 		}
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/actions/Button.js
@@ -1919,6 +1936,150 @@ window.__ModuleLoader__.load({
 			}), props.footer), locked ? (0, react$1.createElement)(OverlayLockCatcher) : null)));
 		}
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/ConfirmModal.js
+		/**
+		* 确认框（语义层，基于 Modal）：双按钮（取消 outline + 确认语义档）、无 ✕；无标题时整条头部消失。
+		* 样式封闭：按钮只暴露语义档（tone → variant），不透传任意 className/style。
+		*
+		* 异步不在这里实现：`onConfirm` / `onCancel` 返回 Promise 时由 `Button` 自动转圈，
+		* 它再把「在跑」报上来，这里只负责把它转成 `Modal` 的 `busy`（锁死遮罩 / Esc）。
+		*/
+		function ConfirmModal(props) {
+			const tt = props.translate ?? t$1;
+			const tone = props.tone ?? "primary";
+			const confirmVariant = tone === "danger" ? "danger" : tone === "warning" ? "warning" : "primary";
+			const [confirmBusy, setConfirmBusy] = (0, react$1.useState)(false);
+			const [cancelBusy, setCancelBusy] = (0, react$1.useState)(false);
+			const busy = confirmBusy || cancelBusy || props.confirmLoading === true || props.cancelLoading === true;
+			return (0, react$1.createElement)(Modal, {
+				title: props.title,
+				size: props.size ?? "sm",
+				hideHeader: props.title === void 0,
+				closable: false,
+				closeOnMask: props.closeOnMask,
+				busy,
+				locked: props.locked,
+				onClose: props.onCancel,
+				notice: props.notice,
+				footer: (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					gap: "8px",
+					justifyContent: "flex-end"
+				} }, (0, react$1.createElement)(Button$2, {
+					variant: "outline",
+					width: props.cancelWidth,
+					loadingText: props.loadingText,
+					loading: props.cancelLoading === true,
+					onBusyChange: setCancelBusy,
+					onClick: () => props.onCancel?.()
+				}, props.cancelText ?? tt("cancel")), (0, react$1.createElement)(Button$2, {
+					variant: confirmVariant,
+					width: props.confirmWidth,
+					loadingText: props.loadingText,
+					loading: props.confirmLoading === true,
+					onBusyChange: setConfirmBusy,
+					onClick: () => props.onConfirm?.()
+				}, props.confirmText ?? tt("confirm")))
+			}, props.message ?? null);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/modal-host.js
+		let hostRoot = null;
+		let hostContainer = null;
+		let entries = [];
+		let idSeq = 0;
+		/** 取（懒建）常驻挂载根；非浏览器环境返回 null。 */
+		function getHostRoot() {
+			if (typeof document === "undefined") return null;
+			if (hostRoot === null) {
+				hostContainer = document.createElement("div");
+				hostContainer.setAttribute("data-dshpc-modal-host", "");
+				document.body.appendChild(hostContainer);
+				hostRoot = (0, react_dom_client.createRoot)(hostContainer);
+			}
+			return hostRoot;
+		}
+		/** 重渲染当前堆叠；空了就卸载回收，不残留空根。 */
+		function flush() {
+			const root = getHostRoot();
+			if (root === null) return;
+			ensureControls(getStyleKit());
+			if (entries.length === 0) {
+				root.unmount();
+				hostContainer?.remove();
+				hostRoot = null;
+				hostContainer = null;
+				return;
+			}
+			root.render((0, react$1.createElement)(react$1.Fragment, null, entries.map((e) => (0, react$1.createElement)(react$1.Fragment, { key: e.id }, e.render()))));
+		}
+		function dismiss(id) {
+			entries = entries.filter((e) => e.id !== id);
+			flush();
+		}
+		let hostHandlers = null;
+		function registerHostDialog(handlers) {
+			hostHandlers = handlers;
+		}
+		/**
+		* 命令式确认框：Promise 形式，`true`=确定 / `false`=取消（或点遮罩 / Esc）。`skin:"host"` 走宿主原生 Modal。
+		* 回调返回 Promise 时进入 loading（按钮转圈 + 遮罩 / Esc 锁死），settle 后才真正关闭。
+		*/
+		function confirmModal(opts) {
+			if (opts.skin === "host") {
+				if (hostHandlers !== null) return hostHandlers.confirm({
+					title: opts.title == null ? void 0 : String(opts.title),
+					description: opts.message == null ? void 0 : String(opts.message),
+					confirmText: opts.confirmText,
+					cancelText: opts.cancelText,
+					danger: opts.tone === "danger"
+				});
+				console.warn("[dsh-plugin-core] confirmModal skin:\"host\" 需先引入官方适配层 official.js，已回落到 core 皮肤");
+			}
+			const { skin: _skin, onConfirm, onCancel, ...core } = opts;
+			return new Promise((resolve) => {
+				const id = ++idSeq;
+				let closed = false;
+				const close = (result) => {
+					if (closed) return;
+					closed = true;
+					dismiss(id);
+					resolve(result);
+				};
+				const entry = {
+					id,
+					locked: false,
+					render: () => null
+				};
+				const ctl = { setLocked: (next) => {
+					if (closed || entry.locked === next) return;
+					entry.locked = next;
+					flush();
+				} };
+				const run = (which) => {
+					if (closed) return void 0;
+					const out = (which === "confirm" ? onConfirm : onCancel)?.(ctl);
+					const settle = (value) => {
+						if (isSuccess(value)) close(which === "confirm");
+					};
+					if (!isThenable(out)) {
+						settle(out);
+						return;
+					}
+					out.then(settle, () => {});
+					return out;
+				};
+				entry.render = () => (0, react$1.createElement)(ConfirmModal, {
+					...core,
+					locked: entry.locked,
+					onConfirm: () => run("confirm"),
+					onCancel: () => run("cancel")
+				});
+				entries.push(entry);
+				flush();
+			});
+		}
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/official.js
 		/**
 		* L1 adapter —— 全仓**唯一** import 官方 primitives 平台模块的文件。
@@ -1963,6 +2124,72 @@ window.__ModuleLoader__.load({
 			}
 			return value;
 		}
+		function mountHostModal(render) {
+			if (typeof document === "undefined") return;
+			const container = document.createElement("div");
+			document.body.appendChild(container);
+			const root = (0, react_dom_client.createRoot)(container);
+			const close = () => {
+				root.unmount();
+				container.remove();
+			};
+			root.render(render(close));
+		}
+		const hostConfirm = (opts) => new Promise((resolve) => {
+			mountHostModal((close) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+				open: true,
+				onClose: () => {
+					close();
+					resolve(false);
+				},
+				title: opts.title ?? "",
+				closeLabel: t$1("modalClose"),
+				description: opts.description,
+				footer: (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					justifyContent: "flex-end",
+					gap: "8px"
+				} }, (0, react$1.createElement)(Button$2, {
+					variant: "outline",
+					onClick: () => {
+						close();
+						resolve(false);
+					}
+				}, opts.cancelText ?? t$1("cancel")), (0, react$1.createElement)(Button$2, {
+					variant: opts.danger === true ? "danger" : "primary",
+					onClick: () => {
+						close();
+						resolve(true);
+					}
+				}, opts.confirmText ?? t$1("confirm")))
+			}));
+		});
+		const hostAlert = (opts) => new Promise((resolve) => {
+			mountHostModal((close) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+				open: true,
+				onClose: () => {
+					close();
+					resolve();
+				},
+				title: opts.title ?? "",
+				closeLabel: t$1("modalClose"),
+				description: opts.description,
+				footer: (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					justifyContent: "flex-end"
+				} }, (0, react$1.createElement)(Button$2, {
+					variant: "primary",
+					onClick: () => {
+						close();
+						resolve();
+					}
+				}, opts.confirmText ?? t$1("dialogOk")))
+			}));
+		});
+		registerHostDialog({
+			confirm: hostConfirm,
+			alert: hostAlert
+		});
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/infra/host-data.js
 		/** 模型目录的 observable store（useSyncExternalStore 直接消费）。 */
@@ -31196,7 +31423,7 @@ window.__ModuleLoader__.load({
 		| cell 1 | cell 2 |
 		```
 		*/
-		const Table = {
+		const Table$1 = {
 			defineNodes: [
 				{
 					name: "Table",
@@ -31297,7 +31524,7 @@ window.__ModuleLoader__.load({
 		[`Autolink`](#Autolink).
 		*/
 		const GFM = [
-			Table,
+			Table$1,
 			TaskList,
 			Strikethrough,
 			{ parseInline: [{
@@ -49042,6 +49269,17 @@ window.__ModuleLoader__.load({
 			return (0, react$1.createElement)("div", { className: "dshpc-fb__tree" }, roots.map((root) => row(`root:${root.path}`, root.label, root.path)), anchors.filter((item) => item.path !== void 0 && item.path !== "").map((item) => row(`ws:${item.title}`, item.title, item.path)));
 		}
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/tooltip.js
+		let renderer;
+		/** 注入官方 Tooltip（插件启动时调一次；传 undefined 撤销，回到自绘降级）。 */
+		function setTooltipRenderer(fn) {
+			renderer = fn;
+		}
+		/** 当前注入的 renderer；未注入返回 undefined（FieldHint 据此走降级路径）。 */
+		function getTooltipRenderer() {
+			return renderer;
+		}
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Segmented.js
 		/**
 		* 角标 / 计数要不要显示，返回要显示的文本。
@@ -49103,6 +49341,7 @@ window.__ModuleLoader__.load({
 				props.bordered,
 				props.block
 			]);
+			const renderer = getTooltipRenderer();
 			const tone = props.tone;
 			const toneClass = typeof tone === "string" ? ` dshpc-seg--tone-${tone}` : "";
 			const toneStyle = tone !== void 0 && typeof tone !== "string" ? {
@@ -49154,7 +49393,11 @@ window.__ModuleLoader__.load({
 					disabled,
 					onClick: handle
 				}, hasIcon ? (0, react$1.createElement)("span", { className: "dshpc-seg__icon" }, item.icon) : null, hasLabel ? item.label : null, count === null ? null : (0, react$1.createElement)("span", { className: "dshpc-seg__count" }, count), badge === null ? null : (0, react$1.createElement)("span", { className: "dshpc-seg__badge" }, badge));
-				if (item.tooltip !== void 0 && false);
+				if (item.tooltip !== void 0 && renderer !== void 0) return renderer({
+					label: item.tooltip,
+					side: "top",
+					children: itemButton
+				});
 				return itemButton;
 			})]);
 		}
@@ -49891,7 +50134,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/layout/panel-dock-css.generated.js
-		const PANEL_DOCK_CSS = "/* 停靠栏 = **布局成员**，不是浮层：它占宽度、把主区真正挤窄（兄弟项目 2026-09-28：\n   「分栏压过来，不是盖上去」）。所以调用方必须把它放进自己的 flex 根里。\n   皮肤（头部 / 拖拽条 / 关闭钮 / 背景阴影）在 side-panel.css，与 SideSheet 共用。 */\n.dshpc-dock{display:flex;flex:0 0 auto;align-self:stretch;min-width:0}\n/* dock 不再替主区让缝（原 --dshpc-dock-gap 的 1px margin 已删，用户 2026-11-02）：\n   滚动条与容器边缘的 1px 统一由滚动容器自己的透明边框提供（见 style.md §滚动条让位），\n   主区容器带了让位，滚动条与这条分隔线之间自然还是 1px。别再往这里加 margin。 */\n\n/* 自动加的宿主行（openFilePreview 加 / 关闭即摘）：消费方那行不必自己写 flex。\n   只让「第一个非预览子项」当主区伸展，其余直接子项不动（页脚条、工具条不误伤）；\n   display 不在这里写死 —— 本来就是 grid 等布局的元素保持原样，由 TS 侧按计算值补 flex。 */\n.dshpc-dock-host{min-width:0;min-height:0}\n.dshpc-dock-host>:not([data-dshpc-file-preview]){min-width:0}\n.dshpc-dock-host>:first-child:not([data-dshpc-file-preview]){flex:1 1 auto}\n\n/* 单栏**占位**：sticky + 视口高让它在页面滚动时保持可见，同时仍然占宽度。\n   ⚠️ **本条刻意不设 z-index**：布局成员一旦带正 z-index，就会无条件压过宿主 portal 到 body 的\n   弹窗（兄弟项目 2026-10-05 真机事故「侧边栏盖住宿主设置弹窗」）。层序交给 DOM 顺序裁决。\n   外观来自 .dshpc-side-surface（side-panel.css），这里只管怎么占位与朝哪边描边。 */\n.dshpc-dock__panel{\n  position:sticky;top:0;align-self:stretch;\n  /* 高度默认视口高（整页场景）；嵌在定高容器里时由调用方给 --dshpc-dock-h（如 420px / 100%）。 */\n  height:var(--dshpc-dock-h,100vh);max-height:var(--dshpc-dock-h,100vh);\n  border-left:1px solid var(--dshpc-border);\n}\n/* 收起的出场：宽度收到 0、透明淡出；落定后组件才真正摘掉这一栏（JS 延时 220ms 配合）。 */\n.dshpc-dock__panel--closing{\n  width:0!important;min-width:0!important;opacity:0;border-left-width:0;\n  transition:width .2s var(--dshpc-ease),opacity .2s var(--dshpc-ease),border-left-width .2s var(--dshpc-ease);\n}\n\n/* 拖动期：① <iframe>（PDF / HTML 预览）是独立文档，会吞掉父文档的 pointermove，\n   向右拖进 iframe 就卡死 —— 整片让出指针事件；② contain 把重排隔离在栏内，\n   否则每帧改宽度都会牵动整页重排（兄弟项目 2026-10-04 真机「挪很久才动一下」）。 */\n.dshpc-dock.dshpc-dock--resizing iframe{pointer-events:none}\n.dshpc-dock.dshpc-dock--resizing .dshpc-dock__panel{contain:layout paint;will-change:width}\n\n/* 收起钮：**待在面板自己的框里**（用户 2026-10-28 三轮：占面板内部空间，不伸到外面去）。\n   left:0 从内侧贴着分隔线 —— 贴线的一边不描边（线是面板自己的 border-left），页签与线不重合。\n   20×44（用户 2026-10-28 四轮定尺寸）；实色底（--dshpc-plate，明暗各有实值），hover 亮一档。\n   padding-right:2px 是**视觉居中**：右侧是圆角，箭头往直线那边挪 1px（用户 2026-10-28 四轮）。 */\n.dshpc-dock__collapse{\n  position:absolute;left:0;top:50%;transform:translateY(-50%);\n  z-index:8;display:inline-flex;align-items:center;justify-content:center;\n  width:20px;height:44px;padding:0 2px 0 0;\n  border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  border-right:1px solid var(--dshpc-border);\n  border-left:none;\n  border-radius:0 var(--dshpc-radius-sm) var(--dshpc-radius-sm) 0;\n  background:var(--dshpc-plate);color:var(--dshpc-fg-3);\n  font-family:inherit;font-size:16px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-dock__collapse:hover{background:var(--dshpc-plate-hover);color:var(--dshpc-fg)}\n.dshpc-dock__collapse:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n\n/* 收起后的浮动耳朵：**fixed 贴右缘、垂直居中、独立于分栏**（用户 2026-10-28 定稿：\n   小页签挂中间、里面放面板图标、不显示文字，箭头与收起钮反向）。多个按收起顺序纵向堆叠。\n   z 走 ear 档（高于弹窗遮罩，2026-11-04）：面板在弹窗下面时，耳朵仍是唯一能点到的入口。\n   DOM 上 portal 到 body（PanelDock.ts），否则会被弹窗的 stacking context 关在里面。 */\n.dshpc-dock__ears{\n  position:fixed;top:50%;right:0;transform:translateY(-50%);\n  z-index:var(--dshpc-z-ear,950);\n  display:flex;flex-direction:column;gap:8px;align-items:flex-end;\n  pointer-events:none;\n}\n.dshpc-dock__ear{\n  pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;\n  /* 与收起钮**同尺寸**（20×44，用户 2026-10-28 四轮）：上/下/左描边，贴右缘的一侧不描。\n     实色底（--dshpc-plate），不用透明色 —— 透明底下透出东西很难看。\n     padding-left:2px 是**视觉居中**：左侧是圆角，箭头往直线（右缘）那边挪 1px。 */\n  width:20px;height:44px;box-sizing:border-box;padding:0 0 0 2px;\n  border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  border-left:1px solid var(--dshpc-border);\n  border-right:none;\n  border-radius:var(--dshpc-radius-sm) 0 0 var(--dshpc-radius-sm);\n  background:var(--dshpc-plate);color:var(--dshpc-fg-2);\n  cursor:pointer;font-family:inherit;line-height:1;\n  animation:dshpc-ear-in .2s var(--dshpc-ease);\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n/* 入场：从右缘外滑进来，别「突然出现」（用户 2026-10-28）。 */\n@keyframes dshpc-ear-in{from{opacity:0;transform:translateX(14px)}}\n.dshpc-dock__ear:hover{background:var(--dshpc-plate-hover);color:var(--dshpc-fg)}\n.dshpc-dock__ear:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 与收起钮的箭头同一字号（16px）：收进去前后箭头一模一样大（用户 2026-10-28）。 */\n.dshpc-dock__ear-arrow{font-size:16px;color:var(--dshpc-fg-3)}\n.dshpc-dock__ear:hover .dshpc-dock__ear-arrow{color:var(--dshpc-fg)}\n/* 动效礼貌：系统声明减少动效时全部关掉，收起退化为瞬时、功能不受影响。 */\n@media (prefers-reduced-motion:reduce){\n  .dshpc-dock__panel{animation:none}\n  .dshpc-dock__panel--closing{transition:none}\n  .dshpc-dock__ear{animation:none}\n}\n";
+		const PANEL_DOCK_CSS = "/* 停靠栏 = **布局成员**，不是浮层：它占宽度、把主区真正挤窄（兄弟项目 2026-09-28：\n   「分栏压过来，不是盖上去」）。所以调用方必须把它放进自己的 flex 根里。\n   皮肤（头部 / 拖拽条 / 关闭钮 / 背景阴影）在 side-panel.css，与 SideSheet 共用。 */\n.dshpc-dock{display:flex;flex:0 0 auto;align-self:stretch;min-width:0}\n/* dock 不再替主区让缝（原 --dshpc-dock-gap 的 1px margin 已删，用户 2026-11-02）：\n   滚动条与容器边缘的 1px 统一由滚动容器自己的透明边框提供（见 style.md §滚动条让位），\n   主区容器带了让位，滚动条与这条分隔线之间自然还是 1px。别再往这里加 margin。 */\n\n/* 自动加的宿主行（openFilePreview 加 / 关闭即摘）：消费方那行不必自己写 flex。\n   只让「第一个非预览子项」当主区伸展，其余直接子项不动（页脚条、工具条不误伤）；\n   display 不在这里写死 —— 本来就是 grid 等布局的元素保持原样，由 TS 侧按计算值补 flex。 */\n.dshpc-dock-host{min-width:0;min-height:0}\n.dshpc-dock-host>:not([data-dshpc-file-preview]){min-width:0}\n.dshpc-dock-host>:first-child:not([data-dshpc-file-preview]){flex:1 1 auto}\n\n/* 单栏**占位**：sticky + 视口高让它在页面滚动时保持可见，同时仍然占宽度。\n   ⚠️ **本条刻意不设 z-index**：布局成员一旦带正 z-index，就会无条件压过宿主 portal 到 body 的\n   弹窗（兄弟项目 2026-10-05 真机事故「侧边栏盖住宿主设置弹窗」）。层序交给 DOM 顺序裁决。\n   外观来自 .dshpc-side-surface（side-panel.css），这里只管怎么占位与朝哪边描边。 */\n.dshpc-dock__panel{\n  position:sticky;top:0;align-self:stretch;\n  /* 高度默认视口高（整页场景）；嵌在定高容器里时由调用方给 --dshpc-dock-h（如 420px / 100%）。 */\n  height:var(--dshpc-dock-h,100vh);max-height:var(--dshpc-dock-h,100vh);\n  border-left:1px solid var(--dshpc-border);\n}\n/* 收起的出场：宽度收到 0、透明淡出；落定后组件才真正摘掉这一栏（JS 延时 220ms 配合）。 */\n.dshpc-dock__panel--closing{\n  width:0!important;min-width:0!important;opacity:0;border-left-width:0;\n  transition:width .2s var(--dshpc-ease),opacity .2s var(--dshpc-ease),border-left-width .2s var(--dshpc-ease);\n}\n\n/* 拖动期：① <iframe>（PDF / HTML 预览）是独立文档，会吞掉父文档的 pointermove，\n   向右拖进 iframe 就卡死 —— 整片让出指针事件；② contain 把重排隔离在栏内，\n   否则每帧改宽度都会牵动整页重排（兄弟项目 2026-10-04 真机「挪很久才动一下」）。 */\n.dshpc-dock.dshpc-dock--resizing iframe{pointer-events:none}\n.dshpc-dock.dshpc-dock--resizing .dshpc-dock__panel{contain:layout paint;will-change:width}\n\n/* 收起钮：**待在面板自己的框里**（用户 2026-10-28 三轮：占面板内部空间，不伸到外面去）。\n   left:0 从内侧贴着分隔线 —— 贴线的一边不描边（线是面板自己的 border-left），页签与线不重合。\n   20×44（用户 2026-10-28 四轮定尺寸）；实色底（--dshpc-plate，明暗各有实值），hover 亮一档。\n   padding-right:2px 是**视觉居中**：右侧是圆角，箭头往直线那边挪 1px（用户 2026-10-28 四轮）。 */\n.dshpc-dock__collapse{\n  position:absolute;left:0;top:50%;transform:translateY(-50%);\n  z-index:8;display:inline-flex;align-items:center;justify-content:center;\n  width:20px;height:44px;padding:0 2px 0 0;\n  border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  border-right:1px solid var(--dshpc-border);\n  border-left:none;\n  border-radius:0 var(--dshpc-radius-sm) var(--dshpc-radius-sm) 0;\n  background:var(--dshpc-plate);color:var(--dshpc-fg-3);\n  font-family:inherit;font-size:16px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-dock__collapse:hover{background:var(--dshpc-plate-hover);color:var(--dshpc-fg)}\n.dshpc-dock__collapse:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n\n/* 收起后的浮动耳朵：**fixed 贴右缘、垂直居中、独立于分栏**（用户 2026-10-28 定稿：\n   小页签挂中间、里面放面板图标、不显示文字，箭头与收起钮反向）。多个按收起顺序纵向堆叠。\n   z 走 ear 档（高于弹窗遮罩，2026-11-04）：面板在弹窗下面时，耳朵仍是唯一能点到的入口。\n   DOM 上 portal 到 body（PanelDock.ts），否则会被弹窗的 stacking context 关在里面。\n   ⚠️ 这一列**全页唯一**（id = dshpc-dock-ears，由 PanelDock 懒创建、各实例共用）：\n   每个 dock 各建一个的话，容器全部落在 top:50% ⇒ 两个 dock 收起时耳朵重叠\n   （兄弟项目 2026-11-06 真机：文件预览 + 编辑任务）。堆叠交给这里的 flex，别再按实例定位。 */\n.dshpc-dock__ears{\n  position:fixed;top:50%;right:0;transform:translateY(-50%);\n  z-index:var(--dshpc-z-ear,950);\n  display:flex;flex-direction:column;gap:8px;align-items:flex-end;\n  pointer-events:none;\n}\n.dshpc-dock__ear{\n  pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;\n  /* 与收起钮**同尺寸**（20×44，用户 2026-10-28 四轮）：上/下/左描边，贴右缘的一侧不描。\n     实色底（--dshpc-plate），不用透明色 —— 透明底下透出东西很难看。\n     padding-left:2px 是**视觉居中**：左侧是圆角，箭头往直线（右缘）那边挪 1px。 */\n  width:20px;height:44px;box-sizing:border-box;padding:0 0 0 2px;\n  border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  border-left:1px solid var(--dshpc-border);\n  border-right:none;\n  border-radius:var(--dshpc-radius-sm) 0 0 var(--dshpc-radius-sm);\n  background:var(--dshpc-plate);color:var(--dshpc-fg-2);\n  cursor:pointer;font-family:inherit;line-height:1;\n  animation:dshpc-ear-in .2s var(--dshpc-ease);\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n/* 入场：从右缘外滑进来，别「突然出现」（用户 2026-10-28）。 */\n@keyframes dshpc-ear-in{from{opacity:0;transform:translateX(14px)}}\n.dshpc-dock__ear:hover{background:var(--dshpc-plate-hover);color:var(--dshpc-fg)}\n.dshpc-dock__ear:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 与收起钮的箭头同一字号（16px）：收进去前后箭头一模一样大（用户 2026-10-28）。 */\n.dshpc-dock__ear-arrow{font-size:16px;color:var(--dshpc-fg-3)}\n.dshpc-dock__ear:hover .dshpc-dock__ear-arrow{color:var(--dshpc-fg)}\n/* 动效礼貌：系统声明减少动效时全部关掉，收起退化为瞬时、功能不受影响。 */\n@media (prefers-reduced-motion:reduce){\n  .dshpc-dock__panel{animation:none}\n  .dshpc-dock__panel--closing{transition:none}\n  .dshpc-dock__ear{animation:none}\n}\n";
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/infra/side-panel-css.generated.js
 		const SIDE_PANEL_CSS = "/* 侧边面板的公共皮肤 —— PanelDock（占宽分栏）与 SideSheet（覆盖抽屉）共用这一份。\n *\n * 分界：**皮肤在这里，定位各自写**。两者唯一的形态差异就是「怎么占位」——\n * PanelDock 用 sticky 占宽挤窄主区（panel-dock.css），SideSheet 用 absolute 盖在页面上（side-sheet.css）。\n *\n * 类名沿用 dshpc-dock__* 前缀：那是既有公开面（文档与消费方都在用），\n * 这里只搬文件不改名；新增的中性类是 .dshpc-side-surface（外观基类）。 */\n\n/* 入场：宽度从 0 长出来（keyframes 只写 from，终点取内联 / 状态宽度）。两边共用。 */\n@keyframes dshpc-side-in{from{width:0;opacity:0;overflow:hidden}}\n\n/* 外观基类：背景 / 文字色 / 阴影 / 纵向 flex。**不含** position、高度、边框方向、动画触发。 */\n.dshpc-side-surface{\n  box-sizing:border-box;\n  display:flex;flex-direction:column;flex:0 0 auto;min-width:0;\n  background:var(--dshpc-surface-base);color:var(--dshpc-fg);\n  box-shadow:var(--dshpc-shadow-2);\n  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease);\n  animation:dshpc-side-in .22s var(--dshpc-ease);\n}\n\n/* 头部：右侧 34px = 8(边距) + 20(关钮) + 6(呼吸)：给绝对定位的关钮留位，标题/extra 不从它底下钻。 */\n.dshpc-dock__head{\n  flex:none;display:flex;align-items:center;gap:8px;\n  padding:10px 34px 10px 14px;\n  border-bottom:1px solid var(--dshpc-border-faint);\n}\n/* 图标位 / 标题右侧的内容位：消费方传 ReactNode，可塞多个；库只负责排布，不抢宽度。 */\n.dshpc-dock__lead{display:inline-flex;align-items:center;gap:6px;flex:none;color:var(--dshpc-fg-2)}\n.dshpc-dock__extra{display:inline-flex;align-items:center;gap:6px;flex:none;margin-left:auto}\n/* 自定义头部：整行归调用方 —— 不加内边距/边框/背景，也不给关钮留内联空间（关钮是绝对定位的）。 */\n.dshpc-dock__head--custom{display:block;padding:0;border-bottom:none}\n.dshpc-dock__title{\n  flex:1 1 auto;min-width:0;\n  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\n  font-size:var(--dshpc-font-md);font-weight:600;\n}\n/* 关闭钮：20×20 方角图标位（与 Modal 的关闭钮同规格，不借 Picker 触发器皮肤）。 */\n.dshpc-dock__close{\n  display:inline-flex;align-items:center;justify-content:center;flex:none;\n  width:20px;height:20px;padding:0;border:none;border-radius:var(--dshpc-radius-sm);\n  background:transparent;color:var(--dshpc-fg-3);\n  font-family:inherit;font-size:13px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-dock__close:hover{background:var(--dshpc-hover);color:var(--dshpc-fg)}\n.dshpc-dock__close:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 头部关钮：绝对定位（top 10 / right 8），锚点是面板本身 —— 正文滚动它不跟滚。 */\n.dshpc-dock__close--abs{position:absolute;top:10px;right:8px;z-index:8}\n/* 浮动关钮：无头部面板用，略收一点边距。 */\n.dshpc-dock__close--floating{\n  position:absolute;top:6px;right:6px;z-index:8;\n  background:var(--dshpc-surface-menu);border:1px solid var(--dshpc-border-faint);\n}\n\n/* 内容区自己滚（面板高度锁死，内容不设内部滚动就会把页面撑高）。\n   透明右边框 = 滚动条与面板右缘隔 1px（口径见 style.md §滚动条让位）。 */\n.dshpc-dock__body{flex:1 1 auto;min-height:0;overflow:auto;border-right:1px solid transparent}\n\n/* 拖拽条：6px 命中区，**自己不画任何线**（贴在朝内那一侧，镜像由各自的定位文件做）。\n   hover / 拖动时把面板自己的边框染成蓝 —— 蓝线只准改原线，不准在旁边再加一条。\n   z-index 7 必须高于面板内容里的浮层（复制钮一类），否则命中区会被内容盖住。 */\n.dshpc-dock__resizer{\n  position:absolute;left:0;top:0;bottom:0;width:6px;\n  z-index:7;cursor:col-resize;background:transparent;\n}\n.dshpc-side-surface:has(> .dshpc-dock__resizer:hover),\n.dshpc-side-surface--resizing{\n  /* 原线保留「上下渐隐」工作区指示条质感：把面板自己的那条边框换成同款渐变。\n     面板四边里只有朝内一侧有宽度，所以渐变只落在那一侧。 */\n  border-image:linear-gradient(180deg,transparent,var(--dshpc-business) 30% 70%,transparent) 1;\n}\n/* 拖动期：① <iframe>（PDF / HTML 预览）是独立文档，会吞掉父文档的 pointermove ——\n   让出指针事件；② contain 把重排隔离在面板内，否则每帧改宽都会牵动整页重排。 */\n.dshpc-side-surface--resizing{contain:layout paint;will-change:width}\n.dshpc-side-surface--resizing iframe{pointer-events:none}\n\n/* 动效礼貌：系统声明减少动效时退化为瞬时（功能不受影响）。 */\n@media (prefers-reduced-motion:reduce){\n  .dshpc-side-surface{animation:none}\n}\n";
@@ -49925,6 +50168,21 @@ window.__ModuleLoader__.load({
 			const style = document.documentElement.style;
 			if (total > 0) style.setProperty(INSET_VAR, `${Math.round(total)}px`);
 			else style.removeProperty(INSET_VAR);
+		}
+		const EARS_HOST_ID = "dshpc-dock-ears";
+		let earsHostNode = null;
+		function earsHost() {
+			if (typeof document === "undefined") return null;
+			if (earsHostNode !== null && earsHostNode.isConnected) return earsHostNode;
+			let host = document.getElementById(EARS_HOST_ID);
+			if (host === null) {
+				host = document.createElement("div");
+				host.id = EARS_HOST_ID;
+				host.className = "dshpc-dock__ears";
+				document.body.appendChild(host);
+			}
+			earsHostNode = host;
+			return host;
 		}
 		/**
 		* 声明一个面板。**它自己不渲染任何东西**——由父级 `<PanelDock>` 读它的 props 后统一画。
@@ -50170,7 +50428,7 @@ window.__ModuleLoader__.load({
 				}, pane.closeIcon ?? "✕");
 			};
 			const rootClass = `dshpc-dock${state.ids.length > 0 ? " dshpc-dock--open" : ""}${props.className === void 0 ? "" : ` ${props.className}`}`;
-			const ears = state.collapsed.length === 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-dock__ears" }, state.collapsed.map((id) => {
+			const ears = state.collapsed.map((id) => {
 				const label = earLabelOf(id);
 				return (0, react$1.createElement)("button", {
 					key: id,
@@ -50182,7 +50440,8 @@ window.__ModuleLoader__.load({
 					className: "dshpc-dock__ear-arrow",
 					"aria-hidden": true
 				}, "‹"));
-			}));
+			});
+			const earHost = ears.length === 0 ? null : earsHost();
 			return (0, react$1.createElement)("div", {
 				ref: rootRef,
 				className: rootClass
@@ -50209,7 +50468,7 @@ window.__ModuleLoader__.load({
 				className: "dshpc-dock__collapse",
 				"aria-label": tt("dockCollapse"),
 				onClick: () => collapseWithAnim(pane.id)
-			}, "›"), renderHeader(pane), headerCloseOf(pane), floatingCloseOf(pane), (0, react$1.createElement)("div", { className: "dshpc-dock__body" }, pane.children ?? null))), ears === null || typeof document === "undefined" ? null : (0, react_dom.createPortal)(ears, document.body));
+			}, "›"), renderHeader(pane), headerCloseOf(pane), floatingCloseOf(pane), (0, react$1.createElement)("div", { className: "dshpc-dock__body" }, pane.children ?? null))), earHost === null ? null : (0, react_dom.createPortal)(ears, earHost));
 		}
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/adv/explorer/fs-face.js
@@ -52966,13 +53225,22 @@ window.__ModuleLoader__.load({
 		function FieldHint(props) {
 			ensureComponentStyles("hint", HINT_CSS);
 			const { text, side, align, maxWidth, className, style } = props;
-			return (0, react$1.createElement)("span", {
+			const anchor = (0, react$1.createElement)("span", {
 				className: `dshpc-hint${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
 				style,
 				tabIndex: 0,
 				role: "note",
 				"aria-label": text
 			}, "?");
+			const renderer = getTooltipRenderer();
+			if (renderer === void 0) return anchor;
+			return renderer({
+				label: text,
+				side: side ?? "top",
+				...align !== void 0 ? { align } : {},
+				...maxWidth !== void 0 ? { maxWidth } : {},
+				children: anchor
+			});
 		}
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/picker-css.generated.js
@@ -54106,7 +54374,6 @@ window.__ModuleLoader__.load({
 				return s === null || e === null ? null : [formatDateTimeIso(floorToPrecision(s, precision)), formatDateTimeIso(ceilToPrecision(e, precision))];
 			})();
 			const applyPreset = (range) => {
-				emit(range);
 				const d = draftOf(range);
 				setDraft(d);
 				const n = nowParts();
@@ -54406,6 +54673,172 @@ window.__ModuleLoader__.load({
 			return CardShell("strip", props);
 		}
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/navigation/pagination-logic.js
+		/**
+		* 分页纯逻辑：总页数、页码夹取、省略号窗口、当前页可见区间。
+		*
+		* 零 React 运行时依赖（只 `import type`，编译后不留痕迹），可被 node 单测直接引。
+		*
+		* 口径照通行的分页约定（Ant Design / MUI / Element Plus 一致）：
+		* 调用方只给「当前页 / 每页条数 / 总条数」，总页数与省略窗口一律由这里算，
+		* **消费方永远不自己算页数、也不自己拼页码**。
+		*/
+		/** 总页数：`ceil(total / pageSize)`，至少 1 页（空数据也显示单页）。 */
+		function pageCountOf(total, pageSize) {
+			return Math.max(1, Math.ceil(Math.max(0, Math.floor(total)) / Math.max(1, Math.floor(pageSize))));
+		}
+		/** 把页码夹回 `[1, pageCount]`（越界 / NaN 一律落到第 1 页）。 */
+		function clampPage(page, pageCount) {
+			const count = Math.max(1, Math.floor(pageCount));
+			if (!Number.isFinite(page)) return 1;
+			return Math.min(Math.max(1, Math.floor(page)), count);
+		}
+		/**
+		* 当前页在数据里的区间（1 起的闭区间行号）。
+		* 空数据返回 `[0, 0]`（调用方据此显示「共 0 条」而不是「第 0-0 条」）。
+		*/
+		function pageRange(page, pageSize, total) {
+			const rows = Math.max(0, Math.floor(total));
+			if (rows === 0) return [0, 0];
+			const size = Math.max(1, Math.floor(pageSize));
+			const from = (clampPage(page, pageCountOf(rows, size)) - 1) * size + 1;
+			return [from, Math.min(rows, from + size - 1)];
+		}
+		function range(start, end) {
+			const out = [];
+			for (let n = start; n <= end; n += 1) out.push(n);
+			return out;
+		}
+		/**
+		* 页码条上的项序列（含省略号占位）。
+		*
+		* 窗口算法照 MUI 的实现：首尾各固定 `boundaryCount` 页，当前页两侧各留 `siblingCount` 页，
+		* 中间不足的部分收成 `'gap'`。默认 1 / 1 —— 最多 7 个位置（与 Element Plus `pager-count: 7` 等价）。
+		*
+		* 关键细节（各家一致，别改成「有缝就画省略号」）：间隔**正好 1 页**时直接显示那个页号，
+		* 不画省略号，否则会出现 `1 2 … 4` 这种丑态。
+		*/
+		function pageItems(page, pageCount, siblingCount = 1, boundaryCount = 1) {
+			const count = Math.max(1, Math.floor(pageCount));
+			const current = clampPage(page, count);
+			const boundary = Math.max(0, Math.floor(boundaryCount));
+			const siblings = Math.max(0, Math.floor(siblingCount));
+			const startPages = range(1, Math.min(boundary, count));
+			const endPages = range(Math.max(count - boundary + 1, boundary + 1), count);
+			const siblingsStart = Math.max(Math.min(current - siblings, count - boundary - siblings * 2 - 1), boundary + 2);
+			const siblingsEnd = Math.min(Math.max(current + siblings, boundary + siblings * 2 + 2), endPages.length > 0 ? endPages[0] - 2 : count - 1);
+			const items = [...startPages];
+			if (siblingsStart > boundary + 2) items.push("gap");
+			else if (boundary + 1 < count - boundary) items.push(boundary + 1);
+			items.push(...range(siblingsStart, siblingsEnd));
+			if (siblingsEnd < count - boundary - 1) items.push("gap");
+			else if (count - boundary > boundary) items.push(count - boundary);
+			items.push(...endPages);
+			return items;
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/navigation/Pagination.js
+		/**
+		* 分页（`‹ Previous  1 [2] 3 … 36  Next ›`）。
+		*
+		* 受控组件：页码由调用方持有，这里只发 `onChange(page, pageSize)`。
+		* 样式只 import 自己那份 CSS（`PAGINATION_CSS`），引它就只打包这一份。
+		*/
+		function Pagination(props) {
+			ensureComponentStyles("pagination", PAGINATION_CSS);
+			const tt = props.translate ?? t$1;
+			const pageSize = Math.max(1, Math.floor(props.pageSize ?? 10));
+			const total = Math.max(0, Math.floor(props.total));
+			const count = pageCountOf(total, pageSize);
+			const page = clampPage(props.page, count);
+			if (props.hideOnSinglePage === true && count <= 1) return null;
+			const locked = useOverlayLocked();
+			const disabled = props.disabled === true || locked;
+			const [from, to] = pageRange(page, pageSize, total);
+			const go = (next) => {
+				if (disabled) return;
+				const target = clampPage(next, count);
+				if (target !== page) props.onChange(target, pageSize);
+			};
+			const navClass = [
+				"dshpc-pagination",
+				`dshpc-pagination--${props.align ?? "right"}`,
+				props.simple === true ? "dshpc-pagination--simple" : "",
+				props.className ?? ""
+			].filter((s) => s !== "").join(" ");
+			const totalNode = (() => {
+				const showTotal = props.showTotal;
+				if (showTotal === void 0 || showTotal === false) return null;
+				if (typeof showTotal === "function") return showTotal(total, from, to);
+				return total === 0 ? tt("paginationTotalZero") : tt("paginationTotal", {
+					from,
+					to,
+					total
+				});
+			})();
+			const pageButton = (n) => (0, react$1.createElement)(Button$2, {
+				key: n,
+				variant: n === page ? "info" : "ghost",
+				size: "md",
+				className: "dshpc-pagination__page",
+				"aria-current": n === page ? "page" : void 0,
+				"aria-label": tt("paginationPage", { n }),
+				disabled,
+				onClick: () => go(n)
+			}, n);
+			const navButton = (direction) => {
+				const isPrev = direction === "prev";
+				const label = isPrev ? tt("paginationPrev") : tt("paginationNext");
+				return (0, react$1.createElement)(Button$2, {
+					variant: "ghost",
+					size: "md",
+					className: "dshpc-pagination__nav",
+					icon: isPrev ? (0, react$1.createElement)(Chevron, {
+						dir: "left",
+						size: 14
+					}) : void 0,
+					iconRight: isPrev ? void 0 : (0, react$1.createElement)(Chevron, {
+						dir: "right",
+						size: 14
+					}),
+					"aria-label": label,
+					disabled: disabled || (isPrev ? page <= 1 : page >= count),
+					onClick: () => go(isPrev ? page - 1 : page + 1)
+				}, (0, react$1.createElement)("span", { className: "dshpc-pagination__text" }, label));
+			};
+			const middle = props.simple === true ? [(0, react$1.createElement)("span", {
+				key: "simple",
+				className: "dshpc-pagination__simple"
+			}, `${String(page)} / ${String(count)}`)] : pageItems(page, count, props.siblingCount, props.boundaryCount).map((item, index) => item === "gap" ? (0, react$1.createElement)("span", {
+				key: `gap-${String(index)}`,
+				className: "dshpc-pagination__ellipsis",
+				"aria-hidden": "true"
+			}, "…") : pageButton(item));
+			const options = props.pageSizeOptions ?? [];
+			const sizeNode = options.length === 0 ? null : (0, react$1.createElement)(Picker, {
+				className: "dshpc-pagination__size",
+				minWidth: "auto",
+				mode: "single",
+				options: options.map((size) => ({
+					value: String(size),
+					label: tt("paginationPageSizeOption", { n: size })
+				})),
+				value: String(pageSize),
+				disabled,
+				ariaLabel: tt("paginationPageSizeAria"),
+				onChange: (value) => {
+					const next = Number(value);
+					if (!Number.isFinite(next) || next < 1) return;
+					props.onChange(1, next);
+				}
+			});
+			return (0, react$1.createElement)("nav", {
+				className: navClass,
+				style: props.style,
+				"aria-label": props.ariaLabel ?? tt("paginationAria")
+			}, totalNode === null ? null : (0, react$1.createElement)("span", { className: "dshpc-pagination__total" }, totalNode), (0, react$1.createElement)("div", { className: "dshpc-pagination__pages" }, navButton("prev"), ...middle, navButton("next")), sizeNode);
+		}
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/display/SectionHead.js
 		/**
 		* 模块标题行（UI 基础层）：**标签（可选，画出来的短竖线）/ icon（可选）+ 标题 + 右侧控件**。
@@ -54453,6 +54886,384 @@ window.__ModuleLoader__.load({
 				"aria-hidden": "true",
 				style: accent === "default" ? void 0 : barStyleOf(accent)
 			}), props.icon === void 0 ? null : (0, react$1.createElement)("span", { className: "dshpc-section-head__icon" }, props.icon), (0, react$1.createElement)("span", { className: "dshpc-section-head__title" }, props.title), props.right === void 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-section-head__right" }, props.right));
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/table-logic.js
+		/**
+		* 单元格值是不是「对象写法」（跨列 / 跨行 / 对齐）。
+		*
+		* 判别不引 React：React 元素一定有 `$$typeof`（内部标记），而单元格对象没有 ——
+		* 用它把「传进来一个 React 元素」和「传进来一个单元格配置」分开。
+		* 放在纯逻辑层，node 单测可直接覆盖。
+		*/
+		function isTableCellSpec(value) {
+			if (typeof value !== "object" || value === null) return false;
+			if ("$$typeof" in value) return false;
+			return "content" in value;
+		}
+		/** 按深度优先顺序取全部叶子列（表格的列顺序 = 数据格的列顺序）。 */
+		function leafColumns(columns) {
+			const out = [];
+			for (const column of columns) {
+				const children = column.children;
+				if (children === void 0 || children.length === 0) out.push(column);
+				else out.push(...leafColumns(children));
+			}
+			return out;
+		}
+		/** 列树深度 = 表头行数（全叶子列时为 1）。 */
+		function tableDepth(columns) {
+			let depth = 1;
+			for (const column of columns) {
+				const children = column.children;
+				if (children === void 0 || children.length === 0) continue;
+				depth = Math.max(depth, 1 + tableDepth(children));
+			}
+			return depth;
+		}
+		/**
+		* 列树 → 逐行表头。
+		*
+		* - 叶子列：`rowSpan = 深度 - 当前层`，一直竖跨到表头底部；
+		* - 分组列：`colSpan = 其下叶子数`，`rowSpan = 1`。
+		*
+		* 例：`[ID, Patient[Name, Age], Status]` ⇒ 第 0 行 `[ID(1×2), Patient(2×1), Status(1×2)]`，
+		* 第 1 行 `[Name(1×1), Age(1×1)]`。
+		*/
+		function headerRows(columns) {
+			const rows = [];
+			const depth = tableDepth(columns);
+			for (let level = 0; level < depth; level += 1) rows.push([]);
+			const visit = (column, level) => {
+				const children = column.children;
+				if (children === void 0 || children.length === 0) {
+					rows[level].push({
+						column,
+						colSpan: 1,
+						rowSpan: depth - level,
+						leafKeys: [column.key]
+					});
+					return [column.key];
+				}
+				const keys = [];
+				for (const child of children) keys.push(...visit(child, level + 1));
+				rows[level].push({
+					column,
+					colSpan: keys.length,
+					rowSpan: 1,
+					leafKeys: keys
+				});
+				return keys;
+			};
+			for (const column of columns) visit(column, 0);
+			return rows;
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/table-shared.js
+		function widthOf(width) {
+			if (width === void 0) return void 0;
+			return typeof width === "number" ? `${width}px` : width;
+		}
+		/** 列级水平内距（覆盖 density 档）；不传交给 CSS。 */
+		function padStyle(column) {
+			return column.padding === void 0 ? void 0 : { paddingInline: `${column.padding}px` };
+		}
+		function alignClass(prefix, align) {
+			return align === void 0 || align === "left" ? "" : ` ${prefix}--${align}`;
+		}
+		/**
+		* 某列在叶子序列里的位置决定画不画左竖线：
+		* 首列恒不画（那是外框的位置）；其余列只在「想要线」时画。
+		* 分组列自己不写 `divider` 时，跟随它第一个叶子列 —— 组头的左缘和第一个子列的左缘
+		* 是同一条线，否则「组头无线、下面子列有线」会断成两截（2026-10-30 用户真机指出）。
+		*/
+		function dividerAttr(leafIndex, wanted) {
+			if (leafIndex === 0) return void 0;
+			return wanted === true ? "left" : void 0;
+		}
+		/**
+		* 表格共享渲染壳（**内部件，不进公开导出**）。
+		*
+		* 职责：基础层样式登记 + 语义化 `<table>` 结构 + 表头分组计算 + 行交互 + 列/单元格配置落地。
+		* 外观（表头底色 / 分隔线 / 悬浮 / 选中）由调用方的皮肤 CSS 负责：每个公开组件
+		* （`Table`、将来的 `TableGrid` / `TableZebra`）只 import 自己那份皮肤，并把自己的
+		* modifier class 传进来。这样消费方引哪个就只打包哪个 —— 绝不用 `variant` 汇总多份皮肤。
+		*/
+		function tableShell(skinClass, props, options = {}) {
+			ensureComponentStyles("table-core", TABLE_BASE_CSS);
+			const tt = props.translate ?? t$1;
+			const headRows = headerRows(props.columns);
+			const leaves = leafColumns(props.columns);
+			const leafIndexByKey = /* @__PURE__ */ new Map();
+			leaves.forEach((column, index) => {
+				leafIndexByKey.set(column.key, index);
+			});
+			const selected = new Set(props.selectedKeys ?? []);
+			const onRowClick = props.onRowClick;
+			const density = props.density ?? "default";
+			const borders = props.borders ?? "y";
+			/** 表头一行：分组表头按层级逐行渲染（每组重复渲染它，分组模式也要表头）。 */
+			const headRowOf = (cells, level) => (0, react$1.createElement)("tr", {
+				key: `head-${level}`,
+				className: "dshpc-table__head-row"
+			}, ...cells.map((cell) => {
+				const group = cell.colSpan > 1;
+				const firstLeafIndex = leafIndexByKey.get(cell.leafKeys[0] ?? "");
+				const firstLeaf = firstLeafIndex === void 0 ? void 0 : leaves[firstLeafIndex];
+				const className = `dshpc-table__head-cell${group ? " dshpc-table__head-cell--group" : ""}${alignClass("dshpc-table__head-cell", cell.column.align)}`;
+				const tone = cell.column.headerTone;
+				return (0, react$1.createElement)("th", {
+					key: cell.column.key,
+					scope: group ? "colgroup" : "col",
+					colSpan: cell.colSpan > 1 ? cell.colSpan : void 0,
+					rowSpan: cell.rowSpan > 1 ? cell.rowSpan : void 0,
+					className,
+					style: padStyle(cell.column),
+					"data-divider": firstLeafIndex === void 0 ? void 0 : dividerAttr(firstLeafIndex, cell.column.divider ?? firstLeaf?.divider),
+					"data-header-tone": tone === void 0 || tone === "default" ? void 0 : tone
+				}, cell.column.title);
+			}));
+			/**
+			* 跨行单元格（rowSpan）把上下几行连成一个视觉块：块里任意一行被选中，整块都算选中。
+			* 先按 rowSpan 求每行所属块的范围 [start, end]，再判断块内有没有选中行 ——
+			* 不依赖点击的是块里的哪一行，也不要求调用方自己展开。
+			*/
+			const selectedBlocksOf = (rows) => {
+				const blocks = rows.map((_, index) => ({
+					start: index,
+					end: index
+				}));
+				rows.forEach((row, index) => {
+					for (const cell of Object.values(row.cells)) {
+						if (!isTableCellSpec(cell) || cell.rowSpan === void 0 || cell.rowSpan <= 1) continue;
+						const end = Math.min(index + cell.rowSpan - 1, rows.length - 1);
+						for (let line = index; line <= end; line += 1) {
+							const block = blocks[line];
+							if (block === void 0) continue;
+							block.start = Math.min(block.start, index);
+							block.end = Math.max(block.end, end);
+						}
+					}
+				});
+				return blocks.map((block) => {
+					for (let line = block.start; line <= block.end; line += 1) {
+						const row = rows[line];
+						if (row !== void 0 && selected.has(row.key)) return true;
+					}
+					return false;
+				});
+			};
+			/** 一组数据行（选中 / 可点 / 单元格配置都在这里落地）。 */
+			const dataRowsOf = (rows, offset = 0) => {
+				const selectedBlocks = selectedBlocksOf(rows);
+				return rows.map((row, index) => (0, react$1.createElement)("tr", {
+					key: row.key,
+					className: "dshpc-table__row",
+					"data-selected": selectedBlocks[index] === true ? "true" : void 0,
+					"data-interactive": onRowClick === void 0 ? void 0 : "true",
+					tabIndex: onRowClick === void 0 ? void 0 : 0,
+					onClick: onRowClick === void 0 ? void 0 : () => onRowClick(row, offset + index),
+					onKeyDown: onRowClick === void 0 ? void 0 : (event) => {
+						if (event.key !== "Enter" && event.key !== " ") return;
+						event.preventDefault();
+						onRowClick(row, offset + index);
+					}
+				}, ...leaves.map((column, leafIndex) => {
+					const cell = row.cells[column.key];
+					if (cell === void 0) return null;
+					let spec;
+					let content;
+					if (isTableCellSpec(cell)) {
+						spec = cell;
+						content = cell.content;
+					} else content = cell;
+					const align = spec?.align ?? column.align;
+					return (0, react$1.createElement)("td", {
+						key: column.key,
+						className: `dshpc-table__cell${alignClass("dshpc-table__cell", align)}`,
+						style: padStyle(column),
+						colSpan: spec?.colSpan !== void 0 && spec.colSpan > 1 ? spec.colSpan : void 0,
+						rowSpan: spec?.rowSpan !== void 0 && spec.rowSpan > 1 ? spec.rowSpan : void 0,
+						"data-divider": dividerAttr(leafIndex, column.divider)
+					}, content ?? null);
+				})));
+			};
+			const colSpan = leaves.length > 0 ? leaves.length : void 0;
+			const emptyRow = (0, react$1.createElement)("tr", {
+				key: "empty",
+				className: "dshpc-table__row"
+			}, (0, react$1.createElement)("td", {
+				className: "dshpc-table__empty",
+				colSpan
+			}, props.emptyText ?? tt("tableEmpty")));
+			const loadingRow = (0, react$1.createElement)("tr", {
+				key: "loading",
+				className: "dshpc-table__state-row"
+			}, (0, react$1.createElement)("td", {
+				className: "dshpc-table__state-cell",
+				colSpan
+			}, (0, react$1.createElement)("div", {
+				className: "dshpc-table__state dshpc-table__state--full",
+				style: props.loadingHeight === void 0 ? void 0 : { height: `${props.loadingHeight}px` }
+			}, (0, react$1.createElement)(Loader$1, {
+				variant: "blocks",
+				size: "xl",
+				label: tt("tableLoading")
+			}))));
+			const infinite = props.onLoadMore !== void 0;
+			const loadingMore = infinite && props.loadingMore === true;
+			const showNoMore = infinite && !loadingMore && props.hasMore === false && props.noMoreText !== false;
+			const footerRows = [];
+			if (loadingMore) footerRows.push((0, react$1.createElement)("tr", {
+				key: "more",
+				className: "dshpc-table__state-row dshpc-table__state-row--footer"
+			}, (0, react$1.createElement)("td", {
+				className: "dshpc-table__state-cell",
+				colSpan
+			}, (0, react$1.createElement)("div", { className: "dshpc-table__state" }, (0, react$1.createElement)(Loader$1, {
+				variant: "blocks",
+				size: "md",
+				label: tt("tableLoadingMore")
+			})))));
+			else if (showNoMore) footerRows.push((0, react$1.createElement)("tr", {
+				key: "end",
+				className: "dshpc-table__state-row dshpc-table__state-row--footer"
+			}, (0, react$1.createElement)("td", {
+				className: "dshpc-table__state-cell",
+				colSpan
+			}, (0, react$1.createElement)("div", { className: "dshpc-table__state" }, (0, react$1.createElement)("span", { className: "dshpc-table__state-text" }, props.noMoreText === void 0 ? tt("tableNoMore") : props.noMoreText)))));
+			const sentinelRow = infinite && props.hasMore !== false && options.sentinelRef !== void 0 ? (0, react$1.createElement)("tr", {
+				key: "sentinel",
+				ref: options.sentinelRef,
+				className: "dshpc-table__sentinel",
+				"aria-hidden": "true"
+			}, (0, react$1.createElement)("td", { colSpan })) : null;
+			const flatFoot = footerRows.length > 0 && (borders === "y" || borders === "none");
+			const tableClass = [
+				"dshpc-table",
+				skinClass,
+				`dshpc-table--density-${density}`,
+				`dshpc-table--borders-${borders}`,
+				props.striped === true ? "dshpc-table--striped" : "",
+				flatFoot ? "dshpc-table--foot-no-bottom" : "",
+				props.className ?? ""
+			].filter((s) => s !== "").join(" ");
+			const groupFoot = footerRows.length > 0 || sentinelRow !== null ? (0, react$1.createElement)("tbody", {
+				key: "group-foot",
+				className: "dshpc-table__body"
+			}, ...footerRows, sentinelRow) : null;
+			const groups = props.groups ?? [];
+			const body = groups.length > 0 ? [...groups.map((group, groupIndex) => (0, react$1.createElement)("tbody", {
+				key: group.key,
+				className: "dshpc-table__body dshpc-table__group-body"
+			}, (0, react$1.createElement)("tr", { className: "dshpc-table__group-row" }, (0, react$1.createElement)("th", {
+				className: "dshpc-table__group-cell",
+				scope: "colgroup",
+				colSpan: leaves.length > 0 ? leaves.length : void 0
+			}, (0, react$1.createElement)(SectionHead, {
+				title: group.title,
+				accent: props.groupAccent ?? "default",
+				flush: true
+			}))), ...headRows.map((cells, level) => headRowOf(cells, `g${groupIndex}-${level}`)), ...dataRowsOf(group.rows, 0))), ...groupFoot === null ? [] : [groupFoot]] : [(0, react$1.createElement)("tbody", {
+				key: "body",
+				className: "dshpc-table__body"
+			}, props.loading === true && (props.rows?.length ?? 0) === 0 ? loadingRow : props.rows !== void 0 && props.rows.length > 0 ? dataRowsOf(props.rows) : emptyRow, ...footerRows, sentinelRow)];
+			return (0, react$1.createElement)("table", {
+				className: tableClass,
+				style: props.style,
+				"aria-label": props.ariaLabel
+			}, leaves.length === 0 ? null : (0, react$1.createElement)("colgroup", null, ...leaves.map((column) => (0, react$1.createElement)("col", {
+				key: column.key,
+				style: widthOf(column.width) === void 0 ? void 0 : { width: widthOf(column.width) }
+			}))), groups.length > 0 ? null : (0, react$1.createElement)("thead", { className: "dshpc-table__head" }, ...headRows.map((cells, level) => headRowOf(cells, level))), ...body);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/Table.js
+		/**
+		* 底部哨兵的滚动监听：哨兵进入视口（提前 200px）就调一次 `onLoadMore`。
+		* `enabled` 由调用方决定（分页 / 分组模式下关掉）；正在加载或已到底时 `blockedRef` 挡住重复触发。
+		*/
+		function useLoadMoreSentinel(props, enabled) {
+			const nodeRef = (0, react$1.useRef)(null);
+			const onLoadMoreRef = (0, react$1.useRef)(props.onLoadMore);
+			const blockedRef = (0, react$1.useRef)(true);
+			(0, react$1.useEffect)(() => {
+				onLoadMoreRef.current = props.onLoadMore;
+				blockedRef.current = !enabled || props.onLoadMore === void 0 || props.loading === true || props.loadingMore === true || props.hasMore === false;
+			});
+			const refCallback = (0, react$1.useRef)((node) => {
+				nodeRef.current = node;
+			}).current;
+			(0, react$1.useEffect)(() => {
+				if (!enabled || typeof IntersectionObserver === "undefined") return;
+				const node = nodeRef.current;
+				if (node === null) return;
+				const observer = new IntersectionObserver((entries) => {
+					if (entries.some((entry) => entry.isIntersecting) && !blockedRef.current) onLoadMoreRef.current?.();
+				}, { rootMargin: "0px 0px 200px 0px" });
+				observer.observe(node);
+				return () => {
+					observer.disconnect();
+				};
+			}, [enabled]);
+			return refCallback;
+		}
+		/**
+		* 表格 · 第一档外观（Plain）：白卡片上的无线框表格。
+		*
+		* 特征：双行分组表头（columns 嵌套 `children` 自动算 colSpan / rowSpan）、竖向浅分隔线、
+		* **无横向行线**、行悬浮淡蓝、选中行淡蓝底 + 左侧蓝竖条。
+		*
+		* 只 import 自己这份皮肤 CSS（`TABLE_PLAIN_CSS`）：消费方引 `Table` 就只打包这一份。
+		* 将来的 `TableGrid` / `TableZebra` 是同族独立组件、各自一份 CSS —— **不做 variant**，
+		* 否则两份皮肤会同时进包。
+		*
+		* ```tsx
+		* h(Table, {
+		*   columns: [
+		*     { key: 'id', title: 'ID', width: 120 },
+		*     { key: 'study', title: 'Study', children: [
+		*       { key: 'date', title: 'Date', width: 130 },
+		*       { key: 'modality', title: 'Modality', width: 110 },
+		*     ]},
+		*   ],
+		*   rows: [{ key: 'S-1', cells: { id: 'S-1', date: '2026-10-24', modality: 'CT' } }],
+		*   onRowClick: (row) => select(row.key),
+		* })
+		* ```
+		*/
+		function Table(props) {
+			ensureComponentStyles("table-plain", TABLE_PLAIN_CSS);
+			const pager = props.pagination;
+			const grouped = (props.groups?.length ?? 0) > 0;
+			const infinite = pager === void 0;
+			const sentinelRef = useLoadMoreSentinel(props, infinite);
+			if (pager === void 0 || grouped) return tableShell("dshpc-table--plain", pager === void 0 ? props : {
+				...props,
+				onLoadMore: void 0,
+				loadingMore: void 0,
+				hasMore: void 0,
+				noMoreText: void 0
+			}, { sentinelRef: infinite ? sentinelRef : void 0 });
+			const pageSize = Math.max(1, Math.floor(pager.pageSize ?? 10));
+			const allRows = props.rows ?? [];
+			const local = pager.total === void 0;
+			const total = local ? allRows.length : Math.max(0, Math.floor(pager.total ?? 0));
+			const page = clampPage(pager.page, pageCountOf(total, pageSize));
+			const rows = local ? allRows.slice((page - 1) * pageSize, page * pageSize) : allRows;
+			return (0, react$1.createElement)("div", { className: "dshpc-table-frame" }, tableShell("dshpc-table--plain", {
+				...props,
+				rows,
+				onLoadMore: void 0,
+				loadingMore: void 0,
+				hasMore: void 0,
+				noMoreText: void 0
+			}, {}), (0, react$1.createElement)(Pagination, {
+				...pager,
+				page,
+				total,
+				align: pager.align ?? "right"
+			}));
 		}
 		//#endregion
 		//#region node_modules/sonner/dist/index.mjs
@@ -59624,6 +60435,8 @@ window.__ModuleLoader__.load({
 			}, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(Segmented, {
 				value: bucket === "" ? "all" : bucket,
 				size: "md",
+				bordered: false,
+				tone: "business",
 				label: t("colStatus"),
 				items: statusItems,
 				onChange: (next) => {
@@ -59637,7 +60450,8 @@ window.__ModuleLoader__.load({
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("listFilterWorkspaceAll"),
 				size: "md",
-				width: 120
+				width: 120,
+				searchable: true
 			}), (0, react$1.createElement)(TaskPicker, {
 				value: taskId,
 				onChange: setTaskId,
@@ -67054,6 +67868,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				items,
 				size: "lg",
 				bordered: false,
+				tone: "business",
 				className: "dshpc-seg--weekday",
 				label: props.label,
 				disabled: props.disabled,
@@ -76254,8 +77069,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
    核心 Picker 的根是 inline-block（max-width:100%），这里给行内子项放行收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 选模型（核心 ModelPicker 分组态）：比工作区小一档，最小宽度下先让出空间（用户 2026-11-06 真机反馈）。 */
-.dsh-tdt-ed-model{width:140px;}
+/* 选模型（核心 ModelPicker 分组态）：比工作区小一档，最小宽度下先让出空间（用户 2026-11-06 真机反馈）。
+   触发器必须填满定宽根，否则值短时触发器缩到 min-width(120)、右缘留白 ⇒ 看着没靠右；
+   margin-left:auto 兜底，让它在任何排布下都贴右缘（用户 2026-11-06）。 */
+.dsh-tdt-ed-model{width:140px;margin-left:auto;}
+.dsh-tdt-ed-model .dshpc-picker__trigger{width:100%;}
 /* 设置页「供应商 + 模型」联动态：两个下拉**等宽定住**（核心 __row 默认 flex，按内容自适应会跳宽）。 */
 .dsh-tdt-model-pair .dshpc-picker__row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2);}
 .dsh-tdt-model-pair .dshpc-picker__row > .dshpc-picker{width:100%;min-width:0;}
@@ -76927,6 +77745,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-view-promptmode",
 				value: promptMode,
 				size: "sm",
+				tone: "business",
 				items: [{
 					value: "source",
 					label: t("editorViewSourceCode")
@@ -77617,107 +78436,41 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			},
 			"&.cm-focused": { outline: "none" }
 		}, { dark: true });
-		/** 关闭「新建 / 编辑任务」分栏前的确认。
-		*  故意不用官方 Modal：其 className 只落到卡片 .dialog，抬不到分栏这一层(z1040)，会被压住、点不了。
-		*  这里以**绝对定位**挂在分栏面板内（面板 = position:relative），盖住整条分栏，
-		*  天然在表单 / 全屏编辑器之上。（U21 撤掉全屏遮罩后，容器从遮罩改挂面板本体。） */
-		function ConfirmDiscard(props) {
-			return (0, react$1.createElement)("div", {
-				role: "alertdialog",
-				"aria-modal": true,
-				"aria-label": props.t("editorDiscardTitle"),
-				style: {
-					position: "absolute",
-					inset: 0,
-					zIndex: 10,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					padding: "24px",
-					background: "var(--dshpc-mask, rgba(0,0,0,0.45))"
-				},
-				onClick: props.onStay
-			}, (0, react$1.createElement)("div", {
-				style: {
-					width: "min(380px, 100%)",
-					boxSizing: "border-box",
-					background: "var(--dshpc-surface-2, #2a2e33)",
-					borderRadius: "var(--dshpc-radius-panel, 10px)",
-					boxShadow: "var(--dshpc-shadow-2)",
-					padding: "22px 24px",
-					color: "var(--dshpc-fg)"
-				},
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--dshpc-font-xl)",
-				fontWeight: 500,
-				marginBottom: "8px"
-			} }, props.t("editorDiscardTitle")), (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--dshpc-font-lg)",
-				lineHeight: "var(--dshpc-line-lg)",
-				color: "var(--dshpc-fg-2)",
-				marginBottom: "20px"
-			} }, props.t("editorDiscardDesc")), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				justifyContent: "flex-end",
-				gap: "8px"
-			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				onClick: props.onStay
-			}, props.t("editorDiscardStay")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "primary",
-				size: "sm",
-				onClick: props.onLeave
-			}, props.t("editorDiscardLeave")))));
-		}
-		/** 版本管理内的小型确认框（复用关闭确认的自绘样式：盖在编辑器之上、随抽屉浮在宿主之上）。 */
-		function VersionConfirm(props) {
+		/**
+		* 高危确认框（「完全权限」保存）：**核心 `Modal` + 核心 `Checkbox`**（2026-11-06）。
+		* 普通确认一律走核心命令式 `confirmModal`；只有这张需要「勾选风险」才留在组件内。
+		* 标题染警告橙；勾选前置灰确认钮 —— 逐条保留 2026-09-30 的交互口径，只换外壳。
+		*/
+		function ConfirmDialog(props) {
 			const needAck = props.checkbox !== void 0;
 			const acked = needAck && props.checkbox?.checked === true;
-			return (0, react$1.createElement)("div", {
-				role: "alertdialog",
-				"aria-modal": true,
-				style: {
-					position: "absolute",
-					inset: 0,
-					zIndex: 20,
+			return (0, react$1.createElement)(Modal, {
+				size: "sm",
+				title: props.warning === true ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-warning)" } }, props.title) : props.title,
+				onClose: props.onCancel,
+				closeOnMask: false,
+				footer: (0, react$1.createElement)("div", { style: {
 					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					padding: "24px",
-					background: "var(--dshpc-mask, rgba(0,0,0,0.45))"
-				},
-				onClick: props.onCancel
-			}, (0, react$1.createElement)("div", {
-				style: {
-					width: "min(400px, 100%)",
-					boxSizing: "border-box",
-					background: "var(--dshpc-surface-2, #2a2e33)",
-					borderRadius: "var(--dshpc-radius-panel, 10px)",
-					boxShadow: "var(--dshpc-shadow-2)",
-					padding: "20px 24px 18px",
-					color: "var(--dshpc-fg)"
-				},
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--dshpc-font-lg)",
-				fontWeight: 600,
-				lineHeight: "var(--dshpc-line-lg)",
-				marginBottom: "10px",
-				...props.warning === true ? { color: "var(--dshpc-warning)" } : {}
-			} }, props.title), props.desc !== "" ? (0, react$1.createElement)("div", { style: {
+					justifyContent: "flex-end",
+					gap: "8px"
+				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					variant: "outline",
+					size: "sm",
+					onClick: props.onCancel
+				}, props.cancelLabel ?? props.t("editorCancel")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					variant: "primary",
+					size: "sm",
+					disabled: needAck && !acked,
+					onClick: props.onConfirm
+				}, props.confirmLabel ?? props.t("editorConfirm")))
+			}, props.desc !== "" ? (0, react$1.createElement)("div", { style: {
 				fontSize: "var(--dshpc-font-md)",
 				lineHeight: "var(--dshpc-line-md)",
 				color: "var(--dshpc-fg-2)",
-				marginBottom: props.bullets !== void 0 ? "8px" : "18px"
+				marginBottom: props.bullets !== void 0 ? "8px" : "0"
 			} }, props.desc) : null, props.bullets !== void 0 && props.bullets.length > 0 ? (0, react$1.createElement)("ul", { style: {
 				listStyle: "none",
-				margin: "0 0 18px",
+				margin: "0 0 14px",
 				padding: "10px 12px",
 				borderRadius: "var(--dshpc-radius-md,8px)",
 				background: "var(--dshpc-surface-1,rgba(128,128,128,.08))",
@@ -77739,46 +78492,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				borderRadius: "50%",
 				background: "var(--dshpc-fg-3,rgba(128,128,128,.8))",
 				margin: "7px 0 0"
-			} }), (0, react$1.createElement)("span", null, b)))) : null, needAck ? (0, react$1.createElement)("label", { style: {
-				display: "flex",
-				alignItems: "flex-start",
-				gap: "8px",
-				fontSize: "var(--dshpc-font-md)",
-				lineHeight: "var(--dshpc-line-md)",
-				cursor: "pointer",
-				marginBottom: "16px"
-			} }, (0, react$1.createElement)("input", {
-				type: "checkbox",
+			} }), (0, react$1.createElement)("span", null, b)))) : null, needAck ? (0, react$1.createElement)(Checkbox, {
 				checked: props.checkbox?.checked === true,
-				onChange: (event) => {
-					props.checkbox?.onToggle(event.target.checked);
-				},
-				style: {
-					flex: "none",
-					margin: "2px 0 0",
-					accentColor: "var(--dshpc-warning)",
-					width: "14px",
-					height: "14px",
-					cursor: "pointer"
+				label: props.checkbox?.label,
+				accentColor: "var(--dshpc-warning)",
+				onChange: (next) => {
+					props.checkbox?.onToggle(next);
 				}
-			}), (0, react$1.createElement)("span", null, props.checkbox?.label)) : null, (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				justifyContent: "flex-end",
-				gap: "8px"
-			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "ghost",
-				size: "sm",
-				onClick: props.onCancel
-			}, props.t("editorCancel")), props.middleLabel !== void 0 && props.onMiddle !== void 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				onClick: props.onMiddle
-			}, props.middleLabel) : null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "primary",
-				size: "sm",
-				disabled: needAck && !acked,
-				onClick: props.onConfirm
-			}, props.confirmLabel ?? props.t("editorConfirm")))));
+			}) : null);
 		}
 		function PromptEditorModal(props) {
 			const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onDeleteVersion, readonly } = props;
@@ -77787,8 +78508,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [showVersions, setShowVersions] = (0, react$1.useState)(false);
 			const versions = history?.versions ?? [];
 			const [hoveredId, setHoveredId] = (0, react$1.useState)(null);
-			const [confirmDeleteFile, setConfirmDeleteFile] = (0, react$1.useState)(null);
-			const [confirmUseFile, setConfirmUseFile] = (0, react$1.useState)(null);
+			/** 删除某个版本：核心命令式确认框（不再自绘内联层）。 */
+			const askDeleteVersion = (file) => {
+				confirmModal({
+					title: t("editorConfirmDeleteTitle"),
+					message: t("editorConfirmDeleteDesc"),
+					tone: "danger",
+					confirmText: t("editorDeleteVersion"),
+					cancelText: t("editorCancel")
+				}).then((ok) => {
+					if (ok) onDeleteVersion(file);
+				});
+			};
+			/** 找回某个版本：同上。 */
+			const askUseVersion = (file) => {
+				confirmModal({
+					title: t("editorRestorePromptTitle"),
+					message: t("editorRestorePromptDesc"),
+					confirmText: t("editorUseVersion"),
+					cancelText: t("editorCancel")
+				}).then((ok) => {
+					if (ok) onRestoreVersion(file);
+				});
+			};
 			const versionTitle = editorMode === "create" ? t("editorHistoryVersions") : t("editorVersions");
 			return (0, react$1.createElement)("div", { style: {
 				display: "flex",
@@ -77817,7 +78559,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-prompt-mode",
 				value: mode,
 				size: "md",
-				bordered: true,
+				bordered: false,
+				tone: "business",
 				items: [{
 					value: "edit",
 					label: t("editorModeEdit")
@@ -77833,6 +78576,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-histtoggle",
 				size: "md",
 				bordered: false,
+				tone: "business",
 				multiple: true,
 				value: showVersions ? ["on"] : [],
 				items: [{
@@ -77930,7 +78674,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				variant: "link",
 				size: "sm",
 				onClick: () => {
-					setConfirmUseFile(v.file);
+					askUseVersion(v.file);
 				}
 			}, t("editorUseShort")), (0, react$1.createElement)(IconButton, {
 				variant: "danger",
@@ -77938,32 +78682,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 12 }),
 				label: t("editorDeleteVersion"),
 				onClick: () => {
-					setConfirmDeleteFile(v.file);
+					askDeleteVersion(v.file);
 				}
-			})) : null)))))) : null), confirmDeleteFile !== null ? (0, react$1.createElement)(VersionConfirm, {
-				t,
-				title: t("editorConfirmDeleteTitle"),
-				desc: t("editorConfirmDeleteDesc"),
-				onCancel: () => {
-					setConfirmDeleteFile(null);
-				},
-				onConfirm: () => {
-					onDeleteVersion(confirmDeleteFile);
-					setConfirmDeleteFile(null);
-				}
-			}) : null, confirmUseFile !== null ? (0, react$1.createElement)(VersionConfirm, {
-				t,
-				title: t("editorRestorePromptTitle"),
-				desc: t("editorRestorePromptDesc"),
-				confirmLabel: t("editorUseVersion"),
-				onCancel: () => {
-					setConfirmUseFile(null);
-				},
-				onConfirm: () => {
-					onRestoreVersion(confirmUseFile);
-					setConfirmUseFile(null);
-				}
-			}) : null);
+			})) : null)))))) : null));
 		}
 		/**
 		* 配置预览面板（用户 2026-09-29 定稿）：与「编辑提示词」一样大的右侧面板，覆盖拉篮区域；
@@ -78034,8 +78755,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [editorOpen, setEditorOpen] = (0, react$1.useState)(false);
 			const [previewOpen, setPreviewOpen] = (0, react$1.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react$1.useState)(0);
-			const [confirmDeleteTask, setConfirmDeleteTask] = (0, react$1.useState)(false);
-			const [confirmReset, setConfirmReset] = (0, react$1.useState)(false);
 			const [resetHint, setResetHint] = (0, react$1.useState)(0);
 			const hintSeq = (0, react$1.useRef)(0);
 			const [saveErrToast, setSaveErrToast] = (0, react$1.useState)(null);
@@ -78144,7 +78863,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			* ⚠️ 只活组件内存，**绝不写进 draft** —— draft 会被序列化进任务定义 JSON，路径是服务端的、也不该留痕。
 			*/
 			const [uploadPaths, setUploadPaths] = (0, react$1.useState)({});
-			const [confirmDiscard, setConfirmDiscard] = (0, react$1.useState)(false);
 			const initialDraftRef = (0, react$1.useRef)(draft);
 			const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current);
 			(0, react$1.useEffect)(() => {
@@ -78191,24 +78909,60 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				syncTaskId,
 				patch
 			]);
-			/** 统一关闭入口：改过 ⇒ 先弹官方 Modal 确认；没改过 ⇒ 直接关。 */
+			/** 统一关闭入口：改过 ⇒ 先弹核心 `confirmModal` 确认；没改过 ⇒ 直接关。 */
 			const requestClose = (0, react$1.useCallback)(() => {
-				if (dirty) setConfirmDiscard(true);
-				else onClose();
-			}, [dirty, onClose]);
+				if (!dirty) {
+					onClose();
+					return;
+				}
+				confirmModal({
+					title: t("editorDiscardTitle"),
+					message: t("editorDiscardDesc"),
+					confirmText: t("editorDiscardLeave"),
+					cancelText: t("editorDiscardStay")
+				}).then((ok) => {
+					if (ok) onClose();
+				});
+			}, [
+				dirty,
+				onClose,
+				t
+			]);
 			(0, react$1.useEffect)(() => {
 				const onKey = (event) => {
-					if (confirmDiscard) {
-						setConfirmDiscard(false);
-						return;
-					}
 					if (event.key === "Escape" && !event.defaultPrevented) requestClose();
 				};
 				window.addEventListener("keydown", onKey);
 				return () => {
 					window.removeEventListener("keydown", onKey);
 				};
-			}, [requestClose, confirmDiscard]);
+			}, [requestClose]);
+			/** 删除任务：核心命令式确认（措辞严厉，用户 2026-09-30 定稿）。 */
+			const askDeleteTask = () => {
+				confirmModal({
+					title: t("editorDeleteTaskTitle"),
+					message: t("editorDeleteTaskDesc"),
+					tone: "danger",
+					confirmText: t("editorDeleteTask"),
+					cancelText: t("editorCancel")
+				}).then((ok) => {
+					if (ok) onDelete?.();
+				});
+			};
+			/** 重置表单：核心命令式确认（避免误点清空已填内容，用户 2026-09-30）。 */
+			const askReset = () => {
+				confirmModal({
+					title: t("editorResetTitle"),
+					message: t("editorResetDesc"),
+					confirmText: t("editorReset"),
+					cancelText: t("editorCancel")
+				}).then((ok) => {
+					if (!ok) return;
+					onChange(initialDraftRef.current);
+					hintSeq.current += 1;
+					setResetHint(hintSeq.current);
+				});
+			};
 			/** 周几的**单字**标签（方块上显示；`editorWeekdayShorts` 里以 `|` 分隔，两种语言各自给全）。 */
 			const weekdayShorts = (0, react$1.useMemo)(() => t("editorWeekdayShorts").split("|"), [t]);
 			const weekdayLabels = (0, react$1.useMemo)(() => ({
@@ -78621,6 +79375,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				value: scheduleTab,
 				size: "md",
 				bordered: false,
+				tone: "business",
 				items: [
 					{
 						value: "once",
@@ -78858,7 +79613,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
-				width: "100%"
+				width: "100%",
+				searchable: true
 			})), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-deppick-task" }, (0, react$1.createElement)(SelectField, {
 				value: depTaskId,
 				options: depTaskOptions,
@@ -78924,6 +79680,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				value: draft.maxAttempts,
 				size: "md",
 				bordered: false,
+				tone: "business",
 				items: retryOptions,
 				onChange: (value) => {
 					patch({ maxAttempts: value });
@@ -79028,7 +79785,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-viewtab",
 				value: viewTab,
 				size: "md",
-				bordered: true,
+				bordered: false,
+				tone: "business",
 				items: [{
 					value: "view",
 					label: t("editorTabView")
@@ -79045,13 +79803,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				size: "sm",
 				className: "dsh-tdt-ed-danger",
 				onClick: () => {
-					setConfirmDeleteTask(true);
+					askDeleteTask();
 				}
 			}, t("editorDeleteTask")) : null, dirty ? (0, react$1.createElement)(Button$2, {
 				variant: "ghost",
 				size: "sm",
 				onClick: () => {
-					setConfirmReset(true);
+					askReset();
 				}
 			}, t("editorReset")) : null, (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
 				variant: "outline",
@@ -79085,33 +79843,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					}
 					onSave(draft);
 				}
-			}, t("editorSave")))), confirmDeleteTask ? (0, react$1.createElement)(VersionConfirm, {
-				t,
-				title: t("editorDeleteTaskTitle"),
-				desc: t("editorDeleteTaskDesc"),
-				confirmLabel: t("editorDeleteTask"),
-				onCancel: () => {
-					setConfirmDeleteTask(false);
-				},
-				onConfirm: () => {
-					setConfirmDeleteTask(false);
-					onDelete?.();
-				}
-			}) : null, confirmReset ? (0, react$1.createElement)(VersionConfirm, {
-				t,
-				title: t("editorResetTitle"),
-				desc: t("editorResetDesc"),
-				confirmLabel: t("editorReset"),
-				onCancel: () => {
-					setConfirmReset(false);
-				},
-				onConfirm: () => {
-					setConfirmReset(false);
-					onChange(initialDraftRef.current);
-					hintSeq.current += 1;
-					setResetHint(hintSeq.current);
-				}
-			}) : null, fullPermOpen ? (0, react$1.createElement)(VersionConfirm, {
+			}, t("editorSave")))), fullPermOpen ? (0, react$1.createElement)(ConfirmDialog, {
 				t,
 				warning: true,
 				title: t("editorFullPermTitle"),
@@ -79130,27 +79862,25 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					setFullPermOpen(false);
 					onSave?.(draft);
 				}
-			}) : null, pendingView !== null && pendingView !== void 0 ? (0, react$1.createElement)(VersionConfirm, {
+			}) : null, pendingView !== null && pendingView !== void 0 ? (0, react$1.createElement)(ConfirmDialog, {
 				t,
 				title: t("editorViewSwitchTitle"),
 				desc: t("editorViewSwitchDesc"),
 				confirmLabel: t("editorTabView"),
+				cancelLabel: t("editorEditSwitchKeep"),
 				onCancel: () => {
 					onCancelPendingView?.();
 				},
 				onConfirm: () => {
 					onConfirmPendingView?.();
 				}
-			}) : null, pendingEdit !== null && pendingEdit !== void 0 ? (0, react$1.createElement)(VersionConfirm, {
+			}) : null, pendingEdit !== null && pendingEdit !== void 0 ? (0, react$1.createElement)(ConfirmDialog, {
 				t,
 				title: t("editorEditSwitchTitle"),
 				desc: t("editorEditSwitchDesc"),
-				middleLabel: t("editorEditSwitchKeep"),
 				confirmLabel: t("editorEditSwitchOverwrite"),
+				cancelLabel: t("editorEditSwitchKeep"),
 				onCancel: () => {
-					onCancelPendingEdit?.();
-				},
-				onMiddle: () => {
 					onCancelPendingEdit?.();
 				},
 				onConfirm: () => {
@@ -79161,16 +79891,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				className: "dsh-tdt-ed-content",
 				role: "dialog",
 				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit")
-			}, panelInner, confirmDiscard ? (0, react$1.createElement)(ConfirmDiscard, {
-				t,
-				onStay: () => {
-					setConfirmDiscard(false);
-				},
-				onLeave: () => {
-					setConfirmDiscard(false);
-					onClose();
-				}
-			}) : null);
+			}, panelInner);
 		}
 		//#endregion
 		//#region src/client/settings-config-block.tsx
@@ -79541,7 +80262,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 						degraded: groups.length === 0,
 						defaultLabel: t("settingsDefaultOption"),
 						placeholder: t("editorFollowHost"),
-						size: "md",
+						size: "lg",
 						className: invalid ? "dsh-tdt-picker--error" : void 0,
 						onChange: (next) => {
 							if (next === "") {
@@ -79608,1349 +80329,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			} }, t("settingsUnsaved")) : null));
 		}
 		//#endregion
-		//#region src/client/task-list.tsx
-		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
-		const monoFont$1 = "var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
-		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
-		*  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
-		const CONTROL_H = "var(--dshpc-control-h-md)";
-		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
-		const WS_WIDTH = 180;
-		const TASK_LIST_CSS = [
-			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; }`,
-			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
-			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--dshpc-font-sm); }`,
-			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--dshpc-head-bg); }",
-			".dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }",
-			".dsh-tdt-rec-row:hover { background: var(--dshpc-plate-hover); }",
-			".dsh-tdt-rec-alt { background: var(--dshpc-plate); }"
-		].join("\n");
-		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
-		/** 幂等注入（走 ui/style.ts 单一 <style>）。设置页的数据表复用本域的 `.dsh-tdt-rec-*` 表格皮肤
-		*  ⇒ 导出给 `db-table.tsx` 调用（设置页可能没渲染过任务列表，规则得由它自己确保已注入）。 */
-		const ensureTaskListStyle = () => {
-			applyStyle("domain:list", TASK_LIST_CSS);
-		};
-		/** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
-		const formatFull = (iso) => formatDateTime(iso, { fallback: "—" });
-		function useFlip(signature) {
-			const nodes = (0, react$1.useRef)(/* @__PURE__ */ new Map());
-			const prevTop = (0, react$1.useRef)(/* @__PURE__ */ new Map());
-			(0, react$1.useLayoutEffect)(() => {
-				const moved = [];
-				for (const [id, el] of nodes.current) {
-					const top = el.getBoundingClientRect().top;
-					const prev = prevTop.current.get(id);
-					if (prev !== void 0 && Math.abs(prev - top) > .5) moved.push([el, prev - top]);
-					prevTop.current.set(id, top);
-				}
-				if (moved.length === 0) return;
-				if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true) return;
-				for (const [el, delta] of moved) {
-					el.style.transition = "none";
-					el.style.transform = `translateY(${delta}px)`;
-				}
-				const frame = requestAnimationFrame(() => {
-					for (const [el] of moved) {
-						el.style.transition = `transform 260ms var(--dshpc-ease)`;
-						el.style.transform = "";
-					}
-					window.setTimeout(() => {
-						for (const [el] of moved) el.style.transition = "";
-					}, 320);
-				});
-				return () => {
-					cancelAnimationFrame(frame);
-				};
-			}, [signature]);
-			const callbacks = (0, react$1.useRef)(/* @__PURE__ */ new Map());
-			return (0, react$1.useCallback)((id) => {
-				const hit = callbacks.current.get(id);
-				if (hit !== void 0) return hit;
-				const fn = (el) => {
-					if (el === null) {
-						nodes.current.delete(id);
-						callbacks.current.delete(id);
-						prevTop.current.delete(id);
-					} else nodes.current.set(id, el);
-				};
-				callbacks.current.set(id, fn);
-				return fn;
-			}, []);
-		}
-		const RAIL_W = 6;
-		const RAIL_H = 36;
-		/** 运行中：整条**蓝色**明暗脉动（颜色 / 脉动形状全在 `ui/running.ts` 一处定，前后两端统一）。 */
-		function RunningRail() {
-			ensureRunningStyle();
-			return (0, react$1.createElement)("span", {
-				className: `${RUN_PULSE_CLASS} dsh-tdt-rail`,
-				style: {
-					display: "inline-block",
-					width: `${RAIL_W}px`,
-					height: `${RAIL_H}px`,
-					flex: "none",
-					borderRadius: "var(--dshpc-radius-xs)",
-					background: RUNNING_TONE
-				}
-			});
-		}
-		function StatusRail(props) {
-			const { row, t } = props;
-			if (row.running) return (0, react$1.createElement)(RunningRail, {});
-			const color = !row.enabled ? "var(--dshpc-fg-3)" : row.lastStatus === "failed" || row.lastStatus === "skipped" ? "var(--dshpc-danger)" : "var(--dshpc-success)";
-			const hint = !row.enabled ? t("statusRailOff") : row.lastStatus === "failed" ? t("statusRailLastFailed") : row.lastStatus === "skipped" ? t("statusRailLastSkipped") : t("statusRailRunning");
-			return (0, react$1.createElement)("span", {
-				title: hint,
-				style: {
-					display: "inline-block",
-					width: `${RAIL_W}px`,
-					height: `${RAIL_H}px`,
-					flex: "none",
-					borderRadius: "var(--dshpc-radius-xs)",
-					background: color,
-					transition: `background var(--dshpc-dur) var(--dshpc-ease)`
-				}
-			});
-		}
-		/**
-		* 「历史执行」与「下次执行」是**两个独立**小标签（2026-09-30 用户拍板：不要合成一格四段，
-		* 拆成两块更清爽）。每个标签 = 语义底色的图标格 + 时间格，整体一个圆角细边框。
-		* - 历史执行：成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；时间格当天 HH:mm、跨天「3 小时前 / 1 天前」。
-		* - 下次执行：图标 = 闹钟；时间格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
-		*   超过 24 小时 = 明天 / 三天后 / N 周后。
-		*
-		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
-		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
-		* 提示**静默失效**（用户 2026-09-30 真机反馈「移上去没提示」的根因，与 task-editor 里
-		* 「图标要包真 `<button>`」是同一个坑）。
-		*/
-		const pillOuterStyle = {
-			display: "inline-flex",
-			alignItems: "stretch",
-			flex: "none",
-			height: "20px",
-			borderRadius: "var(--dshpc-radius-sm)",
-			overflow: "hidden",
-			border: `1px solid var(--dshpc-border)`
-		};
-		/** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
-		const pillIconCell = (bg, fg) => ({
-			display: "inline-flex",
-			alignItems: "center",
-			padding: "0 6px",
-			background: bg,
-			color: fg,
-			flex: "none"
-		});
-		/** 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。 */
-		const pillTimeCell = {
-			display: "inline-flex",
-			alignItems: "center",
-			padding: "0 8px",
-			background: "var(--dshpc-surface-1)",
-			color: "var(--dshpc-fg)",
-			fontSize: "var(--dshpc-font-xs)",
-			lineHeight: "var(--dshpc-line-xs)",
-			whiteSpace: "nowrap",
-			fontVariantNumeric: "tabular-nums",
-			fontFamily: monoFont$1
-		};
-		/** 历史执行标签（成功绿 / 失败红 / 无状态灰）。 */
-		function PastPill(props) {
-			const { row, t, tt } = props;
-			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
-			const colored = has && row.lastStatus !== null && row.lastStatus !== "unknown";
-			const bg = !has || row.lastStatus === "unknown" ? "var(--dshpc-surface-3)" : row.lastStatus === "succeeded" ? "var(--dshpc-success)" : "var(--dshpc-danger)";
-			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
-			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: title,
-				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(bg, colored ? "var(--dshpc-on-signal)" : "var(--dshpc-fg-2)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
-				style: pillTimeCell,
-				render: (nowMs) => {
-					if (!has) return "--";
-					const iso = row.lastScheduledAt ?? "";
-					return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt);
-				}
-			})));
-		}
-		/**
-		* 下次执行标签。**三种状态**（用户 2026-09-30 拍板：不要去判断补跑时间）：
-		* - **运行中** ⇒ 不显示倒计时（下一槽要等这趟跑完才算），改显「三个小方块脉动」的活动指示；
-		* - 未运行 ⇒ 一天以内 = `HH:mm:ss` 秒级倒计时（`LiveText` 自转），超过 24 小时 = 明天 / 三天后 / N 周后；
-		* - 无后续 ⇒ 占位符。
-		*
-		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
-		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
-		* 提示静默失效（用户 2026-09-30 真机反馈「移上去没提示」的根因）。
-		*/
-		function NextPill(props) {
-			const { row, t, tt } = props;
-			const nowMs = useNowMs();
-			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: t("listRunning"),
-				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(RUNNING_TONE, "var(--dshpc-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
-				...pillTimeCell,
-				color: RUNNING_TONE
-			} }, (0, react$1.createElement)(RunningBlocks, {}))));
-			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs;
-			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
-			const title = dueNow ? nowMs - Date.parse(row.nextSlotAt ?? "") <= dueLoadingMs() ? t("listRunning") : deferredTitle : typeof row.blockedReason === "string" && row.blockedReason !== "" ? deferredTitle : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
-			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: title,
-				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--dshpc-surface-3)", "var(--dshpc-fg)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
-				style: pillTimeCell,
-				render: (nowMs) => {
-					if (row.nextSlotAt === null) return "--";
-					const diff = Date.parse(row.nextSlotAt) - nowMs;
-					if (diff <= 0) {
-						if (-diff <= dueLoadingMs()) return (0, react$1.createElement)("span", { style: {
-							display: "inline-flex",
-							alignItems: "center",
-							color: RUNNING_TONE
-						} }, (0, react$1.createElement)(RunningBlocks, {}));
-						return (0, react$1.createElement)("span", { style: {
-							cursor: "default",
-							opacity: .85
-						} }, tt("listDeferred"));
-					}
-					return nextExecLabel(row.nextSlotAt, nowMs, tt);
-				}
-			})));
-		}
-		const titleStyle = {
-			fontSize: "var(--dshpc-font-lg)",
-			fontWeight: 600,
-			lineHeight: "var(--dshpc-line-md)"
-		};
-		const metaStyle = {
-			fontSize: "var(--dshpc-font-sm)",
-			color: "var(--dshpc-fg-2)",
-			lineHeight: "var(--dshpc-line-sm)",
-			marginTop: "2px"
-		};
-		const faintStyle = {
-			fontSize: "var(--dshpc-font-xs)",
-			color: "var(--dshpc-fg-3)",
-			lineHeight: "var(--dshpc-line-sm)",
-			marginTop: "2px"
-		};
-		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
-		*  `position: relative` 保留为内部绝对定位子元素的上下文。 */
-		const panelBoxStyle = {
-			height: `360px`,
-			display: "flex",
-			flexDirection: "column",
-			minHeight: 0,
-			position: "relative"
-		};
-		/**
-		* 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
-		* 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
-		* 亮起后请求一返回就立刻消失（`BUSY_HOLD_MS = 0`，无保底停留）。
-		*/
-		const BUSY_DELAY_MS = 400;
-		const BUSY_HOLD_MS = 0;
-		function useDelayedBusy(active) {
-			const [shown, setShown] = (0, react$1.useState)(false);
-			const shownAtRef = (0, react$1.useRef)(0);
-			(0, react$1.useEffect)(() => {
-				if (active) {
-					if (shown) return;
-					const timer = setTimeout(() => {
-						shownAtRef.current = Date.now();
-						setShown(true);
-					}, BUSY_DELAY_MS);
-					return () => {
-						clearTimeout(timer);
-					};
-				}
-				if (!shown) return;
-				const wait = Math.max(0, BUSY_HOLD_MS - (Date.now() - shownAtRef.current));
-				const timer = setTimeout(() => {
-					setShown(false);
-				}, wait);
-				return () => {
-					clearTimeout(timer);
-				};
-			}, [active, shown]);
-			return shown;
-		}
-		/** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
-		const panelScrollFillStyle = {
-			flex: "1 1 auto",
-			minHeight: 0,
-			overflowY: "auto"
-		};
-		const panelWrapStyle = {
-			borderTop: `1px dashed var(--dshpc-border)`,
-			paddingTop: "10px",
-			paddingLeft: "14px",
-			paddingRight: "14px",
-			paddingBottom: "12px"
-		};
-		const panelBarStyle = {
-			paddingTop: "10px",
-			borderTop: `1px dashed var(--dshpc-border)`,
-			display: "flex",
-			alignItems: "center",
-			gap: "8px"
-		};
-		const miniTableStyle = {
-			width: "100%",
-			borderCollapse: "collapse",
-			fontSize: "var(--dshpc-font-sm)"
-		};
-		const miniCellStyle = {
-			padding: "9px 10px",
-			textAlign: "left",
-			color: "var(--dshpc-fg)",
-			whiteSpace: "nowrap",
-			fontSize: "var(--dshpc-font-sm)"
-		};
-		const miniCellWrapStyle = {
-			...miniCellStyle,
-			whiteSpace: "normal",
-			wordBreak: "break-word"
-		};
-		/** 居中格（用户 2026-10-02：除**产出物 / 备注**两列外，各列内容一律居中）。 */
-		const miniCellCenterStyle = {
-			...miniCellStyle,
-			textAlign: "center"
-		};
-		/**
-		* 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
-		* 上沿一条线（与执行记录表头上沿线同色 `--dshpc-border`），从这条线到下方虚线**整块铺底色**，
-		* 日志直接铺在里面。等宽字体跟环境风格走。
-		*/
-		const logAreaStyle = {
-			...panelScrollFillStyle,
-			borderTop: `1px solid var(--dshpc-border)`,
-			background: "var(--dshpc-surface-1)",
-			padding: "10px 0",
-			fontFamily: monoFont$1,
-			fontSize: "var(--dshpc-font-xs)",
-			lineHeight: "var(--dshpc-line-sm)"
-		};
-		/** 日志行：行间距拉开一点（用户 2026-10-03）。 */
-		const logRowStyle = {
-			marginBottom: "6px",
-			wordBreak: "break-all"
-		};
-		const overlayStyle = {
-			position: "fixed",
-			inset: 0,
-			zIndex: "var(--dshpc-z-modal)",
-			background: "var(--dshpc-mask)",
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "center"
-		};
-		const dialogStyle = {
-			width: "360px",
-			maxWidth: "calc(100vw - 48px)",
-			boxSizing: "border-box",
-			background: "var(--dshpc-surface-base, #fff)",
-			color: "var(--dshpc-fg)",
-			border: `1px solid var(--dshpc-border)`,
-			borderRadius: "var(--dshpc-radius-md)",
-			padding: "18px",
-			boxShadow: "var(--dshpc-shadow-2, 0 12px 32px rgba(0,0,0,0.4))"
-		};
-		/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
-		const formatStamp = (iso) => iso === null ? "—" : formatDateTime(iso, {
-			seconds: true,
-			fallback: "—"
-		});
-		/** 产出物图标格（最多 3 个 +「…」更多）。 */
-		const outputCellStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "2px",
-			flexWrap: "nowrap"
-		};
-		/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
-		const filterRowStyle = {
-			display: "flex",
-			alignItems: "center",
-			gap: "6px",
-			flexWrap: "wrap",
-			marginBottom: "10px"
-		};
-		/** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
-		const limitRowStyle$1 = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "4px",
-			marginLeft: "auto",
-			fontSize: "var(--dshpc-font-xs)",
-			color: "var(--dshpc-fg-3)"
-		};
-		/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
-		const recHeadStyle = {
-			...miniCellStyle,
-			padding: "11px 10px",
-			textAlign: "center",
-			fontWeight: 600,
-			color: "var(--dshpc-fg-2)",
-			background: "var(--dshpc-head-bg)",
-			boxShadow: "inset 0 1px 0 var(--dshpc-border), inset 0 -1px 0 var(--dshpc-border)"
-		};
-		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
-		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
-			color: "var(--dshpc-danger)",
-			fontWeight: 600
-		} : void 0;
-		/**
-		* 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
-		* 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
-		* 数据全走 `client/query.ts` 真实取数（仓库硬规则：禁止 mock）。
-		*/
-		function TaskExpandPanel(props) {
-			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props;
-			const [tab, setTab] = (0, react$1.useState)("info");
-			/**
-			* 事件推送计数（2026-10-07 补缺口）：`row` 的运行态字段只覆盖「终态 / 在飞翻转」，
-			* **覆盖不到**派发后写 `session_id`、`dispatched → running`、阻塞 / 放行这类**行级**变化
-			* （它们不改 `lastStatus` / `lastFinishedAt` / `running`）⇒ 面板会一直停在「已派发」，会话链接与
-			* 早期日志都看不到，直到这次执行出终态。故订阅本任务的运行态事件来驱动三个 tab 重取。
-			* 只认 `payload.taskId === 本卡片`（在屏判定）；面板只在展开时才挂载 ⇒ 订阅也只在展开期间存在。
-			*/
-			const [pushNonce, setPushNonce] = (0, react$1.useState)(0);
-			useEvents(RUN_EVENT_TYPES, (event) => {
-				if (event.payload?.taskId !== row.id) return;
-				setPushNonce((n) => n + 1);
-			});
-			useResync(() => {
-				setPushNonce((n) => n + 1);
-			});
-			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}|${pushNonce}`;
-			const firstRun = (0, react$1.useRef)(true);
-			(0, react$1.useEffect)(() => {
-				if (firstRun.current) {
-					firstRun.current = false;
-					return;
-				}
-				refresh();
-			}, [runSig, refresh]);
-			const [infoLast, setInfoLast] = (0, react$1.useState)(null);
-			const [infoLoading, setInfoLoading] = (0, react$1.useState)(false);
-			const [infoError, setInfoError] = (0, react$1.useState)(null);
-			const [infoLoaded, setInfoLoaded] = (0, react$1.useState)(false);
-			const timeRangeLabels = (0, react$1.useMemo)(() => ({
-				all: t("trAll"),
-				presets: {
-					today: t("trToday"),
-					yesterday: t("trYesterday"),
-					thisWeek: t("trThisWeek"),
-					lastWeek: t("trLastWeek"),
-					thisMonth: t("trThisMonth"),
-					lastMonth: t("trLastMonth")
-				}
-			}), [t]);
-			const [recStatus, setRecStatus] = (0, react$1.useState)("");
-			const [recRange, setRecRange] = (0, react$1.useState)({
-				from: "",
-				to: ""
-			});
-			const [recLimit, setRecLimit] = (0, react$1.useState)(100);
-			const [records, setRecords] = (0, react$1.useState)(null);
-			const [recLoading, setRecLoading] = (0, react$1.useState)(false);
-			const [recError, setRecError] = (0, react$1.useState)(null);
-			const [openInstance, setOpenInstance] = (0, react$1.useState)(null);
-			const [events, setEvents] = (0, react$1.useState)(null);
-			const [eventsError, setEventsError] = (0, react$1.useState)(null);
-			const [logKeyword, setLogKeyword] = (0, react$1.useState)("");
-			const [logRange, setLogRange] = (0, react$1.useState)({
-				from: "",
-				to: ""
-			});
-			const [logLimit, setLogLimit] = (0, react$1.useState)(100);
-			const [logs, setLogs] = (0, react$1.useState)(null);
-			const [logLoading, setLogLoading] = (0, react$1.useState)(false);
-			const recBusy = useDelayedBusy(recLoading);
-			const logBusy = useDelayedBusy(logLoading);
-			const [logError, setLogError] = (0, react$1.useState)(null);
-			const [confirmDelete, setConfirmDelete] = (0, react$1.useState)(false);
-			const [deleting, setDeleting] = (0, react$1.useState)(false);
-			const [confirmRun, setConfirmRun] = (0, react$1.useState)(false);
-			const [runBusy, setRunBusy] = (0, react$1.useState)(false);
-			/**
-			* 立即执行成功后的「立刻重拉执行记录」信号（用户 2026-10-03 真机反馈：点了马上写记录，
-			* 但面板要等下一次轮询才显示 ⇒ 等它显示时任务都已经在跑了）。计数 +1 即触发下面那个 effect。
-			*/
-			const [runNonce, setRunNonce] = (0, react$1.useState)(0);
-			const [runToast, setRunToast] = (0, react$1.useState)(null);
-			const runSeq = (0, react$1.useRef)(0);
-			(0, react$1.useEffect)(() => {
-				if (runToast !== null) notify(runToast.text, { variant: runToast.tone });
-			}, [runToast]);
-			/** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
-			const runNowToast = (outcome) => {
-				if (outcome.ok) return {
-					text: t("cardRunNowOk"),
-					tone: "success"
-				};
-				switch (outcome.error) {
-					case "already-running": return {
-						text: t("cardRunNowAlready"),
-						tone: "error"
-					};
-					case "upstream-not-succeeded": return {
-						text: t("cardRunNowBlocked"),
-						tone: "error"
-					};
-					case "upstream-missing": return {
-						text: t("cardRunNowMissingDep"),
-						tone: "error"
-					};
-					case "workspace-missing": return {
-						text: tt("cardRunNowWorkspace", { name: outcome.detail ?? "" }),
-						tone: "error"
-					};
-					case "attachment-missing": return {
-						text: tt("cardRunNowAttachment", { name: outcome.detail ?? "" }),
-						tone: "error"
-					};
-					case "task-not-found": return {
-						text: t("cardRunNowNotFound"),
-						tone: "error"
-					};
-					case "not-ready": return {
-						text: t("cardRunNowNotReady"),
-						tone: "error"
-					};
-					default: return {
-						text: tt("cardRunNowFailed", { reason: outcome.detail ?? outcome.error }),
-						tone: "error"
-					};
-				}
-			};
-			const doRunNow = () => {
-				setRunBusy(true);
-				onRunNow(row.id).then((outcome) => {
-					const { text, tone } = runNowToast(outcome);
-					runSeq.current += 1;
-					setRunToast({
-						text,
-						tone,
-						seq: runSeq.current
-					});
-					if (outcome.ok) setRunNonce((n) => n + 1);
-				}).finally(() => {
-					setRunBusy(false);
-					setConfirmRun(false);
-				});
-			};
-			(0, react$1.useEffect)(() => {
-				if (tab !== "info") return;
-				let alive = true;
-				setInfoLoading(true);
-				setInfoError(null);
-				fetchInstances({
-					taskId: row.id,
-					statuses: LAST_RUN_STATUSES,
-					limit: 1
-				}).then(({ rows }) => {
-					if (!alive) return;
-					setInfoLast(rows[0] ?? null);
-					setInfoLoaded(true);
-				}).catch((error) => {
-					if (alive) setInfoError(error instanceof Error ? error.message : String(error));
-				}).finally(() => {
-					if (alive) setInfoLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				tab,
-				row.id,
-				runSig
-			]);
-			const filterSig = `${recStatus}|${recRange.from}|${recRange.to}|${recLimit}`;
-			const prevFilterSig = (0, react$1.useRef)(filterSig);
-			(0, react$1.useEffect)(() => {
-				const filterChanged = prevFilterSig.current !== filterSig;
-				prevFilterSig.current = filterSig;
-				if (tab !== "records") return;
-				let alive = true;
-				setRecLoading(true);
-				setRecError(null);
-				const range = rangeToQuery(recRange, "day");
-				fetchInstances({
-					taskId: row.id,
-					statuses: recStatus === "" || recStatus === "all" ? void 0 : statusesOfBucket(recStatus),
-					from: range.fromTs,
-					to: range.toTs,
-					limit: recLimit
-				}).then(({ rows }) => {
-					if (!alive) return;
-					setRecords(rows);
-					if (filterChanged) {
-						setOpenInstance(null);
-						setEvents(null);
-					}
-				}).catch((error) => {
-					if (alive) setRecError(error instanceof Error ? error.message : String(error));
-				}).finally(() => {
-					if (alive) setRecLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				tab,
-				row.id,
-				recStatus,
-				recRange,
-				recLimit,
-				runSig,
-				runNonce,
-				filterSig
-			]);
-			(0, react$1.useEffect)(() => {
-				if (openInstance === null) return;
-				let alive = true;
-				setEventsError(null);
-				setEvents(null);
-				fetchEvents(openInstance).then((rows) => {
-					if (alive) setEvents(rows);
-				}).catch((error) => {
-					if (alive) setEventsError(error instanceof Error ? error.message : String(error));
-				});
-				return () => {
-					alive = false;
-				};
-			}, [openInstance]);
-			(0, react$1.useEffect)(() => {
-				if (tab !== "logs") return;
-				let alive = true;
-				setLogLoading(true);
-				setLogError(null);
-				const range = rangeToQuery(logRange, "minute");
-				fetchLogs({
-					taskId: row.id,
-					keyword: logKeyword.trim() === "" ? void 0 : logKeyword.trim(),
-					from: range.fromTs,
-					to: range.toTs,
-					limit: logLimit
-				}).then(({ rows }) => {
-					if (alive) setLogs(rows);
-				}).catch((error) => {
-					if (alive) setLogError(error instanceof Error ? error.message : String(error));
-				}).finally(() => {
-					if (alive) setLogLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				tab,
-				row.id,
-				logKeyword,
-				logRange,
-				logLimit,
-				runSig
-			]);
-			const renderInfo = () => {
-				const view = {
-					scheduleLine,
-					nextSlot: renderNextExec(row.nextSlotAt, t),
-					workspace: row.workspace,
-					model: modelText,
-					retry: String(row.retryMax),
-					window: row.schedule.window,
-					attachments: row.attachments.map((item) => ({
-						name: item.name,
-						key: `${item.kind}:${item.name}`,
-						path: item.path ?? null,
-						anchorSessionId: item.anchorSessionId ?? null,
-						isDir: item.isDir
-					})),
-					depends: row.depends.map((dep) => ({
-						id: dep.id,
-						title: dep.title,
-						enabled: dep.enabled
-					}))
-				};
-				return (0, react$1.createElement)("div", { style: panelBoxStyle }, (0, react$1.createElement)("div", { style: infoWrapStyle }, (0, react$1.createElement)("div", {
-					className: "dsh-tdt-info-cfg",
-					style: infoConfigStyle
-				}, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), taskInfoBaseFields({
-					t,
-					view,
-					onOpenFile,
-					onViewTask
-				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--dshpc-font-xs)",
-					color: "var(--dshpc-danger)"
-				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : infoLast === null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--dshpc-font-xs)",
-					color: "var(--dshpc-fg-3)"
-				} }, t("infoNoRun")) : lastRunFields({
-					t,
-					instance: infoLast,
-					onOpenSession,
-					onOpenFile
-				}))));
-			};
-			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(SelectField, {
-				value: recStatus,
-				options: [
-					{
-						value: "all",
-						label: tt("filterAll")
-					},
-					{
-						value: "succeeded",
-						label: statusTextOf("succeeded", t)
-					},
-					{
-						value: "failed",
-						label: statusTextOf("failed", t)
-					},
-					{
-						value: "running",
-						label: t("filterRunning")
-					}
-				],
-				onChange: (next) => {
-					setRecStatus(next);
-				},
-				placeholder: t("colStatus"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("colStatus"),
-				size: "md",
-				width: 96
-			}), (0, react$1.createElement)(TimeRange, {
-				value: recRange,
-				onChange: setRecRange,
-				labels: timeRangeLabels,
-				precision: "day",
-				size: "md"
-			}), (0, react$1.createElement)("label", { style: limitRowStyle$1 }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
-				value: String(recLimit),
-				options: [
-					50,
-					100,
-					200
-				].map((n) => ({
-					value: String(n),
-					label: String(n)
-				})),
-				onChange: (next) => {
-					setRecLimit(Number(next));
-				},
-				placeholder: String(recLimit),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("cardLogLimit"),
-				size: "md",
-				width: 70
-			}), t("limitSuffix")), recError !== null ? (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--dshpc-font-xs)",
-				color: "var(--dshpc-danger)"
-			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react$1.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, recStatus !== "" && recStatus !== "all" || recRange.from !== "" || recRange.to !== "" ? t("cardRecordsEmptyFiltered") : t("cardRecordsEmpty")) : (0, react$1.createElement)("table", { style: {
-				...miniTableStyle,
-				tableLayout: "fixed"
-			} }, (0, react$1.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react$1.createElement)("tr", null, (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "76px"
-			} }, t("colStatus")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "140px"
-			} }, t("colPlanned")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "84px"
-			} }, t("colActualStart")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "76px"
-			} }, t("colDuration")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "72px"
-			} }, t("colTokens")), (0, react$1.createElement)("th", { style: recHeadStyle }, t("colNote")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "96px"
-			} }, t("colOutputs")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "68px"
-			} }, t("colSession")))), (0, react$1.createElement)("tbody", null, records.flatMap((instance, index) => {
-				const open = openInstance === instance.id;
-				const outputs = outputsOf(instance.outputs);
-				const sid = instance.session_id;
-				const openFile = onOpenFile;
-				const openSession = onOpenSession;
-				const canOpenFile = sid !== null && openFile !== void 0;
-				const canOpenSession = sid !== null && openSession !== void 0;
-				const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at);
-				return [(0, react$1.createElement)("tr", {
-					key: instance.id,
-					className: ["dsh-tdt-rec-row", open || index % 2 === 0 ? "" : "dsh-tdt-rec-alt"].join(" ").trim(),
-					style: {
-						cursor: "pointer",
-						...open ? { background: "var(--dshpc-open-bg)" } : {}
-					},
-					onClick: () => {
-						setOpenInstance(open ? null : instance.id);
-					}
-				}, (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { style: {
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					gap: "6px"
-				} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), (0, react$1.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--dshpc-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, formatDurationHms(durMs)), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, "-") : (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react$1.createElement)("td", { style: {
-					...miniCellStyle,
-					maxWidth: 0
-				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react$1.createElement)("span", {
-					title: instance.note,
-					className: "dsh-tdt-ellipsis",
-					style: {
-						display: "block",
-						color: "var(--dshpc-fg-3)"
-					}
-				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-					key: output,
-					label: baseNameOf(output),
-					side: "top"
-				}, (0, react$1.createElement)("button", {
-					type: "button",
-					className: "dsh-tdt-chip",
-					style: { cursor: canOpenFile ? "pointer" : "default" },
-					onClick: (event) => {
-						event.stopPropagation();
-						if (canOpenFile && openFile !== void 0 && sid !== null) openFile(sid, output);
-					}
-				}, output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-					path: output,
-					size: 16
-				})))), outputs.length > 3 ? (0, react$1.createElement)("button", {
-					type: "button",
-					"aria-label": t("viewSession"),
-					className: "dsh-tdt-chip dsh-tdt-chip--label",
-					onClick: (event) => {
-						event.stopPropagation();
-						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid);
-					}
-				}, "…") : null)), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react$1.createElement)(Button$2, {
-					variant: "outline",
-					size: "sm",
-					onClick: (event) => {
-						event.stopPropagation();
-						openSession(sid);
-					}
-				}, t("colView")) : null)), open ? (0, react$1.createElement)("tr", { key: `${instance.id}-detail` }, (0, react$1.createElement)("td", {
-					colSpan: 8,
-					style: {
-						...miniCellWrapStyle,
-						padding: "18px 20px",
-						background: "var(--dshpc-open-bg-soft)"
-					}
-				}, eventsError !== null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--dshpc-font-xs)",
-					color: "var(--dshpc-danger)"
-				} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--dshpc-font-xs)",
-					color: "var(--dshpc-fg-3)"
-				} }, t("cardEventsEmpty")) : events.map((event) => (0, react$1.createElement)("div", {
-					key: event.seq,
-					style: {
-						marginBottom: "7px",
-						lineHeight: "var(--dshpc-line-md)"
-					}
-				}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, event.detail ?? ""))))) : null];
-			})))));
-			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Input, {
-				value: logKeyword,
-				onChange: setLogKeyword,
-				placeholder: t("cardKeyword"),
-				size: "md",
-				style: { width: "140px" }
-			}), (0, react$1.createElement)(TimeRange, {
-				value: logRange,
-				onChange: setLogRange,
-				labels: timeRangeLabels,
-				precision: "minute",
-				size: "md"
-			}), (0, react$1.createElement)("label", { style: limitRowStyle$1 }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
-				value: String(logLimit),
-				options: [
-					50,
-					100,
-					200
-				].map((n) => ({
-					value: String(n),
-					label: String(n)
-				})),
-				onChange: (next) => {
-					setLogLimit(Number(next));
-				},
-				placeholder: String(logLimit),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("cardLogLimit"),
-				size: "md",
-				width: 70
-			}), t("limitSuffix")), logError !== null ? (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--dshpc-font-xs)",
-				color: "var(--dshpc-danger)"
-			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react$1.createElement)("div", { style: logAreaStyle }, logs === null ? null : logs.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : logs.map((row) => (0, react$1.createElement)("div", {
-				key: row.seq,
-				style: logRowStyle
-			}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react$1.createElement)("span", { style: {
-				color: row.level === "error" ? "var(--dshpc-danger)" : row.level === "warn" ? "var(--dshpc-accent)" : "var(--dshpc-fg-3)",
-				fontWeight: row.level === "error" ? 600 : 400
-			} }, `[${row.level}]`), " ", (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, `${row.kind}: `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, row.message)))));
-			/** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
-			const renderConfirm = () => (0, react$1.createElement)("div", {
-				style: overlayStyle,
-				onClick: () => {
-					if (!deleting) setConfirmDelete(false);
-				}
-			}, (0, react$1.createElement)("div", {
-				style: dialogStyle,
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--dshpc-font-lg)",
-				fontWeight: 600,
-				marginBottom: "8px"
-			} }, t("cardDeleteTitle")), (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--dshpc-font-sm)",
-				color: "var(--dshpc-fg-2)",
-				lineHeight: "var(--dshpc-line-sm)",
-				marginBottom: "14px"
-			} }, t("cardDeleteDesc")), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				justifyContent: "flex-end",
-				gap: "8px"
-			} }, (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "sm",
-				disabled: deleting,
-				onClick: () => {
-					setConfirmDelete(false);
-				}
-			}, t("cardCancel")), (0, react$1.createElement)(Button$2, {
-				variant: "danger",
-				size: "sm",
-				disabled: deleting,
-				onClick: () => {
-					setDeleting(true);
-					onDelete(row.id).finally(() => {
-						setDeleting(false);
-						setConfirmDelete(false);
-					});
-				}
-			}, deleting ? t("loading") : t("cardDelete")))));
-			/** 立即执行确认框（2026-10-03）：与删除确认同款自绘 overlay，文案「你确定要立即执行此任务吗？」。 */
-			const renderRunConfirm = () => (0, react$1.createElement)("div", {
-				style: overlayStyle,
-				onClick: () => {
-					if (!runBusy) setConfirmRun(false);
-				}
-			}, (0, react$1.createElement)("div", {
-				style: dialogStyle,
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--dshpc-font-lg)",
-				fontWeight: 600,
-				marginBottom: "8px"
-			} }, t("cardRunNowTitle")), (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--dshpc-font-sm)",
-				color: "var(--dshpc-fg-2)",
-				lineHeight: "var(--dshpc-line-sm)",
-				marginBottom: "14px"
-			} }, t("cardRunNowDesc")), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				justifyContent: "flex-end",
-				gap: "8px"
-			} }, (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "sm",
-				disabled: runBusy,
-				onClick: () => {
-					setConfirmRun(false);
-				}
-			}, t("cardCancel")), (0, react$1.createElement)(Button$2, {
-				variant: "primary",
-				size: "sm",
-				disabled: runBusy,
-				onClick: () => {
-					doRunNow();
-				}
-			}, runBusy ? t("loading") : t("cardRunNow")))));
-			return (0, react$1.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react$1.createElement)("div", { style: { position: "relative" } }, (0, react$1.createElement)("div", { style: panelBarStyle }, (0, react$1.createElement)(Segmented, {
-				value: tab,
-				size: "md",
-				bordered: false,
-				items: [
-					{
-						value: "info",
-						label: t("cardTabInfo")
-					},
-					{
-						value: "records",
-						label: t("cardTabRecords")
-					},
-					{
-						value: "logs",
-						label: t("cardTabLogs")
-					}
-				],
-				onChange: setTab
-			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
-				variant: "danger-outline",
-				size: "md",
-				onClick: () => {
-					setConfirmDelete(true);
-				}
-			}, t("cardDelete")), (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlayOutlineRegular, { size: 14 }),
-				onClick: () => {
-					setConfirmRun(true);
-				}
-			}, t("cardRunNow")), (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
-				onClick: () => {
-					onEdit(row.id);
-				}
-			}, t("editorEdit")))), confirmDelete ? renderConfirm() : null, confirmRun ? renderRunConfirm() : null);
-		}
-		function TaskCard(props) {
-			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, onToggleEnabled, refOf, refresh } = props;
-			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
-			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
-			return (0, react$1.createElement)("div", {
-				ref: refOf,
-				style: {
-					display: "block",
-					width: "100%",
-					marginBottom: "10px"
-				}
-			}, (0, react$1.createElement)(Card, {
-				accent: "neutral",
-				bar: {
-					size: 0,
-					inset: 0,
-					gap: 0
-				},
-				style: { padding: 0 }
-			}, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-card-row",
-				style: {
-					display: "flex",
-					alignItems: "center",
-					gap: "12px",
-					cursor: "pointer",
-					padding: "12px 14px"
-				},
-				onClick: () => {
-					const sel = typeof window === "undefined" ? null : window.getSelection();
-					if (sel !== null && sel.toString() !== "") return;
-					onToggleOpen();
-				}
-			}, (0, react$1.createElement)(StatusRail, {
-				row,
-				t
-			}), (0, react$1.createElement)("div", { style: {
-				flex: "1 1 auto",
-				minWidth: 0
-			} }, (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "baseline",
-				gap: "6px",
-				minWidth: 0
-			} }, onViewTask === void 0 ? (0, react$1.createElement)("div", { style: {
-				...titleStyle,
-				flex: "0 1 auto",
-				minWidth: 0
-			} }, (0, react$1.createElement)(MarqueeText, { text: row.title })) : (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-info-dep",
-				title: t("infoViewTask"),
-				style: {
-					...titleStyle,
-					flex: "0 1 auto",
-					minWidth: 0,
-					textAlign: "left"
-				},
-				onClick: (event) => {
-					event.stopPropagation();
-					onViewTask(row.id);
-				}
-			}, (0, react$1.createElement)(MarqueeText, { text: row.title })), row.code !== null ? (0, react$1.createElement)("span", { style: {
-				...faintStyle,
-				flex: "none",
-				display: "inline"
-			} }, `[${row.code}]`) : null, (0, react$1.createElement)("span", { style: {
-				...faintStyle,
-				flex: "none",
-				display: "inline"
-			} }, row.createdAt === null ? `[${t("listCreatedUnknown")}]` : `[${t("listCreatedTag", { date: formatYmd(row.createdAt) })}]`), row.enabled ? null : (0, react$1.createElement)("span", { style: {
-				...faintStyle,
-				flex: "none",
-				display: "inline"
-			} }, t("listDisabledTag"))), (0, react$1.createElement)("div", { style: {
-				...metaStyle,
-				minWidth: 0
-			} }, (0, react$1.createElement)(MarqueeText, { text: scheduleLine }))), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "8px",
-				flex: "none"
-			} }, (0, react$1.createElement)(PastPill, {
-				row,
-				t,
-				tt
-			}), (0, react$1.createElement)(NextPill, {
-				row,
-				t,
-				tt
-			}), (0, react$1.createElement)("span", {
-				className: "dsh-tdt-switch",
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
-				checked: row.enabled,
-				onChange: (next) => {
-					onToggleEnabled(row.id, next);
-				},
-				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled"),
-				title: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
-			})), (0, react$1.createElement)("span", { onClick: (event) => {
-				event.stopPropagation();
-			} }, (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "sm",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
-				label: t("listExpandHint"),
-				onClick: onToggleOpen,
-				"aria-expanded": open,
-				style: { transform: open ? "rotate(180deg)" : "none" }
-			})))), open ? (0, react$1.createElement)(TaskExpandPanel, {
-				row,
-				t,
-				tt,
-				scheduleLine,
-				modelText,
-				onEdit,
-				onDelete,
-				onRunNow,
-				onOpenFile,
-				onOpenSession,
-				onViewTask,
-				refresh
-			}) : null));
-		}
-		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces, onCreate } = props;
-			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
-			ensureTaskListStyle();
-			ensureTaskInfoStyle();
-			ensureTaskEditorStyle();
-			const [filter, setFilter] = (0, react$1.useState)("all");
-			const [workspace, setWorkspace] = (0, react$1.useState)("");
-			const [query, setQuery] = (0, react$1.useState)("");
-			const [openId, setOpenId] = (0, react$1.useState)(null);
-			/** 拨片的乐观值：点了立刻变，等服务端确认（它会马上同步任务表并重新拉一次）后清除。 */
-			const [optimistic, setOptimistic] = (0, react$1.useState)({});
-			const rowsWithOptimistic = (0, react$1.useMemo)(() => {
-				if (Object.keys(optimistic).length === 0) return rows;
-				return rows.map((row) => row.id in optimistic ? {
-					...row,
-					enabled: optimistic[row.id]
-				} : row);
-			}, [rows, optimistic]);
-			(0, react$1.useEffect)(() => {
-				setOptimistic((cur) => Object.keys(cur).length === 0 ? cur : {});
-			}, [rows]);
-			/**
-			* 异常数 = 「最近一次**失败**」或「最近一次**未执行**」的任务数（全量统计，不受当前筛选影响）。
-			* ⚠️ 2026-09-30 评审 P0：状态条已把 `skipped`（未执行）与 `failed` 一起标红，这里（与下面的异常筛选）
-			* 却只认 `failed` ⇒ 卡片红着却不在「异常」里，口径分叉。两处必须同口径。
-			*/
-			const abnormalCount = (0, react$1.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed" || row.lastStatus === "skipped").length, [rowsWithOptimistic]);
-			const visible = (0, react$1.useMemo)(() => {
-				const q = query.trim().toLowerCase();
-				return sortRows(rowsWithOptimistic.filter((row) => {
-					if (filter === "enabled" && !row.enabled) return false;
-					if (filter === "disabled" && row.enabled) return false;
-					if (filter === "abnormal" && row.lastStatus !== "failed" && row.lastStatus !== "skipped") return false;
-					if (workspace !== "" && row.workspace !== workspace) return false;
-					if (q === "") return true;
-					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
-				}));
-			}, [
-				rowsWithOptimistic,
-				filter,
-				workspace,
-				query
-			]);
-			const refOf = useFlip(visible.map((r) => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join("|"));
-			const workspaceOptions = (0, react$1.useMemo)(() => [{
-				value: "",
-				label: t("listFilterWorkspaceAll")
-			}, ...workspaces], [workspaces, t]);
-			return (0, react$1.createElement)("div", { style: {
-				width: "100%",
-				display: "flex",
-				justifyContent: "center"
-			} }, (0, react$1.createElement)("div", {
-				id: PANEL_CONTENT_ID,
-				style: PANEL_CONTENT_STYLE
-			}, (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "8px",
-				marginBottom: "12px",
-				flexWrap: "wrap"
-			} }, (0, react$1.createElement)(Segmented, {
-				value: filter,
-				size: "md",
-				items: [
-					{
-						value: "all",
-						label: t("listFilterAll")
-					},
-					{
-						value: "enabled",
-						label: t("listFilterEnabled")
-					},
-					{
-						value: "disabled",
-						label: t("listFilterDisabled")
-					},
-					{
-						value: "abnormal",
-						label: t("listFilterAbnormal"),
-						badge: abnormalCount
-					}
-				],
-				onChange: setFilter
-			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "8px",
-				flex: "none"
-			} }, (0, react$1.createElement)(Input, {
-				size: "md",
-				className: "dsh-tdt-tl-input",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
-				value: query,
-				placeholder: t("listSearchPlaceholder"),
-				onChange: (value) => {
-					setQuery(value);
-				}
-			}), (0, react$1.createElement)(SelectField, {
-				value: workspace,
-				options: workspaceOptions,
-				onChange: setWorkspace,
-				placeholder: t("listFilterWorkspaceAll"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("listFilterWorkspaceAll"),
-				size: "md",
-				width: WS_WIDTH,
-				searchable: true
-			}))), visible.length === 0 ? rows.length === 0 && !ready ? null : rows.length === 0 ? (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				flexDirection: "column",
-				alignItems: "center",
-				justifyContent: "center",
-				margin: "24px auto 0",
-				padding: "48px 32px",
-				textAlign: "center",
-				border: "1px dashed var(--dshpc-border-heavy)",
-				borderRadius: "var(--dshpc-radius-md)",
-				background: "var(--dshpc-surface-1)"
-			} }, (0, react$1.createElement)("div", { style: { color: "var(--dshpc-fg-3)" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 40 })), (0, react$1.createElement)("div", { style: {
-				marginTop: "12px",
-				fontSize: "var(--dshpc-font-lg)",
-				fontWeight: 600
-			} }, t("listEmptyTitle")), (0, react$1.createElement)("div", { style: {
-				marginTop: "6px",
-				maxWidth: "360px",
-				fontSize: "var(--dshpc-font-sm)",
-				color: "var(--dshpc-fg-2)",
-				lineHeight: "var(--dshpc-line-sm)"
-			} }, t("listEmptyHint")), (0, react$1.createElement)(Button$2, {
-				variant: "primary",
-				size: "md",
-				style: { marginTop: "16px" },
-				onClick: () => {
-					onCreate();
-				}
-			}, t("listEmptyAction"))) : (0, react$1.createElement)("p", { style: {
-				...metaStyle,
-				marginTop: "8px"
-			} }, t("listEmptyFiltered")) : (0, react$1.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react$1.createElement)(TaskCard, {
-				key: row.id,
-				row,
-				t,
-				tt,
-				open: openId === row.id,
-				onToggleOpen: () => {
-					setOpenId((cur) => cur === row.id ? null : row.id);
-				},
-				onEdit,
-				onViewTask,
-				onDelete,
-				onRunNow,
-				onOpenFile,
-				onOpenSession,
-				refresh,
-				onToggleEnabled: (id, enabled) => {
-					setOptimistic((cur) => ({
-						...cur,
-						[id]: enabled
-					}));
-					onToggleEnabled(id, enabled).then((err) => {
-						if (err === null) return;
-						setOptimistic((cur) => {
-							if (!(id in cur)) return cur;
-							const next = { ...cur };
-							delete next[id];
-							return next;
-						});
-					});
-				},
-				refOf: refOf(row.id)
-			})))));
-		}
-		//#endregion
 		//#region src/client/db-table.tsx
 		/**
-		* 单表结果渲染（现在只有「插件日志」在用）。
+		* 单表结果渲染（现在只有「设置 → 日志」在用）。
 		*
-		* 观感**直接复用「任务配置 → 展开 → 执行记录」表格**的斑马纹与 hover（同一批 `.dsh-tdt-rec-*` 类，
-		* 定义在 `task-list.tsx` 的 `domain:list`，故渲染前调 `ensureTaskListStyle()`）。
-		*
-		* ⚠️ **表头不吸顶**（用户 2026-10-08）：这里是**页面滚动**，吸顶会让表头浮在上下文之外、
-		* 上面还会漏出内容 ⇒ 表头跟着内容一起滚走，不再用 `.dsh-tdt-rec-head`。
-		*
-		* 列宽（用户 2026-10-08）：`ts` 缩短成「MM-DD HH:mm:ss」并**定宽**，省下来的宽度全给 `message`
-		* （日志正文可能很长，其余列都是定长短字段）。
-		* `level` 按语义着色：**warn 黄 / error 红**（`plugin_log.level` 的枚举是 info | warn | error）。
-		*
-		* ⚠️ **字号必须写 `fontSize`，不能写 `font` 简写**：`font: 12px` 是**无效声明**（简写要求字号 + 字族），
-		* 整条被浏览器丢弃 ⇒ 表格退回宿主默认字号（用户 2026-10-08 揪出）。
-		* ⚠️ **不能给 `min-width: max-content`**（那会把页面撑出横向滚动条）⇒ 列宽交给 `table-layout: fixed`。
+		* 2026-11-06：表格皮肤改接核心 `Table`（Plain 档：无线框、竖向浅分隔线、行悬浮淡蓝）。
+		* 列宽口径不变（`ts` 缩短成「MM-DD HH:mm:ss」并定宽，省下的宽度全给 `message`），
+		* `level` 仍按语义着色（warn 黄 / error 红）。
 		*/
-		/** 定长列：`message` 不列在这里 ⇒ 吃掉剩下全部宽度。 */
+		/** 定长列（px）：`message` 不列在这里 ⇒ 吃掉剩下全部宽度。 */
 		const COL_WIDTH = {
-			seq: "56px",
-			ts: "116px",
-			level: "56px",
-			kind: "150px"
+			seq: 56,
+			ts: 116,
+			level: 56,
+			kind: 150
 		};
 		/** 时间戳缩短成「MM-DD HH:mm:ss」（原值是完整 ISO，占得太多）。 */
 		const shortTs = (iso) => {
@@ -80967,34 +80359,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			color: "var(--dshpc-warning)",
 			fontWeight: 600
 		} : void 0;
-		const tableStyle = {
-			width: "100%",
-			tableLayout: "fixed",
-			borderCollapse: "collapse",
-			fontSize: "var(--dshpc-font-sm)"
-		};
-		const thStyle = {
-			padding: "11px 10px",
-			textAlign: "left",
-			fontWeight: 600,
-			color: "var(--dshpc-fg-2)",
-			background: "var(--dshpc-head-bg)",
-			whiteSpace: "nowrap",
-			overflow: "hidden",
-			textOverflow: "ellipsis"
-		};
-		/** 数据格：与执行记录 `miniCellStyle` 同度量；**不用实线分隔**，行与行靠斑马纹区分。 */
-		const tdStyle = {
-			padding: "9px 10px",
-			textAlign: "left",
-			color: "var(--dshpc-fg)",
-			fontSize: "var(--dshpc-font-sm)",
-			wordBreak: "break-word",
-			verticalAlign: "top",
-			overflow: "hidden"
-		};
-		function DbTable({ table, t, emptyText }) {
-			ensureTaskListStyle();
+		function DbTable({ table, emptyText }) {
 			const rows = table?.rows ?? [];
 			const columns = table?.columns ?? [];
 			if (rows.length === 0) return (0, react$1.createElement)("p", { style: {
@@ -81002,30 +80367,30 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				fontSize: "var(--dshpc-font-sm)",
 				margin: 0
 			} }, emptyText);
-			const widthOf = (col) => COL_WIDTH[col] === void 0 ? {} : { width: COL_WIDTH[col] };
-			return (0, react$1.createElement)("table", { style: tableStyle }, (0, react$1.createElement)("thead", null, (0, react$1.createElement)("tr", null, columns.map((col) => (0, react$1.createElement)("th", {
+			const tableColumns = columns.map((col) => ({
 				key: col,
-				style: {
-					...thStyle,
-					...widthOf(col)
-				}
-			}, col)))), (0, react$1.createElement)("tbody", null, rows.map((row, i) => (0, react$1.createElement)("tr", {
+				title: col,
+				...COL_WIDTH[col] === void 0 ? {} : { width: COL_WIDTH[col] }
+			}));
+			const tableRows = rows.map((row, i) => ({
 				key: i,
-				className: i % 2 === 1 ? "dsh-tdt-rec-row dsh-tdt-rec-alt" : "dsh-tdt-rec-row"
-			}, columns.map((col) => {
-				const value = row[col];
-				const raw = value === null || value === void 0 ? "—" : String(value);
-				const text = col === "ts" ? shortTs(raw) : col === "message" ? raw : raw.length > 160 ? `${raw.slice(0, 160)}…` : raw;
-				return (0, react$1.createElement)("td", {
-					key: col,
-					style: {
-						...tdStyle,
-						...widthOf(col),
-						...col === "level" ? levelStyleOf(raw) : {}
-					},
-					title: raw
-				}, text);
-			})))));
+				cells: columns.reduce((acc, col) => {
+					const value = row[col];
+					const raw = value === null || value === void 0 ? "—" : String(value);
+					const text = col === "ts" ? shortTs(raw) : col === "message" ? raw : raw.length > 160 ? `${raw.slice(0, 160)}…` : raw;
+					acc[col] = (0, react$1.createElement)("span", {
+						style: col === "level" ? levelStyleOf(raw) : void 0,
+						title: raw
+					}, text);
+					return acc;
+				}, {})
+			}));
+			return (0, react$1.createElement)(Table, {
+				ariaLabel: emptyText,
+				columns: tableColumns,
+				rows: tableRows,
+				density: "compact"
+			});
 		}
 		//#endregion
 		//#region src/client/settings-log-block.tsx
@@ -81048,7 +80413,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			200
 		];
 		/** 条数过滤的外壳：与任务配置 `limitRowStyle` 同款（`marginLeft:auto` ⇒ 整组里它最右）。 */
-		const limitRowStyle = {
+		const limitRowStyle$1 = {
 			display: "inline-flex",
 			alignItems: "center",
 			gap: "4px",
@@ -81116,7 +80481,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					size: "md",
 					onClick: () => void load(),
 					disabled: loading
-				}, t("settingsRefresh")), (0, react$1.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
+				}, t("settingsRefresh")), (0, react$1.createElement)("label", { style: limitRowStyle$1 }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
 					value: String(n),
 					options: PAGE_SIZES.map((v) => ({
 						value: String(v),
@@ -81137,7 +80502,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				marginBottom: "var(--dshpc-space-2)"
 			} }, error) : null, (0, react$1.createElement)(DbTable, {
 				table: result,
-				t,
 				emptyText: t("settingsLogEmpty")
 			}));
 		}
@@ -81899,6 +81263,1237 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					className: "dsh-tdt-cal-clock"
 				}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-date" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-weekday" }, weekdayFormatter === null ? "" : weekdayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
 			}))));
+		}
+		//#endregion
+		//#region src/client/task-list.tsx
+		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
+		const monoFont$1 = "var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
+		*  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
+		const CONTROL_H = "var(--dshpc-control-h-md)";
+		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
+		const WS_WIDTH = 180;
+		const TASK_LIST_CSS = [
+			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; }`,
+			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
+			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--dshpc-font-sm); }`,
+			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--dshpc-head-bg); }",
+			".dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }",
+			".dsh-tdt-rec-row:hover { background: var(--dshpc-plate-hover); }",
+			".dsh-tdt-rec-alt { background: var(--dshpc-plate); }"
+		].join("\n");
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。设置页的数据表复用本域的 `.dsh-tdt-rec-*` 表格皮肤
+		*  ⇒ 导出给 `db-table.tsx` 调用（设置页可能没渲染过任务列表，规则得由它自己确保已注入）。 */
+		const ensureTaskListStyle = () => {
+			applyStyle("domain:list", TASK_LIST_CSS);
+		};
+		/** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
+		const formatFull = (iso) => formatDateTime(iso, { fallback: "—" });
+		function useFlip(signature) {
+			const nodes = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			const prevTop = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			(0, react$1.useLayoutEffect)(() => {
+				const moved = [];
+				for (const [id, el] of nodes.current) {
+					const top = el.getBoundingClientRect().top;
+					const prev = prevTop.current.get(id);
+					if (prev !== void 0 && Math.abs(prev - top) > .5) moved.push([el, prev - top]);
+					prevTop.current.set(id, top);
+				}
+				if (moved.length === 0) return;
+				if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true) return;
+				for (const [el, delta] of moved) {
+					el.style.transition = "none";
+					el.style.transform = `translateY(${delta}px)`;
+				}
+				const frame = requestAnimationFrame(() => {
+					for (const [el] of moved) {
+						el.style.transition = `transform 260ms var(--dshpc-ease)`;
+						el.style.transform = "";
+					}
+					window.setTimeout(() => {
+						for (const [el] of moved) el.style.transition = "";
+					}, 320);
+				});
+				return () => {
+					cancelAnimationFrame(frame);
+				};
+			}, [signature]);
+			const callbacks = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			return (0, react$1.useCallback)((id) => {
+				const hit = callbacks.current.get(id);
+				if (hit !== void 0) return hit;
+				const fn = (el) => {
+					if (el === null) {
+						nodes.current.delete(id);
+						callbacks.current.delete(id);
+						prevTop.current.delete(id);
+					} else nodes.current.set(id, el);
+				};
+				callbacks.current.set(id, fn);
+				return fn;
+			}, []);
+		}
+		const RAIL_W = 6;
+		const RAIL_H = 36;
+		/** 运行中：整条**蓝色**明暗脉动（颜色 / 脉动形状全在 `ui/running.ts` 一处定，前后两端统一）。 */
+		function RunningRail() {
+			ensureRunningStyle();
+			return (0, react$1.createElement)("span", {
+				className: `${RUN_PULSE_CLASS} dsh-tdt-rail`,
+				style: {
+					display: "inline-block",
+					width: `${RAIL_W}px`,
+					height: `${RAIL_H}px`,
+					flex: "none",
+					borderRadius: "var(--dshpc-radius-xs)",
+					background: RUNNING_TONE
+				}
+			});
+		}
+		function StatusRail(props) {
+			const { row, t } = props;
+			if (row.running) return (0, react$1.createElement)(RunningRail, {});
+			const color = !row.enabled ? "var(--dshpc-fg-3)" : row.lastStatus === "failed" || row.lastStatus === "skipped" ? "var(--dshpc-danger)" : "var(--dshpc-success)";
+			const hint = !row.enabled ? t("statusRailOff") : row.lastStatus === "failed" ? t("statusRailLastFailed") : row.lastStatus === "skipped" ? t("statusRailLastSkipped") : t("statusRailRunning");
+			return (0, react$1.createElement)("span", {
+				title: hint,
+				style: {
+					display: "inline-block",
+					width: `${RAIL_W}px`,
+					height: `${RAIL_H}px`,
+					flex: "none",
+					borderRadius: "var(--dshpc-radius-xs)",
+					background: color,
+					transition: `background var(--dshpc-dur) var(--dshpc-ease)`
+				}
+			});
+		}
+		/**
+		* 「历史执行」与「下次执行」是**两个独立**小标签（2026-09-30 用户拍板：不要合成一格四段，
+		* 拆成两块更清爽）。每个标签 = 语义底色的图标格 + 时间格，整体一个圆角细边框。
+		* - 历史执行：成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；时间格当天 HH:mm、跨天「3 小时前 / 1 天前」。
+		* - 下次执行：图标 = 闹钟；时间格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
+		*   超过 24 小时 = 明天 / 三天后 / N 周后。
+		*
+		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
+		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
+		* 提示**静默失效**（用户 2026-09-30 真机反馈「移上去没提示」的根因，与 task-editor 里
+		* 「图标要包真 `<button>`」是同一个坑）。
+		*/
+		const pillOuterStyle = {
+			display: "inline-flex",
+			alignItems: "stretch",
+			flex: "none",
+			height: "20px",
+			borderRadius: "var(--dshpc-radius-sm)",
+			overflow: "hidden",
+			border: `1px solid var(--dshpc-border)`
+		};
+		/** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
+		const pillIconCell = (bg, fg) => ({
+			display: "inline-flex",
+			alignItems: "center",
+			padding: "0 6px",
+			background: bg,
+			color: fg,
+			flex: "none"
+		});
+		/** 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。 */
+		const pillTimeCell = {
+			display: "inline-flex",
+			alignItems: "center",
+			padding: "0 8px",
+			background: "var(--dshpc-surface-1)",
+			color: "var(--dshpc-fg)",
+			fontSize: "var(--dshpc-font-xs)",
+			lineHeight: "var(--dshpc-line-xs)",
+			whiteSpace: "nowrap",
+			fontVariantNumeric: "tabular-nums",
+			fontFamily: monoFont$1
+		};
+		/** 历史执行标签（成功绿 / 失败红 / 无状态灰）。 */
+		function PastPill(props) {
+			const { row, t, tt } = props;
+			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
+			const colored = has && row.lastStatus !== null && row.lastStatus !== "unknown";
+			const bg = !has || row.lastStatus === "unknown" ? "var(--dshpc-surface-3)" : row.lastStatus === "succeeded" ? "var(--dshpc-success)" : "var(--dshpc-danger)";
+			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
+			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
+				side: "bottom"
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(bg, colored ? "var(--dshpc-on-signal)" : "var(--dshpc-fg-2)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
+				style: pillTimeCell,
+				render: (nowMs) => {
+					if (!has) return "--";
+					const iso = row.lastScheduledAt ?? "";
+					return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt);
+				}
+			})));
+		}
+		/**
+		* 下次执行标签。**三种状态**（用户 2026-09-30 拍板：不要去判断补跑时间）：
+		* - **运行中** ⇒ 不显示倒计时（下一槽要等这趟跑完才算），改显「三个小方块脉动」的活动指示；
+		* - 未运行 ⇒ 一天以内 = `HH:mm:ss` 秒级倒计时（`LiveText` 自转），超过 24 小时 = 明天 / 三天后 / N 周后；
+		* - 无后续 ⇒ 占位符。
+		*
+		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
+		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
+		* 提示静默失效（用户 2026-09-30 真机反馈「移上去没提示」的根因）。
+		*/
+		function NextPill(props) {
+			const { row, t, tt } = props;
+			const nowMs = useNowMs();
+			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: t("listRunning"),
+				side: "bottom"
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(RUNNING_TONE, "var(--dshpc-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
+				...pillTimeCell,
+				color: RUNNING_TONE
+			} }, (0, react$1.createElement)(RunningBlocks, {}))));
+			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs;
+			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
+			const title = dueNow ? nowMs - Date.parse(row.nextSlotAt ?? "") <= dueLoadingMs() ? t("listRunning") : deferredTitle : typeof row.blockedReason === "string" && row.blockedReason !== "" ? deferredTitle : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
+				side: "bottom"
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--dshpc-surface-3)", "var(--dshpc-fg)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
+				style: pillTimeCell,
+				render: (nowMs) => {
+					if (row.nextSlotAt === null) return "--";
+					const diff = Date.parse(row.nextSlotAt) - nowMs;
+					if (diff <= 0) {
+						if (-diff <= dueLoadingMs()) return (0, react$1.createElement)("span", { style: {
+							display: "inline-flex",
+							alignItems: "center",
+							color: RUNNING_TONE
+						} }, (0, react$1.createElement)(RunningBlocks, {}));
+						return (0, react$1.createElement)("span", { style: {
+							cursor: "default",
+							opacity: .85
+						} }, tt("listDeferred"));
+					}
+					return nextExecLabel(row.nextSlotAt, nowMs, tt);
+				}
+			})));
+		}
+		const titleStyle = {
+			fontSize: "var(--dshpc-font-lg)",
+			fontWeight: 600,
+			lineHeight: "var(--dshpc-line-md)"
+		};
+		const metaStyle = {
+			fontSize: "var(--dshpc-font-sm)",
+			color: "var(--dshpc-fg-2)",
+			lineHeight: "var(--dshpc-line-sm)",
+			marginTop: "2px"
+		};
+		const faintStyle = {
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-fg-3)",
+			lineHeight: "var(--dshpc-line-sm)",
+			marginTop: "2px"
+		};
+		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
+		*  `position: relative` 保留为内部绝对定位子元素的上下文。 */
+		const panelBoxStyle = {
+			height: `360px`,
+			display: "flex",
+			flexDirection: "column",
+			minHeight: 0,
+			position: "relative"
+		};
+		/**
+		* 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
+		* 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
+		* 亮起后请求一返回就立刻消失（`BUSY_HOLD_MS = 0`，无保底停留）。
+		*/
+		const BUSY_DELAY_MS = 400;
+		const BUSY_HOLD_MS = 0;
+		function useDelayedBusy(active) {
+			const [shown, setShown] = (0, react$1.useState)(false);
+			const shownAtRef = (0, react$1.useRef)(0);
+			(0, react$1.useEffect)(() => {
+				if (active) {
+					if (shown) return;
+					const timer = setTimeout(() => {
+						shownAtRef.current = Date.now();
+						setShown(true);
+					}, BUSY_DELAY_MS);
+					return () => {
+						clearTimeout(timer);
+					};
+				}
+				if (!shown) return;
+				const wait = Math.max(0, BUSY_HOLD_MS - (Date.now() - shownAtRef.current));
+				const timer = setTimeout(() => {
+					setShown(false);
+				}, wait);
+				return () => {
+					clearTimeout(timer);
+				};
+			}, [active, shown]);
+			return shown;
+		}
+		/** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
+		const panelScrollFillStyle = {
+			flex: "1 1 auto",
+			minHeight: 0,
+			overflowY: "auto"
+		};
+		const panelWrapStyle = {
+			borderTop: `1px dashed var(--dshpc-border)`,
+			paddingTop: "10px",
+			paddingLeft: "14px",
+			paddingRight: "14px",
+			paddingBottom: "12px"
+		};
+		const panelBarStyle = {
+			paddingTop: "10px",
+			borderTop: `1px dashed var(--dshpc-border)`,
+			display: "flex",
+			alignItems: "center",
+			gap: "8px"
+		};
+		/**
+		* 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
+		* 上沿一条线（与执行记录表头上沿线同色 `--dshpc-border`），从这条线到下方虚线**整块铺底色**，
+		* 日志直接铺在里面。等宽字体跟环境风格走。
+		*/
+		const logAreaStyle = {
+			...panelScrollFillStyle,
+			borderTop: `1px solid var(--dshpc-border)`,
+			background: "var(--dshpc-surface-1)",
+			padding: "10px 0",
+			fontFamily: monoFont$1,
+			fontSize: "var(--dshpc-font-xs)",
+			lineHeight: "var(--dshpc-line-sm)"
+		};
+		/** 日志行：行间距拉开一点（用户 2026-10-03）。 */
+		const logRowStyle = {
+			marginBottom: "6px",
+			wordBreak: "break-all"
+		};
+		/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
+		const formatStamp = (iso) => iso === null ? "—" : formatDateTime(iso, {
+			seconds: true,
+			fallback: "—"
+		});
+		/** 产出物图标格（最多 3 个 +「…」更多）。 */
+		const outputCellStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "2px",
+			flexWrap: "nowrap"
+		};
+		/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
+		const filterRowStyle = {
+			display: "flex",
+			alignItems: "center",
+			gap: "6px",
+			flexWrap: "wrap",
+			marginBottom: "10px"
+		};
+		/** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
+		const limitRowStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "4px",
+			marginLeft: "auto",
+			fontSize: "var(--dshpc-font-xs)",
+			color: "var(--dshpc-fg-3)"
+		};
+		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
+		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
+			color: "var(--dshpc-danger)",
+			fontWeight: 600
+		} : void 0;
+		/**
+		* 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
+		* 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
+		* 数据全走 `client/query.ts` 真实取数（仓库硬规则：禁止 mock）。
+		*/
+		function TaskExpandPanel(props) {
+			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props;
+			const [tab, setTab] = (0, react$1.useState)("info");
+			/**
+			* 事件推送计数（2026-10-07 补缺口）：`row` 的运行态字段只覆盖「终态 / 在飞翻转」，
+			* **覆盖不到**派发后写 `session_id`、`dispatched → running`、阻塞 / 放行这类**行级**变化
+			* （它们不改 `lastStatus` / `lastFinishedAt` / `running`）⇒ 面板会一直停在「已派发」，会话链接与
+			* 早期日志都看不到，直到这次执行出终态。故订阅本任务的运行态事件来驱动三个 tab 重取。
+			* 只认 `payload.taskId === 本卡片`（在屏判定）；面板只在展开时才挂载 ⇒ 订阅也只在展开期间存在。
+			*/
+			const [pushNonce, setPushNonce] = (0, react$1.useState)(0);
+			useEvents(RUN_EVENT_TYPES, (event) => {
+				if (event.payload?.taskId !== row.id) return;
+				setPushNonce((n) => n + 1);
+			});
+			useResync(() => {
+				setPushNonce((n) => n + 1);
+			});
+			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}|${pushNonce}`;
+			const firstRun = (0, react$1.useRef)(true);
+			(0, react$1.useEffect)(() => {
+				if (firstRun.current) {
+					firstRun.current = false;
+					return;
+				}
+				refresh();
+			}, [runSig, refresh]);
+			const [infoLast, setInfoLast] = (0, react$1.useState)(null);
+			const [infoLoading, setInfoLoading] = (0, react$1.useState)(false);
+			const [infoError, setInfoError] = (0, react$1.useState)(null);
+			const [infoLoaded, setInfoLoaded] = (0, react$1.useState)(false);
+			const timeRangeLabels = (0, react$1.useMemo)(() => ({
+				all: t("trAll"),
+				presets: {
+					today: t("trToday"),
+					yesterday: t("trYesterday"),
+					thisWeek: t("trThisWeek"),
+					lastWeek: t("trLastWeek"),
+					thisMonth: t("trThisMonth"),
+					lastMonth: t("trLastMonth")
+				}
+			}), [t]);
+			const [recStatus, setRecStatus] = (0, react$1.useState)("");
+			const [recRange, setRecRange] = (0, react$1.useState)({
+				from: "",
+				to: ""
+			});
+			const [recLimit, setRecLimit] = (0, react$1.useState)(100);
+			const [records, setRecords] = (0, react$1.useState)(null);
+			const [recLoading, setRecLoading] = (0, react$1.useState)(false);
+			const [recError, setRecError] = (0, react$1.useState)(null);
+			const [openInstance, setOpenInstance] = (0, react$1.useState)(null);
+			const [events, setEvents] = (0, react$1.useState)(null);
+			const [eventsError, setEventsError] = (0, react$1.useState)(null);
+			const [logKeyword, setLogKeyword] = (0, react$1.useState)("");
+			const [logRange, setLogRange] = (0, react$1.useState)({
+				from: "",
+				to: ""
+			});
+			const [logLimit, setLogLimit] = (0, react$1.useState)(100);
+			const [logs, setLogs] = (0, react$1.useState)(null);
+			const [logLoading, setLogLoading] = (0, react$1.useState)(false);
+			const recBusy = useDelayedBusy(recLoading);
+			const logBusy = useDelayedBusy(logLoading);
+			const [logError, setLogError] = (0, react$1.useState)(null);
+			/**
+			* 立即执行成功后的「立刻重拉执行记录」信号（用户 2026-10-03 真机反馈：点了马上写记录，
+			* 但面板要等下一次轮询才显示 ⇒ 等它显示时任务都已经在跑了）。计数 +1 即触发下面那个 effect。
+			*/
+			const [runNonce, setRunNonce] = (0, react$1.useState)(0);
+			const [runToast, setRunToast] = (0, react$1.useState)(null);
+			const runSeq = (0, react$1.useRef)(0);
+			(0, react$1.useEffect)(() => {
+				if (runToast !== null) notify(runToast.text, { variant: runToast.tone });
+			}, [runToast]);
+			/** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
+			const runNowToast = (outcome) => {
+				if (outcome.ok) return {
+					text: t("cardRunNowOk"),
+					tone: "success"
+				};
+				switch (outcome.error) {
+					case "already-running": return {
+						text: t("cardRunNowAlready"),
+						tone: "error"
+					};
+					case "upstream-not-succeeded": return {
+						text: t("cardRunNowBlocked"),
+						tone: "error"
+					};
+					case "upstream-missing": return {
+						text: t("cardRunNowMissingDep"),
+						tone: "error"
+					};
+					case "workspace-missing": return {
+						text: tt("cardRunNowWorkspace", { name: outcome.detail ?? "" }),
+						tone: "error"
+					};
+					case "attachment-missing": return {
+						text: tt("cardRunNowAttachment", { name: outcome.detail ?? "" }),
+						tone: "error"
+					};
+					case "task-not-found": return {
+						text: t("cardRunNowNotFound"),
+						tone: "error"
+					};
+					case "not-ready": return {
+						text: t("cardRunNowNotReady"),
+						tone: "error"
+					};
+					default: return {
+						text: tt("cardRunNowFailed", { reason: outcome.detail ?? outcome.error }),
+						tone: "error"
+					};
+				}
+			};
+			const doRunNow = () => {
+				onRunNow(row.id).then((outcome) => {
+					const { text, tone } = runNowToast(outcome);
+					runSeq.current += 1;
+					setRunToast({
+						text,
+						tone,
+						seq: runSeq.current
+					});
+					if (outcome.ok) setRunNonce((n) => n + 1);
+				});
+			};
+			(0, react$1.useEffect)(() => {
+				if (tab !== "info") return;
+				let alive = true;
+				setInfoLoading(true);
+				setInfoError(null);
+				fetchInstances({
+					taskId: row.id,
+					statuses: LAST_RUN_STATUSES,
+					limit: 1
+				}).then(({ rows }) => {
+					if (!alive) return;
+					setInfoLast(rows[0] ?? null);
+					setInfoLoaded(true);
+				}).catch((error) => {
+					if (alive) setInfoError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setInfoLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				tab,
+				row.id,
+				runSig
+			]);
+			const filterSig = `${recStatus}|${recRange.from}|${recRange.to}|${recLimit}`;
+			const prevFilterSig = (0, react$1.useRef)(filterSig);
+			(0, react$1.useEffect)(() => {
+				const filterChanged = prevFilterSig.current !== filterSig;
+				prevFilterSig.current = filterSig;
+				if (tab !== "records") return;
+				let alive = true;
+				setRecLoading(true);
+				setRecError(null);
+				const range = rangeToQuery(recRange, "day");
+				fetchInstances({
+					taskId: row.id,
+					statuses: recStatus === "" || recStatus === "all" ? void 0 : statusesOfBucket(recStatus),
+					from: range.fromTs,
+					to: range.toTs,
+					limit: recLimit
+				}).then(({ rows }) => {
+					if (!alive) return;
+					setRecords(rows);
+					if (filterChanged) {
+						setOpenInstance(null);
+						setEvents(null);
+					}
+				}).catch((error) => {
+					if (alive) setRecError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setRecLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				tab,
+				row.id,
+				recStatus,
+				recRange,
+				recLimit,
+				runSig,
+				runNonce,
+				filterSig
+			]);
+			(0, react$1.useEffect)(() => {
+				if (openInstance === null) return;
+				let alive = true;
+				setEventsError(null);
+				setEvents(null);
+				fetchEvents(openInstance).then((rows) => {
+					if (alive) setEvents(rows);
+				}).catch((error) => {
+					if (alive) setEventsError(error instanceof Error ? error.message : String(error));
+				});
+				return () => {
+					alive = false;
+				};
+			}, [openInstance]);
+			(0, react$1.useEffect)(() => {
+				if (tab !== "logs") return;
+				let alive = true;
+				setLogLoading(true);
+				setLogError(null);
+				const range = rangeToQuery(logRange, "minute");
+				fetchLogs({
+					taskId: row.id,
+					keyword: logKeyword.trim() === "" ? void 0 : logKeyword.trim(),
+					from: range.fromTs,
+					to: range.toTs,
+					limit: logLimit
+				}).then(({ rows }) => {
+					if (alive) setLogs(rows);
+				}).catch((error) => {
+					if (alive) setLogError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setLogLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				tab,
+				row.id,
+				logKeyword,
+				logRange,
+				logLimit,
+				runSig
+			]);
+			const renderInfo = () => {
+				const view = {
+					scheduleLine,
+					nextSlot: renderNextExec(row.nextSlotAt, t),
+					workspace: row.workspace,
+					model: modelText,
+					retry: String(row.retryMax),
+					window: row.schedule.window,
+					attachments: row.attachments.map((item) => ({
+						name: item.name,
+						key: `${item.kind}:${item.name}`,
+						path: item.path ?? null,
+						anchorSessionId: item.anchorSessionId ?? null,
+						isDir: item.isDir
+					})),
+					depends: row.depends.map((dep) => ({
+						id: dep.id,
+						title: dep.title,
+						enabled: dep.enabled
+					}))
+				};
+				return (0, react$1.createElement)("div", { style: panelBoxStyle }, (0, react$1.createElement)("div", { style: infoWrapStyle }, (0, react$1.createElement)("div", {
+					className: "dsh-tdt-info-cfg",
+					style: infoConfigStyle
+				}, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), taskInfoBaseFields({
+					t,
+					view,
+					onOpenFile,
+					onViewTask
+				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--dshpc-font-xs)",
+					color: "var(--dshpc-danger)"
+				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : infoLast === null ? (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--dshpc-font-xs)",
+					color: "var(--dshpc-fg-3)"
+				} }, t("infoNoRun")) : lastRunFields({
+					t,
+					instance: infoLast,
+					onOpenSession,
+					onOpenFile
+				}))));
+			};
+			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(SelectField, {
+				value: recStatus,
+				options: [
+					{
+						value: "all",
+						label: tt("filterAll")
+					},
+					{
+						value: "succeeded",
+						label: statusTextOf("succeeded", t)
+					},
+					{
+						value: "failed",
+						label: statusTextOf("failed", t)
+					},
+					{
+						value: "running",
+						label: t("filterRunning")
+					}
+				],
+				onChange: (next) => {
+					setRecStatus(next);
+				},
+				placeholder: t("colStatus"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("colStatus"),
+				size: "md",
+				width: 96
+			}), (0, react$1.createElement)(TimeRange, {
+				value: recRange,
+				onChange: setRecRange,
+				labels: timeRangeLabels,
+				precision: "day",
+				size: "md"
+			}), (0, react$1.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
+				value: String(recLimit),
+				options: [
+					50,
+					100,
+					200
+				].map((n) => ({
+					value: String(n),
+					label: String(n)
+				})),
+				onChange: (next) => {
+					setRecLimit(Number(next));
+				},
+				placeholder: String(recLimit),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("cardLogLimit"),
+				size: "md",
+				width: 70
+			}), t("limitSuffix")), recError !== null ? (0, react$1.createElement)("span", { style: {
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-danger)"
+			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react$1.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, recStatus !== "" && recStatus !== "all" || recRange.from !== "" || recRange.to !== "" ? t("cardRecordsEmptyFiltered") : t("cardRecordsEmpty")) : (0, react$1.createElement)(Table, {
+				ariaLabel: t("cardTabRecords"),
+				density: "compact",
+				selectedKeys: openInstance === null ? [] : [openInstance],
+				columns: [
+					{
+						key: "status",
+						title: t("colStatus"),
+						width: 76,
+						align: "center"
+					},
+					{
+						key: "planned",
+						title: t("colPlanned"),
+						width: 140,
+						align: "center"
+					},
+					{
+						key: "actual",
+						title: t("colActualStart"),
+						width: 84,
+						align: "center"
+					},
+					{
+						key: "duration",
+						title: t("colDuration"),
+						width: 76,
+						align: "center"
+					},
+					{
+						key: "tokens",
+						title: t("colTokens"),
+						width: 72,
+						align: "center"
+					},
+					{
+						key: "note",
+						title: t("colNote")
+					},
+					{
+						key: "outputs",
+						title: t("colOutputs"),
+						width: 96
+					},
+					{
+						key: "session",
+						title: t("colSession"),
+						width: 68,
+						align: "center"
+					}
+				],
+				rows: records.flatMap((instance) => {
+					const open = openInstance === instance.id;
+					const outputs = outputsOf(instance.outputs);
+					const sid = instance.session_id;
+					const openFile = onOpenFile;
+					const openSession = onOpenSession;
+					const canOpenFile = sid !== null && openFile !== void 0;
+					const canOpenSession = sid !== null && openSession !== void 0;
+					const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at);
+					const main = {
+						key: instance.id,
+						cells: {
+							status: (0, react$1.createElement)("span", { style: {
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "6px"
+							} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), (0, react$1.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--dshpc-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t))),
+							planned: (0, react$1.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at)),
+							actual: (0, react$1.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at)),
+							duration: formatDurationHms(durMs),
+							tokens: instance.token_in === null && instance.token_out === null ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, "-") : (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))),
+							note: instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react$1.createElement)("span", {
+								title: instance.note,
+								className: "dsh-tdt-ellipsis",
+								style: {
+									display: "block",
+									color: "var(--dshpc-fg-3)"
+								}
+							}, instance.note),
+							outputs: outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+								key: output,
+								label: baseNameOf(output),
+								side: "top"
+							}, (0, react$1.createElement)("button", {
+								type: "button",
+								className: "dsh-tdt-chip",
+								style: { cursor: canOpenFile ? "pointer" : "default" },
+								onClick: (event) => {
+									event.stopPropagation();
+									if (canOpenFile && openFile !== void 0 && sid !== null) openFile(sid, output);
+								}
+							}, output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+								path: output,
+								size: 16
+							})))), outputs.length > 3 ? (0, react$1.createElement)("button", {
+								type: "button",
+								"aria-label": t("viewSession"),
+								className: "dsh-tdt-chip dsh-tdt-chip--label",
+								onClick: (event) => {
+									event.stopPropagation();
+									if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid);
+								}
+							}, "…") : null),
+							session: canOpenSession && openSession !== void 0 && sid !== null ? (0, react$1.createElement)(Button$2, {
+								variant: "outline",
+								size: "sm",
+								onClick: (event) => {
+									event.stopPropagation();
+									openSession(sid);
+								}
+							}, t("colView")) : null
+						}
+					};
+					if (!open) return [main];
+					return [main, {
+						key: `${instance.id}-detail`,
+						cells: { status: {
+							colSpan: 8,
+							content: (0, react$1.createElement)("div", { role: "presentation" }, eventsError !== null ? (0, react$1.createElement)("div", { style: {
+								fontSize: "var(--dshpc-font-xs)",
+								color: "var(--dshpc-danger)"
+							} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { style: {
+								fontSize: "var(--dshpc-font-xs)",
+								color: "var(--dshpc-fg-3)"
+							} }, t("cardEventsEmpty")) : events.map((event) => (0, react$1.createElement)("div", {
+								key: event.seq,
+								style: {
+									marginBottom: "7px",
+									lineHeight: "var(--dshpc-line-md)"
+								}
+							}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, event.detail ?? ""))))
+						} }
+					}];
+				}),
+				onRowClick: (row) => {
+					const key = String(row.key);
+					if (key.endsWith("-detail")) return;
+					setOpenInstance(openInstance === key ? null : key);
+				}
+			})));
+			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Input, {
+				value: logKeyword,
+				onChange: setLogKeyword,
+				placeholder: t("cardKeyword"),
+				size: "md",
+				style: { width: "140px" }
+			}), (0, react$1.createElement)(TimeRange, {
+				value: logRange,
+				onChange: setLogRange,
+				labels: timeRangeLabels,
+				precision: "minute",
+				size: "md"
+			}), (0, react$1.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
+				value: String(logLimit),
+				options: [
+					50,
+					100,
+					200
+				].map((n) => ({
+					value: String(n),
+					label: String(n)
+				})),
+				onChange: (next) => {
+					setLogLimit(Number(next));
+				},
+				placeholder: String(logLimit),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("cardLogLimit"),
+				size: "md",
+				width: 70
+			}), t("limitSuffix")), logError !== null ? (0, react$1.createElement)("span", { style: {
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-danger)"
+			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react$1.createElement)("div", { style: logAreaStyle }, logs === null ? null : logs.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : logs.map((row) => (0, react$1.createElement)("div", {
+				key: row.seq,
+				style: logRowStyle
+			}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react$1.createElement)("span", { style: {
+				color: row.level === "error" ? "var(--dshpc-danger)" : row.level === "warn" ? "var(--dshpc-accent)" : "var(--dshpc-fg-3)",
+				fontWeight: row.level === "error" ? 600 : 400
+			} }, `[${row.level}]`), " ", (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, `${row.kind}: `), (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-2)" } }, row.message)))));
+			/** 删除确认：核心 `confirmModal`（命令式，自带遮罩与焦点管理）。 */
+			const askDelete = () => {
+				confirmModal({
+					title: t("cardDeleteTitle"),
+					message: t("cardDeleteDesc"),
+					tone: "danger",
+					confirmText: t("cardDelete"),
+					cancelText: t("cardCancel")
+				}).then((ok) => {
+					if (ok) onDelete(row.id);
+				});
+			};
+			/** 立即执行确认（2026-10-03）：同款核心 `confirmModal`。 */
+			const askRunNow = () => {
+				confirmModal({
+					title: t("cardRunNowTitle"),
+					message: t("cardRunNowDesc"),
+					confirmText: t("cardRunNow"),
+					cancelText: t("cardCancel")
+				}).then((ok) => {
+					if (ok) doRunNow();
+				});
+			};
+			return (0, react$1.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react$1.createElement)("div", { style: { position: "relative" } }, (0, react$1.createElement)("div", { style: panelBarStyle }, (0, react$1.createElement)(Segmented, {
+				value: tab,
+				size: "md",
+				bordered: false,
+				tone: "business",
+				items: [
+					{
+						value: "info",
+						label: t("cardTabInfo")
+					},
+					{
+						value: "records",
+						label: t("cardTabRecords")
+					},
+					{
+						value: "logs",
+						label: t("cardTabLogs")
+					}
+				],
+				onChange: setTab
+			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
+				variant: "danger-outline",
+				size: "md",
+				onClick: askDelete
+			}, t("cardDelete")), (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "md",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlayOutlineRegular, { size: 14 }),
+				onClick: askRunNow
+			}, t("cardRunNow")), (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "md",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+				onClick: () => {
+					onEdit(row.id);
+				}
+			}, t("editorEdit")))));
+		}
+		function TaskCard(props) {
+			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, onToggleEnabled, refOf, refresh } = props;
+			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
+			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
+			return (0, react$1.createElement)("div", {
+				ref: refOf,
+				style: {
+					display: "block",
+					width: "100%",
+					marginBottom: "10px"
+				}
+			}, (0, react$1.createElement)(Card, {
+				accent: "neutral",
+				bar: {
+					size: 0,
+					inset: 0,
+					gap: 0
+				},
+				style: { padding: 0 }
+			}, (0, react$1.createElement)("div", {
+				className: "dsh-tdt-card-row",
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "12px",
+					cursor: "pointer",
+					padding: "12px 14px"
+				},
+				onClick: () => {
+					const sel = typeof window === "undefined" ? null : window.getSelection();
+					if (sel !== null && sel.toString() !== "") return;
+					onToggleOpen();
+				}
+			}, (0, react$1.createElement)(StatusRail, {
+				row,
+				t
+			}), (0, react$1.createElement)("div", { style: {
+				flex: "1 1 auto",
+				minWidth: 0
+			} }, (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "baseline",
+				gap: "6px",
+				minWidth: 0
+			} }, onViewTask === void 0 ? (0, react$1.createElement)("div", { style: {
+				...titleStyle,
+				flex: "0 1 auto",
+				minWidth: 0
+			} }, (0, react$1.createElement)(MarqueeText, { text: row.title })) : (0, react$1.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-info-dep",
+				title: t("infoViewTask"),
+				style: {
+					...titleStyle,
+					flex: "0 1 auto",
+					minWidth: 0,
+					textAlign: "left"
+				},
+				onClick: (event) => {
+					event.stopPropagation();
+					onViewTask(row.id);
+				}
+			}, (0, react$1.createElement)(MarqueeText, { text: row.title })), row.code !== null ? (0, react$1.createElement)("span", { style: {
+				...faintStyle,
+				flex: "none",
+				display: "inline"
+			} }, `[${row.code}]`) : null, (0, react$1.createElement)("span", { style: {
+				...faintStyle,
+				flex: "none",
+				display: "inline"
+			} }, row.createdAt === null ? `[${t("listCreatedUnknown")}]` : `[${t("listCreatedTag", { date: formatYmd(row.createdAt) })}]`), row.enabled ? null : (0, react$1.createElement)("span", { style: {
+				...faintStyle,
+				flex: "none",
+				display: "inline"
+			} }, t("listDisabledTag"))), (0, react$1.createElement)("div", { style: {
+				...metaStyle,
+				minWidth: 0
+			} }, (0, react$1.createElement)(MarqueeText, { text: scheduleLine }))), (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				flex: "none"
+			} }, (0, react$1.createElement)(PastPill, {
+				row,
+				t,
+				tt
+			}), (0, react$1.createElement)(NextPill, {
+				row,
+				t,
+				tt
+			}), (0, react$1.createElement)("span", {
+				className: "dsh-tdt-switch",
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+				checked: row.enabled,
+				onChange: (next) => {
+					onToggleEnabled(row.id, next);
+				},
+				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled"),
+				title: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
+			})), (0, react$1.createElement)("span", { onClick: (event) => {
+				event.stopPropagation();
+			} }, (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
+				label: t("listExpandHint"),
+				onClick: onToggleOpen,
+				"aria-expanded": open,
+				style: { transform: open ? "rotate(180deg)" : "none" }
+			})))), open ? (0, react$1.createElement)(TaskExpandPanel, {
+				row,
+				t,
+				tt,
+				scheduleLine,
+				modelText,
+				onEdit,
+				onDelete,
+				onRunNow,
+				onOpenFile,
+				onOpenSession,
+				onViewTask,
+				refresh
+			}) : null));
+		}
+		function TaskListView(props) {
+			const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces, onCreate } = props;
+			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
+			ensureTaskListStyle();
+			ensureTaskInfoStyle();
+			ensureTaskEditorStyle();
+			const [filter, setFilter] = (0, react$1.useState)("all");
+			const [workspace, setWorkspace] = (0, react$1.useState)("");
+			const [query, setQuery] = (0, react$1.useState)("");
+			const [openId, setOpenId] = (0, react$1.useState)(null);
+			/** 拨片的乐观值：点了立刻变，等服务端确认（它会马上同步任务表并重新拉一次）后清除。 */
+			const [optimistic, setOptimistic] = (0, react$1.useState)({});
+			const rowsWithOptimistic = (0, react$1.useMemo)(() => {
+				if (Object.keys(optimistic).length === 0) return rows;
+				return rows.map((row) => row.id in optimistic ? {
+					...row,
+					enabled: optimistic[row.id]
+				} : row);
+			}, [rows, optimistic]);
+			(0, react$1.useEffect)(() => {
+				setOptimistic((cur) => Object.keys(cur).length === 0 ? cur : {});
+			}, [rows]);
+			/**
+			* 异常数 = 「最近一次**失败**」或「最近一次**未执行**」的任务数（全量统计，不受当前筛选影响）。
+			* ⚠️ 2026-09-30 评审 P0：状态条已把 `skipped`（未执行）与 `failed` 一起标红，这里（与下面的异常筛选）
+			* 却只认 `failed` ⇒ 卡片红着却不在「异常」里，口径分叉。两处必须同口径。
+			*/
+			const abnormalCount = (0, react$1.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed" || row.lastStatus === "skipped").length, [rowsWithOptimistic]);
+			const visible = (0, react$1.useMemo)(() => {
+				const q = query.trim().toLowerCase();
+				return sortRows(rowsWithOptimistic.filter((row) => {
+					if (filter === "enabled" && !row.enabled) return false;
+					if (filter === "disabled" && row.enabled) return false;
+					if (filter === "abnormal" && row.lastStatus !== "failed" && row.lastStatus !== "skipped") return false;
+					if (workspace !== "" && row.workspace !== workspace) return false;
+					if (q === "") return true;
+					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
+				}));
+			}, [
+				rowsWithOptimistic,
+				filter,
+				workspace,
+				query
+			]);
+			const refOf = useFlip(visible.map((r) => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join("|"));
+			const workspaceOptions = (0, react$1.useMemo)(() => [{
+				value: "",
+				label: t("listFilterWorkspaceAll")
+			}, ...workspaces], [workspaces, t]);
+			return (0, react$1.createElement)("div", { style: {
+				width: "100%",
+				display: "flex",
+				justifyContent: "center"
+			} }, (0, react$1.createElement)("div", {
+				id: PANEL_CONTENT_ID,
+				style: PANEL_CONTENT_STYLE
+			}, (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				marginBottom: "12px",
+				flexWrap: "wrap"
+			} }, (0, react$1.createElement)(Segmented, {
+				value: filter,
+				size: "md",
+				tone: "business",
+				items: [
+					{
+						value: "all",
+						label: t("listFilterAll")
+					},
+					{
+						value: "enabled",
+						label: t("listFilterEnabled")
+					},
+					{
+						value: "disabled",
+						label: t("listFilterDisabled")
+					},
+					{
+						value: "abnormal",
+						label: t("listFilterAbnormal"),
+						badge: abnormalCount
+					}
+				],
+				onChange: setFilter
+			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				flex: "none"
+			} }, (0, react$1.createElement)(Input, {
+				size: "md",
+				className: "dsh-tdt-tl-input",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
+				value: query,
+				placeholder: t("listSearchPlaceholder"),
+				onChange: (value) => {
+					setQuery(value);
+				}
+			}), (0, react$1.createElement)(SelectField, {
+				value: workspace,
+				options: workspaceOptions,
+				onChange: setWorkspace,
+				placeholder: t("listFilterWorkspaceAll"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("listFilterWorkspaceAll"),
+				size: "md",
+				width: WS_WIDTH,
+				searchable: true
+			}))), visible.length === 0 ? rows.length === 0 && !ready ? null : rows.length === 0 ? (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				alignItems: "center",
+				justifyContent: "center",
+				margin: "24px auto 0",
+				padding: "48px 32px",
+				textAlign: "center",
+				border: "1px dashed var(--dshpc-border-heavy)",
+				borderRadius: "var(--dshpc-radius-md)",
+				background: "var(--dshpc-surface-1)"
+			} }, (0, react$1.createElement)("div", { style: { color: "var(--dshpc-fg-3)" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 40 })), (0, react$1.createElement)("div", { style: {
+				marginTop: "12px",
+				fontSize: "var(--dshpc-font-lg)",
+				fontWeight: 600
+			} }, t("listEmptyTitle")), (0, react$1.createElement)("div", { style: {
+				marginTop: "6px",
+				maxWidth: "360px",
+				fontSize: "var(--dshpc-font-sm)",
+				color: "var(--dshpc-fg-2)",
+				lineHeight: "var(--dshpc-line-sm)"
+			} }, t("listEmptyHint")), (0, react$1.createElement)(Button$2, {
+				variant: "primary",
+				size: "md",
+				style: { marginTop: "16px" },
+				onClick: () => {
+					onCreate();
+				}
+			}, t("listEmptyAction"))) : (0, react$1.createElement)("p", { style: {
+				...metaStyle,
+				marginTop: "8px"
+			} }, t("listEmptyFiltered")) : (0, react$1.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react$1.createElement)(TaskCard, {
+				key: row.id,
+				row,
+				t,
+				tt,
+				open: openId === row.id,
+				onToggleOpen: () => {
+					setOpenId((cur) => cur === row.id ? null : row.id);
+				},
+				onEdit,
+				onViewTask,
+				onDelete,
+				onRunNow,
+				onOpenFile,
+				onOpenSession,
+				refresh,
+				onToggleEnabled: (id, enabled) => {
+					setOptimistic((cur) => ({
+						...cur,
+						[id]: enabled
+					}));
+					onToggleEnabled(id, enabled).then((err) => {
+						if (err === null) return;
+						setOptimistic((cur) => {
+							if (!(id in cur)) return cur;
+							const next = { ...cur };
+							delete next[id];
+							return next;
+						});
+					});
+				},
+				refOf: refOf(row.id)
+			})))));
 		}
 		//#endregion
 		//#region src/client/index.ts
@@ -82791,6 +83386,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}, `← ${t("backToConversation")}`), (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react$1.createElement)("div", { style: headerRightStyle }, (0, react$1.createElement)(Segmented, {
 				value: tab,
 				size: "md",
+				tone: "business",
 				items: [
 					{
 						value: "config",
@@ -83217,6 +83813,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		function apply(ctx) {
 			connectFs({ path: FS_ROUTE });
 			connectHost(ctx);
+			setTooltipRenderer((props) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: props.label,
+				side: props.side ?? "top",
+				portal: true,
+				...props.align === void 0 ? {} : { align: props.align },
+				...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth }
+			}, props.children));
 			ctx.inject(["locale"], (localeCtx) => {
 				ctx.effect(() => localeCtx.locale.register(LOCALE_NS, {
 					zh,

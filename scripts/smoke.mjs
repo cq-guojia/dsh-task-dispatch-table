@@ -5989,24 +5989,26 @@ console.log("\n[14] runtime-index");
 				!tl.includes("chipStyleOf") &&
 				!tl.includes("IconNewChatOutlineRegular"),
 		);
+		// 2026-11-06：执行记录表整体改接核心 `Table`，列宽 / 对齐从自绘样式常量搬到
+		// `TableColumn` 配置 ⇒ 断言改读列定义块（同一个口径：8 列、7 列定长、备注唯一弹性）。
+		const recColsBlock =
+			/columns: \[[\s\S]*?\] as TableColumn\[\]/.exec(tl)?.[0] ?? "";
 		check(
-			"备注列是唯一弹性列（其余 7 列定长）+ 除产出物 / 备注外内容居中",
-			tl.includes("miniCellCenterStyle") &&
-				tl.includes("maxWidth: 0") &&
-				(tl.match(/width: '\d+px'/g) ?? []).length >= 7,
+			"备注列是唯一弹性列（其余 7 列定长）+ 除产出物 / 备注外内容居中（核心 Table 列定义）",
+			recColsBlock.includes("key: 'note', title: t('colNote')") &&
+				(recColsBlock.match(/width: \d+/g) ?? []).length >= 7 &&
+				!/key: 'note'[\s\S]{0,80}width:/.test(recColsBlock) &&
+				(recColsBlock.match(/align: 'center'/g) ?? []).length >= 6,
 		);
-		// 只锁定表头那一块（弹窗等处用 surface-base 是合理的，不在本断言范围）。
-		const headBlock = /const recHeadStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? "";
+		// 2026-11-06：表头 / 斑马纹 / 行悬浮 / 吸顶全归核心 `Table` 皮肤 ⇒ 本仓这些自绘常量应已删，
+		// 断言改为「核心表格在、旧皮肤不在」（再留一份自绘表头就红）。
 		check(
-			"表头：居中 + 加高 + 上下各一条线（走 **box-shadow** ⇒ 跟着表头不随滚动滑走）",
-			headBlock.includes("textAlign: 'center'") &&
-				headBlock.includes("background: 'var(--dshpc-head-bg)'") &&
-				headBlock.includes("padding: '11px 10px'") &&
-				headBlock.includes("boxShadow:") &&
-				headBlock.includes("inset 0 1px 0 var(--dshpc-border)") &&
-				headBlock.includes("inset 0 -1px 0 var(--dshpc-border)") &&
-				!headBlock.includes("borderTop:") &&
-				!headBlock.includes("borderBottom:"),
+			"执行记录表头 / 斑马纹 / 行悬浮归核心 Table（本仓自绘 recHeadStyle / miniTable 皮肤已删）",
+			tl.includes("h(Table, {") &&
+				tl.includes("ariaLabel: t('cardTabRecords')") &&
+				!tl.includes("recHeadStyle") &&
+				!tl.includes("miniTableStyle") &&
+				!tl.includes("miniCellStyle"),
 		);
 		check(
 			"状态过滤下拉顺序 全部 / 成功 / 失败 / 运行中（下拉不必守两字）",
@@ -6082,10 +6084,13 @@ console.log("\n[14] runtime-index");
 				!tl.includes("color: 'var(--dshpc-danger)',\n"),
 		);
 		check(
-			"展开行 / 展开内容区走**带透明度的蓝**（--dshpc-open-bg / -soft），不用灰色",
-			tl.includes("var(--dshpc-open-bg)") &&
-				tl.includes("var(--dshpc-open-bg-soft)") &&
-				!tl.includes("open ? { background: 'var(--dshpc-surface-2)' }"),
+			"展开行由核心 Table 的选中行皮肤标记（selectedKeys），展开内容整行跨 8 列（colSpan）",
+			tl.includes(
+				"selectedKeys: openInstance === null ? [] : [openInstance]",
+			) &&
+				tl.includes("colSpan: 8") &&
+				// 手写展开行蓝底已删：底色 / 左侧竖条一律交给核心皮肤。
+				!tl.includes("var(--dshpc-open-bg)"),
 		);
 		check(
 			"展开区直接铺执行日志：**无标题、无黑框**（小字段亦已移除）",
@@ -6181,11 +6186,10 @@ console.log("\n[14] runtime-index");
 				!tl.includes("logLoading ? h('span'"),
 		);
 		check(
-			"展开区排布放宽：外圈 padding 翻倍 + 日志行间距 + 字色压暗一档",
-			tl.includes("padding: '18px 20px'") &&
-				tl.includes("marginBottom: '7px'") &&
+			"展开区日志：行间距放宽 + 字色压暗一档（外圈留白交给核心 Table 单元格密度）",
+			tl.includes("marginBottom: '7px'") &&
 				tl.includes("color: 'var(--dshpc-fg-2)'") &&
-				!tl.includes("color: 'var(--dshpc-accent)' }, `${event.kind}"),
+				!tl.includes("color: 'var(--dshpc-accent)' }, `"),
 		);
 		check(
 			"执行记录 / 日志都有条数过滤：`显示 <N> 条`，统一居右",
@@ -6381,10 +6385,12 @@ console.log("\n[14] runtime-index");
 				idxSrc.includes("scheduler.runNow(id)"),
 		);
 		check(
-			"前端：按钮组在删除与编辑之间插「立即执行」+ 确认框 + 结果提示 + 播放三角图标 + 成功后立即重拉记录",
+			"前端：按钮组在删除与编辑之间插「立即执行」+ 核心 confirmModal 确认 + 结果提示 + 播放三角图标 + 成功后立即重拉记录",
 			tl.includes("t('cardRunNow')") &&
 				tl.includes("t('cardRunNowDesc')") &&
-				tl.includes("renderRunConfirm") &&
+				// 2026-11-06：自绘确认框已删，一律走核心命令式 confirmModal。
+				tl.includes("confirmModal(") &&
+				!tl.includes("renderRunConfirm") &&
 				tl.includes("notify(") &&
 				tl.includes("IconPlayOutlineRegular") &&
 				tl.includes("runNonce"),
@@ -6661,11 +6667,13 @@ console.log("\n[14] runtime-index");
 		);
 
 		check(
-			"未保存冲突：编辑别的任务且草稿脏 ⇒ 先弹确认（面板内联层 VersionConfirm，不引官方 Modal）",
-			te.includes("t('editorViewSwitchTitle')") &&
-				te.includes("t('editorViewSwitchDesc')") &&
+			"未保存冲突：编辑别的任务且草稿脏 ⇒ 核心 Modal 确认（本仓自绘 VersionConfirm 已删）",
+			te.includes("editorViewSwitchTitle") &&
+				te.includes("editorViewSwitchDesc") &&
 				te.includes("pendingView !== null") &&
-				te.includes("VersionConfirm") &&
+				// 2026-11-06：确认框统一由 `ConfirmDialog`（核心 Modal）承载。
+				te.includes("h(ConfirmDialog, {") &&
+				!te.includes("VersionConfirm") &&
 				ixSrc.includes("setPendingView({ id })") &&
 				ixSrc.includes("editorDirtyRef") &&
 				ixSrc.includes("onDirtyChange"),
@@ -6677,15 +6685,16 @@ console.log("\n[14] runtime-index");
 		);
 
 		check(
-			"未保存冲突（编辑态切去编辑另一个任务）：草稿脏 ⇒ 先弹三选确认（取消 / 继续编辑 / 直接覆盖），不静默覆盖",
-			te.includes("t('editorEditSwitchTitle')") &&
-				te.includes("t('editorEditSwitchDesc')") &&
-				te.includes("t('editorEditSwitchKeep')") &&
-				te.includes("t('editorEditSwitchOverwrite')") &&
+			"未保存冲突（编辑态切去编辑另一个任务）：草稿脏 ⇒ 核心 Modal 两选（继续编辑 / 直接覆盖），不静默覆盖",
+			te.includes("editorEditSwitchTitle") &&
+				te.includes("editorEditSwitchDesc") &&
+				te.includes("editorEditSwitchKeep") &&
+				te.includes("editorEditSwitchOverwrite") &&
 				te.includes("pendingEdit !== null") &&
-				te.includes("VersionConfirm") &&
-				te.includes("middleLabel: t(") &&
-				te.includes("onMiddle:") &&
+				te.includes("h(ConfirmDialog, {") &&
+				!te.includes("VersionConfirm") &&
+				te.includes('cancelLabel: t("editorEditSwitchKeep")') &&
+				te.includes('confirmLabel: t("editorEditSwitchOverwrite")') &&
 				ixSrc.includes("setPendingEdit({ id })") &&
 				ixSrc.includes("openEditorNow(") &&
 				ixSrc.includes("editorDirtyRef.current") &&

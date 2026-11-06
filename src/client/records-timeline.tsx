@@ -38,7 +38,7 @@ import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular,
   IconFolderCloseRegular, IconQueueOutlineRegular, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { baseNameOf, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
+import { baseNameOf, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, pad2 } from './format'
 import { resolvedDepsOf, type ResolvedDependency } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { ProcessFiles } from './process-files'
@@ -251,15 +251,6 @@ const emptyStyle: CSSProperties = {
 /** 本地日历日的 key（`YYYY-MM-DD`）。 */
 function ymdOfDate(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
-
-/** `HH:mm`（非法值给占位）。 */
-function hmOf(iso: string | null): string {
-  if (iso === null) return '--'
-  const ms = Date.parse(iso)
-  if (Number.isNaN(ms)) return '--'
-  const d = new Date(ms)
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
 /**
@@ -1076,11 +1067,12 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
     h('div', { id: PANEL_CONTENT_ID, style: PANEL_CONTENT_STYLE },
       // ── 过滤行：左 = 状态四档分段控件；右 = 时间范围 · 工作区 · 任务 ──
       h('div', { style: filterRowStyle },
-        // ⚠️ variant 走**默认档**（与「任务配置」页那排分组按钮同一皮肤：轨道第二层面 + 外描边）——
-        //    用户 2026-10-05：执行记录的这排与任务配置页样式不一致（那边有白边）⇒ 统一成同一变体。
+        // ⚠️ 无描边 + 选中片统一 business 色（用户 2026-11-06：全站滑轨都这档）。
         h(Segmented<StatusBucket | 'all'>, {
           value: bucket === '' ? 'all' : bucket,
           size: 'md',
+          bordered: false,
+          tone: 'business',
           label: t('colStatus'),
           items: statusItems,
           onChange: (next: StatusBucket | 'all') => { setBucket(next === 'all' ? '' : next) },
@@ -1095,6 +1087,8 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
             ariaLabel: t('listFilterWorkspaceAll'),
             size: 'md',
             width: 120,
+            // 工作区候选可能很多：下拉必须带搜索框（核心 Picker 自带，全站统一口径）。
+            searchable: true,
           }),
           h(TaskPicker, {
             value: taskId,

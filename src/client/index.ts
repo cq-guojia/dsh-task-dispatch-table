@@ -23,6 +23,7 @@ import {
 	type OfficeToPdfFace,
 	openFilePreview,
 } from "dsh-plugin-core/adv/explorer";
+import { Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
 import { connectHost, notify as coreNotify } from "dsh-plugin-core/ui";
 import { t as coreT } from "dsh-plugin-core/utils";
 import {
@@ -98,6 +99,7 @@ import {
 	type PanelDockController,
 	QuickToolbar,
 	Segmented,
+	setTooltipRenderer,
 	type TaskOption,
 } from "./ui";
 
@@ -1599,6 +1601,7 @@ function TaskPage(props: {
 							h(Segmented<"config" | "records" | "calendar" | "settings">, {
 								value: tab,
 								size: "md",
+								tone: "business",
 								items: [
 									{ value: "config", label: t("tabConfig") },
 									{ value: "records", label: t("tabRecords") },
@@ -2488,6 +2491,21 @@ export function apply(ctx: ClientContext): void {
 	// 文件浏览 / 预览改接核心 `adv/explorer`：接上宿主 fs 面 + 官方工作区快照源。
 	connectFs({ path: FS_ROUTE });
 	connectHost(ctx as unknown as Parameters<typeof connectHost>[0]);
+	// 核心 `FieldHint` 的气泡本体就是官方 `Tooltip`：插件启动时必须注入一次 renderer，
+	// 否则问号只有图标、悬停无气泡（core 不自绘兜底）。`portal` 让气泡逃出分栏的 overflow 裁剪。
+	setTooltipRenderer((props) =>
+		h(
+			Tooltip,
+			{
+				label: props.label,
+				side: props.side ?? "top",
+				portal: true,
+				...(props.align === undefined ? {} : { align: props.align }),
+				...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
+			},
+			props.children,
+		),
+	);
 
 	// 词典注册要等 locale 服务；绝不能写进模块级注入声明（组合缺服务会 pending 卡死）。
 	ctx.inject(["locale"], (localeCtx) => {

@@ -46,7 +46,7 @@ import { sortRows } from '../task-sort.js'
 import { debugLogOrder, dueLoadingMs, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, Card, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { applyStyle, Button, Card, confirmModal, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, Table, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TableColumn, type TableRow, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
@@ -409,16 +409,6 @@ const panelBarStyle: Record<string, string | number> = {
   paddingTop: '10px', borderTop: `1px dashed var(--dshpc-border)`,
   display: 'flex', alignItems: 'center', gap: '8px',
 }
-const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--dshpc-font-sm)' }
-const miniCellStyle: Record<string, string | number> = {
-  // 行更松（用户 2026-10-02：「上下拉高一点、大气些」）；**不用实线分隔** ⇒ 去掉 borderBottom，
-  // 改行交错浅底（`.dsh-tdt-rec-alt`）。
-  padding: '9px 10px', textAlign: 'left',
-  color: 'var(--dshpc-fg)', whiteSpace: 'nowrap', fontSize: 'var(--dshpc-font-sm)',
-}
-const miniCellWrapStyle: Record<string, string | number> = { ...miniCellStyle, whiteSpace: 'normal', wordBreak: 'break-word' }
-/** 居中格（用户 2026-10-02：除**产出物 / 备注**两列外，各列内容一律居中）。 */
-const miniCellCenterStyle: Record<string, string | number> = { ...miniCellStyle, textAlign: 'center' }
 /**
  * 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
  * 上沿一条线（与执行记录表头上沿线同色 `--dshpc-border`），从这条线到下方虚线**整块铺底色**，
@@ -434,16 +424,6 @@ const logAreaStyle: Record<string, string | number> = {
 }
 /** 日志行：行间距拉开一点（用户 2026-10-03）。 */
 const logRowStyle: Record<string, string | number> = { marginBottom: '6px', wordBreak: 'break-all' }
-const overlayStyle: Record<string, string | number> = {
-  position: 'fixed', inset: 0, zIndex: 'var(--dshpc-z-modal)', background: 'var(--dshpc-mask)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-}
-const dialogStyle: Record<string, string | number> = {
-  width: '360px', maxWidth: 'calc(100vw - 48px)', boxSizing: 'border-box',
-  background: 'var(--dshpc-surface-base, #fff)', color: 'var(--dshpc-fg)',
-  border: `1px solid var(--dshpc-border)`, borderRadius: 'var(--dshpc-radius-md)', padding: '18px',
-  boxShadow: 'var(--dshpc-shadow-2, 0 12px 32px rgba(0,0,0,0.4))',
-}
 
 /** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
 const formatStamp = (iso: string | null): string =>
@@ -471,21 +451,6 @@ const filterRowStyle: Record<string, string | number> = {
 const limitRowStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto',
   fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)',
-}
-/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
-const recHeadStyle: Record<string, string | number> = {
-  // 标题一律**居中**（用户 2026-10-02）。
-  // 底色走 `--dshpc-head-bg`：浅色主题**偏深**、暗色主题**偏亮**（两侧都与卡片面拉开层次，
-  // 不再出现「浅色纯白 / 暗色纯黑」）。明暗差异单点落在核心 token 层。
-  ...miniCellStyle,
-  // 表头**加高**（用户 2026-10-02：太薄了）。
-  padding: '11px 10px',
-  textAlign: 'center', fontWeight: 600, color: 'var(--dshpc-fg-2)',
-  background: 'var(--dshpc-head-bg)',
-  // **上下各一条线，且亮度一致**；⚠️ 必须走 **box-shadow**：
-  // `border-collapse: collapse` 下边框归**表格网格**所有 ⇒ sticky 表头滚动时边框会「滑走」
-  // （用户 2026-10-02 揪出）。box-shadow 属于 th 自身 ⇒ 跟着表头不动。
-  boxShadow: 'inset 0 1px 0 var(--dshpc-border), inset 0 -1px 0 var(--dshpc-border)',
 }
 /** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 const statusStyleOf = (status: string): Record<string, string | number> | undefined =>
@@ -593,13 +558,7 @@ function TaskExpandPanel(props: {
   const logBusy = useDelayedBusy(logLoading)
   const [logError, setLogError] = useState<string | null>(null)
 
-  // ── 删除确认 ──
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-
-  // ── 立即执行（2026-10-03）：确认框 + 结果 Toast ──
-  const [confirmRun, setConfirmRun] = useState(false)
-  const [runBusy, setRunBusy] = useState(false)
+  // ── 删除 / 立即执行：确认框一律走核心命令式 `confirmModal`（自带惰性 mount、不再自绘 overlay）──
   /**
    * 立即执行成功后的「立刻重拉执行记录」信号（用户 2026-10-03 真机反馈：点了马上写记录，
    * 但面板要等下一次轮询才显示 ⇒ 等它显示时任务都已经在跑了）。计数 +1 即触发下面那个 effect。
@@ -626,14 +585,13 @@ function TaskExpandPanel(props: {
     }
   }
   const doRunNow = (): void => {
-    setRunBusy(true)
     void onRunNow(row.id).then(outcome => {
       const { text, tone } = runNowToast(outcome)
       runSeq.current += 1
       setRunToast({ text, tone, seq: runSeq.current })
       // 成功 ⇒ 立刻重拉「执行记录」（不等轮询）：用户点了就要马上看见那条记录。
       if (outcome.ok) setRunNonce(n => n + 1)
-    }).finally(() => { setRunBusy(false); setConfirmRun(false) })
+    })
   }
 
   // 切到基础信息 ⇒ 取「上次执行」一条（新→旧排序，limit 1 即最近的一条终态实例）。
@@ -830,23 +788,25 @@ function TaskExpandPanel(props: {
               ((recStatus !== '' && recStatus !== 'all') || recRange.from !== '' || recRange.to !== '')
                 ? t('cardRecordsEmptyFiltered')
                 : t('cardRecordsEmpty'))
-          : h('table', { style: { ...miniTableStyle, tableLayout: 'fixed' } },
-            h('thead', { className: 'dsh-tdt-rec-head' }, h('tr', null,
-              // 除「备注」外**一律定长**（备注是唯一弹性列，拉伸 / 收缩只动它）。
-              // 列序（用户 2026-10-02 二次调整）：**查看会话在最后、产出物在倒数第二**——
-              // 「用眼睛看的」在前（含备注），「要点的」排在后面挨在一起。
-              h('th', { style: { ...recHeadStyle, width: '76px' } }, t('colStatus')),
-              // 计划执行：年改**四位**（`2026-09-30 15:10`）⇒ 列宽相应放宽；备注是弹性列会自动让位。
-              h('th', { style: { ...recHeadStyle, width: '140px' } }, t('colPlanned')),
-              h('th', { style: { ...recHeadStyle, width: '84px' } }, t('colActualStart')),
-              h('th', { style: { ...recHeadStyle, width: '76px' } }, t('colDuration')),
-              h('th', { style: { ...recHeadStyle, width: '72px' } }, t('colTokens')),
-              h('th', { style: recHeadStyle }, t('colNote')),
-              h('th', { style: { ...recHeadStyle, width: '96px' } }, t('colOutputs')),
-              h('th', { style: { ...recHeadStyle, width: '68px' } }, t('colSession')),
-            )),
-            h('tbody', null,
-              records.flatMap((instance, index) => {
+          : h(Table, {
+              // 表格皮肤归核心 `Table`（Plain 档：无线框、竖向浅分隔线、行悬浮淡蓝）。
+              ariaLabel: t('cardTabRecords'),
+              density: 'compact',
+              // 展开的那一行由核心表格的「选中行」皮肤标记（左侧竖条 + 淡底），不再手写行背景。
+              selectedKeys: openInstance === null ? [] : [openInstance],
+              columns: [
+                // 列序（用户 2026-10-02 二次调整）：查看会话在最后、产出物在倒数第二。
+                // 除「备注」外一律定长；备注是唯一弹性列（核心 fixed 布局里不传 width 即参与均分）。
+                { key: 'status', title: t('colStatus'), width: 76, align: 'center' },
+                { key: 'planned', title: t('colPlanned'), width: 140, align: 'center' },
+                { key: 'actual', title: t('colActualStart'), width: 84, align: 'center' },
+                { key: 'duration', title: t('colDuration'), width: 76, align: 'center' },
+                { key: 'tokens', title: t('colTokens'), width: 72, align: 'center' },
+                { key: 'note', title: t('colNote') },
+                { key: 'outputs', title: t('colOutputs'), width: 96 },
+                { key: 'session', title: t('colSession'), width: 68, align: 'center' },
+              ] as TableColumn[],
+              rows: records.flatMap((instance): TableRow[] => {
                 const open = openInstance === instance.id
                 const outputs = outputsOf(instance.outputs)
                 const sid = instance.session_id
@@ -858,62 +818,40 @@ function TaskExpandPanel(props: {
                 const durMs = instance.finished_at === null
                   ? Number.NaN
                   : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at)
-                const mainRow = h('tr', {
+                const main: TableRow = {
                   key: instance.id,
-                  // 斑马纹：奇数行浅底（`.dsh-tdt-rec-alt`）；展开行盖成第二层面。
-                  // 斑马纹 + hover 高亮（hover 由 `.dsh-tdt-rec-row:hover` 接管）。
-                  className: ['dsh-tdt-rec-row', open || index % 2 === 0 ? '' : 'dsh-tdt-rec-alt'].join(' ').trim(),
-                  // 展开态走**带透明度的蓝**（`--dshpc-open-bg`）——不用灰色：灰跟斑马纹分不出来。
-                  style: { cursor: 'pointer', ...(open ? { background: 'var(--dshpc-open-bg)' } : {}) },
-                  onClick: () => { setOpenInstance(open ? null : instance.id) },
-                },
-                  // ① 状态图标 + 通用短名（**居中**：状态已统一两字，按字宽算好间距）。
-                  h('td', { style: miniCellCenterStyle },
-                    h('span', { style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' } },
+                  cells: {
+                    // ① 状态图标 + 通用短名。
+                    status: h('span', { style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' } },
                       h(StatusIcon, { status: instance.status }),
                       h('span', {
                         style: instance.status === 'succeeded' ? { color: 'var(--dshpc-success)' } : statusStyleOf(instance.status),
                       }, statusTextOf(instance.status, t)),
                     ),
-                  ),
-                  // ② 计划执行：YY-MM-DD HH:mm（完整时刻进 hover）。
-                  h('td', { style: miniCellCenterStyle },
-                    h('span', { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))),
-                  // ③ 实际开始：HH:mm:ss（未派发 ⇒ '-'）。
-                  h('td', { style: miniCellCenterStyle },
-                    h('span', { title: instance.dispatched_at === null ? undefined : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))),
-                  // ④ 执行时长：H:MM:SS（有小时）/ MM:SS。
-                  h('td', { style: miniCellCenterStyle }, formatDurationHms(durMs)),
-                  // ⑤ 消耗 token（用户 2026-10-02 提上一级）：总量 K/M 格式，hover 看输入/输出/缓存明细。
-                  h('td', { style: miniCellCenterStyle },
-                    instance.token_in === null && instance.token_out === null
+                    // ② 计划执行：YY-MM-DD HH:mm（完整时刻进 hover）。
+                    planned: h('span', { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at)),
+                    // ③ 实际开始：HH:mm:ss（未派发 ⇒ '-'）。
+                    actual: h('span', { title: instance.dispatched_at === null ? undefined : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at)),
+                    // ④ 执行时长：H:MM:SS（有小时）/ MM:SS。
+                    duration: formatDurationHms(durMs),
+                    // ⑤ 消耗 token：总量 K/M 格式，hover 看输入/输出/缓存明细。
+                    tokens: instance.token_in === null && instance.token_out === null
                       ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, '-')
-                      : h('span', { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
-                  // ⑥ 备注：**错误 / 未执行的原因**（服务端 `attachNotes` 从最新原因事件推导）。
-                  // 全表**唯一弹性列**（不定长）：拉伸 / 收缩只动它；超长省略号，hover 看全文。
-                  // ⚠️ **不要红色**（用户 2026-10-02：不是要提醒他去看备注）——走最浅的灰 `--dshpc-fg-3`，
-                  // 比正文更淡，深浅两主题都是「退后一层」的存在感。
-                  h('td', { style: { ...miniCellStyle, maxWidth: 0 } },
-                    instance.note === null || instance.note === undefined || instance.note === ''
+                      : h('span', { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))),
+                    // ⑥ 备注：错误 / 未执行的原因。超长省略号，hover 看全文；走最浅的灰。
+                    note: instance.note === null || instance.note === undefined || instance.note === ''
                       ? null
-                      :                       h('span', {
+                      : h('span', {
                         title: instance.note,
                         className: 'dsh-tdt-ellipsis',
                         style: { display: 'block', color: 'var(--dshpc-fg-3)' },
                       }, instance.note),
-                  ),
-                  // ⑦ 产出物（**倒数第二列**，紧挨「查看会话」）：官方文件类型图标 ≤3 个；
-                  // >3 收「…」（点开会话看完整）；无产出 ⇒ 该格空。**不居中**（图标从左到右排）。
-                  // 图标底板 = 基础层 `.dsh-tdt-chip`（**全站唯一实现**，2026-10-04 收编；执行记录总查询页共用同一份）。
-                  h('td', { style: miniCellStyle },
-                    outputs.length === 0
+                    // ⑦ 产出物（倒数第二列）：官方文件类型图标 ≤3 个；>3 收「…」（点开会话看完整）。
+                    outputs: outputs.length === 0
                       ? null
                       : h('span', { style: outputCellStyle },
-                        // 硬性规定：只给图标、没有文件名 ⇒ 悬停**必须**显示文件名（含后缀），走官方 Tooltip。
                         outputs.slice(0, 3).map(output => h(Tooltip, {
-                          key: output,
-                          label: baseNameOf(output),
-                          side: 'top',
+                          key: output, label: baseNameOf(output), side: 'top',
                         }, h('button', {
                           type: 'button', className: 'dsh-tdt-chip',
                           style: { cursor: canOpenFile ? 'pointer' : 'default' },
@@ -933,50 +871,49 @@ function TaskExpandPanel(props: {
                           }, '…')
                           : null,
                       ),
-                  ),
-                  // ⑧ 会话记录（**最后一列**）：小按钮「查看」（用户 2026-10-02：不要光秃秃一个图标）+ 定宽居中。
-                  h('td', { style: miniCellCenterStyle },
-                    canOpenSession && openSession !== undefined && sid !== null
+                    // ⑧ 会话记录（最后一列）：小按钮「查看」。
+                    session: canOpenSession && openSession !== undefined && sid !== null
                       ? h(Button, {
                         variant: 'outline', size: 'sm',
                         onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid) },
                       }, t('colView'))
                       : null,
-                  ),
-                )
-                const detailRow = open
-                  ? h('tr', { key: `${instance.id}-detail` },
-                    // 展开内容区：**更淡一档的蓝**（`--dshpc-open-bg-soft`）⇒ 与展开行本身区隔开，
-                    // 且不是灰 / 不是纯黑纯白（用户 2026-10-02）。
-                    // 展开区（用户 2026-10-02）：**外圈 padding 翻倍**（9/10 → 18/20），别再密密麻麻。
-                    h('td', {
+                  },
+                }
+                if (!open) return [main]
+                // 展开区：整行跨 8 列（核心 `colSpan` 写法），内容直接铺执行日志。
+                const detail: TableRow = {
+                  key: `${instance.id}-detail`,
+                  cells: {
+                    status: {
                       colSpan: 8,
-                      style: { ...miniCellWrapStyle, padding: '18px 20px', background: 'var(--dshpc-open-bg-soft)' },
+                      content: h('div', { role: 'presentation' },
+                        eventsError !== null
+                          ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${eventsError}`)
+                          : events === null
+                            ? null
+                            : events.length === 0
+                              ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('cardEventsEmpty'))
+                              : events.map(event => h('div', {
+                                key: event.seq, style: { marginBottom: '7px', lineHeight: 'var(--dshpc-line-md)' },
+                              },
+                                h('span', { style: { color: 'var(--dshpc-fg-3)' } }, `${formatStamp(event.ts)} `),
+                                h('span', { style: { color: 'var(--dshpc-fg-2)' } }, `${event.kind} `),
+                                h('span', { style: { color: 'var(--dshpc-fg-2)' } }, event.detail ?? ''),
+                              )),
+                      ),
                     },
-                      // 展开区**直接铺执行日志**（用户 2026-10-02）：**不要标题、不要黑框**——
-                      // 展开的日志本来就是给要看细节的人看的，套一层框 + 一个小标题纯属多余。
-                      // 底色沿用 `--dshpc-open-bg-soft`（淡蓝）就够了，用它把展开区区隔出来。
-                      eventsError !== null
-                        ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${eventsError}`)
-                        : events === null
-                          ? null
-                          : events.length === 0
-                            ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('cardEventsEmpty'))
-                            // 行间距拉开；字色整体**压暗一档**（日志是慢慢翻的，不要跟正文一样刺眼）。
-                            : events.map(event => h('div', {
-                              key: event.seq, style: { marginBottom: '7px', lineHeight: 'var(--dshpc-line-md)' },
-                            },
-                              h('span', { style: { color: 'var(--dshpc-fg-3)' } }, `${formatStamp(event.ts)} `),
-                              h('span', { style: { color: 'var(--dshpc-fg-2)' } }, `${event.kind} `),
-                              h('span', { style: { color: 'var(--dshpc-fg-2)' } }, event.detail ?? ''),
-                            )),
-                    ),
-                  )
-                  : null
-                return [mainRow, detailRow]
+                  },
+                }
+                return [main, detail]
               }),
-            ),
-          ),
+              // 点主行就展开 / 收起；展开行本身（detail）不可再触发。
+              onRowClick: (row) => {
+                const key = String(row.key)
+                if (key.endsWith('-detail')) return
+                setOpenInstance(openInstance === key ? null : key)
+              },
+            }),
         ),
   )
 
@@ -1038,50 +975,26 @@ function TaskExpandPanel(props: {
     ),
   )
 
-  /** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
-  const renderConfirm = (): ReturnType<typeof h> => h('div', {
-    style: overlayStyle,
-    onClick: () => { if (!deleting) setConfirmDelete(false) },
-  },
-    h('div', { style: dialogStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-      h('div', { style: { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, marginBottom: '8px' } }, t('cardDeleteTitle')),
-      h('div', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', lineHeight: 'var(--dshpc-line-sm)', marginBottom: '14px' } }, t('cardDeleteDesc')),
-      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
-        h(Button, {
-          variant: 'outline', size: 'sm', disabled: deleting,
-          onClick: () => { setConfirmDelete(false) },
-        }, t('cardCancel')),
-        h(Button, {
-          variant: 'danger', size: 'sm', disabled: deleting,
-          onClick: () => {
-            setDeleting(true)
-            void onDelete(row.id).finally(() => { setDeleting(false); setConfirmDelete(false) })
-          },
-        }, deleting ? t('loading') : t('cardDelete')),
-      ),
-    ),
-  )
+  /** 删除确认：核心 `confirmModal`（命令式，自带遮罩与焦点管理）。 */
+  const askDelete = (): void => {
+    void confirmModal({
+      title: t('cardDeleteTitle'),
+      message: t('cardDeleteDesc'),
+      tone: 'danger',
+      confirmText: t('cardDelete'),
+      cancelText: t('cardCancel'),
+    }).then(ok => { if (ok) void onDelete(row.id) })
+  }
 
-  /** 立即执行确认框（2026-10-03）：与删除确认同款自绘 overlay，文案「你确定要立即执行此任务吗？」。 */
-  const renderRunConfirm = (): ReturnType<typeof h> => h('div', {
-    style: overlayStyle,
-    onClick: () => { if (!runBusy) setConfirmRun(false) },
-  },
-    h('div', { style: dialogStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-      h('div', { style: { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, marginBottom: '8px' } }, t('cardRunNowTitle')),
-      h('div', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-fg-2)', lineHeight: 'var(--dshpc-line-sm)', marginBottom: '14px' } }, t('cardRunNowDesc')),
-      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
-        h(Button, {
-          variant: 'outline', size: 'sm', disabled: runBusy,
-          onClick: () => { setConfirmRun(false) },
-        }, t('cardCancel')),
-        h(Button, {
-          variant: 'primary', size: 'sm', disabled: runBusy,
-          onClick: () => { doRunNow() },
-        }, runBusy ? t('loading') : t('cardRunNow')),
-      ),
-    ),
-  )
+  /** 立即执行确认（2026-10-03）：同款核心 `confirmModal`。 */
+  const askRunNow = (): void => {
+    void confirmModal({
+      title: t('cardRunNowTitle'),
+      message: t('cardRunNowDesc'),
+      confirmText: t('cardRunNow'),
+      cancelText: t('cardCancel'),
+    }).then(ok => { if (ok) doRunNow() })
+  }
 
   return h('div', { style: panelWrapStyle },
     // 内容区：三选一替换；**滚动只发生在各 tab 自己的内容盒里**（过滤行 / 表头固定，用户 2026-10-02）。
@@ -1094,6 +1007,7 @@ function TaskExpandPanel(props: {
           value: tab,
           size: 'md',
           bordered: false,
+          tone: 'business',
           items: [
             { value: 'info', label: t('cardTabInfo') },
             { value: 'records', label: t('cardTabRecords') },
@@ -1105,13 +1019,13 @@ function TaskExpandPanel(props: {
         // 高度跟同排三滑块一样走 md(28)（用户 2026-10-01：此前 sm=24 比滑块矮 4px）。
         h(Button, {
           variant: 'danger-outline', size: 'md',
-          onClick: () => { setConfirmDelete(true) },
+          onClick: askDelete,
         }, t('cardDelete')),
         // 立即执行（用户 2026-10-03）：插在删除与编辑**中间**；点了弹确认框，确认后提前触发一次调度。
         // 图标用官方「播放三角」（IconPlayOutlineRegular）——用户点名闹钟不对（2026-10-03）。
         h(Button, {
           variant: 'outline', size: 'md', icon: h(IconPlayOutlineRegular, { size: 14 }),
-          onClick: () => { setConfirmRun(true) },
+          onClick: askRunNow,
         }, t('cardRunNow')),
         h(Button, {
           variant: 'outline', size: 'md', icon: h(IconEditOutlineRegular, { size: 14 }),
@@ -1119,8 +1033,6 @@ function TaskExpandPanel(props: {
         }, t('editorEdit')),
       ),
     ),
-    confirmDelete ? renderConfirm() : null,
-    confirmRun ? renderRunConfirm() : null,
   )
 }
 
@@ -1356,6 +1268,7 @@ export function TaskListView(props: {
         h(Segmented<'all' | 'enabled' | 'disabled' | 'abnormal'>, {
           value: filter,
           size: 'md',
+          tone: 'business',
           items: [
             { value: 'all', label: t('listFilterAll') },
             { value: 'enabled', label: t('listFilterEnabled') },

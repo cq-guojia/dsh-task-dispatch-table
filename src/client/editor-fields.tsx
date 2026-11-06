@@ -93,6 +93,8 @@ export function WeekdayPicker(props: {
       items,
       size: 'lg',
       bordered: false,
+      // 选中态统一 business 色（用户 2026-11-06：全站滑轨的选中片都用核心 business）。
+      tone: 'business',
       className: 'dshpc-seg--weekday',
       label: props.label,
       disabled: props.disabled,

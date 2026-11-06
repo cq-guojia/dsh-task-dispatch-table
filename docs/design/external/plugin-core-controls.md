@@ -58,9 +58,22 @@
 
 **纯时分的替代方案**：本仓把「时刻」与「日期」合并成**一个 `DateTimePicker`**（`task-editor.tsx` 的 `MomentField` 只做 `date + time ⇄ ISO` 换算）。核心若将来补 `TimePicker`，再拆开。
 
-## 四、`FieldHint`
+## 四、`FieldHint`（问号提示）
 
-`text`（气泡文字 / aria-label，`\n` 真换行）、`side`（`top` / `bottom` / `right`）、`align`（`center` / `end`）、`maxWidth`、`className`、`style`。渲染为可 focus 的 `span` + 官方 `Tooltip`；挂进可点行时要自己吞点击冒泡（本仓 `HelpButton` 的 `insideClickable` 分支）。
+适用版本：`dsh-plugin-core@0.35.1`（2026-11-06 实测更正）
+
+`text`（气泡文字 / aria-label，`\n` 真换行）、`side`（`top` / `bottom` / `right`）、`align`（`center` / `end`）、`maxWidth`、`className`、`style`。渲染为可 focus 的 `span`（`role="note"`）+ **注入的 Tooltip renderer**；挂进可点行时要自己吞点击冒泡（本仓 `HelpButton` 的 `insideClickable` 分支）。
+
+⚠️ **更正旧结论**：「FieldHint 自己渲染官方 Tooltip」是错的。核心**不做降级兜底**（`FieldHint.js:28-31`）：
+
+| 事实 | 说明 |
+|---|---|
+| 必须注入 | 插件启动时调 `setTooltipRenderer(fn)`；未注入 ⇒ **只出问号图标、没有气泡**（`FieldHint.js:30`） |
+| 宿主内恒需 | 宿主里官方包恒在，所以这是**产品形态**问题，不是「可选优化」。用户 2026-11-06 报「问号有反应但没提示」即此因 |
+| 注入写法 | `setTooltipRenderer(props => h(Tooltip, { label: props.label, side: props.side ?? 'top', portal: true, ...(props.align ? {align} : {}), ...(props.maxWidth ? {maxWidth} : {}), }, props.children))`；本仓在 `index.ts` 的 `apply()` 里做一次 |
+| `TooltipRenderProps` | `label` / `side` / `align` / `maxWidth` / `children`；`children` 必须是能挂 ref 的真实 DOM 元素（函数组件挂不上） |
+| `portal: true` | 右侧栏 / 滚动容器会裁剪绝对定位气泡 ⇒ 必须让官方 Tooltip 挂到 body |
+| 同源 | 核心 `Segmented` 的分段提示也走同一个 renderer（`Segmented.js:65`）⇒ 注入一次，全站问号 / 选块提示一起生效 |
 
 ## 五、`notify` / `showToast`
 
@@ -120,7 +133,41 @@
 
 本仓 `task-editor.tsx` 的 `PrefixedInput` 包装已改底为 `InputGroup`（任务名称 / 编号两处）。
 
-## 十、复核命令（升级核心后照跑）
+## 十、`Segmented` / `Table` / 确认框（适用版本 0.35.1）
+
+### `Segmented`
+
+| 点 | 事实 |
+|---|---|
+| `bordered` | **默认 `false`**（无外描边）；`true` 只是最外多一圈 1px，总高与无框版逐像素一致 |
+| `tone` | **唯一的配色入口**：内置色名（`business` / `success` / …）由核心定底 / 字（明暗两主题各自成立），或传 `{ bg, fg }` |
+| `variant` | **已删**（2026-10-26）；旧调用写 `variant:'inset'` 没有效果 |
+| 本仓口径 | 全部滑轨 `bordered:false` + `tone:'business'`（用户 2026-11-06 点名） |
+
+### `Table`
+
+| 点 | 事实 |
+|---|---|
+| 数据模型 | `columns`（`key` / `title` / `width`(px 数字或 CSS 串) / `align` / `divider` / `padding` / `headerTone` / `children` 分组表头）+ `rows`（`{ key, cells }`，`cells` 是**列 key → 单元格**映射，按**叶子列**取值） |
+| 单元格对象 | `{ content, colSpan, rowSpan, align }`；某列 key 缺省（`undefined`）= 该格不渲染（给上一行 `rowSpan` 让位）；要空格请显式 `null` |
+| **没有内建展开行** | 展开内容用**一条附加行** + 单格 `{ colSpan: 列数 }` 承载（本仓执行记录 `colSpan: 8`） |
+| 展开态标记 | 用 `selectedKeys`（核心皮肤给高亮 + 左侧竖条），**不要**自己给行写背景色 |
+| 外观 | `density`: `'compact'` / `'default'` / `'comfortable'`；`striped`；`borders`: `'y'`（默认）/ `'all'` / `'x'` / `'none'` |
+| 交互 | `onRowClick(row, index)` 才可点（行获得指针 / Enter / 空格）；`ariaLabel` 必给 |
+| `translate` | 类型是核心 `Translate`，本仓 `t` 键集更大 ⇒ **不传**（走核心内置中英字典） |
+| 本仓用法 | 执行记录（`task-list.tsx`）、设置 → 日志（`db-table.tsx`）；**不许再写 `h('table')` / 斑马纹类 / 自绘表头** |
+
+### 确认框
+
+| 组件 | 用法 | 本仓落点 |
+|---|---|---|
+| `confirmModal` | **命令式**，自带惰性 mount / 遮罩 / 焦点管理，返回 `Promise<boolean>`；选项 `title` / `message` / `tone` / `confirmText` / `cancelText` | 删除任务 / 立即执行 / 删除版本，`confirmModal({...})` 一行搞定，**不许再自绘 overlay** |
+| `alertModal` | 命令式单按钮警告，`Promise<void>`（关闭即确认） | 需要「只看一下」的场景 |
+| 受控 `Modal` + 核心 `Checkbox` | 需要**勾选 / 自定义内容 / 自定义按钮文案**时才用；`closeOnMask` 可控 | 本仓 `ConfirmDialog`（完全权限保存、未保存冲突两选）；外壳归核心，本仓只排版正文与 footer |
+
+⚠️ **已登记缺口（待核心支持，何心）**：`Card` / `StripCard` 的左侧色条**不支持 hover / Tooltip**（色条是纯装饰元素，没有事件面）⇒ 本仓执行记录里「色条悬停显示状态说明」已撤掉。核心补上事件 / `tooltip` 口子后，再把该提示接回。
+
+## 十一、复核命令（升级核心后照跑）
 
 ```bash
 node -p "require('./node_modules/dsh-plugin-core/package.json').version"
@@ -131,4 +178,8 @@ grep -n "interface ModelPickerProps" -A 35 node_modules/dsh-plugin-core/dist/ui/
 grep -n "interface WorkspacePickerProps" -A 30 node_modules/dsh-plugin-core/dist/ui/inputs/WorkspacePicker.d.ts
 grep -n "interface InputGroupProps" -A 35 node_modules/dsh-plugin-core/dist/ui/inputs/InputGroup.d.ts
 grep -n "interface CardSharedProps" -A 30 node_modules/dsh-plugin-core/dist/ui/display/Card.d.ts
+grep -n "setTooltipRenderer\|TooltipRenderProps" -A 10 node_modules/dsh-plugin-core/dist/ui/infra/tooltip.d.ts
+grep -n "interface TableSharedProps\|interface TableColumn\|interface TableRow" -A 20 node_modules/dsh-plugin-core/dist/ui/display/table-shared.d.ts
+grep -n "confirmModal\|alertModal" -A 10 node_modules/dsh-plugin-core/dist/ui/feedback/modal-host.d.ts
+grep -n "bordered\|tone" -A 3 node_modules/dsh-plugin-core/dist/ui/inputs/Segmented.d.ts
 ```

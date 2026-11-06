@@ -99,7 +99,10 @@ import {
 	Segmented,
 	SelectField,
 	Button as TdtButton,
+	Checkbox,
+	confirmModal,
 	InputGroup,
+	Modal,
 	Textarea,
 	type PickerGroup,
 } from "./ui";
@@ -1221,101 +1224,19 @@ const promptEditorTheme = EditorView.theme(
 	{ dark: true },
 );
 
-/** 关闭「新建 / 编辑任务」分栏前的确认。
- *  故意不用官方 Modal：其 className 只落到卡片 .dialog，抬不到分栏这一层(z1040)，会被压住、点不了。
- *  这里以**绝对定位**挂在分栏面板内（面板 = position:relative），盖住整条分栏，
- *  天然在表单 / 全屏编辑器之上。（U21 撤掉全屏遮罩后，容器从遮罩改挂面板本体。） */
-function ConfirmDiscard(props: {
-	t: T;
-	onStay: () => void;
-	onLeave: () => void;
-}): ReactNode {
-	return h(
-		"div",
-		{
-			role: "alertdialog",
-			"aria-modal": true,
-			"aria-label": props.t("editorDiscardTitle"),
-			style: {
-				position: "absolute",
-				inset: 0,
-				zIndex: 10,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: "24px",
-				background: "var(--dshpc-mask, rgba(0,0,0,0.45))",
-			},
-			onClick: props.onStay,
-		},
-		h(
-			"div",
-			{
-				style: {
-					width: "min(380px, 100%)",
-					boxSizing: "border-box",
-					background: "var(--dshpc-surface-2, #2a2e33)",
-					borderRadius: "var(--dshpc-radius-panel, 10px)",
-					boxShadow: "var(--dshpc-shadow-2)",
-					padding: "22px 24px",
-					color: "var(--dshpc-fg)",
-				},
-				onClick: (event: { stopPropagation(): void }) => {
-					event.stopPropagation();
-				},
-			},
-			h(
-				"div",
-				{
-					style: {
-						fontSize: "var(--dshpc-font-xl)",
-						fontWeight: 500,
-						marginBottom: "8px",
-					},
-				},
-				props.t("editorDiscardTitle"),
-			),
-			h(
-				"div",
-				{
-					style: {
-						fontSize: "var(--dshpc-font-lg)",
-						lineHeight: "var(--dshpc-line-lg)",
-						color: "var(--dshpc-fg-2)",
-						marginBottom: "20px",
-					},
-				},
-				props.t("editorDiscardDesc"),
-			),
-			h(
-				"div",
-				{ style: { display: "flex", justifyContent: "flex-end", gap: "8px" } },
-				h(
-					Button,
-					{ variant: "outline", size: "sm", onClick: props.onStay },
-					props.t("editorDiscardStay"),
-				),
-				h(
-					Button,
-					{ variant: "primary", size: "sm", onClick: props.onLeave },
-					props.t("editorDiscardLeave"),
-				),
-			),
-		),
-	);
-}
-
-/** 版本管理内的小型确认框（复用关闭确认的自绘样式：盖在编辑器之上、随抽屉浮在宿主之上）。 */
-function VersionConfirm(props: {
+/**
+ * 高危确认框（「完全权限」保存）：**核心 `Modal` + 核心 `Checkbox`**（2026-11-06）。
+ * 普通确认一律走核心命令式 `confirmModal`；只有这张需要「勾选风险」才留在组件内。
+ * 标题染警告橙；勾选前置灰确认钮 —— 逐条保留 2026-09-30 的交互口径，只换外壳。
+ */
+function ConfirmDialog(props: {
 	t: T;
 	title: string;
 	desc: string;
 	/** 结构化圆点清单（用户 2026-09-30：正文别糊成一坨——说明是说明、条目是条目，层级拉开）。 */
 	bullets?: readonly string[];
 	confirmLabel?: string;
-	/** 可选中钮（三选确认：取消 / 中 / 确认）。编辑切任务冲突确认用它放「继续编辑」。 */
-	middleLabel?: string;
-	onMiddle?: () => void;
+	cancelLabel?: string;
 	/** 标题染警告橙（高危确认，如「完全权限」保存确认）。 */
 	warning?: boolean;
 	/** 勾选确认：提供时确认钮在勾选前置灰（用户 2026-09-30：完全权限保存前须打勾）。 */
@@ -1330,157 +1251,22 @@ function VersionConfirm(props: {
 	const needAck = props.checkbox !== undefined;
 	const acked = needAck && props.checkbox?.checked === true;
 	return h(
-		"div",
+		Modal,
 		{
-			role: "alertdialog",
-			"aria-modal": true,
-			style: {
-				position: "absolute",
-				inset: 0,
-				zIndex: 20,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: "24px",
-				background: "var(--dshpc-mask, rgba(0,0,0,0.45))",
-			},
-			onClick: props.onCancel,
-		},
-		h(
-			"div",
-			{
-				style: {
-					width: "min(400px, 100%)",
-					boxSizing: "border-box",
-					background: "var(--dshpc-surface-2, #2a2e33)",
-					borderRadius: "var(--dshpc-radius-panel, 10px)",
-					boxShadow: "var(--dshpc-shadow-2)",
-					padding: "20px 24px 18px",
-					color: "var(--dshpc-fg)",
-				},
-				onClick: (event: { stopPropagation(): void }) => {
-					event.stopPropagation();
-				},
-			},
-			// 层级：标题 15/600（警告橙可选）→ 说明 13 次要色 → 圆点清单 13 主色、条目间留呼吸 → 勾选 → 按钮。
-			h(
-				"div",
-				{
-					style: {
-						fontSize: "var(--dshpc-font-lg)",
-						fontWeight: 600,
-						lineHeight: "var(--dshpc-line-lg)",
-						marginBottom: "10px",
-						...(props.warning === true
-							? { color: "var(--dshpc-warning)" }
-							: {}),
-					},
-				},
-				props.title,
-			),
-			props.desc !== ""
-				? h(
-						"div",
-						{
-							style: {
-								fontSize: "var(--dshpc-font-md)",
-								lineHeight: "var(--dshpc-line-md)",
-								color: "var(--dshpc-fg-2)",
-								marginBottom: props.bullets !== undefined ? "8px" : "18px",
-							},
-						},
-						props.desc,
-					)
-				: null,
-			props.bullets !== undefined && props.bullets.length > 0
-				? h(
-						"ul",
-						{
-							style: {
-								listStyle: "none",
-								margin: "0 0 18px",
-								padding: "10px 12px",
-								borderRadius: "var(--dshpc-radius-md,8px)",
-								background: "var(--dshpc-surface-1,rgba(128,128,128,.08))",
-								display: "flex",
-								flexDirection: "column",
-								gap: "6px",
-							},
-						},
-						...props.bullets.map((b) =>
-							h(
-								"li",
-								{
-									key: b,
-									style: {
-										fontSize: "var(--dshpc-font-md)",
-										lineHeight: "var(--dshpc-line-md)",
-										display: "flex",
-										gap: "8px",
-									},
-								},
-								h("span", {
-									style: {
-										flex: "none",
-										width: "5px",
-										height: "5px",
-										borderRadius: "50%",
-										background: "var(--dshpc-fg-3,rgba(128,128,128,.8))",
-										margin: "7px 0 0",
-									},
-								}),
-								h("span", null, b),
-							),
-						),
-					)
-				: null,
-			needAck
-				? h(
-						"label",
-						{
-							style: {
-								display: "flex",
-								alignItems: "flex-start",
-								gap: "8px",
-								fontSize: "var(--dshpc-font-md)",
-								lineHeight: "var(--dshpc-line-md)",
-								cursor: "pointer",
-								marginBottom: "16px",
-							},
-						},
-						h("input", {
-							type: "checkbox",
-							checked: props.checkbox?.checked === true,
-							onChange: (event: { target: { checked: boolean } }) => {
-								props.checkbox?.onToggle(event.target.checked);
-							},
-							style: {
-								flex: "none",
-								margin: "2px 0 0",
-								accentColor: "var(--dshpc-warning)",
-								width: "14px",
-								height: "14px",
-								cursor: "pointer",
-							},
-						}),
-						h("span", null, props.checkbox?.label),
-					)
-				: null,
-			h(
+			size: "sm",
+			title: props.warning === true
+				? h("span", { style: { color: "var(--dshpc-warning)" } }, props.title)
+				: props.title,
+			onClose: props.onCancel,
+			closeOnMask: false,
+			footer: h(
 				"div",
 				{ style: { display: "flex", justifyContent: "flex-end", gap: "8px" } },
 				h(
 					Button,
-					{ variant: "ghost", size: "sm", onClick: props.onCancel },
-					props.t("editorCancel"),
+					{ variant: "outline", size: "sm", onClick: props.onCancel },
+					props.cancelLabel ?? props.t("editorCancel"),
 				),
-				props.middleLabel !== undefined && props.onMiddle !== undefined
-					? h(
-							Button,
-							{ variant: "outline", size: "sm", onClick: props.onMiddle },
-							props.middleLabel,
-						)
-					: null,
 				h(
 					Button,
 					{
@@ -1492,7 +1278,73 @@ function VersionConfirm(props: {
 					props.confirmLabel ?? props.t("editorConfirm"),
 				),
 			),
-		),
+		},
+		props.desc !== ""
+			? h(
+					"div",
+					{
+						style: {
+							fontSize: "var(--dshpc-font-md)",
+							lineHeight: "var(--dshpc-line-md)",
+							color: "var(--dshpc-fg-2)",
+							marginBottom: props.bullets !== undefined ? "8px" : "0",
+						},
+					},
+					props.desc,
+				)
+			: null,
+		props.bullets !== undefined && props.bullets.length > 0
+			? h(
+					"ul",
+					{
+						style: {
+							listStyle: "none",
+							margin: "0 0 14px",
+							padding: "10px 12px",
+							borderRadius: "var(--dshpc-radius-md,8px)",
+							background: "var(--dshpc-surface-1,rgba(128,128,128,.08))",
+							display: "flex",
+							flexDirection: "column",
+							gap: "6px",
+						},
+					},
+					...props.bullets.map((b) =>
+						h(
+							"li",
+							{
+								key: b,
+								style: {
+									fontSize: "var(--dshpc-font-md)",
+									lineHeight: "var(--dshpc-line-md)",
+									display: "flex",
+									gap: "8px",
+								},
+							},
+							h("span", {
+								style: {
+									flex: "none",
+									width: "5px",
+									height: "5px",
+									borderRadius: "50%",
+									background: "var(--dshpc-fg-3,rgba(128,128,128,.8))",
+									margin: "7px 0 0",
+								},
+							}),
+							h("span", null, b),
+						),
+					),
+				)
+			: null,
+		needAck
+			? h(Checkbox, {
+					checked: props.checkbox?.checked === true,
+					label: props.checkbox?.label,
+					accentColor: "var(--dshpc-warning)",
+					onChange: (next: boolean) => {
+						props.checkbox?.onToggle(next);
+					},
+				})
+			: null,
 	);
 }
 
@@ -1534,10 +1386,30 @@ function PromptEditorModal(props: {
 	const [showVersions, setShowVersions] = useState(false);
 	const versions = history?.versions ?? [];
 	const [hoveredId, setHoveredId] = useState<string | null>(null);
-	const [confirmDeleteFile, setConfirmDeleteFile] = useState<string | null>(
-		null,
-	);
-	const [confirmUseFile, setConfirmUseFile] = useState<string | null>(null);
+
+	/** 删除某个版本：核心命令式确认框（不再自绘内联层）。 */
+	const askDeleteVersion = (file: string): void => {
+		void confirmModal({
+			title: t("editorConfirmDeleteTitle"),
+			message: t("editorConfirmDeleteDesc"),
+			tone: "danger",
+			confirmText: t("editorDeleteVersion"),
+			cancelText: t("editorCancel"),
+		}).then((ok) => {
+			if (ok) onDeleteVersion(file);
+		});
+	};
+	/** 找回某个版本：同上。 */
+	const askUseVersion = (file: string): void => {
+		void confirmModal({
+			title: t("editorRestorePromptTitle"),
+			message: t("editorRestorePromptDesc"),
+			confirmText: t("editorUseVersion"),
+			cancelText: t("editorCancel"),
+		}).then((ok) => {
+			if (ok) onRestoreVersion(file);
+		});
+	};
 
 	const versionTitle =
 		editorMode === "create" ? t("editorHistoryVersions") : t("editorVersions");
@@ -1580,7 +1452,8 @@ function PromptEditorModal(props: {
 					id: "dsh-tdt-ed-prompt-mode",
 					value: mode,
 					size: "md",
-					bordered: true,
+					bordered: false,
+					tone: "business",
 					items: [
 						{ value: "edit", label: t("editorModeEdit") },
 						{ value: "preview", label: t("editorModePreview") },
@@ -1598,6 +1471,7 @@ function PromptEditorModal(props: {
 							id: "dsh-tdt-ed-histtoggle",
 							size: "md",
 							bordered: false,
+							tone: "business",
 							multiple: true,
 							value: showVersions ? ["on"] : [],
 							items: [{ value: "on", label: t("editorVersionToggle") }],
@@ -1789,7 +1663,7 @@ function PromptEditorModal(props: {
 																				variant: "link",
 																				size: "sm",
 																				onClick: () => {
-																					setConfirmUseFile(v.file);
+																					askUseVersion(v.file);
 																				},
 																			},
 																			t("editorUseShort"),
@@ -1802,7 +1676,7 @@ function PromptEditorModal(props: {
 																			}),
 																			label: t("editorDeleteVersion"),
 																			onClick: () => {
-																				setConfirmDeleteFile(v.file);
+																				askDeleteVersion(v.file);
 																			},
 																		}),
 																	)
@@ -1815,36 +1689,6 @@ function PromptEditorModal(props: {
 					)
 				: null,
 		),
-		// 三处确认一律严厉措辞：找回前必须让用户知道「会用历史版本覆盖现有修改的所有数据」。
-		confirmDeleteFile !== null
-			? h(VersionConfirm, {
-					t,
-					title: t("editorConfirmDeleteTitle"),
-					desc: t("editorConfirmDeleteDesc"),
-					onCancel: () => {
-						setConfirmDeleteFile(null);
-					},
-					onConfirm: () => {
-						onDeleteVersion(confirmDeleteFile);
-						setConfirmDeleteFile(null);
-					},
-				})
-			: null,
-		confirmUseFile !== null
-			? h(VersionConfirm, {
-					t,
-					title: t("editorRestorePromptTitle"),
-					desc: t("editorRestorePromptDesc"),
-					confirmLabel: t("editorUseVersion"),
-					onCancel: () => {
-						setConfirmUseFile(null);
-					},
-					onConfirm: () => {
-						onRestoreVersion(confirmUseFile);
-						setConfirmUseFile(null);
-					},
-				})
-			: null,
 	);
 }
 
@@ -2060,8 +1904,6 @@ export function TaskEditorDrawer(props: {
 	const [editorOpen, setEditorOpen] = useState(false);
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [pendingHint, setPendingHint] = useState(0); // >0 = Toast seq（「预览态不可保存」中性提示）
-	const [confirmDeleteTask, setConfirmDeleteTask] = useState(false);
-	const [confirmReset, setConfirmReset] = useState(false);
 	const [resetHint, setResetHint] = useState(0); // >0 = Toast seq（「已恢复为打开时的内容」中性提示）
 	const hintSeq = useRef(0);
 	// 保存失败：服务端文案不「长显」占 footer，改为浮现 Toast（用户 2026-09-30：与面板保存提示同款）。
@@ -2200,7 +2042,6 @@ export function TaskEditorDrawer(props: {
 	 */
 	const [uploadPaths, setUploadPaths] = useState<Record<string, string>>({});
 	// 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
-	const [confirmDiscard, setConfirmDiscard] = useState(false);
 	// 原始快照：挂载那一刻定死。弹窗关闭即卸载、重开即重挂 ⇒ 每次打开都从当次初始值算起；
 	// 「改成 2 又改回 1」序列化结果与快照一致 ⇒ 不算改过。
 	const initialDraftRef = useRef(draft);
@@ -2266,27 +2107,59 @@ export function TaskEditorDrawer(props: {
 		};
 	}, [overview?.rows, syncTaskId, patch]);
 
-	/** 统一关闭入口：改过 ⇒ 先弹官方 Modal 确认；没改过 ⇒ 直接关。 */
+	/** 统一关闭入口：改过 ⇒ 先弹核心 `confirmModal` 确认；没改过 ⇒ 直接关。 */
 	const requestClose = useCallback((): void => {
-		if (dirty) setConfirmDiscard(true);
-		else onClose();
-	}, [dirty, onClose]);
+		if (!dirty) {
+			onClose();
+			return;
+		}
+		void confirmModal({
+			title: t("editorDiscardTitle"),
+			message: t("editorDiscardDesc"),
+			confirmText: t("editorDiscardLeave"),
+			cancelText: t("editorDiscardStay"),
+		}).then((ok) => {
+			if (ok) onClose();
+		});
+	}, [dirty, onClose, t]);
 
 	// Esc 关闭；浮层（下拉 / 日历 / 时分）自己先处理并 preventDefault ⇒ 此处不再关弹窗。
-	// 确认弹窗开着时 Esc 关掉确认框（留在编辑）；否则 Esc 走统一关闭入口。
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent): void => {
-			if (confirmDiscard) {
-				setConfirmDiscard(false);
-				return;
-			}
 			if (event.key === "Escape" && !event.defaultPrevented) requestClose();
 		};
 		window.addEventListener("keydown", onKey);
 		return () => {
 			window.removeEventListener("keydown", onKey);
 		};
-	}, [requestClose, confirmDiscard]);
+	}, [requestClose]);
+
+	/** 删除任务：核心命令式确认（措辞严厉，用户 2026-09-30 定稿）。 */
+	const askDeleteTask = (): void => {
+		void confirmModal({
+			title: t("editorDeleteTaskTitle"),
+			message: t("editorDeleteTaskDesc"),
+			tone: "danger",
+			confirmText: t("editorDeleteTask"),
+			cancelText: t("editorCancel"),
+		}).then((ok) => {
+			if (ok) onDelete?.();
+		});
+	};
+	/** 重置表单：核心命令式确认（避免误点清空已填内容，用户 2026-09-30）。 */
+	const askReset = (): void => {
+		void confirmModal({
+			title: t("editorResetTitle"),
+			message: t("editorResetDesc"),
+			confirmText: t("editorReset"),
+			cancelText: t("editorCancel"),
+		}).then((ok) => {
+			if (!ok) return;
+			onChange(initialDraftRef.current);
+			hintSeq.current += 1;
+			setResetHint(hintSeq.current);
+		});
+	};
 
 	// 左缘拖拽调宽 / 宽度记忆 / 收起耳朵：全部由核心 PanelDock 承担（2026-11-06），
 	// 本组件不再自己处理指针手势与 CSS 变量（`--dsh-tdt-editor-w` 已随自建外壳删除）。
@@ -2872,6 +2745,7 @@ export function TaskEditorDrawer(props: {
 					value: scheduleTab,
 					size: "md",
 					bordered: false,
+					tone: "business",
 					items: [
 						{ value: "once", label: t("editorFreqOnce") },
 						{ value: "periodic", label: t("editorSchedulePeriodic") },
@@ -3279,6 +3153,8 @@ export function TaskEditorDrawer(props: {
 					ariaLabel: t("editorWorkspace"),
 					icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
 					width: "100%",
+					// 工作区候选可能很多：下拉必须带搜索框（核心 Picker 自带，全站统一口径）。
+					searchable: true,
 				}),
 			),
 			h(
@@ -3384,6 +3260,7 @@ export function TaskEditorDrawer(props: {
 									value: draft.maxAttempts,
 									size: "md",
 									bordered: false,
+									tone: "business",
 									items: retryOptions,
 									onChange: (value: string) => {
 										patch({ maxAttempts: value });
@@ -3647,7 +3524,8 @@ export function TaskEditorDrawer(props: {
 							id: "dsh-tdt-ed-viewtab",
 							value: viewTab,
 							size: "md",
-							bordered: true,
+							bordered: false,
+							tone: "business",
 							items: [
 								{ value: "view", label: t("editorTabView") },
 								{ value: "edit", label: t("editorTabEdit") },
@@ -3674,7 +3552,7 @@ export function TaskEditorDrawer(props: {
 													size: "sm",
 													className: "dsh-tdt-ed-danger",
 													onClick: () => {
-														setConfirmDeleteTask(true);
+														askDeleteTask();
 													},
 												},
 												t("editorDeleteTask"),
@@ -3689,7 +3567,7 @@ export function TaskEditorDrawer(props: {
 													variant: "ghost",
 													size: "sm",
 													onClick: () => {
-														setConfirmReset(true);
+														askReset();
 													},
 												},
 												t("editorReset"),
@@ -3739,43 +3617,9 @@ export function TaskEditorDrawer(props: {
 									),
 								),
 					),
-					// 删除任务的严厉确认（用户 2026-09-30：措辞「所有的移除都是找不回来的，不可逆的」）。
-					confirmDeleteTask
-						? h(VersionConfirm, {
-								t,
-								title: t("editorDeleteTaskTitle"),
-								desc: t("editorDeleteTaskDesc"),
-								confirmLabel: t("editorDeleteTask"),
-								onCancel: () => {
-									setConfirmDeleteTask(false);
-								},
-								onConfirm: () => {
-									setConfirmDeleteTask(false);
-									onDelete?.();
-								},
-							})
-						: null,
-					// 重置确认（用户 2026-09-30：重置也要先确认，避免误点把已填写内容清空）。
-					confirmReset
-						? h(VersionConfirm, {
-								t,
-								title: t("editorResetTitle"),
-								desc: t("editorResetDesc"),
-								confirmLabel: t("editorReset"),
-								onCancel: () => {
-									setConfirmReset(false);
-								},
-								onConfirm: () => {
-									setConfirmReset(false);
-									onChange(initialDraftRef.current);
-									hintSeq.current += 1;
-									setResetHint(hintSeq.current);
-								},
-							})
-						: null,
-					// 「完全权限」保存确认（高危）：标题警告橙 + 结构化风险清单 + 勾选「我已了解风险」后才可点「保存」。
+					// 「完全权限」保存确认（高危）：核心 `Modal` 壳 + 风险清单 + 勾选后才可保存。
 					fullPermOpen
-						? h(VersionConfirm, {
+						? h(ConfirmDialog, {
 								t,
 								warning: true,
 								title: t("editorFullPermTitle"),
@@ -3796,14 +3640,14 @@ export function TaskEditorDrawer(props: {
 								},
 							})
 						: null,
-					// 未保存时要去查看**另一个任务**：先确认、再切过去（用户 2026-10-05 拍板）。
-					// 走面板内联确认层（VersionConfirm 绝对定位挂在分栏面板内）⇒ 绝不会被遮罩压住点不了。
+					// 未保存时要去查看**另一个任务**：核心 `Modal` 确认后再切（用户 2026-10-05 拍板）。
 					pendingView !== null && pendingView !== undefined
-						? h(VersionConfirm, {
+						? h(ConfirmDialog, {
 								t,
 								title: t("editorViewSwitchTitle"),
 								desc: t("editorViewSwitchDesc"),
 								confirmLabel: t("editorTabView"),
+								cancelLabel: t("editorEditSwitchKeep"),
 								onCancel: () => {
 									onCancelPendingView?.();
 								},
@@ -3812,18 +3656,15 @@ export function TaskEditorDrawer(props: {
 								},
 							})
 						: null,
-					// 未保存时要去编辑**另一个任务**：三选确认（取消 / 继续编辑 / 直接覆盖）——用户 2026-10-05 修正静默覆盖。
+					// 未保存时要去编辑**另一个任务**：两选（继续编辑 / 直接覆盖）——用户 2026-10-05 修正静默覆盖。
 					pendingEdit !== null && pendingEdit !== undefined
-						? h(VersionConfirm, {
+						? h(ConfirmDialog, {
 								t,
 								title: t("editorEditSwitchTitle"),
 								desc: t("editorEditSwitchDesc"),
-								middleLabel: t("editorEditSwitchKeep"),
 								confirmLabel: t("editorEditSwitchOverwrite"),
+								cancelLabel: t("editorEditSwitchKeep"),
 								onCancel: () => {
-									onCancelPendingEdit?.();
-								},
-								onMiddle: () => {
 									onCancelPendingEdit?.();
 								},
 								onConfirm: () => {
@@ -3846,19 +3687,5 @@ export function TaskEditorDrawer(props: {
 			"aria-label": mode === "create" ? t("editorNew") : t("editorEdit"),
 		},
 		panelInner,
-		// 关闭确认（分栏内联层，绝对定位盖住整块内容）：改过才出现；
-		// 「继续编辑」⇒ 留在原处，「放弃更改」⇒ 真正关分栏。
-		confirmDiscard
-			? h(ConfirmDiscard, {
-					t,
-					onStay: () => {
-						setConfirmDiscard(false);
-					},
-					onLeave: () => {
-						setConfirmDiscard(false);
-						onClose();
-					},
-				})
-			: null,
 	);
 }
