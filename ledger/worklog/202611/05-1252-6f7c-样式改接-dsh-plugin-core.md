@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 09:08:45 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 12:14:13 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -535,6 +535,33 @@ h(ChatViewFrame, {
 1. 设置页 `cascade` 两个下拉的宽度档（当前按核心默认等分两列，如需再收窄可指定 px）。
 2. 执行记录色条 Tooltip 移除是否接受（核心色条不支持挂提示）。
 
+## P4e（2026-11-06）问号气泡 / 滑轨 / 表格 / 确认框 / 设置模型字号
+
+**用户原话**：「你先把核心的版本获取一下最新的。然后提交。……第一，现在里面所有的小问号，那个浮动的提示都没出来……第二，所有的滑动选择块全都统一用不带 border 的样式。然后，所有选中状态的颜色，你都用 business。所有的表格都用核心的表格样式……第三，在设置里的大模型选择中……比其他所有的框都小了 1 号，要用统一的型号啊。」
+
+**核心版本**：`npm view dsh-plugin-core dist-tags` 与已装版本均为 **0.35.1** ⇒ 已是最新，无需升级。
+
+**改动**
+
+| 文件 | 改了什么 |
+|---|---|
+| `src/client/index.ts` | 启动时 `setTooltipRenderer(props => h(Tooltip, { …, portal: true }, props.children))`；顶部 tab `Segmented` 加 `tone:'business'` |
+| `src/client/task-editor.tsx` | `ConfirmDialog` 改核心 `Modal` 壳；全权限保存 / pendingView / pendingEdit 三处复用；所有 `Segmented` 加 `tone:'business'`，`bordered:true` 的两处改 `false` |
+| `src/client/task-list.tsx` | 执行记录表整体改核心 `Table`（8 列、`colSpan:8` 展开行、`selectedKeys` 标记展开态、`onRowClick` 切换）；删除 / 立即执行改核心 `confirmModal`，删自绘确认框与状态 |
+| `src/client/db-table.tsx` | 设置 → 日志表改核心 `Table`（动态列、`COL_WIDTH` 数字 px、`density:'compact'`） |
+| `src/client/settings-config-block.tsx` | 模型选择 `size` 由 `'md'` 改 **`'lg'`**（与其他表单行同档）；灰框改 `StripCard` |
+| `src/client/records-timeline.tsx` / `task-calendar.tsx` | 滑轨 `bordered:false` + `tone:'business'`；工作区筛选补 `searchable:true`；条目改 `StripCard` |
+| `src/client/editor-fields.tsx` / `task-view.tsx` | 周几 / 视图档滑轨统一 `bordered:false` + `tone:'business'` |
+| `scripts/smoke.mjs` | 7 条断言改读新实现（核心 Table 列定义 / `selectedKeys` / `confirmModal` / `ConfirmDialog`），**未删检查项** |
+
+**根因（问号无气泡）**：核心 `FieldHint` **不做降级兜底** —— `getTooltipRenderer()` 未注入时只返回问号图标（`node_modules/dsh-plugin-core/dist/ui/display/FieldHint.js:28-31`）。本仓此前从未调用 `setTooltipRenderer` ⇒ 用户看到「图标有 hover 反应、没有气泡」。已在 `apply()` 注入官方 `Tooltip`（`portal:true` 避免分栏裁剪）。**这是「我们没用核心配套」，不是核心 bug。**
+
+**核心缺口（已写入 external 文档）**：`Card` / `StripCard` 的左侧色条不支持 hover / Tooltip ⇒ 执行记录色条提示已撤，待核心补口子（何心）。
+
+**验证**：`typecheck` ✅ · `build` ✅ · `smoke` **740 / 12**（12 项均为既有失败，与本轮无关）· `koc-codelint` **12 条**（与基线一致，无新增）。
+
+**文档**：[`external/plugin-core-controls.md`](../../docs/design/external/plugin-core-controls.md) §四更正 `FieldHint` 必须注入 + 新增 §十（Segmented / Table / 确认框）；[`ui-style-guide.md`](../../docs/design/ui-style-guide.md) §二更新 Segmented 行 + 新增 Table / 确认框两行。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -550,3 +577,4 @@ h(ChatViewFrame, {
 - 2026-11-06 06:15:56 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览改接核心完成：核心升至 dsh-plugin-core@0.35.0（title/header/headerActions/bodyHeader/bodyFooter 槽位），session-view.ts 1471→约190 行薄包装，删 mirror 14 文件只留 Deliverables.tsx，archive-session-css 339→约95 行；删 present.host 与 remote.workspaceFiles 探测；build/typecheck 通过，smoke 738/14（14 项均为既有单引号断言失配）
 - 2026-11-06 07:38:40 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4b 编辑分栏改接核心 PanelDock 完成：index.ts 用 createPanelDock+PanelDock/DockPanel（同页双分栏），删自绘面板/拖拽条/宽度记忆与 --dsh-tdt-editor-w；task-editor 只留内容本体；typecheck/build 通过，smoke 738/14（14 项均为既有断言失配）；新增 external/plugin-core-dock.md
 - 2026-11-06 09:08:45 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4d 控件/卡片再对齐：ModelPicker(grouped/cascade)、Card/StripCard、InputGroup 全部改接核心；工作区下拉补 searchable；模型宽定 140/设置页两列等宽；typecheck/build 通过，smoke 738/14（既有），codelint 12 条（无新增）；文档 2 篇回写
+- 2026-11-06 12:14:13 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4e 完成：注入 setTooltipRenderer 修问号无气泡；执行记录/设置日志表改核心 Table；滑轨统一 bordered:false+tone:business；确认框走核心 confirmModal/Modal；设置模型选择统一 lg；typecheck/build/smoke 740/12（12 项既有）、codelint 12（无新增）；文档 2 篇回写
