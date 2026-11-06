@@ -45,10 +45,8 @@ import { sortRows } from '../task-sort.js'
 // 取数层（2026-10-06 从本页面文件归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
 import { debugLogOrder, dueLoadingMs, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 import { ensureTaskEditorStyle } from './task-editor-css'
-// 浮层结果提示（立即执行成功 / 被拒）：全站唯一实现，不许各处手写。
-import { FloatingToast, ensureToastStyle } from './toast-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { applyStyle, Button, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
@@ -619,6 +617,10 @@ function TaskExpandPanel(props: {
   const [runNonce, setRunNonce] = useState(0)
   const [runToast, setRunToast] = useState<{ text: string; tone: 'success' | 'error'; seq: number } | null>(null)
   const runSeq = useRef(0)
+  // 结果提示走核心 notify（Sonner）；seq 只负责「同一条结果再弹一次」。
+  useEffect(() => {
+    if (runToast !== null) notify(runToast.text, { variant: runToast.tone })
+  }, [runToast])
   /** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
   const runNowToast = (outcome: RunNowOutcome): { text: string; tone: 'success' | 'error' } => {
     if (outcome.ok) return { text: t('cardRunNowOk'), tone: 'success' }
@@ -1094,16 +1096,8 @@ function TaskExpandPanel(props: {
   return h('div', { style: panelWrapStyle },
     // 内容区：三选一替换；**滚动只发生在各 tab 自己的内容盒里**（过滤行 / 表头固定，用户 2026-10-02）。
     tab === 'info' ? renderInfo() : tab === 'records' ? renderRecords() : renderLogs(),
-    // 底栏外包一层 position:relative ⇒ 立即执行的结果 Toast 浮在底栏上方（成功绿 / 拒绝红），2.8s 自退。
-    // 按钮顺序（用户 2026-10-03）：删除 → **立即执行** → 编辑。
+    // 底栏按钮（用户 2026-10-03）：删除 → **立即执行** → 编辑；结果提示走核心 notify，不再浮在底栏上方。
     h('div', { style: { position: 'relative' } },
-      runToast !== null
-        ? h(FloatingToast, {
-          seq: runToast.seq, tone: runToast.tone,
-          onDone: () => { setRunToast(null) },
-          text: runToast.text,
-        })
-        : null,
       h('div', { style: panelBarStyle },
         // 三面板滑块走 UI 基础层唯一实现：variant="inset" = 在卡片底色上（轨道下沉、选中抬到第三层面）
         h(Segmented<'info' | 'records' | 'logs'>, {
@@ -1291,8 +1285,7 @@ export function TaskListView(props: {
   ensureTaskInfoStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
   ensureTaskEditorStyle()
-  // 立即执行结果 Toast 样式（域 'domain:toast'，全站唯一实现；幂等）。
-  ensureToastStyle()
+  // 立即执行结果提示走核心 notify，不再注入本仓 toast 皮肤。
   const [filter, setFilter] = useState<'all' | 'enabled' | 'disabled' | 'abnormal'>('all')
   const [workspace, setWorkspace] = useState<string>('')
   const [query, setQuery] = useState('')
@@ -1396,7 +1389,6 @@ export function TaskListView(props: {
             ariaLabel: t('listFilterWorkspaceAll'),
             size: 'md',
             width: WS_WIDTH,
-            marquee: true,
           }),
         ),
       ),

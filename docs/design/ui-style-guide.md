@@ -31,16 +31,16 @@
 | 分段控件（滑动块） | `ui/Segmented.tsx` | `h(Segmented<'a' \| 'b'>, { value: v, size: 'md', variant: 'inset', items: [{ value: 'a', label: '甲', badge: 3 }], onChange: setV })` | ✅ 全站唯一（主面板 / 列表筛选 / 卡片三面板 / 编辑器官方覆写 ×3 / 星期多选 / 版本开关 / 预览两态） |
 | 按钮 / 图标钮 | `ui/Button.tsx`（`Button` / `IconButton`） | `h(Button, { variant: 'outline', size: 'md' }, '重置')` | ✅ 全站唯一。**⚠️ 圆角审计（r12，2026-10-05）**：官方 `Button`（宿主 primitives）与基础层 `Button` **并存两套、圆角天生不一致**——基础层走 `--dshpc-radius-md`(12px)，官方的圆角由宿主注入 CSS 决定、插件侧不可控；同排并放一眼就能看出（右侧栏底栏即为实例，r12 已统一改基础层）。**新代码一律用基础层**；存量官方 Button 混用点（卡片按钮 / 记录页「查看会话」/ 弹窗关闭钮等）登记待逐步收编。按钮类元素**不许自写 border-radius**——要特殊观感走 §五 流程改基础层或加修饰类 |
 | 输入框 / 前缀框 / 数字框 | `ui/Field.tsx`（`Input` / `PrefixedInput` / `NumberInput`） | `h(Input, { value: v, onChange, size: 'lg', error: bad })` | ✅ 全站唯一（原生 `<input type=number>` 已清零） |
-| 下拉 | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`） | `h(SelectField, { options, value: v, onChange, maxWidth: 200 })` | ✅ **全站唯一**（2026-10-04：任务列表顶部那个绕过基础层手搓的官方 `Menu` + 自绘锚点已收编，它是最后一处；过程 [`worklog/workspace-options-unification.md`](../../worklog/workspace-options-unification.md)）。⚠️ **原生 `<select>` 已清零**（执行记录总查询页重写时连同两个测试用下拉一并删除，全仓现无原生 select）。⚠️ **同一排多个下拉一律定宽**：窄的热点会让宽度随选项文字变化、换选项就跳；写法见 §五「同排下拉定宽」 |
+| 下拉 | `ui/Field.tsx`（`SelectField`，核心 `Picker` **薄包装**） | `h(SelectField, { options, value: v, onChange, maxWidth: 200 })` | ✅ **全站唯一**；**2026-11-06 改接核心**（`dsh-plugin-core/ui` 的 `Picker`）：触发器 / 弹层 / 分组 / 搜索 / 空态 / 跑马灯 / 键盘与明暗全归上游，本仓只补 `error` 描红一条皮肤 + `title` 外层提示。⚠️ **原生 `<select>` 已清零**。⚠️ **同一排多个下拉一律定宽**：写法见 §五「同排下拉定宽」 |
 | **任务选择器（带搜索）** | `ui/TaskPicker.tsx`（核心 `Picker` **薄包装**，规格 [`ui-foundation.md`](ui-foundation.md) §5.4） | `h(TaskPicker, { options: tasks, value, onChange, scope: workspace, recentLimit: 10, allOption, placeholder, emptyLabel, ariaLabel, searchPlaceholder, moreLabel, outOfScopeHint })` | ✅ **2026-11-06 改接核心**（`dsh-plugin-core/ui` 的 `Picker`，核心 0.34.0 新增 `limit` 分页 / `keywords` 搜索字段）：浮层、搜索、分页、空态、明暗全归上游，本仓只留业务四件（作用域过滤 / `excludeIds` 排除 / 「全部任务」作首项 / 停用任务尾标）。**候选多（几十上百）或需要按名字 / id 搜索的任务选择一律用它，不许用 `SelectField`，更不许原生 `<select>`**；也不许在使用点手搓 Input + Menu。⚠️ `scope` 是**受控入参**，外部改工作区 ⇒ 候选实时重算；`allOption` 作列表**第一个普通选项**（与其它项一样参与搜索与分页，被搜词过滤掉属预期，2026-11-06 拍板；已废「常驻、不受搜索过滤」），选中 ⇒ 清回不过滤 |
 | **产出物图标 chip** | `ui/controls-css.ts` 的 `.dsh-tdt-chip`（规格 [`ui-foundation.md`](ui-foundation.md) §5.5） | `h('button', { className: 'dsh-tdt-chip', title: path, disabled: !canOpen, onClick }, h(FileTypeIcon, { path, size: 16 }))` | ✅ **全站唯一实现**（2026-10-04 收编：卡片「执行记录」面板 + 执行记录总查询页共用）。⚠️ **底板平时透明、`:hover` 才浮出**（2026-10-04 用户要求「鼠标移上去才有」）；**底色必须走 class**（inline `background` 会盖掉 `:hover`）；文字型（`…` / `+N`）加 `dsh-tdt-chip--label`；不可点用 `disabled` 而不是灰字糊弄 |
 | **行式文件按钮** | `ui/controls-css.ts` 的 `.dsh-tdt-filechip`（规格 [`ui-foundation.md`](ui-foundation.md) §5.6） | `h('button', { className: 'dsh-tdt-filechip dsh-tdt-filechip--block', title: path, disabled: !canOpen, onClick }, h(FileTypeIcon, { path, size: 14 }), h('span', { className: 'dsh-tdt-ellipsis' }, name))` | ✅ **全站唯一实现**（2026-10-04 收编：卡片基础信息产出物清单 / 附件区 / 执行记录页展开区三处共用）。⚠️ **一行一个文件**用 `--block`（撑满父宽），**跟着文字后头**用 `--inline`；平时透明、`:hover` 才出 `--dshpc-chip-bg`；不可点用 `disabled` |
 | **任务信息展示（标签—值纸表格 + 上次执行）** | `task-info.tsx` + `task-info-css.ts`（样式域 `domain:task-info`；规格与职责见 [`code-conventions.md`](code-conventions.md) §二） | `h(InfoField, { label, children })`；视图模型 `taskInfoViewFromDraft(draft, ctx)`（右侧栏查看档）/ `taskInfoViewFromRow(row, ctx)`（卡片展开区） | ✅ **2026-10-05 落码**（卡片展开区「基础信息」+ 右侧栏**查看档**共用同一份渲染与样式）。**两处必须共用**：不许在页面里另写字段行、不许另写一份「上次执行」渲染 |
 | 开关 | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（皮肤在 `ui/controls-css.ts`） | `h('span', { className: 'dsh-tdt-switch' }, h(Switch, { checked, onChange }))` | ✅ 全站共用一个包装类（选中 success 绿只此一处） |
-| 日期 / 时间 | `ui/DateTime.tsx`（`DateField` / `TimeField`） | `h(DateField, { value: d, onChange, size: 'lg' })` | ✅ 全站唯一（自绘日历 + 时分列） |
+| 日期 / 时间 | 核心 `dsh-plugin-core/ui` 的 `DateTimePicker`（单值 / `precision:'minute'`） | `h(DateTimePicker, { mode:'single', precision:'minute', value, onChange })` | ✅ **2026-11-06 改接核心**：日期 + 时刻合成**一个组合控件**（任务表单由 `task-editor.tsx` 的 `MomentField` 只做 `date/time ⇄ ISO` 边界换算）；本仓 `DateField` / `TimeField` / `ui/DateTime.tsx` / 时分皮肤已删。⚠️ 核心**没有纯时分（time-only）档** ⇒ 周期档的「执行时刻」并入「开始时间」组合控件 |
 | 时间范围筛选 | `ui/TimeRange.tsx`（核心 `DateTimePicker` **薄包装**：预设 + 起止一体） | `h(TimeRange, { value, onChange, labels, precision: 'minute', size: 'md' })` | ✅ **2026-11-06 改接核心**（`dsh-plugin-core/ui` 的 `DateTimePicker`，`mode:'range'` + `presets`）：预设档走核心 date-math（`now/d` 等整档表达式），触发器是**整条一个**、宽度由核心按 `precision` 定死，本仓不再画三框、不再写死宽度、不再自己展开预设。`size` **必传**、`precision` 选 `day`/`minute`；值语义与边界归一不变（`YYYY-MM-DD` / `YYYY-MM-DD HH:mm`，`ui/time-range.ts` 半开区间）；**两端齐全才可提交**（核心约束） |
-| **月历网格（7 列 × 6 行）** | `ui/DateTime.tsx` 的 `buildMonthCells`（2026-10-05 由私有函数上提为导出） | `const cells = buildMonthCells(y, m)`（`m` 为 **1-based**；返回 `{ iso, day, inMonth, isToday }[]`，固定 42 格） | ✅ **2026-10-05 落码**：日期框的自绘日历与「任务日程」页**共用同一份**（此前只有前者在用，后者不许再写一套网格算法）。⚠️ **格子内容 / 选中日清单的版式是页面私有**（`task-calendar.tsx` 的样式域 `domain:calendar`）⇒ **不进本表**（它不是通用控件）；周表头与月份标题走 `calendarLabelsOf` 单源 |
-| Toast | `toast-css.ts`（`FloatingToast`，含 `closable` 可关闭变体） | `h(FloatingToast, { tone: 'error', … })` | ✅ 唯一（先前 `index.ts` 自绘中性提示条已收编为 `closable` 变体，U20 #5，2026-10-05） |
+| **月历网格（7 列 × 6 行）** | 核心 `dsh-plugin-core/ui` 的 `buildMonthCells`（经 `ui/index.ts` 再导出） | `const cells = buildMonthCells(y, m)`（`m` 为 **1-based**；返回 `{ iso, day, inMonth, isToday }[]`，固定 42 格） | ✅ **2026-11-06 起归核心**：本仓自绘日历（`ui/DateTime.tsx`）已删，「任务日程」页与核心 `DateTimePicker` 共用同一份网格算法。⚠️ **格子内容 / 选中日清单的版式是页面私有**（`task-calendar.tsx` 的样式域 `domain:calendar`）⇒ **不进本表**（它不是通用控件）；周表头与月份标题走 `calendarLabelsOf` 单源 |
+| 提示（Toast） | 核心 `dsh-plugin-core/ui` 的 `notify` / `showToast`（Sonner，自带跨插件共享 Toaster） | `notify(text, { variant: 'success' \| 'error' \| 'info' \| 'warning', actions })` | ✅ **2026-11-06 改接核心**：本仓 `toast-css.ts`（`FloatingToast`）与四档色皮肤已删；一次性提示用 `notify`，常驻态（JSON 非法）改长停留提示 |
 | **回到顶部悬浮钮** | `ui/BackToTop.tsx` + `ui/back-to-top-css.ts`（皮肤 `.dsh-tdt-backtotop`） | `h(BackToTop, null)`（默认锚 `dsh-tdt-main`，横向贴主内容列右缘**外侧**、滚过 320px 才显形） | ✅ **2026-10-06 落码**：主面板三个 tab（任务配置 / 执行记录 / 任务日程 …）共用同一个 page 滚动容器，在 `index.ts` 的 page 容器里渲染**一次**即全覆盖，不许各页面各放一份；横向锚定与主内容同进退（与 `Loading` 同源，后者贴右缘内侧） |
 | 卡 / 浮层外壳 | 编辑器内容卡 `.dsh-tdt-ed-card` 单一可复用类（提示词/附件/排期/前置任务卡共用） | — | ✅ **2026-10-05 收口**（内容卡已唯一）；**2026-11-06 起两种外壳都归核心**：会话弹窗 `dsh-plugin-core/adv/session`（`dshpc-*`）、任务编辑分栏 `PanelDock`（`.dshpc-dock__panel`）——本仓 `.dsh-tdt-ed-panel` 已删，只留内容本体 `.dsh-tdt-ed-content` |
 
@@ -96,7 +96,7 @@
 | 圆形 `border-radius:50%` | `task-editor.tsx` 圆点、`task-list.tsx` 圆点 | 圆点必须圆 |
 | 内容区定高 / 限高 | `task-list.tsx` 360（刻意定高）、`task-editor-css.ts` 132、`archive-session-css.ts` 60（交付卡）、16（序号徽标）、`index.ts` 16em/12em | 内容区尺寸，与控件档无关 |
 | 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`task-list.tsx` chip（面包屑 / 树 toggle 已归核心 `dsh-plugin-core/adv/explorer`） | 语义非普通按钮，走各自专用类与计算属性 |
-| **宿主值导入例外：官方 `Toast`** | `index.ts` 的保存成功提示（`import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'`） | 2026-10-04 评审登记：官件自带明暗自适应 + 淡入淡出，这里只要「一次性轻提示」，且与 `FloatingToast`（操作结果提示）分工不同。**除它之外业务文件不许再引宿主值**；若将来要收编，随 `FloatingToast` 收编一并处理 |
+| **宿主值导入例外** | **无**（2026-11-06 起连保存成功提示也改核心 `notify`） | 业务文件**一律不引宿主值**；提示走核心 `notify`，控件走 `dsh-plugin-core/ui` |
 
 ### 待抽象（2026-10-01 审计登记；**2026-10-05 已收口**——见下表逐条 ✅）
 
@@ -137,11 +137,11 @@
 - **想要新的 token**（颜色 / 圆角 / 字号 / 间距 / 层级）：加进 `dsh-plugin-core/design` **一处**（命名 `--dshpc-*`，映射宿主 alias 并留兜底值），同时在 [`ui-foundation.md`](ui-foundation.md) §四 的表里登记；**不许在使用点直接写 `var(--dsw-*)`**。
 - **同排下拉定宽**（2026-10-02 拍板，来自「提示词下三下拉」）：一排里出现多个 `SelectField` 时**一律给 `width` 定宽**，以其中最短语义的那一个为基准、其余取倍数（如权限 120 ⇒ 工作区 / 模型 180 = 1.5×）。
   理由：`SelectField` 不传宽度时按内容撑（`maxWidth` 只封顶）⇒ **换一个选项宽度就变一下**（先各自撑到上限、三个都长才开始互相挤），视觉一直在跳。
-  显示不下的部分走省略号（需要可读全名时用 `marquee: true`，hover 才跑马灯）；**空间确实不够时整体等比收缩**（CSS 收缩与选项长短无关，不会重新引入跳动）。
+  显示不下的部分由核心 `Picker` 自动省略 + hover 跑马灯（2026-11-06：`marquee` 参数已随本地实现删除，核心默认就有）。**空间确实不够时整体等比收缩**（CSS 收缩与选项长短无关，不会重新引入跳动）。
 - **窄栏里的一行：宁可换行，也不折标签 / 不切框内字**（2026-10-02，来自排期底部行在最小宽 530 下的实际表现）：
   - 同一行里的**文字标签一律 `flex:'none' + whiteSpace:'nowrap'`** —— 否则空间一紧，先被牺牲的就是它（中文会折成两行，例如「任务开始时／间」）。
-  - 行内的**控件包一层 `flex:'none'` 的 span**（`SelectField` / `DateField` / `TimeField` 的根都带 `min-width:0`，默认**可被压缩到出省略号**）。
-  - ⚠️ **日期 / 时刻这类「内容必须完整可读」的框不给定宽**（2026-10-02 返工：定 108 / 78 后直接显示成 `2026-09-3…`、时间被三个点吃掉）。正确做法是**内容宽 + `flex:none`**：框宽恰好等于内容，天然切不掉，还比定宽更省。（⚠️ 2026-11-06 起 `TimeRange` 已改接核心 `DateTimePicker`：**宽度由核心按 `precision` 统一写死**（区间 = 整条触发器一个尺寸，选中前后不变），本仓既不传 `width` 也不再画三个框——旧「115 / 80 / 80」例外**作废**。）
+  - 行内的**控件包一层 `flex:'none'` 的 span**（`SelectField` 的根是核心 `Picker` 的 inline-block 元素，默认带 `max-width:100%`，**可被压缩到出省略号**）。
+  - ⚠️ **日期 / 时刻不再单独排版**（2026-11-06）：任务表单把它与日期合成**一个核心 `DateTimePicker` 组合控件**（`MomentField`），宽度由核心按 `precision:'minute'` 写死、选中前后不变，本仓不传 `width`、也不再包 `flex:none`。（⚠️ 2026-11-06 起 `TimeRange` 同理：宽度由核心按 `precision` 统一写死，本仓既不传 `width` 也不再画三个框——旧「115 / 80 / 80」例外**作废**。）
   - **只有下拉才定宽**，且按**最宽那一档选项**取值（如「30 分钟」≈ 46 + 内边距/箭头 38 ⇒ 定 96），不按当前值算 —— 否则换选项时宽度会跳。
   - 实在放不下才给行容器 `flexWrap:'wrap'`（右组整组落第二行），**绝不靠切字或折标签来凑**。
 
@@ -168,17 +168,17 @@
 | 官方件 className 覆盖面各不相同 | `Input`：`className` 落外层 `.wrap`、`style` 落内层 `<input>`；`Modal`：`className` 只落 `.dialog`，抬不了整层（编辑器因此故意不用官方 Modal） | `primitives.d.ts:172`、`task-editor.tsx:977-979` |
 | 官方类名是哈希 | 不许写死，只能按元素 + `role` 选；`ocOr` 是「官方优先、缺失回退」二选一，容易写死规则 | `official-classes.ts:106-108,140-142`、`archive-session-css.ts:243-246` |
 | 官方 `SegmentedControl` 指示器位置靠 CSS 变量算 | 外部改 padding 必须同步改 top/left/height/width 算式（脆弱）⇒ 新体系不覆写它，改自绘统一体 | `task-editor-css.ts:101-105` |
-| 官方没有日期 / 时间选择器 | 只能自绘，但要走同一套 token 与皮肤命名 | `primitives.d.ts:158-159` |
+| 宿主 primitives 没有日期 / 时间选择器 | **不要自绘**：插件核心 `dsh-plugin-core/ui` 提供 `DateTimePicker`（单值 / 区间，`day/hour/minute/second`），一律用它；⚠️ 核心**无纯时分（time-only）档** ⇒ 只有时刻的场景并入日期+时间组合控件 | 核心 `DateTimePicker.d.ts`；[`external/plugin-core-controls.md`](external/plugin-core-controls.md) |
 | 样式注入顺序不保证 | 覆盖官方件时必须靠「元素 + role」提高特异性，不靠先后 | `task-editor-css.ts:30`、`task-list.tsx:124` |
 | `import './x.css'` 在 client 产物里**不被加载** | client 是内核消费的 CJS 闭包 ⇒ CSS 只能运行时注入 `<style>`，不许改成 import | `task-editor-css.ts:3-4` |
 | 同一个意思的宿主变量有两个名字 | `state-warning-primary` / `border-focus` **宿主根本无定义**（写它们只会拿兜底色、不随主题）；`focus-ring-color` 有定义但默认值是 `transparent`（`var()` 兜底不生效 ⇒ 焦点环会隐身） | [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 §4 |
 | 宿主自带字号体系 | **成立且成族**：`--dsw-font-{xxxs-11,xxs-12,xs-13,s-14,base-16,m-18,l-20,xl-24}` + `-strong-` 变体 + 子 token ⇒ **字号一律映射宿主 token，不要自己定 px 刻度** | theme `lib/client.js`（capabilities §2） |
 | 「看着有、其实没有」的变量名 | 本仓已踩 5 处：`--dsw-alias-interactive-bg`、`--dsw-alias-border-focus`、`--dsw-alias-state-warning-primary`、`--dsh-elevation-prominent`、`--dsh-radius-panel` | [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §4 |
-| Tooltip 子元素必须是真 DOM | 裸函数组件（含 `IconButton`）ref 挂不上 ⇒ 提示静默失效（踩过两次）；故问号统一用原生 `span`/`button` 当 Tooltip 子节点 | 决策 53 同轮口径；`task-editor.tsx` `HelpButton` |
+| 「?」提示统一走核心 `FieldHint` | 2026-11-06 起 `HelpButton` 只是 `FieldHint` 的薄包装（图标 / 气泡 / focus 全归核心）；挂在可点行里时外层套 `span` 吞掉点击冒泡 | 核心 `FieldHint.d.ts`；`task-editor.tsx` `HelpButton` |
 | 用结构伪类收敛「末行」时，边框**必须走 class** | 内联样式优先级高于任何不含 `!important` 的 CSS ⇒ 写在 inline 的 `border-bottom` 会盖掉 `.x:last-child{border-bottom:0}`，表现为「改了没生效」（与 `.dsh-tdt-card` 底色同一个坑） | `task-list.tsx:157`；过程 [`worklog/info-panel-line-alignment.md`](../worklog/info-panel-line-alignment.md) §二 轮 1 |
 | 多列 grid（`align-items: stretch`）**两列行盒必须等高** | 格子高度由行内最高的那格决定 ⇒ 一列漏写 `line-height`（只继承宿主值）、与另一列的 `var(--dshpc-line-md)` 不等高时，矮的那格内容被**顶对齐**，看着「字贴上边线」。统一行高后：单行 = 上下居中；值多行时标签与值**第一行齐平** | `task-list.tsx:152` / `:157`；过程同上 §2.1 |
 | 「去掉最后一行 / 第 N 行」的判据**不许写死容器** | 按容器 `:last-child` 判「末行」= 隐式写死了那一行：一旦末尾被插入别的块（如产出物区），被去掉的仍是旧末行。判据要抬到**整个栏**层级 | `task-list.tsx:162` / `:1218`；过程同上 §二 轮 2 |
-| 下拉超长会撑破整行 | `SelectField` 锚点**必须给 `maxWidth`**；且官方 `Menu` 把锚点包进一层 shrink-to-fit 的 `span`，要让**这层也能收缩**（父容器加 `> *{min-width:0}`）才会压宽度出省略号——否则封了顶照样顶破容器 | `ui/Field.tsx`；`task-editor-css.ts` 的 `.dsh-tdt-ed-card-foot > *` |
+| 下拉超长会撑破整行 | `SelectField` 锚点**必须给 `maxWidth`**；核心 `Picker` 的根是 `inline-block` 的 div（`max-width:100%`），父容器要加 `> *{min-width:0}` 放行收缩，才会压宽度出省略号——否则封了顶照样顶破容器 | `ui/Field.tsx`；`task-editor-css.ts` 的 `.dsh-tdt-ed-card-foot > *` |
 
 ---
 

@@ -5,11 +5,9 @@
  *  - **只消费 `var(--dshpc-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
  *  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达。
  *
- * 2026-11-06：分段 / 按钮 / 输入 / 数字步进 / 多行文本 / 跑马灯已全部改接核心 `dsh-plugin-core/ui`，
- * 对应本地皮肤（`.dsh-tdt-seg*` / `.dsh-tdt-btn*` / `.dsh-tdt-iconbtn*` / `.dsh-tdt-input*`
- * / `.dsh-tdt-pfx*` / `.dsh-tdt-num*` / `.dsh-tdt-textarea*` / `.dsh-tdt-mq*`）整段删除。
- * 本文件只剩**核心没有**的三类业务件：产出物 chip / 行式文件按钮、时分的弹层与列、下拉锚点与省略号，
- * 外加「过程文件」块。
+ * 2026-11-06：分段 / 按钮 / 输入 / 数字步进 / 多行文本 / 跑马灯 / 下拉 / 日期时间 / 小问号
+ * 已全部改接核心 `dsh-plugin-core/ui`，对应本地皮肤整段删除。
+ * 本文件只剩**核心没有**的三类业务件：产出物 chip / 行式文件按钮、开关选色，外加「过程文件」块。
  */
 import { applyStyle } from "./style";
 
@@ -56,44 +54,12 @@ export const FIELD_CSS = `
 /* 拖拽分隔条已随两条分栏一起归核心 PanelDock（2026-11-06），本仓不再自绘命中条。 */
 `;
 
-/** 时分的弹层与列（本仓唯一实现：核心暂无「纯时分」档）。 */
-export const DATETIME_CSS = `
-/* ── 纯时分（核心缺口，本仓唯一实现）────────────────────────────────────── */
-.dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
-.dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--dshpc-control-h-lg);
-  min-width:0;max-width:100%;padding:0 8px;border:0.5px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);
-  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font:inherit;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);
-  cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-dtf--sm{height:var(--dshpc-control-h-sm);padding:0 6px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
-.dsh-tdt-dtf--md{height:var(--dshpc-control-h-md);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-dtf--lg{height:var(--dshpc-control-h-lg);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-dtf:hover:not(:disabled){background:var(--dshpc-hover);}
-.dsh-tdt-dtf:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
-.dsh-tdt-dtf:disabled{cursor:not-allowed;opacity:.6;}
-.dsh-tdt-dtf__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
-.dsh-tdt-dtf__label--ph{color:var(--dshpc-fg-dim);}
-.dsh-tdt-dtf__icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:none;color:var(--dshpc-fg-3);}
-
-.dsh-tdt-layer{position:fixed;z-index:var(--dshpc-z-menu);box-sizing:border-box;padding:8px;background:var(--dshpc-surface-1);
-  box-shadow:var(--dshpc-shadow-2);border-radius:var(--dshpc-radius-md);color:var(--dshpc-fg);font-size:var(--dshpc-font-md);}
-
-.dsh-tdt-time__cols{display:flex;gap:4px;}
-.dsh-tdt-time__list{width:56px;max-height:196px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
-.dsh-tdt-time__opt{padding:5px 0;border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);
-  font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-time__opt[aria-selected='true']{background:var(--dshpc-hover);color:var(--dshpc-fg);font-weight:600;}
-.dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--dshpc-border);}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-time__opt{transition:none;}}
-`;
-
-/** 下拉锚点 / 省略号的皮肤规则（核心 `Picker` 暂缺 error/title，本仓 `SelectField` 保留）。 */
+/** 下拉的皮肤规则（核心 `Picker` 暂缺 `error` 档，这里只补一条描红）。 */
 export const SELECT_CSS = `
-/* 下拉 / 日历 / 时分锚点：键盘可达性描边 + 校验描红（类名从业务层沿用，皮肤归位基础层） */
-.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dshpc-business);outline-offset:1px;}
-.dsh-tdt-ed-field--error{border-color:var(--dshpc-danger)!important;box-shadow:0 0 0 1px var(--dshpc-danger);}
-/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满 */
-.dsh-tdt-ed-selectwrap{width:100%;}
+/* 核心 Picker 的校验描红（className 挂在 .dshpc-picker 根上）。 */
+.dsh-tdt-picker--error .dshpc-picker__trigger{border-color:var(--dshpc-danger);box-shadow:0 0 0 1px var(--dshpc-danger);}
+/* 整行下拉：核心 Picker 根是 inline-block，要显式撑满父宽。 */
+.dsh-tdt-picker--block{display:block;width:100%;}
 
 /* 省略号三件套（ui-style-guide §三「待抽象 #1」的收敛点）：**新代码一律挂这个类**，不再各写一遍。 */
 .dsh-tdt-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -125,6 +91,6 @@ export const CONTROLS_DOMAIN = "controls";
 export function ensureControlsStyle(): void {
 	applyStyle(
 		CONTROLS_DOMAIN,
-		BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS + PROCESS_FILES_CSS,
+		BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS,
 	);
 }

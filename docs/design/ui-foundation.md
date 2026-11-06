@@ -45,7 +45,7 @@
 | `Button.tsx` | `Button`（primary/outline/ghost/danger × sm/md）+ `IconButton` |
 | `Field.tsx` | `Input` / `Select`（包装官方件）/ `PrefixedInput` |
 | `SwitchToggle.tsx` | 官方 `Switch` 的统一包装（含「打开 = success 绿」这一处覆盖） |
-| `DateTime.tsx` | `DateField` / `TimeField`（官方**没有**日期时间件 ⇒ 自绘，走同一套 token） |
+| `DateTime.tsx` | **已删（2026-11-06）**：日期 / 时刻全部改接核心 `dsh-plugin-core/ui` 的 `DateTimePicker`，本仓只在 `task-editor.tsx` 留 `MomentField` 做值换算 |
 | `Textarea.tsx` | 多行文本输入（提示词框等；皮肤进 `controls-css.ts`，无边框卡内态 + 校验描红） |
 | `Checkbox.tsx` | 勾选框（包装官方 `Checkbox` primitive，统一外观 + `label` / `accentColor`） |
 | `resizer.ts` | 拖拽分隔条宽度调节共享逻辑 `startResizeLayoutWidth`（preventDefault / 拖动禁选 / rAF 节流 / `rootClass` 切换） |
@@ -62,7 +62,7 @@
 
 | 问 | 答 |
 |---|---|
-| 为什么不建 `src/client/ui/ui.css`？ | client 产物是**内核消费的 CJS 闭包**，`import './ui.css'` **不会被加载**（`task-editor-css.ts:3-4`、`archive-session-css.ts:3-5`、`toast-css.ts:4-5` 三条注释已结论）；`dist/` 里**没有任何 `.css`**（已核实 29 个产物）⇒ CSS 只能作为字符串在运行时注入。引入 CSS 构建插件收益小、回归面大，本方案不动构建链。 |
+| 为什么不建 `src/client/ui/ui.css`？ | client 产物是**内核消费的 CJS 闭包**，`import './ui.css'` **不会被加载**（`task-editor-css.ts:3-4`、`archive-session-css.ts:3-5` 两条注释已结论）；`dist/` 里**没有任何 `.css`**（已核实 29 个产物）⇒ CSS 只能作为字符串在运行时注入。引入 CSS 构建插件收益小、回归面大，本方案不动构建链。 |
 | 那它存在哪？ | **两处来源**：`dsh-plugin-core/design`（token 定义，上游核心，非本仓文件）／本仓 `ui/controls-css.ts`（控件皮肤）。本仓的样式仍是 `export const XXX_CSS = \`…\`` 的 TS 模板字符串。 |
 | 怎么进页面？ | 只经 **`ui/style.ts`**（薄壳）：`setStyleKit(createStyleKit({ id }))` + `registerStyle('tokens', kit.tokensCss)` … `ensureUiStyles()` ⇒ **一条 `<style id="dsh-task-dispatch-table-ui">`**，幂等。注入机制在上游 `dsh-plugin-core/design`。 |
 | 各页面私有的样式怎么办？ | **允许保留**，但必须：① 放自己的 `*-css.ts`（如 `task-editor-css.ts`）；② 通过 `ui/style.ts` 注册（不再自己 `createElement('style')`）；③ 只能消费 `--dshpc-*`，不许再定义颜色/尺寸字面量。 |
@@ -77,9 +77,9 @@
 | **Loading 皮肤（CSS 规则）** | `src/client/ui/loading-css.ts` | `<Loading />` / `<RunningBlocks />` |
 | **官方件观感覆盖** | `src/client/ui/official-skins.ts` | 官方 `Switch`/`Input`/`Menu`/`SegmentedControl` |
 | **样式注入入口（唯一）** | `src/client/ui/style.ts` | 所有 `*-css.ts` 在此注册 |
-| **公用控件组件** | `src/client/ui/{Segmented,Button,Field,SwitchToggle,DateTime,Loading,Textarea,Checkbox}.tsx` + `resizer.ts`（拖拽调宽逻辑） | L3 使用点 |
+| **公用控件组件** | `src/client/ui/{Segmented,Button,Field,SwitchToggle,Loading,Textarea,Checkbox}.tsx` + `resizer.ts`（拖拽调宽逻辑）；日期时间 / 提示 / 小问号直接用核心 `dsh-plugin-core/ui`（`DateTimePicker` / `notify` / `FieldHint`） | L3 使用点 |
 | **公用出口（唯一 import 面）** | `src/client/ui/index.ts` | L3 只 import 这个 |
-| **域私有样式** | `src/client/task-editor-css.ts` / `archive-session-css.ts` / `toast-css.ts`（过渡期保留，最终并入 `ui/`） | 各自页面 |
+| **域私有样式** | `src/client/task-editor-css.ts` / `archive-session-css.ts`（过渡期保留，最终并入 `ui/`） | 各自页面 |
 | **技术方案（定型）** | `docs/design/ui-foundation.md`（本文） | 设计与评审 |
 | **开发手册（定型）** | `docs/design/ui-style-guide.md` | **每天写界面时照它做** |
 | **过程（叙事）** | `docs/worklog/ui-foundation.md` | 回溯踩坑 |
@@ -182,7 +182,7 @@ body[data-ds-dark-theme]{
 
 | # | 疑点 | 裁决（已核实） | 我们怎么做 |
 |---|---|---|---|
-| ① | `state-warn-primary` 与 `state-warning-primary` 并存 | **`state-warn-primary` 是真变量**（amber-500，明暗同值）；`state-warning-primary` 宿主 0 处定义 ⇒ 写它的 3 处（`task-editor.tsx:1034,1052`、`toast-css.ts:63`）一直取的是自己的兜底色 | token 层定 `--dshpc-warning` = `state-warn-primary`；3 处调用点随 P4 一并改掉 |
+| ① | `state-warn-primary` 与 `state-warning-primary` 并存 | **`state-warn-primary` 是真变量**（amber-500，明暗同值）；`state-warning-primary` 宿主 0 处定义 ⇒ 写它的调用点（`task-editor.tsx:1034,1052`；`toast-css.ts` 已随 2026-11-06 改核心而删除）一直取的是自己的兜底色 | token 层定 `--dshpc-warning` = `state-warn-primary`；调用点随 P4 一并改掉 |
 | ② | `focus-ring-color` 与 `border-focus` 并存 | **`focus-ring-color` 存在但默认值是 `transparent`**（`var()` 兜底不生效）；`border-focus` **宿主 0 处定义**（`archive-session-css.ts:295` 也是死引用） | token 层定 `--dshpc-focus` = `state-business-primary`（可见蓝），不再引用这两个名 |
 | ③ | 宿主是否有**字号体系** | **有，且成族**：`--dsw-font-{xxxs-11,xxs-12,xs-13,s-14,base-16,m-18,l-20,xl-24}` + `-strong-` 变体 + 子 token | `--dshpc-font-*` 直绑宿主字号 token（见 §4.3），不自定 px |
 
@@ -238,13 +238,13 @@ body[data-ds-dark-theme]{
 | 按钮 | `primary` / `outline` / `ghost` / `danger`（+ 修饰类 `--link` / `--danger-ink`）。**链接型文字钮 = `ghost` + `--link`**（无边框 / 链接色 / hover 下划线）—— 2026-10-04 起执行记录页前置格的「查看会话」在消费它（本轮**只消费、未新增资产**） | sm / md / lg（默认 lg） | `ui/Button.tsx` + `ui/controls-css.ts` ✅ |
 | 图标钮 | `plain`（默认）/ `outline` / `danger` | sm / md / lg（默认 lg） | `ui/Button.tsx`（`IconButton`）✅ |
 | 输入框 / 前缀框 / 数字框 | 输入框 `error`（描红）；数字框显式 ±、`inputWidth` 可调宽度 | sm / md / lg（默认 lg） | `ui/Field.tsx` ✅ |
-| 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽、`marquee` 跑马灯） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`）✅ |
+| 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽；跑马灯由核心默认启用） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，核心 `Picker` 薄包装）✅ |
 | **任务选择器（带搜索）** | 见 §5.4：在 `SelectField` 之上加**搜索框 + 最近 N 条/更多 + 外部作用域** | sm / md / lg（默认 lg） | `ui/TaskPicker.tsx` ✅ **2026-10-04 落码**（执行记录总查询页在用；不许业务文件自己拼 Input + Menu） |
 | **产出物图标 chip** | 见 §5.5：28×28 上的官方文件类型图标（**只给图标**，名字走 `title`），**底板平时透明、hover 才浮出** | —（固定 28，同 `sm` 行高观感） | `ui/controls-css.ts` 的 `.dsh-tdt-chip` ✅ **2026-10-04 收编**：卡片「执行记录」面板 + 执行记录总查询页共用；此前两页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，同一页面里谁后注册谁生效、互相污染 |
 | **行式文件按钮** | 见 §5.6：一行一个文件 = 「官方文件类型图标（14px）+ 文件名（溢出省略号）」，**平时透明、hover 才出浅底** | `--block` / `--inline` | `ui/controls-css.ts` 的 `.dsh-tdt-filechip` ✅ **2026-10-04 收编**（原 `task-list.tsx` 的 `.dsh-tdt-info-out`）：卡片「上次执行」产出物清单 / 附件区 / 执行记录页展开区三处共用 |
 | 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
-| 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
-| Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
+| 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | 核心 `dsh-plugin-core/ui` 的 `DateTimePicker`（单值 / 区间）✅ **2026-11-06 改接**；⚠️ 无纯时分档 |
+| 提示（Toast） | success / error / info / warning | — | 核心 `notify` / `showToast`（Sonner，共享 Toaster）✅ **2026-11-06 改接** |
 | Loading（浮动加载 pill） | — | — | `ui/Loading.tsx` + `ui/loading-css.ts` ✅ |
 | 卡 / 浮层外壳 | — | — | ✅ 编辑器内容卡 `.dsh-tdt-ed-card` 单一可复用类；**外壳（会话弹窗 / 任务编辑分栏）自 2026-11-06 起归核心**（`adv/session` 的 `dshpc-*` 与 `PanelDock` 的 `dshpc-dock__panel`），本仓 `.dsh-tdt-ed-panel` 已删（U20 #4 + 2026-11-06；见 [`ui-style-guide.md`](ui-style-guide.md) §三） |
 

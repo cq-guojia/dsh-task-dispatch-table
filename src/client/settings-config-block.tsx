@@ -3,7 +3,7 @@
  *
  * **交互全抄「新增 / 修改任务」那一套**（用户 2026-10-08）：
  *  - **校验**：点保存才判定，**一次把所有问题都查出来**——出问题的框描红（持续态，改好才退），
- *    同时弹**一次** `FloatingToast` 把所有问题一行一条列出来（一次性，与描红解耦）；
+ *    同时弹**一次**核心提示（`notify`）把所有问题一行一条列出来（一次性，与描红解耦）；
  *  - **提示一律走统一 Toast**，不在表单里挂错误文字；服务端机读错误码（如 `update-failed`）
  *    翻成人话再弹，**不把 `update failed` 这种机读串甩给用户**；
  *  - **数字框只吃数字**：非数字字符直接过滤掉，输不进去（不让用户先输个 "AA" 再来报错）。
@@ -15,11 +15,10 @@
  * ⚠️ **表单状态一律存服务端值**（毫秒），显示时才换算（`toDisplay`）。
  */
 import { createElement as h, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { Button, Input, SectionHead, SelectField } from './ui'
+import { Button, Input, notify, SectionHead, SelectField } from './ui'
 import { fetchConfig, postConfig, fetchModelOptions, type ModelOption, type SettingsConfigValue } from './settings-data'
 import { HelpButton } from './task-editor'
 import { ensureTaskEditorStyle } from './task-editor-css'
-import { ensureToastStyle, FloatingToast } from './toast-css'
 import { IconCordisPluginOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type LocaleKey, type Translate } from './locales'
 
@@ -82,13 +81,16 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
   const [draft, setDraft] = useState<Partial<Record<string, string>>>({})
   // 点保存才判定（与「新增 / 修改任务」同款）；判定后问题随修正实时消退。
   const [showErrors, setShowErrors] = useState(false)
-  // Toast：seq 自增 ⇒ 同一句连点也能重播淡入淡出。
+  // 提示统一走核心 notify（Sonner）；seq 自增 ⇒ 同一句连点也能重播。
   const [toast, setToast] = useState<{ text: string; tone: 'error' | 'success'; seq: number } | null>(null)
   const toastSeq = useRef(0)
+  useEffect(() => {
+    if (toast !== null) notify(toast.text, { variant: toast.tone, durationMs: 5000 })
+  }, [toast])
 
   const tt = useMemo(() => interpolateTranslate(t), [t])
 
-  useEffect(() => { ensureTaskEditorStyle(); ensureToastStyle() }, [])
+  useEffect(() => { ensureTaskEditorStyle() }, [])
 
   useEffect(() => {
     let alive = true
@@ -307,10 +309,6 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
       // 没有任何改动 ⇒ 保存灰着（照参考插件：没改就没什么可存的）。
       h(Button, { variant: 'primary', size: 'lg', onClick: () => void save(), disabled: saving || !dirty }, saving ? t('saving') : t('save')),
       dirty ? h('span', { style: { fontSize: 'var(--dshpc-font-sm)', color: 'var(--dshpc-warning)' } }, t('settingsUnsaved')) : null,
-      // 提示**全部**收编统一 Toast（与「新增 / 修改任务」同款）：校验问题 / 保存失败 = 红，保存成功 = 绿。
-      toast === null
-        ? null
-        : h(FloatingToast, { seq: toast.seq, tone: toast.tone, onDone: () => { setToast(null) }, text: toast.text }),
     ),
   )
 }

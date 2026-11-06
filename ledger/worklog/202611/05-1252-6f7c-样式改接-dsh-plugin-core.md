@@ -43,10 +43,12 @@
 - [x] **用户逐条拍板**（2026-11-05 完成）：TaskPicker（核心扩 `limit` + `keywords`，「全部」作首项、核心零改）· TimeRange（核心扩 `presets` + `width`）· token 基线（跟核心、不覆盖）
 - [x] **首批改接（2026-11-06）**：核心 `0.34.0` 交付 C1–C4 后，`ui/TaskPicker.tsx` → 核心 `Picker`、`ui/TimeRange.tsx` → 核心 `DateTimePicker`（均为薄包装），见「2026-11-06 · P1 首批改接」
 - [ ] P1 基础控件替换：Button/IconButton、Checkbox、Segmented、Textarea、Input/PrefixedInput/NumberInput、LiveText、MarqueeText、SectionHead、Loading、BackToTop、DateTime、CodeViewer → 核心同名件
-- [ ] P2 反馈层：自绘 toast → 核心 notify/Toast；Modal/Confirm/Alert → 核心 `skin`
+- [ ] P2 反馈层：~~自绘 toast → 核心 notify~~ **✅ 已随 P4c 完成**；Modal/Confirm/Alert → 核心 `skin`（仍待办）
 - [ ] P3 文件浏览 / 预览：`file-browser.tsx` / `file-preview.tsx` → `dsh-plugin-core/adv/explorer`
 - [x] **P4 会话预览（2026-11-06）**：核心 `0.35.0` 补齐插槽后，`session-view.ts` 改薄包装、`mirror/*` 只剩 `Deliverables.tsx`、`archive-session-css.ts` 只剩两组规则，见「2026-11-06 · P4 会话预览改接核心」
 - [x] **P4b 任务编辑分栏（2026-11-06 用户追加）**：右侧「新建 / 查看任务」分栏外壳改挂核心 `PanelDock`，与文件预览同页双分栏；删自绘面板 / 拖拽条 / 宽度记忆，见「2026-11-06 · P4b 编辑分栏改接核心 PanelDock」
+- [x] **P4c 控件逐项对齐（2026-11-06 用户追加）**：`SelectField` → 核心 `Picker`；日期 + 时刻 → 核心 `DateTimePicker` 组合控件；`HelpButton` → 核心 `FieldHint`；Toast → 核心 `notify`（删 `toast-css.ts`），见「2026-11-06 · P4c 控件逐项对齐核心」
+- [ ] P2 反馈层：~~自绘 toast → 核心 notify~~ **✅ 已随 P4c 完成**；Modal/Confirm/Alert → 核心 `skin`（仍待办）
 - [ ] P5 业务样式重构：`editor-css` / `info-css` / 内联字面量 / 自绘浮层 → 核心 token + 核心件
 - [ ] P6 文档回写：`ui-style-guide.md` / `ui-foundation.md` / `external/session-view-ui-map.md` / `features.md`
 - [ ] 收尾统计：替换前 / 后本项目自留样式行数与类名数量，确认「样式很少」；build + smoke + typecheck + 专家复核
@@ -453,6 +455,52 @@ h(ChatViewFrame, {
 1. 跨实例不互算宽度：编辑分栏拖拽只保 `mainMinWidth = 760`，不把预览宽度当预留（核心契约如此）；但**打开预览时**会按编辑分栏当前宽度给它算 `maxWidth`，主要路径不会挤掉主区。
 2. 收起的分栏内容仍在内存（`editor` state 不丢）；再点任一任务的编辑 / 查看会重新展开 —— 这是核心收起耳朵的语义，不是关闭。
 3. 关闭仍走内容里的 ✕ / Esc / 脏确认三入口（核心 ✕ 已关），不会出现两套确认。
+
+### 2026-11-06 · P4c 控件逐项对齐核心（下拉 / 日期时间 / 小问号 / Toast）
+
+用户原话（2026-11-06）：
+
+> 看看你所有的 select，我发现所有的这种下拉选择，你几乎还是用的自己的，没有用核心的。还有包括所有的滑块。还有日期和时间的选择，都用核心的日期和时间选择，核心也有组合版。包括小问号那种提示，包括 toast，你好好的一个字一个字去对，应该是 95% 的核心都提供了。
+
+**逐项核对结果**（`dsh-plugin-core@0.35.0`，读 `dist/ui/*.d.ts` + 实现源码）：
+
+| 用户点名的 | 现状 | 结论 |
+|---|---|---|
+| select / 下拉 | `SelectField` 是官方 `Menu` 薄包装，不是核心 `Picker` | **改核心 `Picker`** |
+| 滑块 | 全仓 grep `role="slider"` / `type="range"` 无命中；口语里的「滑块」指分段控件 | 已是核心 `Segmented`，无需改 |
+| 日期 / 时间 | `DateField` 已是核心 `DateTimePicker`；`TimeField` 是本地唯一实现 | 核心**无纯时分档** ⇒ 日期 + 时刻合并成一个核心 `DateTimePicker` 组合控件（`MomentField`），周期档时刻并入「开始时间」；删 `TimeField` / `DateTime.tsx` |
+| 小问号提示 | `HelpButton` 用官方 `Tooltip` + 本地 `.dsh-tdt-ed-help` 皮肤 | **改核心 `FieldHint`**，删本地皮肤 |
+| Toast | 本地 `toast-css.ts` 的 `FloatingToast` + 宿主 `Toast` | **改核心 `notify`**，删 `toast-css.ts` |
+
+**改动**：
+
+| 文件 | 改了什么 |
+|---|---|
+| `src/client/ui/Field.tsx` | `SelectField` 改核心 `Picker` 薄包装；删官方 `Menu` / `MenuEntry` / `MarqueeText` / 本地锚点；只补 `error` 描红 className 与 `title` 外层提示；空列表 `disabled + placeholder=emptyLabel` |
+| `src/client/ui/controls-css.ts` | 删 `DATETIME_CSS`（时分弹层 / 列 / 锚点皮肤）；`SELECT_CSS` 改成两条（`.dsh-tdt-picker--error` 描红、`.dsh-tdt-picker--block` 撑满） |
+| `src/client/ui/DateTime.tsx` | **整文件删除**（`DateField` / `TimeField` / `fieldWidthOf` / `timeWidthOf` / 两套 labels 类型） |
+| `src/client/editor-fields.tsx` | `CalendarLabels` 类型落到本文件；删 `timeLabelsOf` / `TimeLabels` |
+| `src/client/task-editor.tsx` | `HelpButton` 改核心 `FieldHint` 薄包装；新增 `MomentField`（`DateTimePicker` 单值 / `precision:'minute'`，只做 `date + time ⇄ ISO` 换算）；单次档与「任务开始时间」都改用它；删 `calendarLabels` / `timeLabels` / `DateField` / `TimeField`；5 处 `FloatingToast` 改为 `coreNotify` effect；删 `ensureToastStyle` |
+| `src/client/toast-css.ts` | **整文件删除** |
+| `src/client/index.ts` | 删宿主 `Toast` 导入、`successToast` / `invalidToast` 状态与渲染；保存成功 / 删除成功 → `coreNotify`；保存失败 / 查询失败 / JSON 非法 → `coreNotify` effect（JSON 非法改 8s 长停留）；删 `ensureToastStyle` |
+| `src/client/task-list.tsx` / `settings-config-block.tsx` | `FloatingToast` → `coreNotify` effect；删 `ensureToastStyle` |
+| `scripts/smoke.mjs` | 8 条断言改核心等价物（Picker / notify / 无 `dsh-tdt-dtf` / 无 `FloatingToast` / 无 `toast-css.ts`）；`dsh-tdt-ed-field--error` 改 `dsh-tdt-picker--error` |
+| `docs/` | 新建 [`external/plugin-core-controls.md`](../../docs/design/external/plugin-core-controls.md)（Picker / DateTimePicker / FieldHint / notify 源码级契约 + 已知缺口）；`ui-style-guide.md`、`ui-foundation.md`、`code-conventions.md`、`features/settings.md`、`features/task-calendar.md`、`features/task-expand-panels.md` 回写 |
+
+**核心缺口（已写入 external 文档）**：
+
+1. `Picker` 无 `error` 档（本仓用根 className + 一条皮肤规则补描红）。
+2. `Picker` 无 `align:'end'` / `title`（菜单只能左对齐；`title` 用外层 span）。
+3. `DateTimePicker` 无纯时分（time-only）档 ⇒ 只能把时刻并入日期 + 时间组合控件。
+4. `notify` 无 `onDismiss`、不支持「状态撤销常驻提示」⇒ JSON 非法这类持续态改长停留（8s）。
+
+**验证**：`typecheck` ✅ · `build` ✅ · `smoke` 738 / 14（14 项均为既有单引号断言失配，与本次无关）· `koc-codelint` 无新增（13 条既有 B 类告警）。
+
+**需用户确认的取舍**（已写在对话里，未擅自改语义）：
+
+1. 周期档（每天 / 每周 / 每月…）的「执行时刻」从频率行并入「任务开始时间」，与日期合成一个核心组合控件（否则必须保留本地纯时分框）。
+2. 下拉菜单从「右对齐」改为核心默认左对齐（核心无 `align:'end'`）。
+3. JSON 非法提示由「常驻直到改对」改为「进入非法时弹一次、停留 8 秒」。
 
 ## Execution Log
 

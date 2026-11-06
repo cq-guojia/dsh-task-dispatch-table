@@ -35,10 +35,8 @@ import {
 	IconFolderOpenOutlineRegular,
 	IconPlanOutlineRegular,
 	IconPlusOutlineRegular,
-	IconQuestionOutlineRegular,
 	MarkdownText,
 	Switch,
-	Tooltip,
 } from "@deepseek-ai/dsh-client-ui-primitives";
 import CodeMirror from "@uiw/react-codemirror";
 import {
@@ -64,7 +62,6 @@ import {
 } from "../attachment-allowlist.js";
 // 表单控件一律走基础层 barrel；`./editor-fields` 只留文案单源与周几多选（W6：不再二次再导出）。
 import {
-	calendarLabelsOf,
 	type WeekdayLabels,
 	WeekdayPicker,
 } from "./editor-fields";
@@ -88,31 +85,28 @@ import { type TaskOverviewRow } from "./task-overview";
 // 查看档正文（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）：纵向单栏 = 基础信息 → 提示词 → 上次执行。
 // ⚠️ 它与本文件是「组件互相引用 + 类型单向依赖」：task-view 只 `import type` 本文件的草稿类型（编译期擦除）。
 import { TaskViewPanel } from "./task-view";
-import { ensureToastStyle, FloatingToast } from "./toast-css";
 import {
-	type CalendarLabels,
 	CodeViewer,
-	DateField,
+	DateTimePicker,
+	type DateTimeOutput,
 	type EditorOption,
+	FieldHint,
 	IconButton,
 	MarqueeText,
+	notify as coreNotify,
 	NumberInput,
 	Segmented,
 	SelectField,
 	Button as TdtButton,
 	PrefixedInput as TdtPrefixedInput,
 	Textarea,
-	TimeField,
-	type TimeLabels,
 } from "./ui";
 
 /**
- * 「?」说明钮（2026-09-30 抽象收敛：此前同样的 JSX 写了 5 份）。
+ * 「?」说明钮 —— 核心 `FieldHint` 的薄包装（2026-11-06）。
  *
- * ⚠️ 图标**必须包在真实 DOM 元素**里再交给官方 Tooltip——它靠给子元素挂 ref，
- * 裸图标组件 ref 挂不上 ⇒ 悬停无字（本仓库踩过两次的坑，此处固化）。
- * `insideClickable`：挂在可点行（如「高级设置」折叠头）里时用 `span + role=img`，
- * 并吞掉点击冒泡，免得点说明把行本身开关了。
+ * 图标、气泡、键盘焦点全部归核心；本仓只补 `insideClickable` 一种位置：挂在可点行
+ * （如「高级设置」折叠头）里时，外面套一层 `span` 吞掉点击冒泡，免得点说明把行本身开关了。
  */
 /** 「?」说明钮 —— 全站唯一实现（设置页每项标题右侧的小问号也用它，2026-10-08 导出复用）。 */
 export function HelpButton(props: {
@@ -129,43 +123,55 @@ export function HelpButton(props: {
 		maxWidth = 300,
 		insideClickable = false,
 	} = props;
-	// ⚠️ 两分支都必须给官方 Tooltip 一个**真实 DOM 元素**当子节点：若传函数组件（如 IconButton），
-	//    Tooltip 挂不上 ref ⇒ 悬停不弹气泡（本仓库踩过两次的坑）。故非 insideClickable 也直接用原生 button，
-	//    并统一挂 .dsh-tdt-ed-help（尺寸 / 颜色一处定义），不再借 IconButton 的按钮壳。
-	const anchor = insideClickable
+	const hintNode = h(FieldHint, {
+		text: hint,
+		side,
+		maxWidth,
+		...(align === undefined ? {} : { align }),
+	});
+	return insideClickable
 		? h(
 				"span",
 				{
-					className: "dsh-tdt-ed-help",
-					role: "img",
-					"aria-label": hint,
+					style: { display: "inline-flex", minWidth: 0 },
 					onClick: (event: { stopPropagation: () => void }) => {
 						event.stopPropagation();
 					},
 				},
-				h(IconQuestionOutlineRegular, { size: 14 }),
+				hintNode,
 			)
-		: h(
-				"button",
-				{
-					type: "button",
-					className: "dsh-tdt-ed-help",
-					"aria-label": hint,
-				},
-				h(IconQuestionOutlineRegular, { size: 14 }),
-			);
-	const tip: {
-		label: string;
-		side: "top" | "bottom";
-		maxWidth: number;
-		align?: "center" | "end";
-	} = { label: hint, side, maxWidth };
-	if (align !== undefined) tip.align = align;
-	return h(Tooltip, tip, anchor);
+		: hintNode;
 }
 
 /** 与 index.ts 同形的 t 席位（本仓库 client 半侧惯例：无参 t；带占位符的文案走 tTemplate）。 */
 type T = (key: LocaleKey) => string;
+
+/**
+ * 日期 + 时刻组合控件 —— 核心 `DateTimePicker`（单值 / 分钟精度）的薄包装。
+ * 草稿里日期与时刻是两个字段，这里只在边界做换算：核心值 = `date + "T" + time`。
+ */
+function MomentField(props: {
+	date: string;
+	time: string;
+	onChange: (date: string, time: string) => void;
+	placeholder: string;
+	ariaLabel: string;
+}): ReactElement {
+	const time = props.time === "" ? "00:00" : props.time;
+	const value = props.date === "" ? null : `${props.date}T${time}:00.000`;
+	return h(DateTimePicker, {
+		mode: "single",
+		precision: "minute",
+		value,
+		onChange: (next: DateTimeOutput) => {
+			if (typeof next !== "string") return;
+			props.onChange(next.slice(0, 10), next.slice(11, 16));
+		},
+		placeholder: props.placeholder,
+		ariaLabel: props.ariaLabel,
+		size: "lg",
+	});
+}
 
 export type { EditorOption };
 
@@ -842,21 +848,8 @@ function PeriodControls(props: {
 	t: T;
 	tt: (key: LocaleKey, params?: Record<string, string | number>) => string;
 	weekdayLabels: WeekdayLabels;
-	calendarLabels: CalendarLabels;
-	timeLabels: TimeLabels;
 }): ReactElement {
-	const { draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels } =
-		props;
-	const timeField = h(TimeField, {
-		value: draft.time,
-		onChange: (value) => {
-			patch({ time: value });
-		},
-		placeholder: t("editorTimePh"),
-		ariaLabel: t("editorTime"),
-		labels: timeLabels,
-		width: 110,
-	});
+	const { draft, patch, t, tt, weekdayLabels } = props;
 	const monthOptions: EditorOption[] = useMemo(
 		() =>
 			Array.from({ length: 12 }, (_, index) => ({
@@ -892,21 +885,20 @@ function PeriodControls(props: {
 		[tt],
 	);
 
-	// 单行说完：频率（+ 月 / 日 / 每 N 周）+ 时间，时间直接跟在频率行末尾（用户 2026-09-29）。
-	// 单次档没有频率，整行就是「运行时刻 = 日期 + 时间」。
+	// 单行说完：频率（+ 月 / 日 / 每 N 周）；单次档没有频率，整行就是「运行时刻 = 日期 + 时间」。
+	// 周期档的时刻与「任务开始时间」共用下方那个核心日期+时间组合控件（2026-11-06），这里不再单放时分。
 	const above: ReactNode[] = [];
 	if (draft.periodFreq === "once") {
 		above.push(
-			h(DateField, {
-				key: "once-date",
-				value: draft.date,
-				onChange: (value) => {
-					patch({ date: value });
+			h(MomentField, {
+				key: "once-moment",
+				date: draft.date,
+				time: draft.time,
+				onChange: (date, time) => {
+					patch({ date, time });
 				},
 				placeholder: t("editorDatePh"),
 				ariaLabel: t("editorDate"),
-				labels: calendarLabels,
-				width: 148,
 			}),
 		);
 	} else {
@@ -1008,8 +1000,7 @@ function PeriodControls(props: {
 			);
 		}
 	}
-	// 时间（执行时刻）统一跟在频率行末尾；单次档也走这里（运行时刻）。
-	above.push(timeField);
+	// 时刻已并入「任务开始时间」的核心组合控件；周期档此处只剩频率相关控件。
 
 	return h(
 		"div",
@@ -2113,7 +2104,7 @@ export function TaskEditorDrawer(props: {
 			});
 		});
 	};
-	// 「已重置」提示自退交给 FloatingToast 动画（onDone），不再用定时器（统一 2.8s 时间线）。
+	// 「已重置」提示走核心 notify（2026-11-06），不再用定时器或本地 toast 动画。
 	// 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
 	// 选择器浮层整段交给核心 `pickWorkspaceFile`（锚定模态、Esc / 点外 / ▾ 工作区切换都由核心做），
 	// 这里只留「是否正在选」防止连点重复开两个。
@@ -2122,8 +2113,38 @@ export function TaskEditorDrawer(props: {
 	// 选择器浮层锚点：「工作区文件」方按钮（核心面板贴着它弹）。
 	const pickerAnchorRef = useRef<HTMLButtonElement | null>(null);
 	// 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
-	// 呈现为浮层 Toast（与保存失败同款），动画结束 onAnimationEnd 自退，不占卡内版面。
+	// 呈现为核心 notify 提示（2026-11-06），不占卡内版面。
 	const [uploadError, setUploadError] = useState<string | null>(null);
+	// 一次性提示统一走核心 `notify`（Sonner）：state 里的 seq 只负责「同一条提示再弹一次」。
+	useEffect(() => {
+		if (pendingHint !== 0)
+			coreNotify(t("editorSavePending"), { variant: "info" });
+	}, [pendingHint]);
+	useEffect(() => {
+		if (resetHint !== 0)
+			coreNotify(t("editorResetDone"), { variant: "info" });
+	}, [resetHint]);
+	useEffect(() => {
+		if (problemsToast !== null)
+			coreNotify(problemsToast.text, { variant: "error", durationMs: 5000 });
+	}, [problemsToast]);
+	useEffect(() => {
+		if (saveErrToast !== null)
+			coreNotify(saveErrToast.msg, { variant: "error", durationMs: 4000 });
+	}, [saveErrToast]);
+	useEffect(() => {
+		if (enabledToast !== null)
+			coreNotify(enabledToast.msg, {
+				variant: enabledToast.err ? "error" : "success",
+			});
+	}, [enabledToast]);
+	useEffect(() => {
+		if (uploadError !== null)
+			coreNotify(uploadErrText(uploadError), {
+				variant: "error",
+				durationMs: 4000,
+			});
+	}, [uploadError]);
 	/**
 	 * 刚上传、还没保存的附件：文件已在**服务端临时区**，但绝对路径只有服务端知道 ⇒ 由上传回包带回来存这里
 	 * （用户 2026-10-09：进了列表就要能点开预览，不能等保存）。
@@ -2164,7 +2185,6 @@ export function TaskEditorDrawer(props: {
 
 	useEffect(() => {
 		ensureTaskEditorStyle();
-		ensureToastStyle();
 	}, []);
 
 	const patch = useCallback(
@@ -2233,22 +2253,6 @@ export function TaskEditorDrawer(props: {
 			empty: t("editorWeekdayEmpty"),
 		}),
 		[t, weekdayShorts],
-	);
-
-	// 日历文案走**单源** `calendarLabelsOf`（editor-fields，决策 55 起与任务卡片三面板共用，不再各处各拼）。
-	const calendarLabels: CalendarLabels = useMemo(
-		() => calendarLabelsOf(t),
-		[t],
-	);
-
-	const timeLabels: TimeLabels = useMemo(
-		() => ({
-			hour: t("editorHour"),
-			minute: t("editorMinute"),
-			now: t("editorNow"),
-			confirm: t("editorConfirm"),
-		}),
-		[t],
 	);
 
 	// 提示词一律手输（2026-09-29 决定）：来源三档选择器已废除，「选文件 / 上传」挪到下方独立的「附加文件」框。
@@ -2352,7 +2356,6 @@ export function TaskEditorDrawer(props: {
 				error: problemsByField("workspace"),
 				icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
 				width: PROMPT_SELECT_WIDE,
-				marquee: true,
 			}),
 			// 权限：紧挨工作区（用户 2026-09-29：选完工作区就定权限，两者同一件事的前后脚）。
 			h(SelectField, {
@@ -2383,7 +2386,6 @@ export function TaskEditorDrawer(props: {
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorModel"),
 				width: PROMPT_SELECT_WIDE,
-				align: "end",
 			}),
 		),
 	);
@@ -2886,8 +2888,6 @@ export function TaskEditorDrawer(props: {
 						t,
 						tt,
 						weekdayLabels,
-						calendarLabels,
-						timeLabels,
 					}),
 				),
 		// 「预计执行」人话说明（用户 2026-09-30）：在「任务开始时间」上方画两条**虚线**，中间夹一句实时翻译。
@@ -2964,39 +2964,17 @@ export function TaskEditorDrawer(props: {
 							},
 							t("editorTaskStart"),
 						),
-						// ⚠️ 日期 / 时刻**不给定宽**（2026-10-02 返工）：定宽就有可能被内容顶破，
-						// 框内文字走 `text-overflow:ellipsis` ⇒ 直接显示成「2026-09-3…」/「18:5…」，而日期必须完整可见。
-						// 现在 = **内容宽 + flex:none**：框宽恰好等于内容（`2026-09-30` / `18:50` + 图标），
-						// 天然不会被省略号吃掉，还比原来的定宽（126 / 92）省出十几像素给标签。
-						h(
-							"span",
-							{ style: { flex: "none", display: "inline-flex" } },
-							h(DateField, {
-								value: draft.date,
-								onChange: (value) => {
-									patch({ date: value });
-								},
-								placeholder: t("editorDatePh"),
-								ariaLabel: t("editorTaskStart"),
-								labels: calendarLabels,
-							}),
-						),
-						// 间隔档要选时刻；周期档时刻由上方频率区决定，这里只选日期。
-						draft.scheduleKind === "interval"
-							? h(
-									"span",
-									{ style: { flex: "none", display: "inline-flex" } },
-									h(TimeField, {
-										value: draft.time,
-										onChange: (value) => {
-											patch({ time: value });
-										},
-										placeholder: t("editorTimePh"),
-										ariaLabel: t("editorTaskStart"),
-										labels: timeLabels,
-									}),
-								)
-							: null,
+						// 日期 / 时刻走核心 `DateTimePicker`（单值 / 分钟精度）的组合控件；
+						// 周期档与间隔档都在这里选开始时刻（用户 2026-11-06：日期时间只用核心）。
+						h(MomentField, {
+							date: draft.date,
+							time: draft.time,
+							onChange: (date, time) => {
+								patch({ date, time });
+							},
+							placeholder: t("editorDatePh"),
+							ariaLabel: t("editorTaskStart"),
+						}),
 						h(HelpButton, {
 							hint: t("editorTaskStartHint"),
 							side: "top",
@@ -3039,7 +3017,6 @@ export function TaskEditorDrawer(props: {
 						// 定宽 96（同排下拉定宽那条规矩，不随选项文字跳）：按**最宽**那一档取值定（`30 分钟`
 						// ≈ 46 + 内边距/箭头 38 ≈ 84），留足余量 ⇒ 切到哪一档都不会被省略号吃掉。
 						width: 96,
-						align: "end",
 					}),
 				),
 				h(HelpButton, {
@@ -3479,22 +3456,8 @@ export function TaskEditorDrawer(props: {
 		// 各区块间距统一走 `.dsh-tdt-ed-section` 的 margin（此前这里多了两个 16px 空 div，
 		// 导致「编号 → 提示词」比别的间隔小一截）。
 		h("div", { className: "dsh-tdt-ed-section" }, promptCard),
-		// 附件卡：外层 position:relative（兼带 .dsh-tdt-ed-section 的 16px 下间距，避免与「执行频率」卡贴在一起）。
-		h(
-			"div",
-			{ className: "dsh-tdt-ed-section", style: { position: "relative" } },
-			attachmentsCard,
-			uploadError !== null
-				? h(FloatingToast, {
-						seq: uploadError,
-						tone: "error",
-						onDone: () => {
-							setUploadError(null);
-						},
-						text: uploadErrText(uploadError),
-					})
-				: null,
-		),
+		// 附件卡（上传失败提示已改接核心 notify，2026-11-06）。
+		h("div", { className: "dsh-tdt-ed-section" }, attachmentsCard),
 		h("div", { className: "dsh-tdt-ed-section" }, scheduleCard),
 		h("div", { className: "dsh-tdt-ed-section" }, depsBlock),
 		advancedBlock,
@@ -3565,18 +3528,7 @@ export function TaskEditorDrawer(props: {
 						h(
 							"div",
 							{ className: "dsh-tdt-ed-headactions" },
-							// 启用开关写回结果 Toast（共用组件：成功绿 / 失败红），浮在头部下方，2.5s 上飘淡出自退。
-							enabledToast !== null
-								? h(FloatingToast, {
-										seq: enabledToast.seq,
-										tone: enabledToast.err ? "error" : "success",
-										below: true,
-										onDone: () => {
-											setEnabledToast(null);
-										},
-										text: enabledToast.msg,
-									})
-								: null,
+							// 启用开关写回结果走核心 notify（成功绿 / 失败红），2026-11-06。
 							// 启用开关 + 联动状态文字：**紧挨关闭钮左边**（U21）。
 							// ⚠️ 查看档是只读视图 ⇒ **不出现可写的开关**（启用状态改由基础信息的「状态」一行表达）。
 							viewTab === "view"
@@ -3635,8 +3587,7 @@ export function TaskEditorDrawer(props: {
 							: body,
 					),
 					// 底部：删除任务（红，仅编辑态）· 重置 · 取消 · 保存。
-					// 提示全部收编共用 FloatingToast（浮在 footer 正上方、统一 2.8s 自退、不占版面）：
-					//   校验问题 = 错误红（一次性，与描红解耦）/ 重置完成 = 中性灰 / 预览态不可保存 = 中性灰 / 保存失败 = 错误红。
+					// 校验问题 / 重置完成 / 预览态不可保存 / 保存失败一律走核心 notify（2026-11-06）。
 					h(
 						"div",
 						{ className: "dsh-tdt-ed-footer" },
@@ -3694,46 +3645,6 @@ export function TaskEditorDrawer(props: {
 											)
 										: null,
 									h("span", { style: { flex: "1 1 auto" } }),
-									problemsToast !== null
-										? h(FloatingToast, {
-												seq: problemsToast.seq,
-												tone: "error",
-												onDone: () => {
-													setProblemsToast(null);
-												},
-												text: problemsToast.text,
-											})
-										: null,
-									resetHint !== 0
-										? h(FloatingToast, {
-												seq: resetHint,
-												tone: "neutral",
-												onDone: () => {
-													setResetHint(0);
-												},
-												text: t("editorResetDone"),
-											})
-										: null,
-									saveErrToast !== null
-										? h(FloatingToast, {
-												seq: saveErrToast.seq,
-												tone: "error",
-												onDone: () => {
-													setSaveErrToast(null);
-												},
-												text: saveErrToast.msg,
-											})
-										: null,
-									pendingHint !== 0
-										? h(FloatingToast, {
-												seq: pendingHint,
-												tone: "neutral",
-												onDone: () => {
-													setPendingHint(0);
-												},
-												text: t("editorSavePending"),
-											})
-										: null,
 									h(
 										TdtButton,
 										{ variant: "outline", size: "sm", onClick: requestClose },

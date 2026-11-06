@@ -1,23 +1,38 @@
 // 任务表单的控件层（2026-09-29 用户返工轮：「下拉按官方来、日期时间控件别这么丑」）。
 //
-// P6 收口：`SelectField` / `MarqueeText` / `DateField` / `TimeField` 的实现已全部迁到 `src/client/ui/`
-// （Field.tsx / MarqueeText.tsx / DateTime.tsx，唯一实现 + 皮肤在 controls-css.ts）。
+// P6 收口：`SelectField` / `MarqueeText` 的实现已全部迁到 `src/client/ui/`；
+// 日期 / 时刻已全部改接核心 `dsh-plugin-core/ui` 的 `DateTimePicker`（2026-11-06），本仓不再自绘。
 // 本文件只保留两样东西：
-//   1. `calendarLabelsOf` / `timeLabelsOf`——日历与时间文案**单源**（决策 55，跨页面共用）；
+//   1. `calendarLabelsOf`——日历文案**单源**（决策 55，任务日历页共用）；
 //   2. `WeekdayPicker`——周几多选（核心 Segmented multiple + 核心自带 `.dshpc-seg--weekday` 修饰）。
 // ⚠️ 2026-10-06：**不再二次再导出 `ui/` 的控件**（design/client-refresh-disposition.md §四 W6）——
-// 同一控件曾有两条 import 路径。要 `SelectField` / `MarqueeText` / `DateField` / `TimeField` 请走 `./ui`。
+// 同一控件曾有两条 import 路径。要 `SelectField` / `MarqueeText` 请走 `./ui`。
 
 import { createElement as h, useMemo } from 'react'
 import { pad2 } from './format'
 import { interpolateTranslate, type Translate } from './locales'
 import type { ReactElement } from 'react'
-import { Segmented, type CalendarLabels, type SegmentedItem, type TimeLabels } from './ui'
+import { Segmented, type SegmentedItem } from './ui'
+
+/** 日历文案（由调用方按语言组装；`calendarLabelsOf` 在下面给单源实现）。 */
+export interface CalendarLabels {
+  /** 「今天」按钮。 */
+  today: string
+  /** 上/下月、上/下年（无障碍名）。 */
+  prevMonth: string
+  nextMonth: string
+  prevYear: string
+  nextYear: string
+  /** 月份标题（如 2026年09月），由调用方按语言拼。 */
+  monthTitle: (year: number, month: number) => string
+  /** 周标题，**周一起**共 7 项。 */
+  weekdays: readonly string[]
+}
 
 // ─────────────────────── 日历文案单源 ───────────────────────
 
 /**
- * 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
+ * 日历文案**单源**（决策 55）：任务日历页共用这一份，
  * 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
  */
 export function calendarLabelsOf(t: Translate): CalendarLabels {
@@ -32,19 +47,6 @@ export function calendarLabelsOf(t: Translate): CalendarLabels {
     monthTitle: (year: number, month: number) => tt('editorMonthTitle', { y: String(year), m: pad2(month) }),
     // 日历表头用单字（一…日 / Mo…Su），日历的通用写法。
     weekdays: t('editorWeekdayShorts').split('|'),
-  }
-}
-
-/**
- * 时分文案**单源**：`TimeField` 的所有调用方（任务编辑器 / 时间范围控件）共用这一份，
- * 不再各处各拼「小时 / 分钟 / 现在 / 确定」。
- */
-export function timeLabelsOf(t: Translate): TimeLabels {
-  return {
-    hour: t('editorHour'),
-    minute: t('editorMinute'),
-    now: t('editorNow'),
-    confirm: t('editorConfirm'),
   }
 }
 

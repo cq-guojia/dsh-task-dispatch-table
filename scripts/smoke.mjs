@@ -1949,28 +1949,29 @@ try {
 			clientJs.includes("MarqueeText"),
 	);
 	check(
-		"启用开关写回 Toast（--below 变体）",
-		clientJs.includes("dsh-tdt-toast--below"),
+		"启用开关写回结果走核心 notify（本地 --below 变体已删）",
+		clientJs.includes("editorToggleOn") &&
+			!clientJs.includes("dsh-tdt-toast--below"),
 	);
-	// 2026-11-06：前缀框红框走核心 `dshpc-pfx--error`（本地 `.dsh-tdt-pfx--error` / 更旧 `.dsh-tdt-ed-pfx--error` 都已删）；下拉仍走本地下拉锚点 `.dsh-tdt-ed-field--error`。
+	// 2026-11-06：前缀框红框走核心 `dshpc-pfx--error`；下拉改核心 Picker 后走本地皮肤 `.dsh-tdt-picker--error`。
 	check(
 		"任务名称/下拉校验红框类（前缀框走核心 .dshpc-pfx--error）",
 		clientJs.includes("dshpc-pfx--error") &&
-			clientJs.includes("dsh-tdt-ed-field--error") &&
+			clientJs.includes("dsh-tdt-picker--error") &&
 			!clientJs.includes("dsh-tdt-ed-pfx--error") &&
-			!clientJs.includes("dsh-tdt-pfx--error"),
+			!clientJs.includes("dsh-tdt-pfx--error") &&
+			!clientJs.includes("dsh-tdt-ed-field--error"),
 	);
 	check(
 		"启用实时写回走独立端点 tasks/enabled",
 		dispatchJs.includes("tasks/enabled") || clientJs.includes("tasks/enabled"),
 	);
-	// UX 第二轮·第三次返工（2026-09-30）：Toast 抽象共用（三色）+ 派发 ctx 读护栏
+	// 2026-11-06：轻提示统一走核心 `notify`（Sonner），本地 FloatingToast / 四档色皮肤已删。
 	check(
-		"浮层 Toast 共用组件 + 四档语义色（success/warning/neutral/error）",
-		clientJs.includes("FloatingToast") &&
-			clientJs.includes("dsh-tdt-toast--success") &&
-			clientJs.includes("dsh-tdt-toast--warning") &&
-			clientJs.includes("dsh-tdt-toast--neutral"),
+		"轻提示统一走核心 notify（本地 FloatingToast 与 dsh-tdt-toast 皮肤已删）",
+		clientJs.includes("notify") &&
+			!clientJs.includes("FloatingToast") &&
+			!clientJs.includes("dsh-tdt-toast--"),
 	);
 	check(
 		"派发 ctx 属性读取带防抛错护栏（readCtxProp，agentTeams/goals 未注入不再炸派发）",
@@ -2065,8 +2066,8 @@ try {
 	// 2026-10-04 工作区候选真源统一（用户拍板「按最干净最规范的来」）：三处「选工作区」共一份真源，
 	// 任务列表顶部那个绕过基础层手搓的官方 Menu + 自绘锚点必须消失（全站只剩 SelectField 一个下拉实现）。
 	check(
-		"任务列表顶部工作区下拉已收编（SelectField，不再是手搓 Menu + 自绘锚点）",
-		clientJs.includes("dsh-tdt-ed-field") &&
+		"任务列表顶部工作区下拉已收编（SelectField → 核心 Picker，不再是手搓 Menu + 自绘锚点）",
+		clientJs.includes("dshpc-picker") &&
 			!clientJs.includes("dsh-tdt-tl-ws"),
 	);
 	check(
@@ -3619,7 +3620,6 @@ try {
 		clientJs.includes("180px") &&
 			clientJs.includes("120px") &&
 			!/maxWidth:\s*200/.test(clientJs) &&
-			clientJs.includes("marquee: true") &&
 			clientJs.includes("dshpc-mq-in"),
 	);
 	check(
@@ -5807,11 +5807,11 @@ console.log("\n[14] runtime-index");
 		// 现规则：日期 / 时刻 = 内容宽 + flex:none（**天然切不掉**，且比原定宽 126/92 更省），
 		// 只有下拉才定宽（按最宽那一档定 96），标签缩短为「开始时间」。
 		check(
-			"排期底部行：日期 / 时刻走内容宽（不给定宽）+ flex:none，延迟下拉按最宽档定宽 96，标签 nowrap",
+			"排期底部行：开始时间走核心 DateTimePicker 组合控件（日期+时间一个框）；延迟下拉按最宽档定宽 96，标签 nowrap",
 			edSrc.includes("flexWrap: 'wrap'") &&
 				edSrc.includes("width: 96") &&
 				edSrc.includes("flex: 'none', whiteSpace: 'nowrap'") &&
-				edSrc.includes("flex: 'none', display: 'inline-flex'") &&
+				edSrc.includes("h(MomentField, {") &&
 				!edSrc.includes("width: 108") &&
 				!edSrc.includes("width: 78"),
 		);
@@ -5873,9 +5873,9 @@ console.log("\n[14] runtime-index");
 			),
 		);
 		check(
-			"时间皮肤进产物（dsh-tdt-dtf / time__opt；日期已改核心 DateTimePicker，cal__cell 已删）",
-			p23Js.includes(".dsh-tdt-dtf{") &&
-				p23Js.includes(".dsh-tdt-time__opt{") &&
+			"日期时间皮肤已清零（核心 DateTimePicker 承担；dsh-tdt-dtf / time__opt 已删）",
+			!p23Js.includes(".dsh-tdt-dtf{") &&
+				!p23Js.includes(".dsh-tdt-time__opt{") &&
 				!p23Js.includes(".dsh-tdt-cal__cell{"),
 		);
 		check(
@@ -5896,7 +5896,6 @@ console.log("\n[14] runtime-index");
 			"config-panel.tsx",
 			"session-view.ts",
 			"archive-session-css.ts",
-			"toast-css.ts",
 			// 2026-10-04：执行记录时间轴 + 任务选择器（同受「不许直引宿主变量 / 不许自注入 style」约束）
 			"records-timeline.tsx",
 			"ui/TaskPicker.tsx",
@@ -6017,10 +6016,9 @@ console.log("\n[14] runtime-index");
 				tl.includes("t('filterRunning')"),
 		);
 		check(
-			"日期 / 时间锚点边框与下拉一致（0.5px + radius-md，同排并放是一套）",
-			cc.includes(
-				"border:0.5px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md)",
-			),
+			"日期 / 时间统一走核心 DateTimePicker（本地 dsh-tdt-dtf 皮肤已删）",
+			!cc.includes(".dsh-tdt-dtf{") &&
+				cc.includes("dsh-tdt-picker--error"),
 		);
 		check(
 			"日志条数选择器居右（marginLeft:auto）",
@@ -6383,11 +6381,11 @@ console.log("\n[14] runtime-index");
 				idxSrc.includes("scheduler.runNow(id)"),
 		);
 		check(
-			"前端：按钮组在删除与编辑之间插「立即执行」+ 确认框 + 结果 Toast + 播放三角图标 + 成功后立即重拉记录",
+			"前端：按钮组在删除与编辑之间插「立即执行」+ 确认框 + 结果提示 + 播放三角图标 + 成功后立即重拉记录",
 			tl.includes("t('cardRunNow')") &&
 				tl.includes("t('cardRunNowDesc')") &&
 				tl.includes("renderRunConfirm") &&
-				tl.includes("FloatingToast") &&
+				tl.includes("notify(") &&
 				tl.includes("IconPlayOutlineRegular") &&
 				tl.includes("runNonce"),
 		);

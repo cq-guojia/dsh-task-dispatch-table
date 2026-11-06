@@ -13,11 +13,9 @@
 // 纯净度：本文件不 import 任何 Node 侧模块；跨插件协作走 cordis 服务注入
 // （locale/slots/settingsScope），宿主能力的类型全部本地结构化声明。客户端 bundle 不打包
 // src/config.ts（Node 侧），Config 语义在此以字段名复述。
-// ⚠️ **唯一的宿主值导入是 `Toast`**（保存成功提示，2026-10-04 评审登记）：官方 Toast 自带明暗自适应
-// 与淡入淡出，观感与本仓 `FloatingToast` 不同、且这里只需要「一次性轻提示」；已登记在
-// docs/design/ui-style-guide.md §三「已知例外」，除它以外本文件不许再引宿主值。
+// 页面壳：核心 `connectHost` + 分栏 / 工具条 / 分段控件等（2026-11-05 起 UI 一律走 `dsh-plugin-core/ui`）。
+// 2026-11-06：轻提示也改接核心 `notify`（Sonner），不再引宿主 `Toast`、不再用本仓 `FloatingToast`。
 
-import { Toast } from "@deepseek-ai/dsh-client-ui-primitives";
 import {
 	connectFs,
 	type FilePreviewHandle,
@@ -25,7 +23,7 @@ import {
 	type OfficeToPdfFace,
 	openFilePreview,
 } from "dsh-plugin-core/adv/explorer";
-import { connectHost } from "dsh-plugin-core/ui";
+import { connectHost, notify as coreNotify } from "dsh-plugin-core/ui";
 import { t as coreT } from "dsh-plugin-core/utils";
 import {
 	createElement as h,
@@ -91,7 +89,6 @@ import {
 	type TaskOverviewRow,
 	useTaskOverview,
 } from "./task-overview";
-import { ensureToastStyle, FloatingToast } from "./toast-css";
 import {
 	Button,
 	createPanelDock,
@@ -684,25 +681,23 @@ function TaskPage(props: {
 	const [draft, setDraft] = useState<string | undefined>(undefined);
 	const [saving, setSaving] = useState(false);
 	const [failed, setFailed] = useState<string | null>(null);
-	// 每次保存失败自增，用作 Toast 的 React key ⇒ 同一条错误连点也能重播淡入淡出动画。
+	// 每次保存失败自增，用来重播提示（同一条错误连点也能再弹一次）。
 	const [failedKey, setFailedKey] = useState(0);
-	// 成功通知 Toast（success 绿、holdMs 2500 自退）：保存「任务已保存」/ 删除「任务已删除」共用同一宿主 Toast。
-	// 渲染此前挂在 LEGACY_CONFIG_VIEW（恒 false）死分支内（index.ts:1275 起），主界面弹不出来，本次迁到主视图层一并修复。
-	const [successToast, setSuccessToast] = useState<{
-		text: string;
-		seq: number;
-	} | null>(null);
-	const successSeq = useRef(0);
+	useEffect(() => {
+		if (failed !== null) coreNotify(failed, { variant: "error", durationMs: 2800 });
+		// failedKey 参与依赖：同一条错误连点也重播。
+	}, [failed, failedKey]);
+	// 保存「任务已保存」/ 删除「任务已删除」：核心 `notify`（Sonner）一次性轻提示。
 	const notify = (text: string): void => {
-		successSeq.current += 1;
-		setSuccessToast({ text, seq: successSeq.current });
+		coreNotify(text, { variant: "success", durationMs: 2500 });
 	};
-	// JSON 不合法：持续态校验，浮层常驻 Toast（不自动消失）浮在保存行上方，不占版面、不挤压下方。
-	const [invalidToast, setInvalidToast] = useState<{
-		on: boolean;
-		key: number;
-	}>({ on: false, key: 0 });
-	const invalidSeq = useRef(0);
+	// JSON 不合法 = 持续态：进入非法态时弹一次错误提示（核心 notify 不支持常驻，改为长停留）。
+	const [invalidKey, setInvalidKey] = useState(0);
+	useEffect(() => {
+		if (invalidKey === 0) return;
+		coreNotify(t("invalidJson"), { variant: "error", durationMs: 8000 });
+		// 只在非法态「进入」时弹一次；invalidKey 自增即重播。
+	}, [invalidKey]);
 	// 新建 / 编辑任务分栏（U21：2026-10-01 起是「占布局的分栏」，不再是浮层弹窗）。
 	// `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
 	const [editor, setEditor] = useState<{
@@ -1302,6 +1297,22 @@ function TaskPage(props: {
 	};
 	// 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
 	const [viewErr, setViewErr] = useState<string | null>(null);
+	useEffect(() => {
+		if (viewErr === null) return;
+		coreNotify(viewErr, {
+			variant: "info",
+			durationMs: 8000,
+			actions: [
+				{
+					text: t("debugClose"),
+					variant: "outline",
+					onClick: () => {
+						setViewErr(null);
+					},
+				},
+			],
+		});
+	}, [viewErr]);
 	const section = (snapshot.value ?? {}) as Record<string, unknown>;
 	// 快照由 host 周期写入 debugSnapshot 字段；页订阅同一 scope 自动刷新。
 	const raw =
@@ -1312,14 +1323,9 @@ function TaskPage(props: {
 	const current = draft ?? effectiveInline;
 	const invalid = draft !== undefined && !isValidTaskTable(draft);
 	const dirty = draft !== undefined && draft !== effectiveInline;
-	// JSON 不合法 → 常驻 Toast 浮在保存行上方（invalid 变 true 时自增 key 重播出现；变 false 时撤掉）。
+	// JSON 不合法 → 进入非法态时 invalidKey 自增（弹一次核心提示）；改对后不再弹。
 	useEffect(() => {
-		if (!invalid) {
-			setInvalidToast((v) => (v.on ? { on: false, key: v.key } : v));
-			return;
-		}
-		invalidSeq.current += 1;
-		setInvalidToast({ on: true, key: invalidSeq.current });
+		if (invalid) setInvalidKey((prev) => prev + 1);
 	}, [invalid]);
 	const writable = snapshot.status === "ready" && snapshot.writable && !saving;
 
@@ -1525,8 +1531,7 @@ function TaskPage(props: {
 		[],
 	);
 
-	// 浮层 Toast 样式注入（保存失败提示用，幂等）。
-	ensureToastStyle();
+	// 浮层 Toast 样式注入已删除（2026-11-06）：提示统一走核心 `notify`，不再需要本仓 toast 皮肤。
 	// UI 基础层：token 表与注入器都由核心（dsh-plugin-core/design）提供，这里只确保已注入。
 	// 业务规则已全部消费 --dshpc-*；本仓不再自建 token 表。
 	ensureUiBase();
@@ -1814,13 +1819,11 @@ function TaskPage(props: {
 												spellCheck: false,
 												style: textareaStyle,
 											}),
-											// 保存 / 放弃行：外层 position:relative，让所有错误 Toast 悬浮在本行正上方，
-											// 不挤占下方「已解析的任务」等版面（用户 2026-09-30：长显占位 / 散落红字统一改为浮层）。
-											// - failed：保存失败（动画 2.5s 自退）
-											// - invalidToast：JSON 不合法（常驻，直到改对）
+											// 保存 / 放弃行。失败与 JSON 非法的提示已改接核心 `notify`（2026-11-06），
+											// 不再在这一行里叠浮层 Toast（核心提示统一在屏幕底部弹出）。
 											h(
 												"div",
-												{ style: { position: "relative" } },
+												null,
 												h(
 													"div",
 													{ style: rowStyle },
@@ -1850,27 +1853,6 @@ function TaskPage(props: {
 														t("discard"),
 													),
 												),
-												failed !== null
-													? h(FloatingToast, {
-															seq: failedKey,
-															tone: "error",
-															onDone: () => {
-																setFailed(null);
-															},
-															text: failed,
-														})
-													: null,
-												invalidToast.on
-													? h(FloatingToast, {
-															seq: `inv-${invalidToast.key}`,
-															tone: "error",
-															sticky: true,
-															onDone: () => {
-																/* sticky：不自动消失，改对 JSON 后由 effect 撤除 */
-															},
-															text: t("invalidJson"),
-														})
-													: null,
 											),
 
 											h(
@@ -2042,33 +2024,6 @@ function TaskPage(props: {
 						applyViewing(null); // 释放 retain 引用（唯一出口）
 						setViewErr(null);
 						if (needArchive) rearchive(closed);
-					},
-				})
-			: null,
-		// 查看会话失败提示条（固定底部中央，可读可关）：收编为共用 FloatingToast 的中性可关闭档
-		// （U20 #5，2026-10-05）——反色实面 + 圆点 + 关闭钮，不自动消失，给用户时间读。
-		viewErr !== null
-			? h(FloatingToast, {
-					seq: "view-err",
-					tone: "neutral",
-					closable: true,
-					text: viewErr,
-					closeLabel: t("debugClose"),
-					onDone: () => {
-						setViewErr(null);
-					},
-				})
-			: null,
-		// 成功通知（保存「任务已保存」/ 删除「任务已删除」）：宿主 Toast，success 绿、2.5s 自退。
-		// 此前挂在 LEGACY 死分支内弹不出来，已迁到此处（与 viewErr 同层渲染）。
-		successToast !== null
-			? h(Toast, {
-					key: successToast.seq,
-					text: successToast.text,
-					tone: "success",
-					holdMs: 2500,
-					onDone: () => {
-						setSuccessToast(null);
 					},
 				})
 			: null,

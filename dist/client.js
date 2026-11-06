@@ -37,11 +37,11 @@ window.__ModuleLoader__.load({
 			enumerable: true
 		}) : target, mod));
 		//#endregion
-		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
-		_deepseek_ai_dsh_client_ui_primitives = __toESM(_deepseek_ai_dsh_client_ui_primitives, 1);
 		let react = require("react");
 		let react$1 = __toESM(react, 1);
 		react = __toESM(react);
+		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
+		_deepseek_ai_dsh_client_ui_primitives = __toESM(_deepseek_ai_dsh_client_ui_primitives, 1);
 		let react_dom_client = require("react-dom/client");
 		let react_jsx_runtime = require("react/jsx-runtime");
 		let react_dom = require("react-dom");
@@ -239,7 +239,7 @@ window.__ModuleLoader__.load({
 		const HINT_CSS = "\n/* ── 问号提示 P4（用户 2026-10-18：对齐真实插件 HelpButton——**带圈的问号图标**）──\n   本体 14px 细圈 + 圈内 ?，颜色 fg-3、hover 只提亮不加底（与 dshpc-ed-help 同规矩）。\n   气泡不在本文件：2026-10-19 用户拍板「问号必须用官方 Tooltip 那一个」⇒ 气泡由注入的\n   官方组件渲染（src/ui/tooltip.ts），这里只管问号图标本身。 */\n.dshpc-hint{display:inline-flex;align-items:center;justify-content:center;flex:none;\n  box-sizing:border-box;width:14px;height:14px;padding:0;border:1px solid currentColor;border-radius:50%;background:transparent;\n  color:var(--dshpc-fg-3);font-family:inherit;font-size:8px;font-weight:600;line-height:12px;cursor:help;vertical-align:middle;\n  transition:color var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-hint:hover,.dshpc-hint:focus-visible{color:var(--dshpc-fg);background:0 0;}\n.dshpc-hint:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}\n";
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/datetime-css.generated.js
-		const DATETIME_CSS$1 = "/* 日期时间选择器（DateTimePicker）。类名 dshpc-dt-*；配色只吃 token，明暗随 token 切换。\n   结构：触发器（range = 一个整条：两个日期区 + 样式画的灰隔条；single = 单日期）→ 浮层\n   （两个独立端框 + 两块独立日历 + 底部动作）。\n   浮层行为与 Picker 一致：portal 到 body、贴边翻转、点外关闭、无遮罩。 */\n.dshpc-dt{position:relative;display:inline-block;font-size:13px;line-height:20px}\n.dshpc-dt__trigger{\n  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;\n  max-width:100%;height:var(--dshpc-control-h-md);padding:0 10px;\n  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);\n  color:var(--dshpc-fg);background:var(--dshpc-surface-1);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);cursor:pointer;\n}\n/* 三档与 .dshpc-input 逐项对齐：高度同 control-h、内距 8/10/12、字号 sm 降到 font-sm（2026-11-06）。 */\n.dshpc-dt__trigger--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm)}\n.dshpc-dt__trigger--lg{height:var(--dshpc-control-h-lg);padding:0 12px}\n.dshpc-dt__trigger:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed;opacity:.7}\n/* 焦点与基础 Input 完全同款（点击即蓝描边 + 1px 光环）。 */\n.dshpc-dt__trigger:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__trigger-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-variant-numeric:tabular-nums}\n.dshpc-dt__trigger-label--empty{color:var(--dshpc-fg-3)}\n.dshpc-dt__cal{flex:none;color:var(--dshpc-fg-3)}\n/* range 触发器：一个整条里两个日期区 + 样式画出来的灰隔条（左右两条竖边），点整条都展开。 */\n/* 组撑满触发器内容高度，隔条才能上下顶到 border。 */\n.dshpc-dt__pair-group{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:8px}\n/* 两个日期区平分（flex:1 1 0）：开始 / 结束永远一样宽，不随内容偏袒。 */\n.dshpc-dt__pair-date{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__pair-date--empty{color:var(--dshpc-fg-3)}\n/* 隔条：上下顶到触发器 border（与边框连起来），中间隔出一块；块里放「到」的符号（-，用户 2026-10-24 拍板）。 */\n.dshpc-dt__pair-sep{\n  flex:none;align-self:stretch;width:22px;margin:0;\n  display:inline-flex;align-items:center;justify-content:center;\n  background:var(--dshpc-surface-sunken);\n  border-left:1px solid var(--dshpc-border);border-right:1px solid var(--dshpc-border);\n  color:var(--dshpc-fg-3);font-size:12px;line-height:1;\n}\n/* 默认宽：**固定**（选中前后不变），数值对照参考图实测（2x 屏，换算 CSS px）后\n   统一 -6px（用户 2026-10-24：实测值留得偏多）：\n   单值 day 128 / 时·分 153.2 / 秒 174.8；区间 day 269 / 分 341.4 / 秒 377.6。\n   ch = 字体里 \"0\" 的宽（日期 tabular-nums 等宽）⇒ 写成 Nch + 常数；常数同时兜住\n   默认占位「请选择日期时间」（7 汉字）不省略。调用方要另给宽：className 传 width。 */\n.dshpc-dt__trigger--w-day{width:calc(10ch + 56px)}\n.dshpc-dt__trigger--w-minute{width:calc(16ch + 38px)}\n.dshpc-dt__trigger--w-second{width:calc(19ch + 38px)}\n.dshpc-dt__trigger--wr-day{width:calc(20ch + 125px)}\n.dshpc-dt__trigger--wr-minute{width:calc(32ch + 111px)}\n.dshpc-dt__trigger--wr-second{width:calc(38ch + 104px)}\n\n/* 弹层表面积归 panel.css 的 popover 档（与选文件弹窗同档）：这里只留层序与内距。 */\n.dshpc-dt__pop{\n  z-index:var(--dshpc-z-popmenu);padding:10px;user-select:none;\n  font-size:13px;line-height:20px;\n}\n/* 两个独立端框（range）：按钮皮肤全走核心 Button，这里只管两根框的排布与内部文字。 */\n.dshpc-dt__ends{display:flex;gap:6px;margin-bottom:8px}\n.dshpc-dt__ends > .dshpc-btn{flex:1 1 0;min-width:0}\n.dshpc-dt__end-label{flex:none;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3);white-space:nowrap}\n.dshpc-dt__end-value{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__end-value--empty{color:var(--dshpc-fg-3)}\n\n.dshpc-dt__nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}\n.dshpc-dt__nav-group{display:flex;gap:2px}\n.dshpc-dt__nav-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__nav-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__nav-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__caption{font-size:13px;font-weight:600;color:var(--dshpc-fg);white-space:nowrap}\n\n/* 列宽弹性：弹层常被底部动作钮（英文 Today/Clear/Cancel/Confirm）撑得比日历宽，\n   固定 30px 会在右边留一大块空白。minmax(30px,1fr) ⇒ 中文时按钮短、格子仍 30px；\n   英文时按钮长、格子自动拉开填满，不留白（2026-11-06）。 */\n.dshpc-dt__grid{display:grid;grid-template-columns:repeat(7,minmax(30px,1fr));gap:2px}\n.dshpc-dt__wd{height:20px;font-size:11px;line-height:20px;color:var(--dshpc-fg-3);text-align:center}\n.dshpc-dt__cell{\n  height:26px;padding:0;font-size:12px;font-variant-numeric:tabular-nums;\n  color:var(--dshpc-fg);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__cell:hover{background:var(--dshpc-surface-sunken)}\n.dshpc-dt__cell:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__cell--out{color:var(--dshpc-fg-dim)}\n.dshpc-dt__cell--today{color:var(--dshpc-business);font-weight:600}\n/* 起 / 止端：品牌蓝实面反白（与 Segmented weekday 选中同口径）。\n   ⚠️ 字色用常量白 --dshpc-on-signal，不用 --dshpc-fg-inverse：后者跟宿主 label-primary-foreground，\n   暗色主题下是近黑 ⇒ 蓝底黑字（与 Segmented 2026-10-29 同一事故）。 */\n.dshpc-dt__cell--sel{background:var(--dshpc-business);color:var(--dshpc-on-signal);font-weight:600}\n.dshpc-dt__cell--sel:hover{background:var(--dshpc-business-hover)}\n\n/* 两块日历面板（range：左开始、右结束，各选各的）。 */\n.dshpc-dt__panels{display:flex;gap:14px;align-items:flex-start}\n/* 面板跟着 body 一起吃掉弹层多出来的宽，grid 的 1fr 才有东西可分；\n   range 两块日历各自 basis = 内容宽，多余空间才平分，不会互相挤窄。 */\n.dshpc-dt__panel{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}\n\n/* 左列（两个端框 + 两块日历）与右列（快捷档）并排；不传 presets 时只剩左列，布局与旧版一致。 */\n.dshpc-dt__layout{display:flex;align-items:stretch;gap:10px}\n.dshpc-dt__body{flex:1 1 auto;min-width:0}\n/* 右列高度由 layout 的 stretch 跟左边日历区拉齐，自己不撑高弹层；档位多了只在列内滚。\n   76px 容得下英文缩写最长那档 + 滚动条，中文两字居中，不随文案变宽（2026-11-06）。 */\n.dshpc-dt__side{\n  position:relative;flex:none;width:76px;\n  padding-left:9px;border-left:1px solid var(--dshpc-border-faint);\n}\n/* 右溢 10px 抵消面板 padding，滚动条才贴到面板自身 1px 边框内侧；内容用 padding-right 补回边距。 */\n.dshpc-dt__side-scroll{\n  position:absolute;inset:0 -10px 0 9px;padding-right:9px;\n  display:flex;flex-direction:column;gap:2px;overflow-y:auto;\n  border-right:1px solid transparent;\n}\n.dshpc-dt__side-scroll > .dshpc-btn{flex:none}\n\n.dshpc-dt__time{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:2px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__unit{display:flex;flex-direction:column;align-items:center;gap:2px}\n.dshpc-dt__unit-label{font-size:10px;line-height:14px;color:var(--dshpc-fg-3)}\n.dshpc-dt__step-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:34px;height:14px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__step-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__step-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__step-val{\n  width:34px;height:24px;padding:0;box-sizing:border-box;text-align:center;\n  font-size:13px;font-variant-numeric:tabular-nums;color:var(--dshpc-fg);\n  background:var(--dshpc-surface-sunken);border:1px solid var(--dshpc-border-heavy);\n  border-radius:var(--dshpc-radius-sm);outline:none;\n}\n.dshpc-dt__step-val:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__step-val:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed}\n.dshpc-dt__sep{padding-bottom:5px;color:var(--dshpc-fg-3);font-size:12px}\n\n.dshpc-dt__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__foot-side{display:flex;align-items:center;gap:6px}\n.dshpc-dt__warn{font-size:11px;color:var(--dshpc-warning-label);white-space:nowrap}\n";
+		const DATETIME_CSS = "/* 日期时间选择器（DateTimePicker）。类名 dshpc-dt-*；配色只吃 token，明暗随 token 切换。\n   结构：触发器（range = 一个整条：两个日期区 + 样式画的灰隔条；single = 单日期）→ 浮层\n   （两个独立端框 + 两块独立日历 + 底部动作）。\n   浮层行为与 Picker 一致：portal 到 body、贴边翻转、点外关闭、无遮罩。 */\n.dshpc-dt{position:relative;display:inline-block;font-size:13px;line-height:20px}\n.dshpc-dt__trigger{\n  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;\n  max-width:100%;height:var(--dshpc-control-h-md);padding:0 10px;\n  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);\n  color:var(--dshpc-fg);background:var(--dshpc-surface-1);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);cursor:pointer;\n}\n/* 三档与 .dshpc-input 逐项对齐：高度同 control-h、内距 8/10/12、字号 sm 降到 font-sm（2026-11-06）。 */\n.dshpc-dt__trigger--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm)}\n.dshpc-dt__trigger--lg{height:var(--dshpc-control-h-lg);padding:0 12px}\n.dshpc-dt__trigger:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed;opacity:.7}\n/* 焦点与基础 Input 完全同款（点击即蓝描边 + 1px 光环）。 */\n.dshpc-dt__trigger:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__trigger-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-variant-numeric:tabular-nums}\n.dshpc-dt__trigger-label--empty{color:var(--dshpc-fg-3)}\n.dshpc-dt__cal{flex:none;color:var(--dshpc-fg-3)}\n/* range 触发器：一个整条里两个日期区 + 样式画出来的灰隔条（左右两条竖边），点整条都展开。 */\n/* 组撑满触发器内容高度，隔条才能上下顶到 border。 */\n.dshpc-dt__pair-group{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:8px}\n/* 两个日期区平分（flex:1 1 0）：开始 / 结束永远一样宽，不随内容偏袒。 */\n.dshpc-dt__pair-date{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__pair-date--empty{color:var(--dshpc-fg-3)}\n/* 隔条：上下顶到触发器 border（与边框连起来），中间隔出一块；块里放「到」的符号（-，用户 2026-10-24 拍板）。 */\n.dshpc-dt__pair-sep{\n  flex:none;align-self:stretch;width:22px;margin:0;\n  display:inline-flex;align-items:center;justify-content:center;\n  background:var(--dshpc-surface-sunken);\n  border-left:1px solid var(--dshpc-border);border-right:1px solid var(--dshpc-border);\n  color:var(--dshpc-fg-3);font-size:12px;line-height:1;\n}\n/* 默认宽：**固定**（选中前后不变），数值对照参考图实测（2x 屏，换算 CSS px）后\n   统一 -6px（用户 2026-10-24：实测值留得偏多）：\n   单值 day 128 / 时·分 153.2 / 秒 174.8；区间 day 269 / 分 341.4 / 秒 377.6。\n   ch = 字体里 \"0\" 的宽（日期 tabular-nums 等宽）⇒ 写成 Nch + 常数；常数同时兜住\n   默认占位「请选择日期时间」（7 汉字）不省略。调用方要另给宽：className 传 width。 */\n.dshpc-dt__trigger--w-day{width:calc(10ch + 56px)}\n.dshpc-dt__trigger--w-minute{width:calc(16ch + 38px)}\n.dshpc-dt__trigger--w-second{width:calc(19ch + 38px)}\n.dshpc-dt__trigger--wr-day{width:calc(20ch + 125px)}\n.dshpc-dt__trigger--wr-minute{width:calc(32ch + 111px)}\n.dshpc-dt__trigger--wr-second{width:calc(38ch + 104px)}\n\n/* 弹层表面积归 panel.css 的 popover 档（与选文件弹窗同档）：这里只留层序与内距。 */\n.dshpc-dt__pop{\n  z-index:var(--dshpc-z-popmenu);padding:10px;user-select:none;\n  font-size:13px;line-height:20px;\n}\n/* 两个独立端框（range）：按钮皮肤全走核心 Button，这里只管两根框的排布与内部文字。 */\n.dshpc-dt__ends{display:flex;gap:6px;margin-bottom:8px}\n.dshpc-dt__ends > .dshpc-btn{flex:1 1 0;min-width:0}\n.dshpc-dt__end-label{flex:none;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3);white-space:nowrap}\n.dshpc-dt__end-value{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__end-value--empty{color:var(--dshpc-fg-3)}\n\n.dshpc-dt__nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}\n.dshpc-dt__nav-group{display:flex;gap:2px}\n.dshpc-dt__nav-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__nav-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__nav-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__caption{font-size:13px;font-weight:600;color:var(--dshpc-fg);white-space:nowrap}\n\n/* 列宽弹性：弹层常被底部动作钮（英文 Today/Clear/Cancel/Confirm）撑得比日历宽，\n   固定 30px 会在右边留一大块空白。minmax(30px,1fr) ⇒ 中文时按钮短、格子仍 30px；\n   英文时按钮长、格子自动拉开填满，不留白（2026-11-06）。 */\n.dshpc-dt__grid{display:grid;grid-template-columns:repeat(7,minmax(30px,1fr));gap:2px}\n.dshpc-dt__wd{height:20px;font-size:11px;line-height:20px;color:var(--dshpc-fg-3);text-align:center}\n.dshpc-dt__cell{\n  height:26px;padding:0;font-size:12px;font-variant-numeric:tabular-nums;\n  color:var(--dshpc-fg);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__cell:hover{background:var(--dshpc-surface-sunken)}\n.dshpc-dt__cell:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__cell--out{color:var(--dshpc-fg-dim)}\n.dshpc-dt__cell--today{color:var(--dshpc-business);font-weight:600}\n/* 起 / 止端：品牌蓝实面反白（与 Segmented weekday 选中同口径）。\n   ⚠️ 字色用常量白 --dshpc-on-signal，不用 --dshpc-fg-inverse：后者跟宿主 label-primary-foreground，\n   暗色主题下是近黑 ⇒ 蓝底黑字（与 Segmented 2026-10-29 同一事故）。 */\n.dshpc-dt__cell--sel{background:var(--dshpc-business);color:var(--dshpc-on-signal);font-weight:600}\n.dshpc-dt__cell--sel:hover{background:var(--dshpc-business-hover)}\n\n/* 两块日历面板（range：左开始、右结束，各选各的）。 */\n.dshpc-dt__panels{display:flex;gap:14px;align-items:flex-start}\n/* 面板跟着 body 一起吃掉弹层多出来的宽，grid 的 1fr 才有东西可分；\n   range 两块日历各自 basis = 内容宽，多余空间才平分，不会互相挤窄。 */\n.dshpc-dt__panel{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}\n\n/* 左列（两个端框 + 两块日历）与右列（快捷档）并排；不传 presets 时只剩左列，布局与旧版一致。 */\n.dshpc-dt__layout{display:flex;align-items:stretch;gap:10px}\n.dshpc-dt__body{flex:1 1 auto;min-width:0}\n/* 右列高度由 layout 的 stretch 跟左边日历区拉齐，自己不撑高弹层；档位多了只在列内滚。\n   76px 容得下英文缩写最长那档 + 滚动条，中文两字居中，不随文案变宽（2026-11-06）。 */\n.dshpc-dt__side{\n  position:relative;flex:none;width:76px;\n  padding-left:9px;border-left:1px solid var(--dshpc-border-faint);\n}\n/* 右溢 10px 抵消面板 padding，滚动条才贴到面板自身 1px 边框内侧；内容用 padding-right 补回边距。 */\n.dshpc-dt__side-scroll{\n  position:absolute;inset:0 -10px 0 9px;padding-right:9px;\n  display:flex;flex-direction:column;gap:2px;overflow-y:auto;\n  border-right:1px solid transparent;\n}\n.dshpc-dt__side-scroll > .dshpc-btn{flex:none}\n\n.dshpc-dt__time{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:2px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__unit{display:flex;flex-direction:column;align-items:center;gap:2px}\n.dshpc-dt__unit-label{font-size:10px;line-height:14px;color:var(--dshpc-fg-3)}\n.dshpc-dt__step-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:34px;height:14px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__step-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__step-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__step-val{\n  width:34px;height:24px;padding:0;box-sizing:border-box;text-align:center;\n  font-size:13px;font-variant-numeric:tabular-nums;color:var(--dshpc-fg);\n  background:var(--dshpc-surface-sunken);border:1px solid var(--dshpc-border-heavy);\n  border-radius:var(--dshpc-radius-sm);outline:none;\n}\n.dshpc-dt__step-val:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__step-val:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed}\n.dshpc-dt__sep{padding-bottom:5px;color:var(--dshpc-fg-3);font-size:12px}\n\n.dshpc-dt__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__foot-side{display:flex;align-items:center;gap:6px}\n.dshpc-dt__warn{font-size:11px;color:var(--dshpc-warning-label);white-space:nowrap}\n";
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/display/section-head-css.generated.js
 		const SECTION_HEAD_CSS = "/* 分区标题行：标签（可选，画出来的短竖线）/ icon + 标题 + 右侧控件。 */\n.dshpc-section-head{display:flex;align-items:center;gap:var(--dshpc-space-2);\n  margin-bottom:var(--dshpc-space-3);}\n.dshpc-section-head--flush{margin-bottom:0;}\n\n.dshpc-section-head__bar{flex:none;width:4px;height:1em;border-radius:999px;\n  font-size:var(--dshpc-font-lg);background:var(--dshpc-fg-2);}\n\n.dshpc-section-head__icon{display:inline-flex;align-items:center;flex:none;\n  line-height:var(--dshpc-line-lg);color:var(--dshpc-fg-3);}\n\n.dshpc-section-head__title{font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);\n  font-weight:600;color:var(--dshpc-fg);flex:none;}\n\n.dshpc-section-head__right{flex:1;display:flex;align-items:center;\n  justify-content:flex-end;gap:var(--dshpc-space-2);min-width:0;}\n";
@@ -308,7 +308,7 @@ window.__ModuleLoader__.load({
 		* @param props 见 {@link LoaderProps}。
 		* @returns `<svg>` 元素（inline，不占额外行高）。
 		*/
-		function Loader(props) {
+		function Loader$1(props) {
 			ensureComponentStyles("loader", LOADER_CSS);
 			const { variant = "ring", size = "md", label, className } = props;
 			const classes = [
@@ -620,7 +620,7 @@ window.__ModuleLoader__.load({
 					...style
 				}
 			};
-			return (0, react$1.createElement)("button", attrs, loading ? (0, react$1.createElement)("span", { className: "dshpc-btn__icon" }, (0, react$1.createElement)(Loader, { size: "xs" })) : icon !== void 0 && icon !== null ? (0, react$1.createElement)("span", { className: "dshpc-btn__icon" }, icon) : null, hideText ? null : marqueeLabel ? (0, react$1.createElement)(MarqueeText, {
+			return (0, react$1.createElement)("button", attrs, loading ? (0, react$1.createElement)("span", { className: "dshpc-btn__icon" }, (0, react$1.createElement)(Loader$1, { size: "xs" })) : icon !== void 0 && icon !== null ? (0, react$1.createElement)("span", { className: "dshpc-btn__icon" }, icon) : null, hideText ? null : marqueeLabel ? (0, react$1.createElement)(MarqueeText, {
 				text: children,
 				className: "dshpc-btn__label"
 			}) : children, iconRight !== void 0 && iconRight !== null && !loading ? (0, react$1.createElement)("span", { className: "dshpc-btn__icon-end" }, iconRight) : null);
@@ -661,7 +661,7 @@ window.__ModuleLoader__.load({
 					...style
 				}
 			};
-			return (0, react$1.createElement)("button", attrs, loading ? (0, react$1.createElement)(Loader, { size: "xs" }) : icon);
+			return (0, react$1.createElement)("button", attrs, loading ? (0, react$1.createElement)(Loader$1, { size: "xs" }) : icon);
 		}
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/utils/i18n.js
@@ -53621,7 +53621,7 @@ window.__ModuleLoader__.load({
 		*    毫秒恒三位输出，数据库只收到秒时优雅退化为「当天最后一秒」。
 		*/
 		function DateTimePicker(props) {
-			ensureComponentStyles("datetime", DATETIME_CSS$1);
+			ensureComponentStyles("datetime", DATETIME_CSS);
 			ensureComponentStyles("panel", PANEL_CSS);
 			ensureComponentStyles("field", FIELD_CSS$1);
 			const tt = props.translate ?? t$1;
@@ -54205,6 +54205,1170 @@ window.__ModuleLoader__.load({
 			}), props.icon === void 0 ? null : (0, react$1.createElement)("span", { className: "dshpc-section-head__icon" }, props.icon), (0, react$1.createElement)("span", { className: "dshpc-section-head__title" }, props.title), props.right === void 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-section-head__right" }, props.right));
 		}
 		//#endregion
+		//#region node_modules/sonner/dist/index.mjs
+		function __insertCSS(code) {
+			if (!code || typeof document == "undefined") return;
+			let head = document.head || document.getElementsByTagName("head")[0];
+			let style = document.createElement("style");
+			style.type = "text/css";
+			head.appendChild(style);
+			style.styleSheet ? style.styleSheet.cssText = code : style.appendChild(document.createTextNode(code));
+		}
+		const getAsset = (type) => {
+			switch (type) {
+				case "success": return SuccessIcon;
+				case "info": return InfoIcon;
+				case "warning": return WarningIcon;
+				case "error": return ErrorIcon;
+				default: return null;
+			}
+		};
+		const bars = Array(12).fill(0);
+		const Loader = ({ visible, className }) => {
+			return /*#__PURE__*/ react$1.default.createElement("div", {
+				className: ["sonner-loading-wrapper", className].filter(Boolean).join(" "),
+				"data-visible": visible
+			}, /*#__PURE__*/ react$1.default.createElement("div", { className: "sonner-spinner" }, bars.map((_, i) => /*#__PURE__*/ react$1.default.createElement("div", {
+				className: "sonner-loading-bar",
+				key: `spinner-bar-${i}`
+			}))));
+		};
+		const SuccessIcon = /*#__PURE__*/ react$1.default.createElement("svg", {
+			xmlns: "http://www.w3.org/2000/svg",
+			viewBox: "0 0 20 20",
+			fill: "currentColor",
+			height: "20",
+			width: "20",
+			"aria-hidden": "true"
+		}, /*#__PURE__*/ react$1.default.createElement("path", {
+			fillRule: "evenodd",
+			d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z",
+			clipRule: "evenodd"
+		}));
+		const WarningIcon = /*#__PURE__*/ react$1.default.createElement("svg", {
+			xmlns: "http://www.w3.org/2000/svg",
+			viewBox: "0 0 24 24",
+			fill: "currentColor",
+			height: "20",
+			width: "20",
+			"aria-hidden": "true"
+		}, /*#__PURE__*/ react$1.default.createElement("path", {
+			fillRule: "evenodd",
+			d: "M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z",
+			clipRule: "evenodd"
+		}));
+		const InfoIcon = /*#__PURE__*/ react$1.default.createElement("svg", {
+			xmlns: "http://www.w3.org/2000/svg",
+			viewBox: "0 0 20 20",
+			fill: "currentColor",
+			height: "20",
+			width: "20",
+			"aria-hidden": "true"
+		}, /*#__PURE__*/ react$1.default.createElement("path", {
+			fillRule: "evenodd",
+			d: "M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z",
+			clipRule: "evenodd"
+		}));
+		const ErrorIcon = /*#__PURE__*/ react$1.default.createElement("svg", {
+			xmlns: "http://www.w3.org/2000/svg",
+			viewBox: "0 0 20 20",
+			fill: "currentColor",
+			height: "20",
+			width: "20",
+			"aria-hidden": "true"
+		}, /*#__PURE__*/ react$1.default.createElement("path", {
+			fillRule: "evenodd",
+			d: "M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z",
+			clipRule: "evenodd"
+		}));
+		const CloseIcon = /*#__PURE__*/ react$1.default.createElement("svg", {
+			xmlns: "http://www.w3.org/2000/svg",
+			width: "12",
+			height: "12",
+			viewBox: "0 0 24 24",
+			fill: "none",
+			stroke: "currentColor",
+			strokeWidth: "1.5",
+			strokeLinecap: "round",
+			strokeLinejoin: "round",
+			"aria-hidden": "true"
+		}, /*#__PURE__*/ react$1.default.createElement("line", {
+			x1: "18",
+			y1: "6",
+			x2: "6",
+			y2: "18"
+		}), /*#__PURE__*/ react$1.default.createElement("line", {
+			x1: "6",
+			y1: "6",
+			x2: "18",
+			y2: "18"
+		}));
+		const useIsDocumentHidden = () => {
+			const [isDocumentHidden, setIsDocumentHidden] = react$1.default.useState(document.hidden);
+			react$1.default.useEffect(() => {
+				const callback = () => {
+					setIsDocumentHidden(document.hidden);
+				};
+				document.addEventListener("visibilitychange", callback);
+				return () => document.removeEventListener("visibilitychange", callback);
+			}, []);
+			return isDocumentHidden;
+		};
+		let toastsCounter = 1;
+		const MAX_HISTORY_SIZE = 100;
+		const getToastId = (data) => {
+			var _data_id;
+			return typeof (data == null ? void 0 : data.id) === "number" || (data == null ? void 0 : (_data_id = data.id) == null ? void 0 : _data_id.length) > 0 ? data.id : toastsCounter++;
+		};
+		var Observer = class {
+			constructor() {
+				this.subscribe = (subscriber) => {
+					this.subscribers.push(subscriber);
+					this.getActiveToasts().forEach((toast) => subscriber(toast));
+					return () => {
+						const index = this.subscribers.indexOf(subscriber);
+						this.subscribers.splice(index, 1);
+					};
+				};
+				this.publish = (data) => {
+					this.subscribers.forEach((subscriber) => subscriber(data));
+				};
+				this.addToast = (data) => {
+					this.publish(data);
+					this.toasts = [...this.toasts, data];
+					this.trimHistory();
+				};
+				this.trimHistory = () => {
+					let toRemove = this.toasts.length - MAX_HISTORY_SIZE;
+					if (toRemove <= 0) return;
+					this.toasts = this.toasts.filter((toast) => {
+						if (toRemove > 0 && this.dismissedToasts.has(toast.id)) {
+							this.dismissedToasts.delete(toast.id);
+							toRemove--;
+							return false;
+						}
+						return true;
+					});
+				};
+				this.create = (data) => {
+					const { message, ...rest } = data;
+					const id = getToastId(data);
+					const pendingDismissal = this.pendingDismissals.get(id);
+					if (pendingDismissal !== void 0) {
+						cancelAnimationFrame(pendingDismissal);
+						this.pendingDismissals.delete(id);
+						this.dismissedToasts.delete(id);
+					}
+					const wasDismissed = this.dismissedToasts.has(id);
+					const dismissible = data.dismissible === void 0 ? true : data.dismissible;
+					if (wasDismissed) {
+						this.dismissedToasts.delete(id);
+						this.toasts = this.toasts.filter((toast) => toast.id !== id);
+					}
+					if (wasDismissed ? void 0 : this.toasts.find((toast) => {
+						return toast.id === id;
+					})) this.toasts = this.toasts.map((toast) => {
+						if (toast.id === id) {
+							this.publish({
+								...toast,
+								...data,
+								id,
+								title: message
+							});
+							return {
+								...toast,
+								...data,
+								id,
+								dismissible,
+								title: message
+							};
+						}
+						return toast;
+					});
+					else this.addToast({
+						title: message,
+						...rest,
+						dismissible,
+						id
+					});
+					return id;
+				};
+				this.dismiss = (id) => {
+					if (id === void 0 || id === null) {
+						this.getActiveToasts().forEach((toast) => {
+							this.dismissedToasts.add(toast.id);
+							this.subscribers.forEach((subscriber) => subscriber({
+								id: toast.id,
+								dismiss: true
+							}));
+						});
+						return id;
+					}
+					this.dismissedToasts.add(id);
+					const alreadyPending = this.pendingDismissals.get(id);
+					if (alreadyPending !== void 0) cancelAnimationFrame(alreadyPending);
+					this.pendingDismissals.set(id, requestAnimationFrame(() => {
+						this.pendingDismissals.delete(id);
+						this.subscribers.forEach((subscriber) => subscriber({
+							id,
+							dismiss: true
+						}));
+					}));
+					return id;
+				};
+				this.message = (message, data) => {
+					return this.create({
+						...data,
+						message,
+						type: void 0
+					});
+				};
+				this.error = (message, data) => {
+					return this.create({
+						...data,
+						message,
+						type: "error"
+					});
+				};
+				this.success = (message, data) => {
+					return this.create({
+						...data,
+						type: "success",
+						message
+					});
+				};
+				this.info = (message, data) => {
+					return this.create({
+						...data,
+						type: "info",
+						message
+					});
+				};
+				this.warning = (message, data) => {
+					return this.create({
+						...data,
+						type: "warning",
+						message
+					});
+				};
+				this.loading = (message, data) => {
+					return this.create({
+						...data,
+						type: "loading",
+						message
+					});
+				};
+				this.promise = (promise, data) => {
+					if (!data) return;
+					let id = void 0;
+					if (data.loading !== void 0) id = this.create({
+						...data,
+						promise,
+						type: "loading",
+						message: data.loading,
+						description: typeof data.description !== "function" ? data.description : void 0
+					});
+					const p = Promise.resolve(promise instanceof Function ? promise() : promise);
+					let shouldDismiss = id !== void 0;
+					let result;
+					const originalPromise = p.then(async (response) => {
+						result = ["resolve", response];
+						if (react$1.default.isValidElement(response)) {
+							shouldDismiss = false;
+							this.create({
+								id,
+								type: "default",
+								message: response
+							});
+						} else if (isHttpResponse(response) && !response.ok) {
+							shouldDismiss = false;
+							const promiseData = typeof data.error === "function" ? await data.error(`HTTP error! status: ${response.status}`) : data.error;
+							const description = typeof data.description === "function" ? await data.description(`HTTP error! status: ${response.status}`) : data.description;
+							const toastSettings = typeof promiseData === "object" && !react$1.default.isValidElement(promiseData) ? promiseData : { message: promiseData };
+							this.create({
+								id,
+								type: "error",
+								description,
+								...toastSettings
+							});
+						} else if (response instanceof Error) {
+							shouldDismiss = false;
+							const promiseData = typeof data.error === "function" ? await data.error(response) : data.error;
+							const description = typeof data.description === "function" ? await data.description(response) : data.description;
+							const toastSettings = typeof promiseData === "object" && !react$1.default.isValidElement(promiseData) ? promiseData : { message: promiseData };
+							this.create({
+								id,
+								type: "error",
+								description,
+								...toastSettings
+							});
+						} else if (data.success !== void 0) {
+							shouldDismiss = false;
+							const promiseData = typeof data.success === "function" ? await data.success(response) : data.success;
+							const description = typeof data.description === "function" ? await data.description(response) : data.description;
+							const toastSettings = typeof promiseData === "object" && !react$1.default.isValidElement(promiseData) ? promiseData : { message: promiseData };
+							this.create({
+								id,
+								type: "success",
+								description,
+								...toastSettings
+							});
+						}
+					}).catch(async (error) => {
+						result = ["reject", error];
+						if (data.error !== void 0) {
+							shouldDismiss = false;
+							const promiseData = typeof data.error === "function" ? await data.error(error) : data.error;
+							const description = typeof data.description === "function" ? await data.description(error) : data.description;
+							const toastSettings = typeof promiseData === "object" && !react$1.default.isValidElement(promiseData) ? promiseData : { message: promiseData };
+							this.create({
+								id,
+								type: "error",
+								description,
+								...toastSettings
+							});
+						}
+					}).finally(() => {
+						if (shouldDismiss) {
+							this.dismiss(id);
+							id = void 0;
+						}
+						data.finally == null || data.finally.call(data);
+					});
+					const unwrap = () => new Promise((resolve, reject) => originalPromise.then(() => result[0] === "reject" ? reject(result[1]) : resolve(result[1])).catch(reject));
+					if (typeof id !== "string" && typeof id !== "number") return { unwrap };
+					else return Object.assign(id, { unwrap });
+				};
+				this.custom = (jsx, data) => {
+					const id = getToastId(data);
+					this.create({
+						...data,
+						jsx: jsx(id),
+						id,
+						type: void 0
+					});
+					return id;
+				};
+				this.getActiveToasts = () => {
+					return this.toasts.filter((toast) => !this.dismissedToasts.has(toast.id));
+				};
+				this.subscribers = [];
+				this.toasts = [];
+				this.dismissedToasts = /* @__PURE__ */ new Set();
+				this.pendingDismissals = /* @__PURE__ */ new Map();
+			}
+		};
+		const ToastState = new Observer();
+		const toastFunction = (message, data) => {
+			return ToastState.message(message, data);
+		};
+		const isHttpResponse = (data) => {
+			return data && typeof data === "object" && "ok" in data && typeof data.ok === "boolean" && "status" in data && typeof data.status === "number";
+		};
+		const basicToast = toastFunction;
+		const getHistory = () => ToastState.toasts;
+		const getToasts = () => ToastState.getActiveToasts();
+		const toast = Object.assign(basicToast, {
+			success: ToastState.success,
+			info: ToastState.info,
+			warning: ToastState.warning,
+			error: ToastState.error,
+			custom: ToastState.custom,
+			message: ToastState.message,
+			promise: ToastState.promise,
+			dismiss: ToastState.dismiss,
+			loading: ToastState.loading
+		}, {
+			getHistory,
+			getToasts
+		});
+		__insertCSS("[data-sonner-toaster][dir=ltr],html[dir=ltr]{--toast-icon-margin-start:-3px;--toast-icon-margin-end:4px;--toast-svg-margin-start:-1px;--toast-svg-margin-end:0px;--toast-button-margin-start:auto;--toast-button-margin-end:0;--toast-close-button-start:0;--toast-close-button-end:unset;--toast-close-button-transform:translate(-35%, -35%)}[data-sonner-toaster][dir=rtl],html[dir=rtl]{--toast-icon-margin-start:4px;--toast-icon-margin-end:-3px;--toast-svg-margin-start:0px;--toast-svg-margin-end:-1px;--toast-button-margin-start:0;--toast-button-margin-end:auto;--toast-close-button-start:unset;--toast-close-button-end:0;--toast-close-button-transform:translate(35%, -35%)}[data-sonner-toaster]{position:fixed;width:var(--width);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;--gray1:hsl(0, 0%, 99%);--gray2:hsl(0, 0%, 97.3%);--gray3:hsl(0, 0%, 95.1%);--gray4:hsl(0, 0%, 93%);--gray5:hsl(0, 0%, 90.9%);--gray6:hsl(0, 0%, 88.7%);--gray7:hsl(0, 0%, 85.8%);--gray8:hsl(0, 0%, 78%);--gray9:hsl(0, 0%, 56.1%);--gray10:hsl(0, 0%, 52.3%);--gray11:hsl(0, 0%, 43.5%);--gray12:hsl(0, 0%, 9%);--border-radius:8px;box-sizing:border-box;padding:0;margin:0;list-style:none;outline:0;z-index:999999999;transition:transform .4s ease}@media (hover:none) and (pointer:coarse){[data-sonner-toaster][data-lifted=true]{transform:none}}[data-sonner-toaster][data-x-position=right]{right:var(--offset-right)}[data-sonner-toaster][data-x-position=left]{left:var(--offset-left)}[data-sonner-toaster][data-x-position=center]{left:50%;transform:translateX(-50%)}[data-sonner-toaster][data-y-position=top]{top:var(--offset-top)}[data-sonner-toaster][data-y-position=bottom]{bottom:var(--offset-bottom)}[data-sonner-toast]{--y:translateY(100%);--lift-amount:calc(var(--lift) * var(--gap));z-index:var(--z-index);position:absolute;opacity:0;transform:var(--y);touch-action:none;transition:transform .4s,opacity .4s,height .4s,box-shadow .2s;box-sizing:border-box;outline:0;overflow-wrap:anywhere}[data-sonner-toast][data-styled=true]{padding:16px;background:var(--normal-bg);border:1px solid var(--normal-border);color:var(--normal-text);border-radius:var(--border-radius);box-shadow:0 4px 12px rgba(0,0,0,.1);width:var(--width);font-size:13px;display:flex;align-items:center;gap:6px}[data-sonner-toast]:focus-visible{box-shadow:0 4px 12px rgba(0,0,0,.1),0 0 0 2px rgba(0,0,0,.2)}[data-sonner-toast][data-y-position=top]{top:0;--y:translateY(-100%);--lift:1;--lift-amount:calc(1 * var(--gap))}[data-sonner-toast][data-y-position=bottom]{bottom:0;--y:translateY(100%);--lift:-1;--lift-amount:calc(var(--lift) * var(--gap))}[data-sonner-toast][data-styled=true] [data-description]{font-weight:400;line-height:1.4;color:#3f3f3f}[data-rich-colors=true][data-sonner-toast][data-styled=true] [data-description]{color:inherit}[data-sonner-toaster][data-sonner-theme=dark] [data-description]{color:#e8e8e8}[data-sonner-toast][data-styled=true] [data-title]{font-weight:500;line-height:1.5;color:inherit}[data-sonner-toast][data-styled=true] [data-icon]{display:flex;height:16px;width:16px;position:relative;justify-content:flex-start;align-items:center;flex-shrink:0;margin-left:var(--toast-icon-margin-start);margin-right:var(--toast-icon-margin-end)}[data-sonner-toast][data-promise=true] [data-icon]>svg{opacity:0;transform:scale(.8);transform-origin:center;animation:sonner-fade-in .3s ease forwards}[data-sonner-toast][data-styled=true] [data-icon]>*{flex-shrink:0}[data-sonner-toast][data-styled=true] [data-icon] svg{margin-left:var(--toast-svg-margin-start);margin-right:var(--toast-svg-margin-end)}[data-sonner-toast][data-styled=true] [data-content]{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}[data-sonner-toast][data-styled=true] [data-button]{border-radius:4px;padding-left:8px;padding-right:8px;height:24px;font-size:12px;color:var(--normal-bg);background:var(--normal-text);margin-left:var(--toast-button-margin-start);margin-right:var(--toast-button-margin-end);border:none;font-weight:500;cursor:pointer;outline:0;display:flex;align-items:center;flex-shrink:0;transition:opacity .4s,box-shadow .2s}[data-sonner-toast][data-styled=true] [data-button]:focus-visible{box-shadow:0 0 0 2px rgba(0,0,0,.4)}[data-sonner-toast][data-styled=true] [data-button]:first-of-type{margin-left:var(--toast-button-margin-start);margin-right:var(--toast-button-margin-end)}[data-sonner-toast][data-styled=true] [data-cancel]{color:var(--normal-text);background:rgba(0,0,0,.08)}[data-sonner-toaster][data-sonner-theme=dark] [data-sonner-toast][data-styled=true] [data-cancel]{background:rgba(255,255,255,.3)}[data-sonner-toast][data-styled=true] [data-close-button]{position:absolute;left:var(--toast-close-button-start);right:var(--toast-close-button-end);top:0;height:20px;width:20px;display:flex;justify-content:center;align-items:center;padding:0;color:var(--normal-text);background:var(--normal-bg);border:1px solid var(--normal-border);transform:var(--toast-close-button-transform);border-radius:50%;cursor:pointer;z-index:1;transition:opacity .1s,background .2s,border-color .2s}[data-sonner-toast][data-styled=true] [data-close-button]:focus-visible{box-shadow:0 4px 12px rgba(0,0,0,.1),0 0 0 2px rgba(0,0,0,.2)}[data-sonner-toast][data-styled=true] [data-disabled=true]{cursor:not-allowed}[data-sonner-toast][data-styled=true]:hover [data-close-button]:hover{background:var(--gray2);border-color:var(--gray5)}[data-sonner-toast][data-swiping=true]::before{content:'';position:absolute;left:-100%;right:-100%;height:100%;z-index:-1}[data-sonner-toast][data-y-position=top][data-swiping=true]::before{bottom:50%;transform:scaleY(3) translateY(50%)}[data-sonner-toast][data-y-position=bottom][data-swiping=true]::before{top:50%;transform:scaleY(3) translateY(-50%)}[data-sonner-toast][data-swiping=false][data-removed=true]::before{content:'';position:absolute;inset:0;transform:scaleY(2)}[data-sonner-toast][data-expanded=true]::after{content:'';position:absolute;left:0;height:calc(var(--gap) + 1px);bottom:100%;width:100%}[data-sonner-toast][data-mounted=true]{--y:translateY(0);opacity:1}[data-sonner-toast][data-expanded=false][data-front=false]{--scale:var(--toasts-before) * 0.05 + 1;--y:translateY(calc(var(--lift-amount) * var(--toasts-before))) scale(calc(-1 * var(--scale)));height:var(--front-toast-height)}[data-sonner-toast]>*{transition:opacity .4s}[data-sonner-toast][data-x-position=right]{right:0}[data-sonner-toast][data-x-position=left]{left:0}[data-sonner-toast][data-expanded=false][data-front=false][data-styled=true]>*{opacity:0}[data-sonner-toast][data-visible=false]{opacity:0;pointer-events:none}[data-sonner-toast][data-mounted=true][data-expanded=true]{--y:translateY(calc(var(--lift) * var(--offset)));height:var(--initial-height)}[data-sonner-toast][data-removed=true][data-front=true][data-swipe-out=false]{--y:translateY(calc(var(--lift) * -100%));opacity:0}[data-sonner-toast][data-removed=true][data-front=false][data-swipe-out=false][data-expanded=true]{--y:translateY(calc(var(--lift) * var(--offset) + var(--lift) * -100%));opacity:0}[data-sonner-toast][data-removed=true][data-front=false][data-swipe-out=false][data-expanded=false]{--y:translateY(40%);opacity:0;transition:transform .5s,opacity .2s}[data-sonner-toast][data-removed=true][data-front=false]::before{height:calc(var(--initial-height) + 20%)}[data-sonner-toast][data-swiping=true]{transform:var(--y) translateY(var(--swipe-amount-y,0)) translateX(var(--swipe-amount-x,0));transition:none}[data-sonner-toast][data-swiped=true]{-webkit-user-select:none;user-select:none}[data-sonner-toast][data-swipe-out=true][data-y-position=bottom],[data-sonner-toast][data-swipe-out=true][data-y-position=top]{animation-duration:.2s;animation-timing-function:ease-out;animation-fill-mode:forwards}[data-sonner-toast][data-swipe-out=true][data-swipe-direction=left]{animation-name:swipe-out-left}[data-sonner-toast][data-swipe-out=true][data-swipe-direction=right]{animation-name:swipe-out-right}[data-sonner-toast][data-swipe-out=true][data-swipe-direction=up]{animation-name:swipe-out-up}[data-sonner-toast][data-swipe-out=true][data-swipe-direction=down]{animation-name:swipe-out-down}@keyframes swipe-out-left{from{transform:var(--y) translateX(var(--swipe-amount-x));opacity:1}to{transform:var(--y) translateX(calc(var(--swipe-amount-x) - 100%));opacity:0}}@keyframes swipe-out-right{from{transform:var(--y) translateX(var(--swipe-amount-x));opacity:1}to{transform:var(--y) translateX(calc(var(--swipe-amount-x) + 100%));opacity:0}}@keyframes swipe-out-up{from{transform:var(--y) translateY(var(--swipe-amount-y));opacity:1}to{transform:var(--y) translateY(calc(var(--swipe-amount-y) - 100%));opacity:0}}@keyframes swipe-out-down{from{transform:var(--y) translateY(var(--swipe-amount-y));opacity:1}to{transform:var(--y) translateY(calc(var(--swipe-amount-y) + 100%));opacity:0}}@media (max-width:600px){[data-sonner-toaster]{position:fixed;right:var(--mobile-offset-right);left:var(--mobile-offset-left);width:100%}[data-sonner-toaster][dir=rtl]{left:calc(var(--mobile-offset-left) * -1)}[data-sonner-toaster] [data-sonner-toast]{left:0;right:0;width:calc(100% - var(--mobile-offset-left) * 2)}[data-sonner-toaster][data-x-position=left]{left:var(--mobile-offset-left)}[data-sonner-toaster][data-y-position=bottom]{bottom:var(--mobile-offset-bottom)}[data-sonner-toaster][data-y-position=top]{top:var(--mobile-offset-top)}[data-sonner-toaster][data-x-position=center]{left:var(--mobile-offset-left);right:var(--mobile-offset-right);transform:none}}[data-sonner-toaster][data-sonner-theme=light]{--normal-bg:#fff;--normal-border:var(--gray4);--normal-text:var(--gray12);--success-bg:hsl(143, 85%, 96%);--success-border:hsl(145, 92%, 87%);--success-text:hsl(140, 100%, 27%);--info-bg:hsl(208, 100%, 97%);--info-border:hsl(221, 91%, 93%);--info-text:hsl(210, 92%, 45%);--warning-bg:hsl(49, 100%, 97%);--warning-border:hsl(49, 91%, 84%);--warning-text:hsl(31, 92%, 45%);--error-bg:hsl(359, 100%, 97%);--error-border:hsl(359, 100%, 94%);--error-text:hsl(360, 100%, 45%)}[data-sonner-toaster][data-sonner-theme=light] [data-sonner-toast][data-invert=true]{--normal-bg:#000;--normal-border:hsl(0, 0%, 20%);--normal-text:var(--gray1)}[data-sonner-toaster][data-sonner-theme=dark] [data-sonner-toast][data-invert=true]{--normal-bg:#fff;--normal-border:var(--gray3);--normal-text:var(--gray12)}[data-sonner-toaster][data-sonner-theme=dark]{--normal-bg:#000;--normal-bg-hover:hsl(0, 0%, 12%);--normal-border:hsl(0, 0%, 20%);--normal-border-hover:hsl(0, 0%, 25%);--normal-text:var(--gray1);--success-bg:hsl(150, 100%, 6%);--success-border:hsl(147, 100%, 12%);--success-text:hsl(150, 86%, 65%);--info-bg:hsl(215, 100%, 6%);--info-border:hsl(223, 43%, 17%);--info-text:hsl(216, 87%, 65%);--warning-bg:hsl(64, 100%, 6%);--warning-border:hsl(60, 100%, 9%);--warning-text:hsl(46, 87%, 65%);--error-bg:hsl(358, 76%, 10%);--error-border:hsl(357, 89%, 16%);--error-text:hsl(358, 100%, 81%)}[data-sonner-toaster][data-sonner-theme=dark] [data-sonner-toast] [data-close-button]{background:var(--normal-bg);border-color:var(--normal-border);color:var(--normal-text)}[data-sonner-toaster][data-sonner-theme=dark] [data-sonner-toast] [data-close-button]:hover{background:var(--normal-bg-hover);border-color:var(--normal-border-hover)}[data-rich-colors=true][data-sonner-toast][data-type=success]{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text)}[data-rich-colors=true][data-sonner-toast][data-type=success] [data-close-button]{background:var(--success-bg);border-color:var(--success-border);color:var(--success-text)}[data-rich-colors=true][data-sonner-toast][data-type=info]{background:var(--info-bg);border-color:var(--info-border);color:var(--info-text)}[data-rich-colors=true][data-sonner-toast][data-type=info] [data-close-button]{background:var(--info-bg);border-color:var(--info-border);color:var(--info-text)}[data-rich-colors=true][data-sonner-toast][data-type=warning]{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning-text)}[data-rich-colors=true][data-sonner-toast][data-type=warning] [data-close-button]{background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning-text)}[data-rich-colors=true][data-sonner-toast][data-type=error]{background:var(--error-bg);border-color:var(--error-border);color:var(--error-text)}[data-rich-colors=true][data-sonner-toast][data-type=error] [data-close-button]{background:var(--error-bg);border-color:var(--error-border);color:var(--error-text)}.sonner-loading-wrapper{--size:16px;height:var(--size);width:var(--size);position:absolute;inset:0;z-index:10}.sonner-loading-wrapper[data-visible=false]{transform-origin:center;animation:sonner-fade-out .2s ease forwards}.sonner-spinner{position:relative;top:50%;left:50%;height:var(--size);width:var(--size)}.sonner-loading-bar{animation:sonner-spin 1.2s linear infinite;background:var(--gray11);border-radius:6px;height:8%;left:-10%;position:absolute;top:-3.9%;width:24%}.sonner-loading-bar:first-child{animation-delay:-1.2s;transform:rotate(.0001deg) translate(146%)}.sonner-loading-bar:nth-child(2){animation-delay:-1.1s;transform:rotate(30deg) translate(146%)}.sonner-loading-bar:nth-child(3){animation-delay:-1s;transform:rotate(60deg) translate(146%)}.sonner-loading-bar:nth-child(4){animation-delay:-.9s;transform:rotate(90deg) translate(146%)}.sonner-loading-bar:nth-child(5){animation-delay:-.8s;transform:rotate(120deg) translate(146%)}.sonner-loading-bar:nth-child(6){animation-delay:-.7s;transform:rotate(150deg) translate(146%)}.sonner-loading-bar:nth-child(7){animation-delay:-.6s;transform:rotate(180deg) translate(146%)}.sonner-loading-bar:nth-child(8){animation-delay:-.5s;transform:rotate(210deg) translate(146%)}.sonner-loading-bar:nth-child(9){animation-delay:-.4s;transform:rotate(240deg) translate(146%)}.sonner-loading-bar:nth-child(10){animation-delay:-.3s;transform:rotate(270deg) translate(146%)}.sonner-loading-bar:nth-child(11){animation-delay:-.2s;transform:rotate(300deg) translate(146%)}.sonner-loading-bar:nth-child(12){animation-delay:-.1s;transform:rotate(330deg) translate(146%)}@keyframes sonner-fade-in{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}@keyframes sonner-fade-out{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.8)}}@keyframes sonner-spin{0%{opacity:1}100%{opacity:.15}}@media (prefers-reduced-motion){.sonner-loading-bar,[data-sonner-toast],[data-sonner-toast]>*{transition:none!important;animation:none!important}}.sonner-loader{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transform-origin:center;transition:opacity .2s,transform .2s}.sonner-loader[data-visible=false]{opacity:0;transform:scale(.8) translate(-50%,-50%)}");
+		function isAction(action) {
+			return action.label !== void 0;
+		}
+		const VISIBLE_TOASTS_AMOUNT = 3;
+		const VIEWPORT_OFFSET = "24px";
+		const MOBILE_VIEWPORT_OFFSET = "16px";
+		const TOAST_LIFETIME = 4e3;
+		const TOAST_WIDTH = 356;
+		const GAP = 14;
+		const SWIPE_THRESHOLD = 45;
+		const TIME_BEFORE_UNMOUNT = 200;
+		function cn(...classes) {
+			return classes.filter(Boolean).join(" ");
+		}
+		function getDefaultSwipeDirections(position) {
+			const [y, x] = position.split("-");
+			const directions = [];
+			if (y) directions.push(y);
+			if (x) directions.push(x);
+			return directions;
+		}
+		const Toast = (props) => {
+			var _toast_classNames, _toast_classNames1, _toast_classNames2, _toast_classNames3, _toast_classNames4, _toast_classNames5, _toast_classNames6, _toast_classNames7, _toast_classNames8;
+			const { invert: ToasterInvert, toast, unstyled, interacting, setHeights, visibleToasts, heights, index, toasts, expanded, removeToast, defaultRichColors, closeButton: closeButtonFromToaster, style, cancelButtonStyle, actionButtonStyle, className = "", descriptionClassName = "", duration: durationFromToaster, position, gap, expandByDefault, classNames, icons, closeButtonAriaLabel = "Close toast" } = props;
+			const [swipeDirection, setSwipeDirection] = react$1.default.useState(null);
+			const [swipeOutDirection, setSwipeOutDirection] = react$1.default.useState(null);
+			const [mounted, setMounted] = react$1.default.useState(false);
+			const [removed, setRemoved] = react$1.default.useState(false);
+			const [swiping, setSwiping] = react$1.default.useState(false);
+			const [swipeOut, setSwipeOut] = react$1.default.useState(false);
+			const [isSwiped, setIsSwiped] = react$1.default.useState(false);
+			const [offsetBeforeRemove, setOffsetBeforeRemove] = react$1.default.useState(0);
+			const [initialHeight, setInitialHeight] = react$1.default.useState(0);
+			const remainingTime = react$1.default.useRef(toast.duration || durationFromToaster || TOAST_LIFETIME);
+			const dragStartTime = react$1.default.useRef(null);
+			const toastRef = react$1.default.useRef(null);
+			const isFront = index === 0;
+			const isVisible = index + 1 <= visibleToasts;
+			const toastType = toast.type;
+			const toastTypeKey = toastType != null ? toastType : "default";
+			const dismissible = toast.dismissible !== false;
+			const toastClassname = toast.className || "";
+			const toastDescriptionClassname = toast.descriptionClassName || "";
+			const heightIndex = react$1.default.useMemo(() => heights.findIndex((height) => height.toastId === toast.id) || 0, [heights, toast.id]);
+			const closeButton = react$1.default.useMemo(() => {
+				var _toast_closeButton;
+				return (_toast_closeButton = toast.closeButton) != null ? _toast_closeButton : closeButtonFromToaster;
+			}, [toast.closeButton, closeButtonFromToaster]);
+			const duration = react$1.default.useMemo(() => toast.duration || durationFromToaster || TOAST_LIFETIME, [toast.duration, durationFromToaster]);
+			const closeTimerStartTimeRef = react$1.default.useRef(0);
+			const offset = react$1.default.useRef(0);
+			const lastCloseTimerStartTimeRef = react$1.default.useRef(0);
+			const pointerStartRef = react$1.default.useRef(null);
+			const [y, x] = position.split("-");
+			const toastsHeightBefore = react$1.default.useMemo(() => {
+				return heights.reduce((prev, curr, reducerIndex) => {
+					if (reducerIndex >= heightIndex) return prev;
+					return prev + curr.height;
+				}, 0);
+			}, [heights, heightIndex]);
+			const isDocumentHidden = useIsDocumentHidden();
+			const swipeDirections = react$1.default.useMemo(() => {
+				var _props_swipeDirections;
+				return (_props_swipeDirections = props.swipeDirections) != null ? _props_swipeDirections : getDefaultSwipeDirections(position);
+			}, [props.swipeDirections, position]);
+			const invert = toast.invert || ToasterInvert;
+			const disabled = toastType === "loading";
+			offset.current = react$1.default.useMemo(() => heightIndex * gap + toastsHeightBefore, [heightIndex, toastsHeightBefore]);
+			react$1.default.useEffect(() => {
+				remainingTime.current = duration;
+			}, [duration]);
+			react$1.default.useEffect(() => {
+				setMounted(true);
+			}, []);
+			react$1.default.useEffect(() => {
+				const toastNode = toastRef.current;
+				if (toastNode) {
+					const height = toastNode.getBoundingClientRect().height;
+					setInitialHeight(height);
+					setHeights((h) => [{
+						toastId: toast.id,
+						height,
+						position: toast.position
+					}, ...h]);
+					return () => setHeights((h) => h.filter((height) => height.toastId !== toast.id));
+				}
+			}, [setHeights, toast.id]);
+			react$1.default.useLayoutEffect(() => {
+				if (!mounted) return;
+				const toastNode = toastRef.current;
+				const originalHeight = toastNode.style.height;
+				toastNode.style.height = "auto";
+				const newHeight = toastNode.getBoundingClientRect().height;
+				toastNode.style.height = originalHeight;
+				setInitialHeight(newHeight);
+				setHeights((heights) => {
+					if (!heights.find((height) => height.toastId === toast.id)) return [{
+						toastId: toast.id,
+						height: newHeight,
+						position: toast.position
+					}, ...heights];
+					else return heights.map((height) => height.toastId === toast.id ? {
+						...height,
+						height: newHeight
+					} : height);
+				});
+			}, [
+				mounted,
+				toast.title,
+				toast.description,
+				setHeights,
+				toast.id,
+				toast.jsx,
+				toast.action,
+				toast.cancel
+			]);
+			const deleteToast = react$1.default.useCallback(() => {
+				setRemoved(true);
+				setOffsetBeforeRemove(offset.current);
+				setHeights((h) => h.filter((height) => height.toastId !== toast.id));
+				setTimeout(() => {
+					removeToast(toast);
+				}, TIME_BEFORE_UNMOUNT);
+			}, [
+				toast,
+				removeToast,
+				setHeights,
+				offset
+			]);
+			react$1.default.useEffect(() => {
+				if (toast.promise && toastType === "loading" || toast.duration === Infinity || toast.type === "loading") return;
+				let timeoutId;
+				const pauseTimer = () => {
+					if (lastCloseTimerStartTimeRef.current < closeTimerStartTimeRef.current) {
+						const elapsedTime = (/* @__PURE__ */ new Date()).getTime() - closeTimerStartTimeRef.current;
+						remainingTime.current = remainingTime.current - elapsedTime;
+					}
+					lastCloseTimerStartTimeRef.current = (/* @__PURE__ */ new Date()).getTime();
+				};
+				const startTimer = () => {
+					if (remainingTime.current === Infinity) return;
+					closeTimerStartTimeRef.current = (/* @__PURE__ */ new Date()).getTime();
+					timeoutId = setTimeout(() => {
+						toast.onAutoClose == null || toast.onAutoClose.call(toast, toast);
+						deleteToast();
+					}, remainingTime.current);
+				};
+				if (expanded || interacting || isDocumentHidden) pauseTimer();
+				else startTimer();
+				return () => clearTimeout(timeoutId);
+			}, [
+				expanded,
+				interacting,
+				toast,
+				toastType,
+				isDocumentHidden,
+				deleteToast
+			]);
+			react$1.default.useEffect(() => {
+				if (toast.delete) {
+					deleteToast();
+					toast.onDismiss == null || toast.onDismiss.call(toast, toast);
+				}
+			}, [deleteToast, toast.delete]);
+			function getLoadingIcon() {
+				var _toast_classNames;
+				if (icons == null ? void 0 : icons.loading) {
+					var _toast_classNames1;
+					return /*#__PURE__*/ react$1.default.createElement("div", {
+						className: cn(classNames == null ? void 0 : classNames.loader, toast == null ? void 0 : (_toast_classNames1 = toast.classNames) == null ? void 0 : _toast_classNames1.loader, "sonner-loader"),
+						"data-visible": toastType === "loading"
+					}, icons.loading);
+				}
+				return /*#__PURE__*/ react$1.default.createElement(Loader, {
+					className: cn(classNames == null ? void 0 : classNames.loader, toast == null ? void 0 : (_toast_classNames = toast.classNames) == null ? void 0 : _toast_classNames.loader),
+					visible: toastType === "loading"
+				});
+			}
+			const icon = toast.icon || (icons == null ? void 0 : icons[toastType]) || getAsset(toastType);
+			var _toast_richColors, _icons_close;
+			return /*#__PURE__*/ react$1.default.createElement("li", {
+				tabIndex: 0,
+				ref: toastRef,
+				className: cn(className, toastClassname, classNames == null ? void 0 : classNames.toast, toast == null ? void 0 : (_toast_classNames = toast.classNames) == null ? void 0 : _toast_classNames.toast, classNames == null ? void 0 : classNames[toastTypeKey], toast == null ? void 0 : (_toast_classNames1 = toast.classNames) == null ? void 0 : _toast_classNames1[toastTypeKey]),
+				"data-sonner-toast": "",
+				"data-rich-colors": (_toast_richColors = toast.richColors) != null ? _toast_richColors : defaultRichColors,
+				"data-styled": !Boolean(toast.jsx || toast.unstyled || unstyled),
+				"data-mounted": mounted,
+				"data-promise": Boolean(toast.promise),
+				"data-swiped": isSwiped,
+				"data-removed": removed,
+				"data-visible": isVisible,
+				"data-y-position": y,
+				"data-x-position": x,
+				"data-index": index,
+				"data-front": isFront,
+				"data-swiping": swiping,
+				"data-dismissible": dismissible,
+				"data-type": toastType,
+				"data-invert": invert,
+				"data-swipe-out": swipeOut,
+				"data-swipe-direction": swipeOutDirection,
+				"data-expanded": Boolean(expanded || expandByDefault && mounted),
+				"data-testid": toast.testId,
+				style: {
+					"--index": index,
+					"--toasts-before": index,
+					"--z-index": toasts.length - index,
+					"--offset": `${removed ? offsetBeforeRemove : offset.current}px`,
+					"--initial-height": expandByDefault ? "auto" : `${initialHeight}px`,
+					...style,
+					...toast.style
+				},
+				onDragEnd: () => {
+					setSwiping(false);
+					setSwipeDirection(null);
+					pointerStartRef.current = null;
+				},
+				onPointerDown: (event) => {
+					if (event.button === 2) return;
+					if (disabled || !dismissible) return;
+					dragStartTime.current = /* @__PURE__ */ new Date();
+					setOffsetBeforeRemove(offset.current);
+					event.target.setPointerCapture(event.pointerId);
+					if (event.target.tagName === "BUTTON") return;
+					setSwiping(true);
+					pointerStartRef.current = {
+						x: event.clientX,
+						y: event.clientY
+					};
+				},
+				onPointerUp: () => {
+					var _toastRef_current, _toastRef_current1, _dragStartTime_current;
+					if (swipeOut || !dismissible) return;
+					pointerStartRef.current = null;
+					const swipeAmountX = Number(((_toastRef_current = toastRef.current) == null ? void 0 : _toastRef_current.style.getPropertyValue("--swipe-amount-x").replace("px", "")) || 0);
+					const swipeAmountY = Number(((_toastRef_current1 = toastRef.current) == null ? void 0 : _toastRef_current1.style.getPropertyValue("--swipe-amount-y").replace("px", "")) || 0);
+					const timeTaken = (/* @__PURE__ */ new Date()).getTime() - ((_dragStartTime_current = dragStartTime.current) == null ? void 0 : _dragStartTime_current.getTime());
+					const swipeAmount = swipeDirection === "x" ? swipeAmountX : swipeAmountY;
+					const velocity = Math.abs(swipeAmount) / timeTaken;
+					if ((swipeDirection === "x" ? swipeDirections.includes(swipeAmountX > 0 ? "right" : "left") : swipeDirections.includes(swipeAmountY > 0 ? "bottom" : "top")) && (Math.abs(swipeAmount) >= SWIPE_THRESHOLD || velocity > .11)) {
+						setOffsetBeforeRemove(offset.current);
+						toast.onDismiss == null || toast.onDismiss.call(toast, toast);
+						if (swipeDirection === "x") setSwipeOutDirection(swipeAmountX > 0 ? "right" : "left");
+						else setSwipeOutDirection(swipeAmountY > 0 ? "down" : "up");
+						deleteToast();
+						setSwipeOut(true);
+						return;
+					} else {
+						var _toastRef_current2, _toastRef_current3;
+						(_toastRef_current2 = toastRef.current) == null || _toastRef_current2.style.setProperty("--swipe-amount-x", `0px`);
+						(_toastRef_current3 = toastRef.current) == null || _toastRef_current3.style.setProperty("--swipe-amount-y", `0px`);
+					}
+					setIsSwiped(false);
+					setSwiping(false);
+					setSwipeDirection(null);
+				},
+				onPointerMove: (event) => {
+					var _window_getSelection, _toastRef_current, _toastRef_current1;
+					if (!pointerStartRef.current || !dismissible) return;
+					if (((_window_getSelection = window.getSelection()) == null ? void 0 : _window_getSelection.toString().length) > 0) return;
+					const yDelta = event.clientY - pointerStartRef.current.y;
+					const xDelta = event.clientX - pointerStartRef.current.x;
+					if (!swipeDirection && (Math.abs(xDelta) > 1 || Math.abs(yDelta) > 1)) setSwipeDirection(Math.abs(xDelta) > Math.abs(yDelta) ? "x" : "y");
+					let swipeAmount = {
+						x: 0,
+						y: 0
+					};
+					const getDampening = (delta) => {
+						return 1 / (1.5 + Math.abs(delta) / 20);
+					};
+					if (swipeDirection === "y") {
+						if (swipeDirections.includes("top") || swipeDirections.includes("bottom")) {
+							if (swipeDirections.includes("top") && yDelta < 0 || swipeDirections.includes("bottom") && yDelta > 0) swipeAmount.y = yDelta;
+							else {
+								const dampenedDelta = yDelta * getDampening(yDelta);
+								swipeAmount.y = Math.abs(dampenedDelta) < Math.abs(yDelta) ? dampenedDelta : yDelta;
+							}
+						}
+					} else if (swipeDirection === "x") {
+						if (swipeDirections.includes("left") || swipeDirections.includes("right")) {
+							if (swipeDirections.includes("left") && xDelta < 0 || swipeDirections.includes("right") && xDelta > 0) swipeAmount.x = xDelta;
+							else {
+								const dampenedDelta = xDelta * getDampening(xDelta);
+								swipeAmount.x = Math.abs(dampenedDelta) < Math.abs(xDelta) ? dampenedDelta : xDelta;
+							}
+						}
+					}
+					if (Math.abs(swipeAmount.x) > 0 || Math.abs(swipeAmount.y) > 0) setIsSwiped(true);
+					(_toastRef_current = toastRef.current) == null || _toastRef_current.style.setProperty("--swipe-amount-x", `${swipeAmount.x}px`);
+					(_toastRef_current1 = toastRef.current) == null || _toastRef_current1.style.setProperty("--swipe-amount-y", `${swipeAmount.y}px`);
+				}
+			}, closeButton && !toast.jsx && toastType !== "loading" ? /*#__PURE__*/ react$1.default.createElement("button", {
+				"aria-label": closeButtonAriaLabel,
+				"data-disabled": disabled,
+				"data-close-button": true,
+				onClick: disabled || !dismissible ? () => {} : () => {
+					deleteToast();
+					toast.onDismiss == null || toast.onDismiss.call(toast, toast);
+				},
+				className: cn(classNames == null ? void 0 : classNames.closeButton, toast == null ? void 0 : (_toast_classNames2 = toast.classNames) == null ? void 0 : _toast_classNames2.closeButton)
+			}, (_icons_close = icons == null ? void 0 : icons.close) != null ? _icons_close : CloseIcon) : null, (toastType || toast.icon || toast.promise) && toast.icon !== null && ((icons == null ? void 0 : icons[toastType]) !== null || toast.icon) ? /*#__PURE__*/ react$1.default.createElement("div", {
+				"data-icon": "",
+				className: cn(classNames == null ? void 0 : classNames.icon, toast == null ? void 0 : (_toast_classNames3 = toast.classNames) == null ? void 0 : _toast_classNames3.icon)
+			}, toastType === "loading" ? toast.icon || getLoadingIcon() : toast.promise ? getLoadingIcon() : null, toastType !== "loading" ? icon : null) : null, /*#__PURE__*/ react$1.default.createElement("div", {
+				"data-content": "",
+				className: cn(classNames == null ? void 0 : classNames.content, toast == null ? void 0 : (_toast_classNames4 = toast.classNames) == null ? void 0 : _toast_classNames4.content)
+			}, /*#__PURE__*/ react$1.default.createElement("div", {
+				"data-title": "",
+				className: cn(classNames == null ? void 0 : classNames.title, toast == null ? void 0 : (_toast_classNames5 = toast.classNames) == null ? void 0 : _toast_classNames5.title)
+			}, toast.jsx ? toast.jsx : typeof toast.title === "function" ? toast.title() : toast.title), toast.description ? /*#__PURE__*/ react$1.default.createElement("div", {
+				"data-description": "",
+				className: cn(descriptionClassName, toastDescriptionClassname, classNames == null ? void 0 : classNames.description, toast == null ? void 0 : (_toast_classNames6 = toast.classNames) == null ? void 0 : _toast_classNames6.description)
+			}, typeof toast.description === "function" ? toast.description() : toast.description) : null), /*#__PURE__*/ react$1.default.isValidElement(toast.cancel) ? toast.cancel : toast.cancel && isAction(toast.cancel) ? /*#__PURE__*/ react$1.default.createElement("button", {
+				"data-button": true,
+				"data-cancel": true,
+				style: toast.cancelButtonStyle || cancelButtonStyle,
+				onClick: (event) => {
+					if (!isAction(toast.cancel)) return;
+					if (!dismissible) return;
+					toast.cancel.onClick == null || toast.cancel.onClick.call(toast.cancel, event);
+					deleteToast();
+				},
+				className: cn(classNames == null ? void 0 : classNames.cancelButton, toast == null ? void 0 : (_toast_classNames7 = toast.classNames) == null ? void 0 : _toast_classNames7.cancelButton)
+			}, toast.cancel.label) : null, /*#__PURE__*/ react$1.default.isValidElement(toast.action) ? toast.action : toast.action && isAction(toast.action) ? /*#__PURE__*/ react$1.default.createElement("button", {
+				"data-button": true,
+				"data-action": true,
+				style: toast.actionButtonStyle || actionButtonStyle,
+				onClick: (event) => {
+					if (!isAction(toast.action)) return;
+					toast.action.onClick == null || toast.action.onClick.call(toast.action, event);
+					if (event.defaultPrevented) return;
+					deleteToast();
+				},
+				className: cn(classNames == null ? void 0 : classNames.actionButton, toast == null ? void 0 : (_toast_classNames8 = toast.classNames) == null ? void 0 : _toast_classNames8.actionButton)
+			}, toast.action.label) : null);
+		};
+		function getDocumentDirection() {
+			if (typeof window === "undefined") return "ltr";
+			if (typeof document === "undefined") return "ltr";
+			const dirAttribute = document.documentElement.getAttribute("dir");
+			if (dirAttribute === "auto" || !dirAttribute) return window.getComputedStyle(document.documentElement).direction;
+			return dirAttribute;
+		}
+		function assignOffset(defaultOffset, mobileOffset) {
+			const styles = {};
+			[defaultOffset, mobileOffset].forEach((offset, index) => {
+				const isMobile = index === 1;
+				const prefix = isMobile ? "--mobile-offset" : "--offset";
+				const defaultValue = isMobile ? MOBILE_VIEWPORT_OFFSET : VIEWPORT_OFFSET;
+				function assignAll(offset) {
+					[
+						"top",
+						"right",
+						"bottom",
+						"left"
+					].forEach((key) => {
+						styles[`${prefix}-${key}`] = typeof offset === "number" ? `${offset}px` : offset;
+					});
+				}
+				if (typeof offset === "number" || typeof offset === "string") assignAll(offset);
+				else if (typeof offset === "object") [
+					"top",
+					"right",
+					"bottom",
+					"left"
+				].forEach((key) => {
+					if (offset[key] === void 0) styles[`${prefix}-${key}`] = defaultValue;
+					else styles[`${prefix}-${key}`] = typeof offset[key] === "number" ? `${offset[key]}px` : offset[key];
+				});
+				else assignAll(defaultValue);
+			});
+			return styles;
+		}
+		const Toaster = /*#__PURE__*/ react$1.default.forwardRef(function Toaster(props, ref) {
+			const { id, invert, position = "bottom-right", hotkey = ["altKey", "KeyT"], expand, closeButton, className, offset, mobileOffset, theme = "light", richColors, duration, style, visibleToasts = VISIBLE_TOASTS_AMOUNT, toastOptions, dir = getDocumentDirection(), gap = GAP, icons, customAriaLabel, containerAriaLabel = "Notifications" } = props;
+			const [toasts, setToasts] = react$1.default.useState([]);
+			const filteredToasts = react$1.default.useMemo(() => {
+				if (id) return toasts.filter((toast) => toast.toasterId === id);
+				return toasts.filter((toast) => !toast.toasterId);
+			}, [toasts, id]);
+			const possiblePositions = react$1.default.useMemo(() => {
+				return Array.from(new Set([position].concat(filteredToasts.filter((toast) => toast.position).map((toast) => toast.position))));
+			}, [filteredToasts, position]);
+			const [heights, setHeights] = react$1.default.useState([]);
+			const [expanded, setExpanded] = react$1.default.useState(false);
+			const [interacting, setInteracting] = react$1.default.useState(false);
+			const [actualTheme, setActualTheme] = react$1.default.useState(theme !== "system" ? theme : typeof window !== "undefined" ? window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light" : "light");
+			const listRef = react$1.default.useRef(null);
+			const hotkeyLabel = hotkey.join("+").replace(/Key/g, "").replace(/Digit/g, "");
+			const lastFocusedElementRef = react$1.default.useRef(null);
+			const isFocusWithinRef = react$1.default.useRef(false);
+			const removeToast = react$1.default.useCallback((toastToRemove) => {
+				setToasts((toasts) => {
+					var _toasts_find;
+					if (!((_toasts_find = toasts.find((toast) => toast.id === toastToRemove.id)) == null ? void 0 : _toasts_find.delete)) ToastState.dismiss(toastToRemove.id);
+					return toasts.filter(({ id }) => id !== toastToRemove.id);
+				});
+			}, []);
+			react$1.default.useEffect(() => {
+				return ToastState.subscribe((toast) => {
+					if (toast.dismiss) {
+						requestAnimationFrame(() => {
+							setToasts((toasts) => toasts.map((t) => t.id === toast.id ? {
+								...t,
+								delete: true
+							} : t));
+						});
+						return;
+					}
+					setTimeout(() => {
+						react_dom.default.flushSync(() => {
+							setToasts((toasts) => {
+								const indexOfExistingToast = toasts.findIndex((t) => t.id === toast.id);
+								if (indexOfExistingToast !== -1) return [
+									...toasts.slice(0, indexOfExistingToast),
+									{
+										...toasts[indexOfExistingToast],
+										...toast
+									},
+									...toasts.slice(indexOfExistingToast + 1)
+								];
+								return [toast, ...toasts];
+							});
+						});
+					});
+				});
+			}, []);
+			react$1.default.useEffect(() => {
+				if (theme !== "system") {
+					setActualTheme(theme);
+					return;
+				}
+				if (theme === "system") {
+					if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) setActualTheme("dark");
+					else setActualTheme("light");
+				}
+				if (typeof window === "undefined") return;
+				const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+				try {
+					darkMediaQuery.addEventListener("change", ({ matches }) => {
+						if (matches) setActualTheme("dark");
+						else setActualTheme("light");
+					});
+				} catch (error) {
+					darkMediaQuery.addListener(({ matches }) => {
+						try {
+							if (matches) setActualTheme("dark");
+							else setActualTheme("light");
+						} catch (e) {
+							console.error(e);
+						}
+					});
+				}
+			}, [theme]);
+			react$1.default.useEffect(() => {
+				if (toasts.length <= 1) setExpanded(false);
+			}, [toasts]);
+			react$1.default.useEffect(() => {
+				const handleKeyDown = (event) => {
+					var _listRef_current;
+					if (hotkey.length > 0 && hotkey.every((key) => event[key] || event.code === key)) {
+						var _listRef_current1;
+						setExpanded(true);
+						(_listRef_current1 = listRef.current) == null || _listRef_current1.focus();
+					}
+					if (event.code === "Escape" && (document.activeElement === listRef.current || ((_listRef_current = listRef.current) == null ? void 0 : _listRef_current.contains(document.activeElement)))) setExpanded(false);
+				};
+				document.addEventListener("keydown", handleKeyDown);
+				return () => document.removeEventListener("keydown", handleKeyDown);
+			}, [hotkey]);
+			react$1.default.useEffect(() => {
+				if (listRef.current) return () => {
+					if (lastFocusedElementRef.current) {
+						lastFocusedElementRef.current.focus({ preventScroll: true });
+						lastFocusedElementRef.current = null;
+						isFocusWithinRef.current = false;
+					}
+				};
+			}, [listRef.current]);
+			return /*#__PURE__*/ react$1.default.createElement("section", {
+				ref,
+				"aria-label": customAriaLabel != null ? customAriaLabel : `${containerAriaLabel} ${hotkeyLabel}`,
+				tabIndex: -1,
+				"aria-live": "polite",
+				"aria-relevant": "additions text",
+				"aria-atomic": "false",
+				suppressHydrationWarning: true,
+				"data-react-aria-top-layer": true
+			}, possiblePositions.map((position, index) => {
+				var _heights_;
+				const [y, x] = position.split("-");
+				if (!filteredToasts.length) return null;
+				return /*#__PURE__*/ react$1.default.createElement("ol", {
+					key: position,
+					dir: dir === "auto" ? getDocumentDirection() : dir,
+					tabIndex: -1,
+					ref: listRef,
+					className,
+					"data-sonner-toaster": true,
+					"data-sonner-theme": actualTheme,
+					"data-y-position": y,
+					"data-x-position": x,
+					style: {
+						"--front-toast-height": `${((_heights_ = heights[0]) == null ? void 0 : _heights_.height) || 0}px`,
+						"--width": `${TOAST_WIDTH}px`,
+						"--gap": `${gap}px`,
+						...style,
+						...assignOffset(offset, mobileOffset)
+					},
+					onBlur: (event) => {
+						if (isFocusWithinRef.current && !event.currentTarget.contains(event.relatedTarget)) {
+							isFocusWithinRef.current = false;
+							if (lastFocusedElementRef.current) {
+								lastFocusedElementRef.current.focus({ preventScroll: true });
+								lastFocusedElementRef.current = null;
+							}
+						}
+					},
+					onFocus: (event) => {
+						if (event.target instanceof HTMLElement && event.target.dataset.dismissible === "false") return;
+						if (!isFocusWithinRef.current) {
+							isFocusWithinRef.current = true;
+							lastFocusedElementRef.current = event.relatedTarget;
+						}
+					},
+					onMouseEnter: () => setExpanded(true),
+					onMouseMove: () => setExpanded(true),
+					onMouseLeave: () => {
+						if (!interacting) setExpanded(false);
+					},
+					onDragEnd: () => setExpanded(false),
+					onPointerDown: (event) => {
+						if (event.target instanceof HTMLElement && event.target.dataset.dismissible === "false") return;
+						setInteracting(true);
+					},
+					onPointerUp: () => setInteracting(false)
+				}, filteredToasts.filter((toast) => !toast.position && index === 0 || toast.position === position).map((toast, index) => {
+					var _toastOptions_duration, _toastOptions_closeButton;
+					return /*#__PURE__*/ react$1.default.createElement(Toast, {
+						key: toast.id,
+						icons,
+						index,
+						toast,
+						defaultRichColors: richColors,
+						duration: (_toastOptions_duration = toastOptions == null ? void 0 : toastOptions.duration) != null ? _toastOptions_duration : duration,
+						className: toastOptions == null ? void 0 : toastOptions.className,
+						descriptionClassName: toastOptions == null ? void 0 : toastOptions.descriptionClassName,
+						invert,
+						visibleToasts,
+						closeButton: (_toastOptions_closeButton = toastOptions == null ? void 0 : toastOptions.closeButton) != null ? _toastOptions_closeButton : closeButton,
+						interacting,
+						position,
+						style: toastOptions == null ? void 0 : toastOptions.style,
+						unstyled: toastOptions == null ? void 0 : toastOptions.unstyled,
+						classNames: toastOptions == null ? void 0 : toastOptions.classNames,
+						cancelButtonStyle: toastOptions == null ? void 0 : toastOptions.cancelButtonStyle,
+						actionButtonStyle: toastOptions == null ? void 0 : toastOptions.actionButtonStyle,
+						closeButtonAriaLabel: toastOptions == null ? void 0 : toastOptions.closeButtonAriaLabel,
+						removeToast,
+						toasts: filteredToasts.filter((t) => t.position == toast.position),
+						heights: heights.filter((h) => h.position == toast.position),
+						setHeights,
+						expandByDefault: expand,
+						gap,
+						expanded,
+						swipeDirections: props.swipeDirections
+					});
+				}));
+			}));
+		});
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/toast-host.js
+		/** 全局注册表键：Symbol.for 跨 bundle 副本天然共享同一个符号。 */
+		const TOAST_HOST_KEY = Symbol.for("dsh-plugin-core/toast-host");
+		/** 全局单例：已注册则直接返回（不触发 create），否则建一个并注册。 */
+		function claimToastHost(create) {
+			const g = globalThis;
+			const existing = g[TOAST_HOST_KEY];
+			if (existing !== void 0) return existing;
+			const created = create();
+			g[TOAST_HOST_KEY] = created;
+			return created;
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/Toast.js
+		const DEFAULT_MS = 2600;
+		const ROOT_ID = "dshpc-toast-root";
+		function currentTheme() {
+			return document.body.hasAttribute("data-ds-dark-theme") ? "dark" : "light";
+		}
+		let sharedHost = null;
+		function toasterHost() {
+			if (sharedHost !== null) return sharedHost;
+			if (typeof document === "undefined" || typeof MutationObserver === "undefined") return null;
+			sharedHost = claimToastHost(createToasterHost);
+			return sharedHost;
+		}
+		function createToasterHost() {
+			let root = null;
+			let themeObserver = null;
+			let position = "bottom-center";
+			function renderToaster() {
+				if (root === null) return;
+				root.render((0, react$1.createElement)(Toaster, {
+					theme: currentTheme(),
+					position,
+					richColors: true
+				}));
+			}
+			function ensureToaster() {
+				if (root !== null) return;
+				let container = document.getElementById(ROOT_ID);
+				if (container === null) {
+					container = document.createElement("div");
+					container.id = ROOT_ID;
+					document.body.appendChild(container);
+				}
+				root = (0, react_dom_client.createRoot)(container);
+				renderToaster();
+				themeObserver = new MutationObserver(() => renderToaster());
+				themeObserver.observe(document.body, {
+					attributes: true,
+					attributeFilter: ["data-ds-dark-theme"]
+				});
+			}
+			function showNative(payload) {
+				const duration = payload.durationMs;
+				const onDismiss = payload.onDismiss;
+				if (payload.color !== void 0) {
+					toast(payload.message, {
+						duration,
+						unstyled: true,
+						onDismiss,
+						className: "dshpc-toast-custom",
+						style: {
+							background: payload.color,
+							color: "#fff",
+							minWidth: "320px",
+							minHeight: "48px",
+							padding: "12px 16px",
+							borderRadius: "8px",
+							boxShadow: "0 6px 16px rgba(0, 0, 0, 0.18)",
+							fontSize: "14px",
+							lineHeight: "20px",
+							boxSizing: "border-box",
+							display: "flex",
+							alignItems: "center"
+						}
+					});
+					return;
+				}
+				const variant = payload.variant;
+				if (variant === "success") toast.success(payload.message, {
+					duration,
+					onDismiss
+				});
+				else if (variant === "error") toast.error(payload.message, {
+					duration,
+					onDismiss
+				});
+				else if (variant === "warning") toast.warning(payload.message, {
+					duration,
+					onDismiss
+				});
+				else toast(payload.message, {
+					duration,
+					onDismiss
+				});
+			}
+			function showCard(payload) {
+				const palette = notifyPalette(payload.variant, currentTheme());
+				const duration = payload.durationMs;
+				const actions = payload.actions;
+				const id = toast.custom(() => (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "12px",
+					minWidth: "320px",
+					minHeight: "48px",
+					padding: "12px 16px",
+					borderRadius: "10px",
+					boxShadow: "0 6px 16px rgba(0, 0, 0, 0.18)",
+					background: palette.bg,
+					color: palette.fg,
+					boxSizing: "border-box",
+					fontSize: "14px",
+					lineHeight: "20px"
+				} }, (0, react$1.createElement)("span", { style: {
+					flexShrink: 0,
+					width: "20px",
+					height: "20px",
+					borderRadius: "50%",
+					background: "rgba(255, 255, 255, 0.25)",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					fontSize: "13px",
+					fontWeight: 700
+				} }, palette.glyph), (0, react$1.createElement)("div", { style: {
+					flex: 1,
+					minWidth: 0
+				} }, (0, react$1.createElement)("div", { style: { fontWeight: 600 } }, payload.message), payload.description !== void 0 ? (0, react$1.createElement)("div", { style: {
+					opacity: .9,
+					fontSize: "13px",
+					marginTop: "2px",
+					whiteSpace: "pre-line"
+				} }, payload.description) : null), actions !== void 0 && actions.length > 0 ? (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					gap: "8px",
+					flexShrink: 0
+				} }, ...actions.slice(0, 2).map((a) => (0, react$1.createElement)(Button$2, {
+					variant: a.variant ?? "info",
+					size: "md",
+					onClick: () => {
+						a.onClick();
+						toast.dismiss(id);
+					}
+				}, a.text))) : null), {
+					duration,
+					unstyled: true
+				});
+			}
+			return {
+				show(payload) {
+					ensureToaster();
+					renderToaster();
+					if (payload.style === "card") showCard(payload);
+					else showNative(payload);
+				},
+				setPosition(next) {
+					position = next;
+					renderToaster();
+				}
+			};
+		}
+		function notifyPalette(variant, theme) {
+			switch (variant) {
+				case "success": return {
+					bg: "#16a34a",
+					fg: "#ffffff",
+					glyph: "✓"
+				};
+				case "error": return {
+					bg: "#c0392b",
+					fg: "#ffffff",
+					glyph: "✕"
+				};
+				case "warning": return {
+					bg: "#e0922f",
+					fg: "#1f2937",
+					glyph: "!"
+				};
+				default: return theme === "dark" ? {
+					bg: "#3f3f46",
+					fg: "#fafafa",
+					glyph: "i"
+				} : {
+					bg: "#f4f4f5",
+					fg: "#18181b",
+					glyph: "i"
+				};
+			}
+		}
+		/**
+		* 我们封装好的提示（**推荐项目内使用**）：统一卡片样式（灰/绿/红/黄，跟随明暗皮肤），
+		* 右侧可挂 1–2 个**我们自己的 Button** 动作按钮，点击后自动关闭并调用你的事件。
+		*
+		* 底层仍是 Sonner（动画 / 定位 / 堆叠），但视觉与交互是我们定制的。
+		* 无 `document` 时静默跳过。
+		*/
+		function notify(message, opts) {
+			if (typeof document === "undefined") return;
+			const host = toasterHost();
+			if (host === null) return;
+			if (opts?.position !== void 0) host.setPosition(opts.position);
+			host.show({
+				message,
+				variant: opts?.variant ?? "info",
+				style: "card",
+				description: opts?.description,
+				durationMs: opts?.durationMs ?? DEFAULT_MS,
+				actions: opts?.actions
+			});
+		}
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Field.js
 		/**
 		* 输入类控件 —— **全站唯一实现**（L2 组件皮肤，P3）
@@ -54370,45 +55534,6 @@ window.__ModuleLoader__.load({
 					bump(1);
 				}
 			})), props.hint);
-		}
-		/**
-		* 下拉锚点的统一样式（**全站唯一一份**）：`SelectField` 与 `TaskPicker` 共用 —— 两者是同一类锚点，
-		* 不许各抄一份（2026-10-04 评审：TaskPicker 曾抄第二/第三份，观感会持续漂移）。
-		*/
-		const FIELD_ANCHOR_STYLE = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "6px",
-			height: "var(--dshpc-control-h-lg)",
-			boxSizing: "border-box",
-			minWidth: 0,
-			maxWidth: "100%",
-			padding: "0 var(--dshpc-space-2)",
-			border: "0.5px solid var(--dshpc-border-heavy)",
-			borderRadius: "var(--dshpc-radius-md)",
-			background: "var(--dshpc-surface-1)",
-			color: "var(--dshpc-fg)",
-			font: "inherit",
-			fontSize: "var(--dshpc-font-md)",
-			lineHeight: "var(--dshpc-line-md)",
-			cursor: "pointer",
-			transition: "background var(--dshpc-dur-fast) var(--dshpc-ease), color var(--dshpc-dur-fast) var(--dshpc-ease), border-color var(--dshpc-dur-fast) var(--dshpc-ease)"
-		};
-		/** 下拉锚点里那行文字（省略号三件套收敛到 `.dshpc-ellipsis`，见 ui-style-guide §三 待抽象 #1）。 */
-		const FIELD_LABEL_STYLE = {
-			flex: "1 1 auto",
-			minWidth: 0,
-			textAlign: "left"
-		};
-		/** 尺寸档 → 锚点几何（高度 / 字号 / 行高 / 图标 / 间距）。**翻译只此一处**，下拉类控件共用。 */
-		function fieldMetricsOf(size) {
-			return {
-				height: size === "sm" ? "var(--dshpc-control-h-sm)" : size === "md" ? "var(--dshpc-control-h-md)" : "var(--dshpc-control-h-lg)",
-				font: size === "sm" ? "var(--dshpc-font-sm)" : "var(--dshpc-font-md)",
-				line: size === "sm" ? "var(--dshpc-line-sm)" : "var(--dshpc-line-md)",
-				icon: size === "sm" ? 14 : 16,
-				gap: size === "sm" ? "var(--dshpc-space-1)" : "6px"
-			};
 		}
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Textarea.js
@@ -56755,11 +57880,9 @@ window.__ModuleLoader__.load({
 		*  - **只消费 `var(--dshpc-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
 		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达。
 		*
-		* 2026-11-06：分段 / 按钮 / 输入 / 数字步进 / 多行文本 / 跑马灯已全部改接核心 `dsh-plugin-core/ui`，
-		* 对应本地皮肤（`.dsh-tdt-seg*` / `.dsh-tdt-btn*` / `.dsh-tdt-iconbtn*` / `.dsh-tdt-input*`
-		* / `.dsh-tdt-pfx*` / `.dsh-tdt-num*` / `.dsh-tdt-textarea*` / `.dsh-tdt-mq*`）整段删除。
-		* 本文件只剩**核心没有**的三类业务件：产出物 chip / 行式文件按钮、时分的弹层与列、下拉锚点与省略号，
-		* 外加「过程文件」块。
+		* 2026-11-06：分段 / 按钮 / 输入 / 数字步进 / 多行文本 / 跑马灯 / 下拉 / 日期时间 / 小问号
+		* 已全部改接核心 `dsh-plugin-core/ui`，对应本地皮肤整段删除。
+		* 本文件只剩**核心没有**的三类业务件：产出物 chip / 行式文件按钮、开关选色，外加「过程文件」块。
 		*/
 		/** 产出物图标 chip / 行式文件按钮的皮肤规则。 */
 		const BUTTON_CSS = `
@@ -56802,43 +57925,12 @@ window.__ModuleLoader__.load({
 
 /* 拖拽分隔条已随两条分栏一起归核心 PanelDock（2026-11-06），本仓不再自绘命中条。 */
 `;
-		/** 时分的弹层与列（本仓唯一实现：核心暂无「纯时分」档）。 */
-		const DATETIME_CSS = `
-/* ── 纯时分（核心缺口，本仓唯一实现）────────────────────────────────────── */
-.dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
-.dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--dshpc-control-h-lg);
-  min-width:0;max-width:100%;padding:0 8px;border:0.5px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);
-  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font:inherit;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);
-  cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-dtf--sm{height:var(--dshpc-control-h-sm);padding:0 6px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}
-.dsh-tdt-dtf--md{height:var(--dshpc-control-h-md);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-dtf--lg{height:var(--dshpc-control-h-lg);padding:0 8px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-.dsh-tdt-dtf:hover:not(:disabled){background:var(--dshpc-hover);}
-.dsh-tdt-dtf:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}
-.dsh-tdt-dtf:disabled{cursor:not-allowed;opacity:.6;}
-.dsh-tdt-dtf__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
-.dsh-tdt-dtf__label--ph{color:var(--dshpc-fg-dim);}
-.dsh-tdt-dtf__icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:none;color:var(--dshpc-fg-3);}
-
-.dsh-tdt-layer{position:fixed;z-index:var(--dshpc-z-menu);box-sizing:border-box;padding:8px;background:var(--dshpc-surface-1);
-  box-shadow:var(--dshpc-shadow-2);border-radius:var(--dshpc-radius-md);color:var(--dshpc-fg);font-size:var(--dshpc-font-md);}
-
-.dsh-tdt-time__cols{display:flex;gap:4px;}
-.dsh-tdt-time__list{width:56px;max-height:196px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
-.dsh-tdt-time__opt{padding:5px 0;border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);
-  font:inherit;font-size:var(--dshpc-font-md);cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);}
-.dsh-tdt-time__opt[aria-selected='true']{background:var(--dshpc-hover);color:var(--dshpc-fg);font-weight:600;}
-.dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--dshpc-border);}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-time__opt{transition:none;}}
-`;
-		/** 下拉锚点 / 省略号的皮肤规则（核心 `Picker` 暂缺 error/title，本仓 `SelectField` 保留）。 */
+		/** 下拉的皮肤规则（核心 `Picker` 暂缺 `error` 档，这里只补一条描红）。 */
 		const SELECT_CSS = `
-/* 下拉 / 日历 / 时分锚点：键盘可达性描边 + 校验描红（类名从业务层沿用，皮肤归位基础层） */
-.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dshpc-business);outline-offset:1px;}
-.dsh-tdt-ed-field--error{border-color:var(--dshpc-danger)!important;box-shadow:0 0 0 1px var(--dshpc-danger);}
-/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满 */
-.dsh-tdt-ed-selectwrap{width:100%;}
+/* 核心 Picker 的校验描红（className 挂在 .dshpc-picker 根上）。 */
+.dsh-tdt-picker--error .dshpc-picker__trigger{border-color:var(--dshpc-danger);box-shadow:0 0 0 1px var(--dshpc-danger);}
+/* 整行下拉：核心 Picker 根是 inline-block，要显式撑满父宽。 */
+.dsh-tdt-picker--block{display:block;width:100%;}
 
 /* 省略号三件套（ui-style-guide §三「待抽象 #1」的收敛点）：**新代码一律挂这个类**，不再各写一遍。 */
 .dsh-tdt-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -56865,106 +57957,52 @@ window.__ModuleLoader__.load({
 		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
 		*/
 		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS + PROCESS_FILES_CSS);
+			applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS);
 		}
 		//#endregion
 		//#region src/client/ui/Field.tsx
 		/**
-		* 下拉锚点 —— 本仓**唯一保留**的输入类件（2026-11-06）。
+		* 下拉选择 —— 核心 `Picker` 的薄包装（2026-11-06）。
 		*
-		* `Input` / `PrefixedInput` / `NumberInput` 已全部改接核心 `dsh-plugin-core/ui`；
-		* 这里只剩 `SelectField`：核心 `Picker` 目前没有 `error`（校验描红）/ `title`（悬停提示）/ `marquee` 语义，
-		* 属核心缺口（见 worklog），在核心补齐前继续用官方 `Menu` 薄包装。
+		* 触发器 / 弹层 / 分组 / 搜索 / 空态 / 跑马灯 / 键盘与明暗全部归核心；
+		* 本仓只补核心 `Picker` 尚未提供的两点：
+		*  - `error` 校验描红：外层 `className` + 一条皮肤规则（`.dsh-tdt-picker--error`）；
+		*  - `title` 悬停提示：外层 `span` 兜底（核心没有该 prop）。
+		* 空列表 ⇒ 禁用并显示业务空态文案（不塞假值）。
 		*/
-		function IconSeat(props) {
-			return (0, react$1.createElement)("span", { style: {
-				display: "inline-flex",
-				width: "16px",
-				height: "16px",
-				alignItems: "center",
-				justifyContent: "center",
-				flex: "none",
-				color: "var(--dshpc-fg-3)"
-			} }, props.children);
-		}
 		/**
-		* 下拉选择：官方 `Menu`（portal 到 body，避免被弹窗内部滚动裁掉；选中项自动带对勾）。
+		* 下拉选择：核心 `Picker`（portal 到 body，选中项自动带对勾，内容超长走跑马灯）。
 		* 空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
 		*/
 		function SelectField(props) {
 			ensureControlsStyle();
-			const [open, setOpen] = (0, react$1.useState)(false);
-			const [hover, setHover] = (0, react$1.useState)(false);
-			const metrics = fieldMetricsOf(props.size ?? "lg");
-			const iconSize = metrics.icon;
-			const usable = props.options.length > 0 && props.disabled !== true;
-			const current = props.options.find((option) => option.value === props.value);
-			const items = (0, react$1.useMemo)(() => props.options.map((option) => ({
-				id: option.value,
-				label: option.label
-			})), [props.options]);
-			const anchor = (0, react$1.createElement)("button", {
-				type: "button",
-				className: `dsh-tdt-ed-field${props.error === true ? " dsh-tdt-ed-field--error" : ""}`,
+			const size = props.size ?? "lg";
+			const empty = props.options.length === 0;
+			const usable = !empty && props.disabled !== true;
+			const width = props.width ?? (props.block === true ? "100%" : void 0);
+			const cls = [props.block === true ? "dsh-tdt-picker--block" : "", props.error === true ? "dsh-tdt-picker--error" : ""].filter(Boolean).join(" ");
+			const picker = (0, react$1.createElement)(Picker, {
+				options: props.options,
+				value: props.value,
+				onChange: (next) => {
+					if (typeof next === "string") props.onChange(next);
+				},
+				placeholder: empty ? props.emptyLabel : props.placeholder,
 				disabled: !usable,
-				"aria-haspopup": "menu",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onPointerEnter: () => {
-					setHover(true);
-				},
-				onPointerLeave: () => {
-					setHover(false);
-				},
-				onClick: () => {
-					setOpen(!open);
-				},
-				style: {
-					...FIELD_ANCHOR_STYLE,
-					height: metrics.height,
-					gap: metrics.gap,
-					fontSize: metrics.font,
-					lineHeight: metrics.line,
-					width: props.width ?? (props.block === true ? "100%" : void 0),
-					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
-					background: hover && usable ? "var(--dshpc-hover)" : "var(--dshpc-surface-1)",
-					cursor: usable ? "pointer" : "not-allowed",
-					opacity: usable ? 1 : .6
-				}
-			}, props.icon === void 0 ? null : (0, react$1.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react$1.createElement)(MarqueeText, {
-				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
-				title: props.title ?? props.ariaLabel,
-				className: "dsh-tdt-ellipsis",
-				style: {
-					...FIELD_LABEL_STYLE,
-					color: current === void 0 ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
-				}
-			}) : (0, react$1.createElement)("span", {
-				className: "dsh-tdt-ellipsis",
-				style: {
-					...FIELD_LABEL_STYLE,
-					color: current === void 0 ? "var(--dshpc-fg-dim)" : "var(--dshpc-fg)"
-				}
-			}, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react$1.createElement)(IconSeat, null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
-			if (!usable) return anchor;
-			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-				open,
-				anchor,
-				items,
-				selectedId: props.value,
-				selection: "check",
-				align: props.align ?? "start",
-				portal: true,
-				className: props.block === true ? "dsh-tdt-ed-selectwrap" : void 0,
-				onSelect: (id) => {
-					setOpen(false);
-					props.onChange(id);
-				},
-				onClose: () => {
-					setOpen(false);
-				}
+				size,
+				icon: props.icon,
+				className: cls === "" ? void 0 : cls,
+				width,
+				...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
+				ariaLabel: props.ariaLabel
 			});
+			return props.title === void 0 ? picker : (0, react$1.createElement)("span", {
+				title: props.title,
+				style: props.block === true ? { display: "block" } : {
+					display: "inline-flex",
+					minWidth: 0
+				}
+			}, picker);
 		}
 		//#endregion
 		//#region src/client/ui/TaskPicker.tsx
@@ -57034,150 +58072,6 @@ window.__ModuleLoader__.load({
 					return t$1(key, vars);
 				}
 			});
-		}
-		//#endregion
-		//#region src/client/ui/DateTime.tsx
-		/**
-		* 日期 / 时间控件 —— 基础层。
-		*
-		* 2026-11-06：`DateField` 改接核心 `DateTimePicker`（`mode:'single'`, `precision:'day'`），
-		* 本仓只留值格式转换；核心暂无「纯时分」档 ⇒ `TimeField` 仍为本地唯一实现（待核心补齐）。
-		* 日历网格 / 浮层定位 / 明暗全部归核心，本仓不再自绘。
-		*/
-		/** 估算「定死」的字段宽度（用户 2026-10-05：宽度按最宽内容定死，不随值跳动）。 */
-		function fieldWidthOf(text, size) {
-			const fontPx = size === "sm" ? 12 : 13;
-			const extra = size === "sm" ? 34 : 38;
-			let w = 0;
-			for (const ch of text) w += /[⺀-鿿＀-￯]/.test(ch) ? fontPx : fontPx * .56;
-			return Math.ceil(w + extra);
-		}
-		/** 时分框定宽 = 刚好放下 `00:00` + 左右留白。 */
-		const timeWidthOf = (size) => fieldWidthOf("00:00", size) + 7;
-		/** 日期框：核心 `DateTimePicker` 单值 / 日精度薄包装（本仓值语义 `YYYY-MM-DD`）。 */
-		function DateField(props) {
-			const coreValue = props.value === "" ? null : `${props.value}T00:00:00.000`;
-			const picker = (0, react$1.createElement)(DateTimePicker, {
-				mode: "single",
-				precision: "day",
-				value: coreValue,
-				onChange: (next) => {
-					const iso = typeof next === "string" ? next : "";
-					props.onChange(iso === "" ? "" : iso.slice(0, 10));
-				},
-				placeholder: props.placeholder,
-				ariaLabel: props.ariaLabel,
-				disabled: props.disabled,
-				size: props.size ?? "lg",
-				width: props.width
-			});
-			return props.title === void 0 ? picker : (0, react$1.createElement)("span", {
-				title: props.title,
-				style: { display: "inline-flex" }
-			}, picker);
-		}
-		const HOURS = Array.from({ length: 24 }, (_, i) => pad2(i));
-		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2(i));
-		/** 时分列：`HH:mm`。 */
-		function TimeField(props) {
-			ensureControlsStyle();
-			const size = props.size ?? "lg";
-			const [open, setOpen] = (0, react$1.useState)(false);
-			const [draft, setDraft] = (0, react$1.useState)(props.value);
-			const selectedRef = (0, react$1.useRef)(null);
-			const rootRef = (0, react$1.useRef)(null);
-			const panelRef = (0, react$1.useRef)(null);
-			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
-				open,
-				anchorRef: rootRef,
-				panelRef,
-				side: "bottom",
-				align: "start",
-				gap: 4,
-				margin: 12
-			});
-			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
-			(0, react$1.useEffect)(() => {
-				if (!open) return;
-				const onKeyDown = (event) => {
-					if (event.key !== "Escape") return;
-					event.preventDefault();
-					setOpen(false);
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => {
-					document.removeEventListener("keydown", onKeyDown);
-				};
-			}, [open]);
-			(0, react$1.useEffect)(() => {
-				if (!open) return;
-				selectedRef.current?.scrollIntoView({ block: "center" });
-			}, [open]);
-			const parsed = /^(\d{2}):(\d{2})$/.exec(draft);
-			const hour = parsed === null ? "" : parsed[1];
-			const minute = parsed === null ? "" : parsed[2];
-			const column = (values, active, name, onPick, attachRef) => (0, react$1.createElement)("div", {
-				role: "listbox",
-				"aria-label": name,
-				className: "dsh-tdt-time__list"
-			}, values.map((item) => (0, react$1.createElement)("button", {
-				key: item,
-				type: "button",
-				role: "option",
-				"aria-selected": item === active,
-				ref: attachRef && item === active ? selectedRef : void 0,
-				className: "dsh-tdt-time__opt",
-				onClick: () => {
-					onPick(item);
-				}
-			}, item)));
-			const anchor = (0, react$1.createElement)("button", {
-				type: "button",
-				className: `dsh-tdt-dtf dsh-tdt-dtf--${size}`,
-				ref: rootRef,
-				disabled: props.disabled,
-				"aria-haspopup": "dialog",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onClick: () => {
-					if (open) {
-						setOpen(false);
-						return;
-					}
-					setDraft(props.value);
-					setOpen(true);
-				},
-				style: { width: props.width ?? timeWidthOf(size) }
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 16 })), (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value));
-			return (0, react$1.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
-				ref: panelRef,
-				role: "dialog",
-				"aria-label": props.ariaLabel,
-				className: "dsh-tdt-layer",
-				style: {
-					...pos ?? {},
-					visibility: pos === void 0 ? "hidden" : "visible"
-				}
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-time__cols" }, column(HOURS, hour, props.labels.hour, (next) => {
-				setDraft(`${next}:${minute === "" ? "00" : minute}`);
-			}, true), column(MINUTES, minute, props.labels.minute, (next) => {
-				setDraft(`${hour === "" ? "00" : hour}:${next}`);
-			}, false)), (0, react$1.createElement)("div", { className: "dsh-tdt-time__foot" }, (0, react$1.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				onClick: () => {
-					const now = /* @__PURE__ */ new Date();
-					setDraft(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`);
-				}
-			}, props.labels.now), (0, react$1.createElement)(Button$2, {
-				variant: "primary",
-				size: "sm",
-				onClick: () => {
-					props.onChange(draft);
-					setOpen(false);
-				}
-			}, props.labels.confirm))), document.body) : null);
 		}
 		//#endregion
 		//#region src/client/ui/time-range.ts
@@ -65784,7 +66678,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		//#endregion
 		//#region src/client/editor-fields.tsx
 		/**
-		* 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
+		* 日历文案**单源**（决策 55）：任务日历页共用这一份，
 		* 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
 		*/
 		function calendarLabelsOf(t) {
@@ -75027,7 +75921,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
-   官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
+   核心 Picker 的根是 inline-block（max-width:100%），这里给行内子项放行收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
 /* 提示词大输入框已改接核心 Textarea（dsh-plugin-core/ui，2026-11-06）；本地皮肤整段删除，此处不再自写。 */
@@ -75045,15 +75939,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 .dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--dshpc-border-strong,rgba(128,128,128,.5));}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
-/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */
-.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:0;background:0 0;color:var(--dshpc-fg-3,rgba(128,128,128,.8));cursor:help;}
-/* 用户 2026-10-01：不要 hover 底色（问号只要一个图标 + 气泡），只做颜色提亮。 */
-.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dshpc-fg,#1f2328);background:0 0;outline:none;}
+/* 小问号已改接核心 FieldHint（2026-11-06）：图标 / 气泡 / 焦点全部归核心，本地皮肤已删。 */
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
-   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
-   中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
-   官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
-   这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
+   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居中
+   吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
+   核心 Picker 的根是 inline-block flex 子项 ⇒ 必须给 min-width:0 才能收缩，否则整行被撑爆。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
 /* 附件行（用户 2026-10-06）：背景 / 圆角放这里而不是内联——内联 background 会压过 :hover。
    整行可点开预览的行给 hover 反馈：背景亮一档（与 chip hover 同档 --dshpc-chip-bg-hover）。 */
@@ -75063,7 +75953,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
-.dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
+.dsh-tdt-ed-deppick-ws > *,.dsh-tdt-ed-deppick-task > *{flex:1 1 auto;min-width:0;width:100%;}
 /* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 /* ── 查看档（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）──────────────────
    纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
@@ -75735,140 +76625,51 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}))) : (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-empty" }, t("editorViewPromptEmpty"))));
 		}
 		//#endregion
-		//#region src/client/toast-css.ts
-		const TOAST_CSS = `
-/* 悬浮提示 Toast（全站唯一实现）：绝对定位在锚点上方（父容器需 position:relative），不占版面。
-   形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
-   语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
-.dsh-tdt-toast{
-  --tone:var(--dshpc-danger,#e5484d);
-  position:absolute;
-  left:50%;
-  bottom:calc(100% + 8px);
-  transform:translate(-50%,10px);
-  z-index:6;
-  pointer-events:none;
-  width:max-content;
-  max-width:min(520px,calc(100% - 24px));
-  box-sizing:border-box;
-  margin:0;
-  padding:8px 14px;
-  border-radius:var(--dshpc-radius-md,8px);
-  border:1px solid var(--tone);
-  /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
-  background:var(--dshpc-surface-1,rgba(128,128,128,.15));
-  background:color-mix(in srgb,var(--tone) 10%,var(--dshpc-surface-1,#fff));
-  color:var(--dshpc-fg,#1f2328);
-  font-size:var(--dshpc-font-sm);
-  line-height:1.6;
-  display:flex;
-  align-items:flex-start;
-  text-align:left;
-  box-shadow:0 4px 16px rgba(0,0,0,.18);
-  opacity:0;
-  animation:dsh-tdt-toast 2.8s ease forwards;
-}
-/* 圆点 = 独立 flex 元素，**左上对齐**（多行文字时不飘）；文字区 white-space:pre-line 支持 \n 换行。 */
-.dsh-tdt-toast-dot{
-  flex:none;
-  width:7px;height:7px;border-radius:50%;
-  background:var(--tone);
-  margin:6px 8px 0 0;
-}
-.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--dshpc-fg-inverse,#fff);opacity:.65;}
-.dsh-tdt-toast-text{
-  flex:1 1 auto;min-width:0;
-  white-space:pre-line;
-  text-align:left;
-}
-@keyframes dsh-tdt-toast{
-  0%{opacity:0;transform:translate(-50%,10px);}
-  8%{opacity:1;transform:translate(-50%,0);}
-  82%{opacity:1;transform:translate(-50%,0);}
-  100%{opacity:0;transform:translate(-50%,-16px);}
-}
-/* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
-.dsh-tdt-toast--success{--tone:var(--dshpc-success,#2f9e44);}
-.dsh-tdt-toast--warning{--tone:var(--dshpc-warning,#e6a23c);}
-.dsh-tdt-toast--neutral{
-  --tone:var(--dshpc-fg-2,rgba(128,128,128,.95));
-  background:var(--dshpc-fg,#1f2328);
-  color:var(--dshpc-fg-inverse,#fff);
-  border-color:transparent;
-}
-.dsh-tdt-toast--neutral::before{background:var(--dshpc-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
-.dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
-/* 可关闭型（操作类失败）：固定底部中央、不自动消失、可点（关闭钮）。中性档即反色实面，观感与旧自绘一致。 */
-.dsh-tdt-toast--closable{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:max-content;max-width:min(90%,520px);pointer-events:auto;z-index:1020;animation:none;opacity:1;}
-/* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
-.dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
-`;
-		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
-		function ensureToastStyle() {
-			applyStyle("domain:toast", TOAST_CSS);
-		}
-		function FloatingToast(props) {
-			const tone = props.tone ?? "error";
-			const cls = [
-				"dsh-tdt-toast",
-				props.below === true ? "dsh-tdt-toast--below" : "",
-				props.sticky === true ? "dsh-tdt-toast--sticky" : "",
-				props.closable === true ? "dsh-tdt-toast--closable" : "",
-				tone === "success" ? "dsh-tdt-toast--success" : "",
-				tone === "warning" ? "dsh-tdt-toast--warning" : "",
-				tone === "neutral" ? "dsh-tdt-toast--neutral" : ""
-			].filter(Boolean).join(" ");
-			return (0, react$1.createElement)("div", {
-				key: props.seq,
-				className: cls,
-				onAnimationEnd: props.onDone
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-toast-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-toast-text" }, props.text), props.closable === true ? (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "sm",
-				icon: "✕",
-				label: props.closeLabel ?? "关闭",
-				style: {
-					color: "inherit",
-					flex: "none",
-					marginLeft: "8px"
-				},
-				onClick: () => {
-					props.onDone();
-				}
-			}) : null);
-		}
-		//#endregion
 		//#region src/client/task-editor.tsx
 		/**
-		* 「?」说明钮（2026-09-30 抽象收敛：此前同样的 JSX 写了 5 份）。
+		* 「?」说明钮 —— 核心 `FieldHint` 的薄包装（2026-11-06）。
 		*
-		* ⚠️ 图标**必须包在真实 DOM 元素**里再交给官方 Tooltip——它靠给子元素挂 ref，
-		* 裸图标组件 ref 挂不上 ⇒ 悬停无字（本仓库踩过两次的坑，此处固化）。
-		* `insideClickable`：挂在可点行（如「高级设置」折叠头）里时用 `span + role=img`，
-		* 并吞掉点击冒泡，免得点说明把行本身开关了。
+		* 图标、气泡、键盘焦点全部归核心；本仓只补 `insideClickable` 一种位置：挂在可点行
+		* （如「高级设置」折叠头）里时，外面套一层 `span` 吞掉点击冒泡，免得点说明把行本身开关了。
 		*/
 		/** 「?」说明钮 —— 全站唯一实现（设置页每项标题右侧的小问号也用它，2026-10-08 导出复用）。 */
 		function HelpButton(props) {
 			const { hint, side = "bottom", align, maxWidth = 300, insideClickable = false } = props;
-			const anchor = insideClickable ? (0, react$1.createElement)("span", {
-				className: "dsh-tdt-ed-help",
-				role: "img",
-				"aria-label": hint,
+			const hintNode = (0, react$1.createElement)(FieldHint, {
+				text: hint,
+				side,
+				maxWidth,
+				...align === void 0 ? {} : { align }
+			});
+			return insideClickable ? (0, react$1.createElement)("span", {
+				style: {
+					display: "inline-flex",
+					minWidth: 0
+				},
 				onClick: (event) => {
 					event.stopPropagation();
 				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })) : (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-help",
-				"aria-label": hint
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }));
-			const tip = {
-				label: hint,
-				side,
-				maxWidth
-			};
-			if (align !== void 0) tip.align = align;
-			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, tip, anchor);
+			}, hintNode) : hintNode;
+		}
+		/**
+		* 日期 + 时刻组合控件 —— 核心 `DateTimePicker`（单值 / 分钟精度）的薄包装。
+		* 草稿里日期与时刻是两个字段，这里只在边界做换算：核心值 = `date + "T" + time`。
+		*/
+		function MomentField(props) {
+			const time = props.time === "" ? "00:00" : props.time;
+			const value = props.date === "" ? null : `${props.date}T${time}:00.000`;
+			return (0, react$1.createElement)(DateTimePicker, {
+				mode: "single",
+				precision: "minute",
+				value,
+				onChange: (next) => {
+					if (typeof next !== "string") return;
+					props.onChange(next.slice(0, 10), next.slice(11, 16));
+				},
+				placeholder: props.placeholder,
+				ariaLabel: props.ariaLabel,
+				size: "lg"
+			});
 		}
 		const WEEKDAY_KEYS = [
 			"editorWeekday1",
@@ -76198,17 +76999,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		}
 		/** 周期档的子控件：内容行 = 频率 + 月/日 + 时间；星期恒定在下面一行。 */
 		function PeriodControls(props) {
-			const { draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels } = props;
-			const timeField = (0, react$1.createElement)(TimeField, {
-				value: draft.time,
-				onChange: (value) => {
-					patch({ time: value });
-				},
-				placeholder: t("editorTimePh"),
-				ariaLabel: t("editorTime"),
-				labels: timeLabels,
-				width: 110
-			});
+			const { draft, patch, t, tt, weekdayLabels } = props;
 			const monthOptions = (0, react$1.useMemo)(() => Array.from({ length: 12 }, (_, index) => ({
 				value: String(index + 1),
 				label: tt("editorMonthOption", { m: index + 1 })
@@ -76242,16 +77033,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				label: tt("editorQuarterMonthOption", { m })
 			})), [tt]);
 			const above = [];
-			if (draft.periodFreq === "once") above.push((0, react$1.createElement)(DateField, {
-				key: "once-date",
-				value: draft.date,
-				onChange: (value) => {
-					patch({ date: value });
+			if (draft.periodFreq === "once") above.push((0, react$1.createElement)(MomentField, {
+				key: "once-moment",
+				date: draft.date,
+				time: draft.time,
+				onChange: (date, time) => {
+					patch({
+						date,
+						time
+					});
 				},
 				placeholder: t("editorDatePh"),
-				ariaLabel: t("editorDate"),
-				labels: calendarLabels,
-				width: 148
+				ariaLabel: t("editorDate")
 			}));
 			else {
 				above.push((0, react$1.createElement)(SelectField, {
@@ -76330,7 +77123,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					width: 120
 				}));
 			}
-			above.push(timeField);
 			return (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
@@ -76944,6 +77736,33 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [uploading, setUploading] = (0, react$1.useState)(false);
 			const pickerAnchorRef = (0, react$1.useRef)(null);
 			const [uploadError, setUploadError] = (0, react$1.useState)(null);
+			(0, react$1.useEffect)(() => {
+				if (pendingHint !== 0) notify(t("editorSavePending"), { variant: "info" });
+			}, [pendingHint]);
+			(0, react$1.useEffect)(() => {
+				if (resetHint !== 0) notify(t("editorResetDone"), { variant: "info" });
+			}, [resetHint]);
+			(0, react$1.useEffect)(() => {
+				if (problemsToast !== null) notify(problemsToast.text, {
+					variant: "error",
+					durationMs: 5e3
+				});
+			}, [problemsToast]);
+			(0, react$1.useEffect)(() => {
+				if (saveErrToast !== null) notify(saveErrToast.msg, {
+					variant: "error",
+					durationMs: 4e3
+				});
+			}, [saveErrToast]);
+			(0, react$1.useEffect)(() => {
+				if (enabledToast !== null) notify(enabledToast.msg, { variant: enabledToast.err ? "error" : "success" });
+			}, [enabledToast]);
+			(0, react$1.useEffect)(() => {
+				if (uploadError !== null) notify(uploadErrText(uploadError), {
+					variant: "error",
+					durationMs: 4e3
+				});
+			}, [uploadError]);
 			/**
 			* 刚上传、还没保存的附件：文件已在**服务端临时区**，但绝对路径只有服务端知道 ⇒ 由上传回包带回来存这里
 			* （用户 2026-10-09：进了列表就要能点开预览，不能等保存）。
@@ -76971,7 +77790,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}, [editorOpen, previewOpen]);
 			(0, react$1.useEffect)(() => {
 				ensureTaskEditorStyle();
-				ensureToastStyle();
 			}, []);
 			const patch = (0, react$1.useCallback)((part) => {
 				onChange({
@@ -77023,13 +77841,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				shorts: weekdayShorts,
 				empty: t("editorWeekdayEmpty")
 			}), [t, weekdayShorts]);
-			const calendarLabels = (0, react$1.useMemo)(() => calendarLabelsOf(t), [t]);
-			const timeLabels = (0, react$1.useMemo)(() => ({
-				hour: t("editorHour"),
-				minute: t("editorMinute"),
-				now: t("editorNow"),
-				confirm: t("editorConfirm")
-			}), [t]);
 			const freqOptions = [
 				{
 					value: "daily",
@@ -77128,8 +77939,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				ariaLabel: t("editorWorkspace"),
 				error: problemsByField("workspace"),
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
-				width: PROMPT_SELECT_WIDE,
-				marquee: true
+				width: PROMPT_SELECT_WIDE
 			}), (0, react$1.createElement)(SelectField, {
 				value: draft.permission,
 				options: permissionOptions,
@@ -77153,8 +77963,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				placeholder: t("editorModelPh"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorModel"),
-				width: PROMPT_SELECT_WIDE,
-				align: "end"
+				width: PROMPT_SELECT_WIDE
 			})));
 			const fileInputRef = (0, react$1.useRef)(null);
 			const addAttachment = (att) => {
@@ -77493,9 +78302,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				freqOptions,
 				t,
 				tt,
-				weekdayLabels,
-				calendarLabels,
-				timeLabels
+				weekdayLabels
 			})), (0, react$1.createElement)("div", { style: { marginTop: "14px" } }, (0, react$1.createElement)("div", { style: {
 				borderTop: `1px dashed var(--dshpc-border)`,
 				paddingTop: "10px",
@@ -77529,29 +78336,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				whiteSpace: "nowrap",
 				fontSize: "var(--dshpc-font-xs)",
 				color: "var(--dshpc-fg)"
-			} }, t("editorTaskStart")), (0, react$1.createElement)("span", { style: {
-				flex: "none",
-				display: "inline-flex"
-			} }, (0, react$1.createElement)(DateField, {
-				value: draft.date,
-				onChange: (value) => {
-					patch({ date: value });
+			} }, t("editorTaskStart")), (0, react$1.createElement)(MomentField, {
+				date: draft.date,
+				time: draft.time,
+				onChange: (date, time) => {
+					patch({
+						date,
+						time
+					});
 				},
 				placeholder: t("editorDatePh"),
-				ariaLabel: t("editorTaskStart"),
-				labels: calendarLabels
-			})), draft.scheduleKind === "interval" ? (0, react$1.createElement)("span", { style: {
-				flex: "none",
-				display: "inline-flex"
-			} }, (0, react$1.createElement)(TimeField, {
-				value: draft.time,
-				onChange: (value) => {
-					patch({ time: value });
-				},
-				placeholder: t("editorTimePh"),
-				ariaLabel: t("editorTaskStart"),
-				labels: timeLabels
-			})) : null, (0, react$1.createElement)(HelpButton, {
+				ariaLabel: t("editorTaskStart")
+			}), (0, react$1.createElement)(HelpButton, {
 				hint: t("editorTaskStartHint"),
 				side: "top",
 				align: "center"
@@ -77582,8 +78378,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				placeholder: t("editorWindow"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWindow"),
-				width: 96,
-				align: "end"
+				width: 96
 			})), (0, react$1.createElement)(HelpButton, {
 				hint: t("editorWindowHint"),
 				side: "top",
@@ -77797,17 +78592,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				onChange: (value) => {
 					patch({ code: value });
 				}
-			})), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react$1.createElement)("div", {
-				className: "dsh-tdt-ed-section",
-				style: { position: "relative" }
-			}, attachmentsCard, uploadError !== null ? (0, react$1.createElement)(FloatingToast, {
-				seq: uploadError,
-				tone: "error",
-				onDone: () => {
-					setUploadError(null);
-				},
-				text: uploadErrText(uploadError)
-			}) : null), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), advancedBlock);
+			})), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, attachmentsCard), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), advancedBlock);
 			const panelInner = editorOpen ? (0, react$1.createElement)(PromptEditorModal, {
 				t,
 				mode,
@@ -77836,15 +78621,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0
-			} }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-title" }, viewTab === "view" ? draft.title.trim() === "" ? t("editorViewUntitled") : draft.title : mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-headactions" }, enabledToast !== null ? (0, react$1.createElement)(FloatingToast, {
-				seq: enabledToast.seq,
-				tone: enabledToast.err ? "error" : "success",
-				below: true,
-				onDone: () => {
-					setEnabledToast(null);
-				},
-				text: enabledToast.msg
-			}) : null, viewTab === "view" ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-ed-enable dsh-tdt-switch" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			} }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-title" }, viewTab === "view" ? draft.title.trim() === "" ? t("editorViewUntitled") : draft.title : mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-headactions" }, viewTab === "view" ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-ed-enable dsh-tdt-switch" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: draft.enabled,
 				onChange: handleToggleEnabled,
 				label: t("editorEnabled"),
@@ -77901,35 +78678,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				onClick: () => {
 					setConfirmReset(true);
 				}
-			}, t("editorReset")) : null, (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), problemsToast !== null ? (0, react$1.createElement)(FloatingToast, {
-				seq: problemsToast.seq,
-				tone: "error",
-				onDone: () => {
-					setProblemsToast(null);
-				},
-				text: problemsToast.text
-			}) : null, resetHint !== 0 ? (0, react$1.createElement)(FloatingToast, {
-				seq: resetHint,
-				tone: "neutral",
-				onDone: () => {
-					setResetHint(0);
-				},
-				text: t("editorResetDone")
-			}) : null, saveErrToast !== null ? (0, react$1.createElement)(FloatingToast, {
-				seq: saveErrToast.seq,
-				tone: "error",
-				onDone: () => {
-					setSaveErrToast(null);
-				},
-				text: saveErrToast.msg
-			}) : null, pendingHint !== 0 ? (0, react$1.createElement)(FloatingToast, {
-				seq: pendingHint,
-				tone: "neutral",
-				onDone: () => {
-					setPendingHint(0);
-				},
-				text: t("editorSavePending")
-			}) : null, (0, react$1.createElement)(Button$2, {
+			}, t("editorReset")) : null, (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: requestClose
@@ -78055,7 +78804,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		*
 		* **交互全抄「新增 / 修改任务」那一套**（用户 2026-10-08）：
 		*  - **校验**：点保存才判定，**一次把所有问题都查出来**——出问题的框描红（持续态，改好才退），
-		*    同时弹**一次** `FloatingToast` 把所有问题一行一条列出来（一次性，与描红解耦）；
+		*    同时弹**一次**核心提示（`notify`）把所有问题一行一条列出来（一次性，与描红解耦）；
 		*  - **提示一律走统一 Toast**，不在表单里挂错误文字；服务端机读错误码（如 `update-failed`）
 		*    翻成人话再弹，**不把 `update failed` 这种机读串甩给用户**；
 		*  - **数字框只吃数字**：非数字字符直接过滤掉，输不进去（不让用户先输个 "AA" 再来报错）。
@@ -78187,10 +78936,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [showErrors, setShowErrors] = (0, react$1.useState)(false);
 			const [toast, setToast] = (0, react$1.useState)(null);
 			const toastSeq = (0, react$1.useRef)(0);
+			(0, react$1.useEffect)(() => {
+				if (toast !== null) notify(toast.text, {
+					variant: toast.tone,
+					durationMs: 5e3
+				});
+			}, [toast]);
 			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			(0, react$1.useEffect)(() => {
 				ensureTaskEditorStyle();
-				ensureToastStyle();
 			}, []);
 			(0, react$1.useEffect)(() => {
 				let alive = true;
@@ -78483,14 +79237,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}, saving ? t("saving") : t("save")), dirty ? (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--dshpc-font-sm)",
 				color: "var(--dshpc-warning)"
-			} }, t("settingsUnsaved")) : null, toast === null ? null : (0, react$1.createElement)(FloatingToast, {
-				seq: toast.seq,
-				tone: toast.tone,
-				onDone: () => {
-					setToast(null);
-				},
-				text: toast.text
-			})));
+			} }, t("settingsUnsaved")) : null));
 		}
 		//#endregion
 		//#region src/client/task-list.tsx
@@ -78982,6 +79729,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [runNonce, setRunNonce] = (0, react$1.useState)(0);
 			const [runToast, setRunToast] = (0, react$1.useState)(null);
 			const runSeq = (0, react$1.useRef)(0);
+			(0, react$1.useEffect)(() => {
+				if (runToast !== null) notify(runToast.text, { variant: runToast.tone });
+			}, [runToast]);
 			/** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
 			const runNowToast = (outcome) => {
 				if (outcome.ok) return {
@@ -79478,14 +80228,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					doRunNow();
 				}
 			}, runBusy ? t("loading") : t("cardRunNow")))));
-			return (0, react$1.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react$1.createElement)("div", { style: { position: "relative" } }, runToast !== null ? (0, react$1.createElement)(FloatingToast, {
-				seq: runToast.seq,
-				tone: runToast.tone,
-				onDone: () => {
-					setRunToast(null);
-				},
-				text: runToast.text
-			}) : null, (0, react$1.createElement)("div", { style: panelBarStyle }, (0, react$1.createElement)(Segmented, {
+			return (0, react$1.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react$1.createElement)("div", { style: { position: "relative" } }, (0, react$1.createElement)("div", { style: panelBarStyle }, (0, react$1.createElement)(Segmented, {
 				value: tab,
 				size: "md",
 				bordered: false,
@@ -79648,7 +80391,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			ensureTaskListStyle();
 			ensureTaskInfoStyle();
 			ensureTaskEditorStyle();
-			ensureToastStyle();
 			const [filter, setFilter] = (0, react$1.useState)("all");
 			const [workspace, setWorkspace] = (0, react$1.useState)("");
 			const [query, setQuery] = (0, react$1.useState)("");
@@ -79750,8 +80492,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("listFilterWorkspaceAll"),
 				size: "md",
-				width: WS_WIDTH,
-				marquee: true
+				width: WS_WIDTH
 			}))), visible.length === 0 ? rows.length === 0 && !ready ? null : rows.length === 0 ? (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
@@ -81091,20 +81832,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const [saving, setSaving] = (0, react$1.useState)(false);
 			const [failed, setFailed] = (0, react$1.useState)(null);
 			const [failedKey, setFailedKey] = (0, react$1.useState)(0);
-			const [successToast, setSuccessToast] = (0, react$1.useState)(null);
-			const successSeq = (0, react$1.useRef)(0);
-			const notify = (text) => {
-				successSeq.current += 1;
-				setSuccessToast({
-					text,
-					seq: successSeq.current
+			(0, react$1.useEffect)(() => {
+				if (failed !== null) notify(failed, {
+					variant: "error",
+					durationMs: 2800
+				});
+			}, [failed, failedKey]);
+			const notify$1 = (text) => {
+				notify(text, {
+					variant: "success",
+					durationMs: 2500
 				});
 			};
-			const [invalidToast, setInvalidToast] = (0, react$1.useState)({
-				on: false,
-				key: 0
-			});
-			const invalidSeq = (0, react$1.useRef)(0);
+			const [invalidKey, setInvalidKey] = (0, react$1.useState)(0);
+			(0, react$1.useEffect)(() => {
+				if (invalidKey === 0) return;
+				notify(t("invalidJson"), {
+					variant: "error",
+					durationMs: 8e3
+				});
+			}, [invalidKey]);
 			const [editor, setEditor] = (0, react$1.useState)(null);
 			const [editorSaving, setEditorSaving] = (0, react$1.useState)(false);
 			const [editorError, setEditorError] = (0, react$1.useState)(null);
@@ -81336,7 +82083,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					}
 					overview.refresh();
 					if (editor?.id === id) setEditor(null);
-					notify(t("editorTaskDeleted"));
+					notify$1(t("editorTaskDeleted"));
 					return null;
 				} catch (error) {
 					const message = error instanceof Error ? error.message : String(error);
@@ -81395,7 +82142,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					}
 					const missing = Array.isArray(body.missingAttachments) ? body.missingAttachments.filter((item) => typeof item === "string") : [];
 					setEditor(null);
-					notify(t("editorTaskSaved"));
+					notify$1(t("editorTaskSaved"));
 					if (typeof body.id === "string" && body.id !== "") overview.patchRow(body.id, rowPatchOf(definition));
 					overview.refresh();
 					if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join("、")}`);
@@ -81421,7 +82168,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					}
 					setEditor(null);
 					overview.refresh();
-					notify(t("editorTaskDeleted"));
+					notify$1(t("editorTaskDeleted"));
 				} catch (error) {
 					setEditorError(humanizeTaskError(error instanceof Error ? error.message : String(error)));
 				}
@@ -81505,24 +82252,27 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				if (prev !== null && prev !== next) prev.view.dispose();
 			};
 			const [viewErr, setViewErr] = (0, react$1.useState)(null);
+			(0, react$1.useEffect)(() => {
+				if (viewErr === null) return;
+				notify(viewErr, {
+					variant: "info",
+					durationMs: 8e3,
+					actions: [{
+						text: t("debugClose"),
+						variant: "outline",
+						onClick: () => {
+							setViewErr(null);
+						}
+					}]
+				});
+			}, [viewErr]);
 			const section = snapshot.value ?? {};
 			const raw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
 			const data = parseDebugSnapshot(raw);
 			const effectiveInline = typeof section.tasksInline === "string" ? section.tasksInline : "";
 			const invalid = draft !== void 0 && !isValidTaskTable(draft);
 			(0, react$1.useEffect)(() => {
-				if (!invalid) {
-					setInvalidToast((v) => v.on ? {
-						on: false,
-						key: v.key
-					} : v);
-					return;
-				}
-				invalidSeq.current += 1;
-				setInvalidToast({
-					on: true,
-					key: invalidSeq.current
-				});
+				if (invalid) setInvalidKey((prev) => prev + 1);
 			}, [invalid]);
 			snapshot.status === "ready" && snapshot.writable;
 			/** 可选的前置任务 = 现有任务表（真数据，带所属工作区 ⇒ 表单里先选工作区再选任务）。 */
@@ -81644,7 +82394,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			(0, react$1.useEffect)(() => () => {
 				previewHandleRef.current?.close();
 			}, []);
-			ensureToastStyle();
 			ensureUiBase();
 			return (0, react$1.createElement)("div", {
 				id: "dsh-tdt-root",
@@ -81765,23 +82514,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					applyViewing(null);
 					setViewErr(null);
 					if (needArchive) rearchive(closed);
-				}
-			}) : null, viewErr !== null ? (0, react$1.createElement)(FloatingToast, {
-				seq: "view-err",
-				tone: "neutral",
-				closable: true,
-				text: viewErr,
-				closeLabel: t("debugClose"),
-				onDone: () => {
-					setViewErr(null);
-				}
-			}) : null, successToast !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
-				key: successToast.seq,
-				text: successToast.text,
-				tone: "success",
-				holdMs: 2500,
-				onDone: () => {
-					setSuccessToast(null);
 				}
 			}) : null, (0, react$1.createElement)(PanelDock, {
 				dock: editorDock,

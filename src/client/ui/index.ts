@@ -5,8 +5,9 @@
  * **只许 import 本文件导出的东西**，不许绕过它直接摸 `ui/` 里的具体文件 —— 否则「一类控件唯一实现」
  * 这条就守不住了。
  *
- * 当前导出（2026-10-05）：token 表 + 注入器 + 分段控件 + 按钮/图标钮 + 输入类（Input / 前缀框 / 数字框
- * / 多行文本 Textarea / 勾选框 Checkbox）+ 下拉（SelectField）+ 任务选择器（TaskPicker）+ 开关皮肤 + 日期/时间 + 时间范围 + 跑马灯 + Loading。
+ * 当前导出（2026-11-06）：token 表 + 注入器 + 分段控件 + 按钮/图标钮 + 输入类（Input / 前缀框 / 数字框
+ * / 多行文本 Textarea / 勾选框 Checkbox）+ 下拉（SelectField）+ 任务选择器（TaskPicker）+ 开关皮肤
+ * + 日期时间 / 时间范围（核心 DateTimePicker）+ 小问号提示（核心 FieldHint）+ 跑马灯 + Loading。
  * 每加一个控件就在这里加一行导出，并在手册 §二「唯一实现表」里登记。
  */
 import type { CSSProperties } from 'react'
@@ -23,7 +24,7 @@ export const PANEL_CONTENT_STYLE: CSSProperties = {
 }
 
 export { UI_STYLE_ID, TOKENS_DOMAIN, registerStyle, applyStyle, ensureUiStyles, ensureUiBase } from './style'
-export { CONTROLS_DOMAIN, BUTTON_CSS, FIELD_CSS, DATETIME_CSS, SELECT_CSS, PROCESS_FILES_CSS, ensureControlsStyle } from './controls-css'
+export { CONTROLS_DOMAIN, BUTTON_CSS, FIELD_CSS, SELECT_CSS, PROCESS_FILES_CSS, ensureControlsStyle } from './controls-css'
 export {
   Segmented,
   Button,
@@ -64,14 +65,11 @@ export { CodeViewer } from 'dsh-plugin-core/ui/code-viewer'
 import type { SegmentedProps } from 'dsh-plugin-core/ui'
 /** 段定义单项（核心 `Segmented` 的 items 元素；核心未单独导出该类型）。 */
 export type SegmentedItem<T extends string = string> = SegmentedProps<T>['items'][number]
+export { FieldHint, type FieldHintProps } from 'dsh-plugin-core/ui'
+export { DateTimePicker, type DateTimeOutput } from 'dsh-plugin-core/ui'
+export { notify } from 'dsh-plugin-core/ui'
 export { SelectField, type SelectFieldProps } from './Field'
 export { TaskPicker, type TaskOption, type TaskPickerProps } from './TaskPicker'
-export {
-  DateField,
-  TimeField,
-  type CalendarLabels,
-  type TimeLabels,
-} from './DateTime'
 export { TimeRange, type TimeRangeProps, type TimeRangeLabels, type TimePresetLabels } from './TimeRange'
 export {
   rangeToQuery,

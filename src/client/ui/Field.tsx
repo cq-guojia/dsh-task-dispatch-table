@@ -1,23 +1,20 @@
 /**
- * 下拉锚点 —— 本仓**唯一保留**的输入类件（2026-11-06）。
+ * 下拉选择 —— 核心 `Picker` 的薄包装（2026-11-06）。
  *
- * `Input` / `PrefixedInput` / `NumberInput` 已全部改接核心 `dsh-plugin-core/ui`；
- * 这里只剩 `SelectField`：核心 `Picker` 目前没有 `error`（校验描红）/ `title`（悬停提示）/ `marquee` 语义，
- * 属核心缺口（见 worklog），在核心补齐前继续用官方 `Menu` 薄包装。
+ * 触发器 / 弹层 / 分组 / 搜索 / 空态 / 跑马灯 / 键盘与明暗全部归核心；
+ * 本仓只补核心 `Picker` 尚未提供的两点：
+ *  - `error` 校验描红：外层 `className` + 一条皮肤规则（`.dsh-tdt-picker--error`）；
+ *  - `title` 悬停提示：外层 `span` 兜底（核心没有该 prop）。
+ * 空列表 ⇒ 禁用并显示业务空态文案（不塞假值）。
  */
-import { createElement as h, useMemo, useState, type ReactElement, type ReactNode } from 'react'
-import { IconChevronDownOutlineRegular, Menu, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
-import { MarqueeText, fieldMetricsOf, FIELD_ANCHOR_STYLE, FIELD_LABEL_STYLE, type FieldSize } from 'dsh-plugin-core/ui'
+import { createElement as h, type ReactElement, type ReactNode } from 'react'
+import { Picker } from 'dsh-plugin-core/ui'
 import { ensureControlsStyle } from './controls-css'
 
 /** 下拉 / 日期 / 时分的选项（value = 写进任务定义的真值）。 */
 export interface EditorOption {
   value: string
   label: string
-}
-
-function IconSeat(props: { children: ReactNode }): ReactElement {
-  return h('span', { style: { display: 'inline-flex', width: '16px', height: '16px', alignItems: 'center', justifyContent: 'center', flex: 'none', color: 'var(--dshpc-fg-3)' } }, props.children)
 }
 
 export interface SelectFieldProps {
@@ -35,89 +32,57 @@ export interface SelectFieldProps {
   ariaLabel: string
   /** 行首图标。 */
   icon?: ReactNode
-  /** 浮层对齐。 */
-  align?: 'start' | 'end'
   /** 禁用。 */
   disabled?: boolean
   /** 悬停提示。 */
   title?: string
-  /** 锚点宽度（数字 = px）。 */
+  /** 定宽（数字 = px）。 */
   width?: number | string
-  /** 锚点最大宽度（数字 = px）。 */
+  /** 最大宽（数字 = px）。 */
   maxWidth?: number | string
-  /** 文本超长时走 MarqueeText（默认省略号）。 */
-  marquee?: boolean
   /** 整行下拉（撑满父宽）。 */
   block?: boolean
   /** 高度档（sm 24 / md 28 / lg 32，默认 lg = 32 标准行）。 */
-  size?: FieldSize
+  size?: 'sm' | 'md' | 'lg'
   /** 校验不通过：描红。 */
   error?: boolean
 }
 
 /**
- * 下拉选择：官方 `Menu`（portal 到 body，避免被弹窗内部滚动裁掉；选中项自动带对勾）。
+ * 下拉选择：核心 `Picker`（portal 到 body，选中项自动带对勾，内容超长走跑马灯）。
  * 空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
  */
 export function SelectField(props: SelectFieldProps): ReactElement {
   ensureControlsStyle()
-  const [open, setOpen] = useState(false)
-  const [hover, setHover] = useState(false)
   const size = props.size ?? 'lg'
-  const metrics = fieldMetricsOf(size)
-  const iconSize = metrics.icon
-  const usable = props.options.length > 0 && props.disabled !== true
-  const current = props.options.find(option => option.value === props.value)
-  const items: MenuEntry[] = useMemo(
-    () => props.options.map(option => ({ id: option.value, label: option.label })),
-    [props.options],
-  )
+  const empty = props.options.length === 0
+  const usable = !empty && props.disabled !== true
+  const width = props.width ?? (props.block === true ? '100%' : undefined)
+  const cls = [
+    props.block === true ? 'dsh-tdt-picker--block' : '',
+    props.error === true ? 'dsh-tdt-picker--error' : '',
+  ].filter(Boolean).join(' ')
 
-  const anchor = h('button', {
-    type: 'button',
-    className: `dsh-tdt-ed-field${props.error === true ? ' dsh-tdt-ed-field--error' : ''}`,
-    disabled: !usable,
-    'aria-haspopup': 'menu',
-    'aria-expanded': open,
-    'aria-label': props.ariaLabel,
-    title: props.title,
-    onPointerEnter: () => { setHover(true) },
-    onPointerLeave: () => { setHover(false) },
-    onClick: () => { setOpen(!open) },
-    style: {
-      ...FIELD_ANCHOR_STYLE,
-      height: metrics.height, gap: metrics.gap, fontSize: metrics.font, lineHeight: metrics.line,
-      width: props.width ?? (props.block === true ? '100%' : undefined),
-      ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
-      background: hover && usable ? 'var(--dshpc-hover)' : 'var(--dshpc-surface-1)',
-      cursor: usable ? 'pointer' : 'not-allowed',
-      opacity: usable ? 1 : 0.6,
+  const picker = h(Picker, {
+    options: props.options,
+    value: props.value,
+    onChange: (next: string | string[]) => {
+      if (typeof next === 'string') props.onChange(next)
     },
-  },
-    props.icon === undefined ? null : h(IconSeat, null, props.icon),
-    props.marquee === true
-      ? h(MarqueeText, {
-        text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
-        title: props.title ?? props.ariaLabel,
-        className: 'dsh-tdt-ellipsis',
-        style: { ...FIELD_LABEL_STYLE, color: current === undefined ? 'var(--dshpc-fg-dim)' : 'var(--dshpc-fg)' },
-      })
-      : h('span', { className: 'dsh-tdt-ellipsis', style: { ...FIELD_LABEL_STYLE, color: current === undefined ? 'var(--dshpc-fg-dim)' : 'var(--dshpc-fg)' } },
-        current?.label ?? (usable ? props.placeholder : props.emptyLabel)),
-    h(IconSeat, null, h(IconChevronDownOutlineRegular, { size: iconSize })),
-  )
-
-  if (!usable) return anchor
-  return h(Menu, {
-    open,
-    anchor,
-    items,
-    selectedId: props.value,
-    selection: 'check',
-    align: props.align ?? 'start',
-    portal: true,
-    className: props.block === true ? 'dsh-tdt-ed-selectwrap' : undefined,
-    onSelect: (id: string) => { setOpen(false); props.onChange(id) },
-    onClose: () => { setOpen(false) },
+    placeholder: empty ? props.emptyLabel : props.placeholder,
+    disabled: !usable,
+    size,
+    icon: props.icon,
+    className: cls === '' ? undefined : cls,
+    width,
+    ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
+    ariaLabel: props.ariaLabel,
   })
+
+  return props.title === undefined
+    ? picker
+    : h('span', {
+      title: props.title,
+      style: props.block === true ? { display: 'block' } : { display: 'inline-flex', minWidth: 0 },
+    }, picker)
 }

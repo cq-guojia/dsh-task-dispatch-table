@@ -29,7 +29,7 @@
 | **全局心跳** | `ui/ticker.ts` + `ui/LiveText.tsx` | 全站**唯一** 1s 心跳（`subscribeTicker` / `useNowMs`）与每秒自刷文本壳 | 2026-10-06 从 `task-info.tsx` 归位；**不许再自建 `setInterval(…,1000)`**（§三 A1/A2/M1） |
 | 官方适配 | `official-classes.ts` | 运行时解析官方 CSS-module 真实类名 | 哈希每次构建都可能变，**写死必在某次宿主升级后集体失效** |
 | 官方文案 | `md-labels.ts` | markdown labels（代码块工具条三条文案） | 是官方 `CodeBlock` 的**分叉开关**；且必须引用稳定（换身份会丢流式渲染缓存） |
-| 提示反馈 | `toast-css.ts`（`FloatingToast`） | 浮层 Toast 唯一实现（四档语义色、2.8s 时间线） | 四处手写已收敛为一处 |
+| 提示反馈 | 核心 `dsh-plugin-core/ui` 的 `notify` / `showToast`（2026-11-06 改接；本仓 `toast-css.ts` 已删） | 一次性 / 常驻提示唯一实现（成功 / 失败 / 中性 / 警告） | 四处手写已收敛为一处，现已归上游 |
 | 文案 | `locales.ts` | 全部界面文案（zh / en） | 面板语言跟随宿主 |
 | 任务信息展示 | `task-info.tsx` + `task-info-css.ts` | 「基础信息」的标签—值纸表格渲染件（`InfoField`、排期行、`windowLabel`、`renderNextExec`）与「上次执行」渲染；两个视图模型构造函数 `taskInfoViewFromDraft` / `taskInfoViewFromRow` | 卡片展开区「基础信息」与右侧栏**查看档**同看一份任务信息，但数据源不同（前者吃 `TaskOverviewRow`、后者吃草稿）⇒ 若各写一份，同一个字段必然两处口径不一（重演 `schedule-text.ts` 头注那件事）。**叶子模块**：不得 import `task-list.tsx` / `task-editor.tsx` |
 
@@ -58,7 +58,7 @@
 | 排期给人看的一句话 | `schedule-text.ts` | 自己解析 cron 出文案 |
 | 实例状态名 | `status-text.ts` | 直接打印 `status` 原始串 |
 | 引用官方组件的类名 | `official-classes.ts` | 写死哈希类名 |
-| 弹提示（成 / 败 / 警告） | `FloatingToast` | 行内 `<p>` / `<span>` 手写提示 |
+| 弹提示（成 / 败 / 警告） | 核心 `notify`（`dsh-plugin-core/ui`） | 行内 `<p>` / `<span>` 手写提示；也不要再自建 Toast 组件 |
 | 界面文字 | `locales.ts` | 硬编码中文 |
 | 任务文件 / 版本 / 附件读写 | `task-assets.ts` | 自己拼目录、直接 `fs` 操作 |
 | 基础信息的标签—值与「上次执行」展示 | `task-info.tsx` | 在页面里另写一套字段行 / 另写一份上次执行渲染 |

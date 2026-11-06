@@ -54,7 +54,7 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
-   官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
+   核心 Picker 的根是 inline-block（max-width:100%），这里给行内子项放行收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
 /* 提示词大输入框已改接核心 Textarea（dsh-plugin-core/ui，2026-11-06）；本地皮肤整段删除，此处不再自写。 */
@@ -72,15 +72,11 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--dshpc-border-strong,rgba(128,128,128,.5));}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
-/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */
-.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:0;background:0 0;color:var(--dshpc-fg-3,rgba(128,128,128,.8));cursor:help;}
-/* 用户 2026-10-01：不要 hover 底色（问号只要一个图标 + 气泡），只做颜色提亮。 */
-.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dshpc-fg,#1f2328);background:0 0;outline:none;}
+/* 小问号已改接核心 FieldHint（2026-11-06）：图标 / 气泡 / 焦点全部归核心，本地皮肤已删。 */
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
-   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
-   中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
-   官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
-   这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
+   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居中
+   吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
+   核心 Picker 的根是 inline-block flex 子项 ⇒ 必须给 min-width:0 才能收缩，否则整行被撑爆。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
 /* 附件行（用户 2026-10-06）：背景 / 圆角放这里而不是内联——内联 background 会压过 :hover。
    整行可点开预览的行给 hover 反馈：背景亮一档（与 chip hover 同档 --dshpc-chip-bg-hover）。 */
@@ -90,7 +86,7 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
-.dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
+.dsh-tdt-ed-deppick-ws > *,.dsh-tdt-ed-deppick-task > *{flex:1 1 auto;min-width:0;width:100%;}
 /* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 /* ── 查看档（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）──────────────────
    纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
