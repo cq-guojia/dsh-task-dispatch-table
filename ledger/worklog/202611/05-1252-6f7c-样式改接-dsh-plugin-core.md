@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 00:51:15 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 01:03:25 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -336,6 +336,19 @@ h(ChatViewFrame, {
 - 代码**未动**：`session-view.ts` 原样保留，等核心。
 - Toast（P2）仍待拍板，本仓 `FloatingToast` 暂留。
 
+### 2026-11-06 · 本地安装首启失败：`process is not defined`（已修）
+
+**现象**：本地 link 安装后 web boot 报 `dsh-task-dispatch-table: import failed: process is not defined`，client entry 未激活。
+
+**根因**：改接核心后 `DateTimePicker` / `Picker` 把 `@floating-ui/react` 内联进 `dist/client.js`；该依赖带**模块级** `if (process.env.NODE_ENV !== "production") { … }`。浏览器没有 `process`，client 入口一 import 就抛错。与业务代码无关，是构建期没替换环境变量。
+
+**修复**：`tsdown.client.config.ts` 增 `define: { 'process.env.NODE_ENV': '"production"' }`（浏览器产物固定生产分支）。重建后 `process.env.NODE_ENV` 归零；仅剩 lezer 的 `typeof process != "undefined"` 守卫（运行时安全）。
+`scripts/smoke.mjs` 增回归断言：bundle 不得含未替换的 `process.env.NODE_ENV`，且构建配置必须保留该 define。
+
+**验证**：`build` ✅ · `typecheck` ✅ · `smoke` 754 / 0 ✅。
+
+**本地复测**：dist 已更新，重启 `dsh web` + 硬刷新即可；无需重新 `add`。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -347,3 +360,4 @@ h(ChatViewFrame, {
 - 2026-11-05 23:29:55 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 核心 0.34.0 交付 C1–C4；TaskPicker/TimeRange 改接核心薄包装完成（src/client/ui/TaskPicker.tsx、ui/TimeRange.tsx），删自绘浮层与 15 条 CSS，typecheck/build/smoke 751/0；专家复核 6 项闭环、文档 4 篇已回写；改动待提交
 - 2026-11-06 00:36:26 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P1 全量改接核心完成（本地控件/CSS 删除）；P3 文件浏览与预览整体切 dsh-plugin-core/adv/explorer（新增 fs 路由、file-preview.tsx 752 行删除、死 CSS 91 行删除），build/typecheck/smoke 753/0；P2 Toast 与 P4 会话预览因核心缺能力待拍板
 - 2026-11-06 00:51:15 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览拍板走 B：worklog 固化核心插槽 API 建议（headerSlot/bodyLeadSlot/turnTailSlot/actionsSlot）、替换会丢的 8 项功能对位、可直接搬的插槽代码与迁移步骤；当前 session-view.ts 不动，等核心支持
+- 2026-11-06 01:03:25 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 修复本地首启 import failed: process is not defined —— tsdown.client.config.ts 加 define process.env.NODE_ENV=production（floating-ui 模块级判断），smoke 加回归断言；build/typecheck/smoke 754/0
