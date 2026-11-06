@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 00:36:26 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 00:51:15 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -196,6 +196,146 @@ P1 第二项：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/Ico
 
 **文档回写状态**：`ui-foundation` / `ui-style-guide` 的 P1 条目已在前序轮完成；本轮 P3（adv/explorer 改接、fs 路由、session/toast 缺口）尚待用户拍板后与结论一并回写 `docs/design/external/`。
 
+### 2026-11-06 · P4 会话预览：用户拍板走 B（核心加插槽后再换，现在不动）
+
+**决策（用户原话）**：「B：让核心加 outputs、headerSlot 这类插槽，加完我再换。这个你先记到 worklog 里面。我会让核心加，但是不是现在。」
+
+⇒ 现在**不替换** `src/client/session-view.ts`，等 `dsh-plugin-core/adv/session` 提供插槽后再整体迁移。
+下面把「要核心加什么、现在换会丢什么、届时可直接搬的代码」全部固化，核心支持后照单执行。
+
+#### 1. 建议核心新增的 API（`dsh-plugin-core/adv/session`，全部可选、向后兼容）
+
+适用版本基线：`dsh-plugin-core@0.34.0`（`SessionViewModal` 现有 props：`view` / `onContinue` / `openHostSession` / `onOpenFile` / `onOpenReview`）。
+
+```ts
+// 建议加在 SessionViewModalProps（或 openSessionView 的 options）
+export interface SessionViewSlotProps {
+  /** ① 标题插槽：渲染在「会话预览 · <标题>」之后、sessionId 之前。本仓用它挂「任务名可点 → 任务查看档」。 */
+  headerSlot?: ReactNode
+  /** ② 会话流体首插槽：ChatViewFrame 的 column 内、所有 keyed 节点之前（同一滚动容器）。本仓用它挂「接收 / 随附」。 */
+  bodyLeadSlot?: ReactNode
+  /** ③ 每轮 turn-tail 收尾插槽：官方 DeliverablesTail 同位（MessageIconActions 之前）。
+   *  ctx.isLast = 本轮是否最后一轮 ⇒ 本仓只把交付卡 / 过程文件挂到最后一轮。 */
+  turnTailSlot?: (ctx: { turn: number; isLast: boolean }) => ReactNode
+  /** ④ 头部按钮插槽：渲染在关闭按钮之前（「继续对话」等自定义操作）。 */
+  actionsSlot?: ReactNode
+}
+```
+
+> 为什么是这四个：本仓与核心的差异全部落在「往官方会话骨架里塞业务块」这四处；会话体本身（keyed 节点分发、折叠、分支、常用条）核心已覆盖，不需要另开渲染入口。
+
+#### 2. 现在直接换核心会丢失的功能（逐条对位）
+
+| 功能 | 本仓位置 | 核心 `SessionViewModal` 现状 | 直接替换的后果 |
+|---|---|---|---|
+| 顶部「接收 / 随附」文件上下文 | [session-view.ts:1428-1441](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L1428-L1441)（`TaskFileContextPanel`，实现见 [task-file-context.tsx:301](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/task-file-context.tsx#L301)） | 无 bodyLead 插槽 | 看不到上游任务这次给了哪些文件、本任务随附了哪些文件 |
+| 交付文件网格（实例 outputs + 快照 deliverables 去重） | [session-view.ts:738-763](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L738-L763)（`DeliverablesGridMirror`，见 [mirror/Deliverables.tsx](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/mirror/Deliverables.tsx)） | 不接收 `outputs`，无 turnTail 插槽 | 会话末尾的「交付文件」整块消失 |
+| 过程文件桶（`process_outputs`，独立判存） | [session-view.ts:746-758](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L746-L758)（`ProcessFiles`，见 [process-files.tsx:22](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/process-files.tsx#L22)） | 同左 | 「只产过程文件、没有主文件」的任务完全看不到产出 |
+| 标题里的任务名可点入口 | [session-view.ts:1376-1389](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L1376-L1389) | 无 headerSlot | 弹窗里点不到任务、回不到任务查看档 |
+| 桌面不可用提示 `presented.unavailable` | [session-view.ts:144-179](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L144-L179)（`/api/present.host` 探测）+ [749-756](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L749-L756) | 无该提示位 | 交付文件在桌面端打不开时不给解释 |
+| 随附文件同名让位（避免同屏两次） | [session-view.ts:724-725](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L724-L725) + [793-798](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L793-L798) | 无 attachedNames 口径 | 同一文件在顶部区和消息气泡里各出现一次 |
+| 归档会话冷读（已归档会话仍可看） | [session-view.ts:229-510](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L229-L510) | 走官方 live 会话源，未含本仓冷读兜底 | 归档/失效会话可能整窗空白 |
+| 任务标题拼接（`headingTask` + `headingRest`） | [session-view.ts:1203](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L1203)、[1382-1389](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/session-view.ts#L1382-L1389) | 只有 `view.heading` | 标题丢掉任务名那段 |
+
+已由核心覆盖、**不需要搬**的：会话节点渲染、轮次折叠、消息分支、常用条、继续对话（fork + agent.send，`onContinue`）、文件打开（`onOpenFile`）、交付/审阅入口（`onOpenReview`）。
+
+#### 3. 核心支持后可直接搬的代码（插槽内容，逐段可粘贴）
+
+**③ 交付文件 + 过程文件（挂最后一轮 turn-tail）** —— 这是核心最该先支持的 `turnTailSlot`：
+
+```tsx
+// 来源：src/client/session-view.ts renderKeyedNode 'turn-tail' 分支（738-763）
+const atLastTail = turn !== undefined && lastTailTurn !== undefined && turn === lastTailTurn
+const showGrid = deliverFiles !== undefined && deliverFiles.length > 0 && atLastTail
+const showProc = processFiles !== undefined && processFiles.length > 0 && atLastTail
+
+const tailSlot = showGrid || showProc
+  ? h(Fragment, null,
+      // 桌面不可用提示（数据 = usePresentedHost 的 /api/present.host）
+      showGrid && host !== undefined && host !== null && host !== 'error' && !host.available
+        ? h('span', {
+            className: ocOr('Deliverables', 'hostStatus', 'dsh-tdt-sv-host-status'),
+            'data-host-unavailable': true,
+          }, t('presented.unavailable'))
+        : null,
+      // 交付文件网格：数据 = task_instances.outputs ∪ 快照 deliveredByTurn（按路径去重）
+      showGrid ? h(DeliverablesGridMirror, { files: deliverFiles, onOpen: fileOpen?.open, t }) : null,
+      // 过程文件：task_instances.process_outputs，独立判存、默认展开
+      showProc ? h(ProcessFiles, { paths: processFiles, onOpen: fileOpen?.open, defaultOpen: true, t }) : null)
+  : null
+```
+
+```ts
+// 数据来源（session-view.ts 1285-1304）
+// 交付：实例 outputs（回执落库真值）+ 快照 deliveredByTurn，按 path 去重
+const deliverFiles = useMemo<readonly DeliveredFileFace[]>(() => {
+  const byPath = new Map<string, DeliveredFileFace>()
+  const add = (file: DeliveredFileFace): void => {
+    const key = file.path.replace(/\/+$/, '')
+    if (!byPath.has(key)) byPath.set(key, file)
+  }
+  for (const path of (outputs ?? [])) add({ path })
+  for (const file of deliveredByTurn.values()) for (const item of file) add(item)
+  return [...byPath.values()]
+}, [outputs, deliveredByTurn])
+
+// 最后一轮的 turn 号：交付卡只挂这里
+const lastTailTurn = useMemo(() => { /* 取 turns 中最后一个 turn-tail 节点 */ }, [turns])
+```
+
+**① 任务名可点（headerSlot）**：
+
+```tsx
+// 来源：session-view.ts 1380-1389
+taskId !== undefined && onOpenTask !== undefined && headingTask !== undefined
+  ? h('button', {
+      type: 'button', className: 'dsh-tdt-info-dep', title: t('infoViewTask'),
+      style: { fontSize: 'inherit' },
+      onClick: () => { onOpenTask(taskId) },
+    }, headingTask)
+  : headingTask ?? heading
+```
+
+**② 接收 / 随附（bodyLeadSlot）**：
+
+```tsx
+// 来源：session-view.ts 1428-1441。核心只需要把它放进 ChatViewFrame 的 column 首个子项，
+// 与会话节点同处一个滚动容器（用户 2026-10-03：不要单独滚动条）。
+h(ChatViewFrame, {
+  children: [
+    h(TaskFileContextPanel, {
+      upstream: upstream ?? [],
+      attached: attached ?? [],
+      workspacePath: workspacePath ?? null,
+      onOpenFile,
+      t: tt, // ⚠️ 必须传带占位符插值的 tt，官方 t 不替换 {count}
+    }),
+    ...(Array.isArray(body) ? body : [body]),
+  ],
+})
+```
+
+**要一起搬的本地组件**（不是纯插槽代码，核心可决定是否收编）：
+
+| 组件 | 文件 | 说明 |
+|---|---|---|
+| `TaskFileContextPanel` | [task-file-context.tsx:301](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/task-file-context.tsx#L301) | 接收（前置任务产出）/ 随附（本任务附件）；数据来自实例快照 `resolvedDeps` + `attachments` |
+| `ProcessFiles` | [process-files.tsx:22](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/process-files.tsx#L22) | `paths / onOpen / className / defaultOpen / t`，空数组返回 null |
+| `DeliverablesGridMirror` | [mirror/Deliverables.tsx](file:///code/dsh-plugins/dsh-task-dispatch-table/src/client/mirror/Deliverables.tsx) | 官方 Deliverables 类名镜像 + 文件行；核心若自带交付网格可直接删 |
+
+#### 4. 核心支持后的迁移步骤（照单执行）
+
+1. 升级 `dsh-plugin-core`，读 `SessionViewModal.d.ts` 确认四个插槽的真实签名（以源码为准，不按本文猜）。
+2. 在 `src/client/index.ts` 的 `openSessionView` 调用处，把 `outputs / processOutputs / upstream / attached / headingTask / taskId / onOpenTask / onOpenFile` 改走核心 props + 插槽；保留本地数据装配（交付去重、lastTailTurn、present.host）。
+3. 删除 `src/client/session-view.ts`（1471 行，含镜像节点、冷读探测、本地弹窗外壳）；确认 `records-timeline.tsx` 只依赖 `sessionLinkStyle` 等导出时先摘出再删。
+4. 保留 `task-file-context.tsx` / `process-files.tsx` / `mirror/Deliverables.tsx`（作为插槽内容），除非核心已收编同名能力。
+5. 同步更新 `scripts/smoke.mjs` 的会话预览断言、`docs/design/external/dsh-capabilities.md`、`docs/design/features/` 与 `ui-style-guide` 已知例外表。
+
+#### 5. 当前状态
+
+- 代码**未动**：`session-view.ts` 原样保留，等核心。
+- Toast（P2）仍待拍板，本仓 `FloatingToast` 暂留。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -206,3 +346,4 @@ P1 第二项：以 `src/client/ui/Button.tsx` + `controls-css.ts` 的 Button/Ico
 - 2026-11-05 14:25:17 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 讨论完毕并拍板：Picker 加 limit（搜索同样分页）+ keywords（单个字符串）；DateTimePicker 加 presets + width（触发器总宽）；「全部任务」作普通首项（核心零改）；token 基线跟随核心。交核心清单 C1–C4 定稿，worklog 提交推送 b9dae9e；TaskPicker/TimeRange 等核心新版发布后再接。
 - 2026-11-05 23:29:55 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 核心 0.34.0 交付 C1–C4；TaskPicker/TimeRange 改接核心薄包装完成（src/client/ui/TaskPicker.tsx、ui/TimeRange.tsx），删自绘浮层与 15 条 CSS，typecheck/build/smoke 751/0；专家复核 6 项闭环、文档 4 篇已回写；改动待提交
 - 2026-11-06 00:36:26 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P1 全量改接核心完成（本地控件/CSS 删除）；P3 文件浏览与预览整体切 dsh-plugin-core/adv/explorer（新增 fs 路由、file-preview.tsx 752 行删除、死 CSS 91 行删除），build/typecheck/smoke 753/0；P2 Toast 与 P4 会话预览因核心缺能力待拍板
+- 2026-11-06 00:51:15 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览拍板走 B：worklog 固化核心插槽 API 建议（headerSlot/bodyLeadSlot/turnTailSlot/actionsSlot）、替换会丢的 8 项功能对位、可直接搬的插槽代码与迁移步骤；当前 session-view.ts 不动，等核心支持
