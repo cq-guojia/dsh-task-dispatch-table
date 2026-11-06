@@ -38,3 +38,4 @@
 - 2026-11-03 08:07:25 · release · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · released to pool
 - 2026-11-03 08:07:48 · claim · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · claimed → doing
 - 2026-11-03 08:13:18 · cancel · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · cancelled: test
+- 2026-11-06 15:47:56 · delete · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · deleted
