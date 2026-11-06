@@ -10,7 +10,7 @@
  *   把三块清晰隔开。三块共用同一份框样式。
  */
 import { createElement as h, type CSSProperties } from 'react'
-import { PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, applyStyle } from './ui'
+import { PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, StripCard } from './ui'
 import { SettingsConfigBlock } from './settings-config-block'
 import { SettingsLogBlock } from './settings-log-block'
 import type { Translate } from './locales'
@@ -19,28 +19,13 @@ import type { Translate } from './locales'
 export const SECTION_GAP: CSSProperties = { marginTop: 'var(--dshpc-space-4)' }
 
 /**
- * 浅灰两色框（参考「执行记录」双色手法，仅用中性灰）。
- *
- * ⚠️ **不要圆角、不要描边**（用户 2026-10-08）——与执行记录条目块同形态：整块就是一个直角色块，
- * 视觉分隔靠「左缘 4px 略深色块 + 框内极淡底色」两拍，不加边框线。
+ * 三块灰框 = 核心 `StripCard` 中性色（左缘 4px 色条 + 极淡底色，直角色块）。
+ * 原本是本仓手写的 `.dsh-tdt-settings-card`，2026-11-06 按用户指正改为核心件。
  */
-const SETTINGS_DOMAIN = 'domain:settings'
-const SETTINGS_CSS = `
-.dsh-tdt-settings-card{
-  box-sizing:border-box;
-  border:none;
-  border-radius:0;
-  border-left:4px solid color-mix(in srgb,var(--dshpc-fg) 14%,transparent);
-  background:color-mix(in srgb,var(--dshpc-fg) 3%,transparent);
-  padding:var(--dshpc-space-4);
-}
-`
-applyStyle(SETTINGS_DOMAIN, SETTINGS_CSS)
-
 export function SettingsPage({ t }: { t: Translate }): ReturnType<typeof h> {
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     h('div', { id: PANEL_CONTENT_ID, style: PANEL_CONTENT_STYLE },
-      h('div', { className: 'dsh-tdt-settings-card' }, h(SettingsConfigBlock, { t })),
-      h('div', { className: 'dsh-tdt-settings-card', style: SECTION_GAP }, h(SettingsLogBlock, { t })),
+      h(StripCard, { accent: 'neutral' }, h(SettingsConfigBlock, { t })),
+      h(StripCard, { accent: 'neutral', style: SECTION_GAP }, h(SettingsLogBlock, { t })),
     ))
 }

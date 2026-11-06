@@ -44,7 +44,7 @@ import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow
 import { ProcessFiles } from './process-files'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
-  Button, ensureRunningStyle, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, Segmented, SelectField, TaskPicker,
+  Button, ensureRunningStyle, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, StripCard, TaskPicker, type CardAccent,
   applyStyle,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
@@ -107,28 +107,14 @@ const RECORDS_CSS = `
      容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
    容器**无 padding、无 cursor**：留白落在头部（这样 hover 高亮正好顶到块边，与卡片主行同观感）。 */
 /* ⚠️ gap 必须是 0：展开时头部的高亮区要**紧贴**下面那条分隔线（用户 2026-10-05：中间别留距离）。 */
-/* ⚠️ --rec-bar-w：左缘竖条的**唯一宽度源**。条子占的是块内的真实宽度 ⇒ 内容的左内边距要把它**加进去**
-   （用户 2026-10-05：左边距应该从竖条的**右边缘**开始算，不是从块的左边缘）⇒ 见 .dsh-tdt-rec-main / -exp。 */
-.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;--rec-bar-w:5px;box-sizing:border-box;
-  border:1px solid transparent;
-  background:var(--rec-tone-soft,transparent);color:var(--dshpc-fg);font:inherit;text-align:left;
+/* 左缘竖条与块底浅底色已归核心 StripCard（2026-11-06）⇒ 本仓不再自算色条宽度、也不维护色调变量。 */
+/* 块底 / 左缘色条 / 浅底色 = 核心 StripCard（2026-11-06 改接，色调走 accent）⇒ 本仓只留块级动画。
+   「预计执行」= 预期、未落实：在核心条带外再套一圈虚线（outline 不会被核心的 border 规则盖掉）。 */
+.dsh-tdt-rec-item{position:relative;box-sizing:border-box;color:var(--dshpc-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--dshpc-dur-fast) var(--dshpc-ease);}
-/* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --dshpc-* token ——
-   token 只在核心 token 层（dsh-plugin-core/design）定义；块底那条「状态色浅底」的 token 就在那里）。 */
-.dsh-tdt-rec-tone--ok{--rec-tone:var(--dshpc-success);--rec-tone-soft:var(--dshpc-success-soft);}
-.dsh-tdt-rec-tone--bad{--rec-tone:var(--dshpc-danger);--rec-tone-soft:var(--dshpc-danger-soft);}
-.dsh-tdt-rec-tone--warn{--rec-tone:var(--dshpc-warning);--rec-tone-soft:var(--dshpc-warning-soft);}
-.dsh-tdt-rec-tone--busy{--rec-tone:var(--dshpc-business);--rec-tone-soft:var(--dshpc-business-soft);}
-/* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
-.dsh-tdt-rec-tone--mute{--rec-tone:var(--dshpc-fg-3);--rec-tone-soft:var(--dshpc-chip-bg);}
-/* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。
-   用户 2026-10-06：虚线与竖条都走**同一支正蓝**（--dshpc-business），不要调暗、更不要灰。
-   用户 2026-10-06 续：虚线**只包上/右/下**，左边不包——左缘是那条实心蓝竖条（--rec-bar-w），虚线从它右边起到最右；蓝色调淡一点。 */
-.dsh-tdt-rec-tone--planned{--rec-tone:var(--dshpc-business);--rec-tone-soft:var(--dshpc-business-soft);border-style:dashed;border-color:color-mix(in srgb,var(--dshpc-business) 50%,transparent);border-left:0;}
-/* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
-   状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
-.dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--dshpc-fg-3));}
-/* 运行中脉动走统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse）：条子直接挂 RUN_PULSE_CLASS，不再另写一份动画。 */
+.dsh-tdt-rec-item--planned{outline:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);outline-offset:-1px;}
+/* 运行中脉动：色条由核心渲染，本域只把统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse）挂到它上面。 */
+.dsh-tdt-rec-item--running .dshpc-card__bar{animation:dsh-tdt-run-pulse var(--dshpc-dur-run) var(--dshpc-ease) infinite;}
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
   .dsh-tdt-rec-item{animation:none;}
@@ -138,15 +124,14 @@ const RECORDS_CSS = `
    **只有鼠标悬停**才叠一层中性半透明（不盖掉块底的状态色浅底）。
    ⚠️ 2026-10-04 第七轮：删掉「展开态常亮」——用户原话「如果我鼠标不移到这一块，它是不变色的，
    还是没展开时的颜色呀。只是鼠标移到这一块，它才换一个颜色」；展开与否**不再影响**头部底色。 */
-/* 左内边距 = --dshpc-space-4 **+ 竖条宽度**（从竖条右缘起算，不与条子叠在一起）。 */
-.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;
-  padding:var(--dshpc-space-3) var(--dshpc-space-3) var(--dshpc-space-3) calc(var(--dshpc-space-4) + var(--rec-bar-w,5px));}
+/* 内距由核心 StripCard 统一给（12 / 12 / 12 / 20，色条已含在内）⇒ 头部不再自己加 padding。 */
+.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;padding:0;}
 .dsh-tdt-rec-head{cursor:pointer;}
 .dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--dshpc-hover),var(--dshpc-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--dshpc-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;}
 /* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
-   字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --dshpc-on-signal，一眼就是个带色的牌子。
+   字是一个反色」）⇒ 底色按语义直接吃实面色，字走实面反色 --dshpc-on-signal，一眼就是个带色的牌子。
    ⚠️ 高度 / 圆角**跟着右列「查看会话」按钮走同一档令牌**，但**总高度比按钮矮 2px**（用户 2026-10-05 续：
      不要和按钮一模一样，总高 -2 ⇒ 24-2=22px，用固定的 height 减 2，padding / 圆角 / 字号**其他不变**）——
      高度 height:calc(var(--dshpc-control-h-sm) - 2px)（border-box ⇒ 含边框在内 22）、
@@ -154,8 +139,12 @@ const RECORDS_CSS = `
    ⚠️ 宽度仍**自适应**（不写 min-width，字多就长、字少就短）：padding 上下 3px / 左右 8px。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
   height:calc(var(--dshpc-control-h-sm) - 2px);padding:3px 8px;border-radius:var(--dshpc-radius-md);
-  background:var(--rec-tone,var(--dshpc-fg-3));color:var(--dshpc-on-signal);
+  background:var(--dshpc-fg-3);color:var(--dshpc-on-signal);
   font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);white-space:nowrap;}
+/* 标签底色按语义取实面色（块底的浅底已归核心 StripCard，这里只服务这枚小牌子）。 */
+.dsh-tdt-rec-tag--bad{background:var(--dshpc-danger);}
+.dsh-tdt-rec-tag--warn{background:var(--dshpc-warning);}
+.dsh-tdt-rec-tag--busy{background:var(--dshpc-business);}
 /* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
 .dsh-tdt-rec-tag--planned{background:transparent;color:var(--dshpc-business);border:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;}
@@ -211,8 +200,9 @@ const RECORDS_CSS = `
    ⚠️ **不可点、无 cursor**：展开出来的内容（产出物 / 前置 / 日志）要能直接拖选复制
       （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 /* 展开区同样从竖条右缘起算 ⇒ 展开后的内容与头部标题**左对齐**（条子是通高的，也压在展开区上）。 */
+/* 左右 / 底部内距同样由核心 StripCard 给，这里只留「与头部之间那 8px + 分隔线」。 */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--dshpc-space-2);
-  padding:var(--dshpc-space-2) var(--dshpc-space-3) var(--dshpc-space-3) calc(var(--dshpc-space-4) + var(--rec-bar-w,5px));
+  padding:var(--dshpc-space-2) 0 0;
   border-top:1px solid var(--dshpc-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
@@ -342,13 +332,12 @@ function weekdayOf(key: string, formatter: Intl.DateTimeFormat | null): string {
  * 语义色调 → 块的色调类名（色值本身全在 CSS 里读 --dshpc-* / --dshpc-*-soft，
  * 业务侧只做「哪一档」的映射；档位由 `status-text.ts` 的 `statusToneOf` 单源决定）。
  */
-function toneClassOf(tone: 'ok' | 'bad' | 'warn' | 'busy' | 'neutral' | 'planned'): string {
-  if (tone === 'ok') return 'dsh-tdt-rec-tone--ok'
-  if (tone === 'bad') return 'dsh-tdt-rec-tone--bad'
-  if (tone === 'warn') return 'dsh-tdt-rec-tone--warn'
-  if (tone === 'busy') return 'dsh-tdt-rec-tone--busy'
-  if (tone === 'planned') return 'dsh-tdt-rec-tone--planned'
-  return 'dsh-tdt-rec-tone--mute'
+function toneAccentOf(tone: 'ok' | 'bad' | 'warn' | 'busy' | 'neutral' | 'planned'): CardAccent {
+  if (tone === 'ok') return 'success'
+  if (tone === 'bad') return 'danger'
+  if (tone === 'warn') return 'warning'
+  if (tone === 'busy' || tone === 'planned') return 'business'
+  return 'neutral'
 }
 
 /** 执行时长（与卡片面板同口径：`dispatched_at ?? scheduled_at` → `finished_at`）。 */
@@ -428,7 +417,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
           text: statusTextOf(row.status, t),
           tone: row.status === 'failed' ? 'bad' : row.status === 'skipped' ? 'warn' : running ? 'busy' : 'neutral',
         })
-  const statusLabel = isPlanned ? t('calPlanTag') : statusTextOf(row.status, t)
+
   // 「预计执行」→「计划：」+ 倒计时：复用任务配置列表「下次预计执行时间」同一套（relativeFuture 每秒自刷 + 具体时刻），icon 同款。
   const plannedTagNode = isPlanned
     ? h('span', { className: 'dsh-tdt-rec-tag dsh-tdt-rec-tag--planned' },
@@ -511,22 +500,16 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         }, h('span', { style: fieldInnerStyle }, formatTokenCount(tokens))))
       : null)
 
-  return h('div', {
+  return h(StripCard, {
     // ⚠️ **容器不挂任何交互**（照任务卡片：容器不挂 onClick → 头部挂 → 展开区是兄弟节点）：
     //    光标 / 点击 / 键盘都只在下面的「头部」上 ⇒ 展开出来的内容既不是手指、也不会误触展开，可安心拖选复制。
-    //    展开与否只驱动「展开区是否渲染」与箭头上的 aria-expanded，**不再改块的外观**（第七轮去掉常亮）。
-    className: `dsh-tdt-rec-item ${toneClassOf(tone)}`,
+    //    展开与否只驱动「展开区是否渲染」与箭头上的 aria-expanded。
+    // 色条 + 浅底 = 核心 `StripCard`（成败色调走 accent，运行中由下方类名给核心色条挂统一脉动）。
+    accent: toneAccentOf(tone),
+    className: `dsh-tdt-rec-item${running ? ' dsh-tdt-rec-item--running' : ''}${tone === 'planned' ? ' dsh-tdt-rec-item--planned' : ''}`,
   },
-    // ── 头部（**唯一可点区域**）：左缘竖条 + 标题 + 信息 + 备注 + 右列控件 ──
+    // ── 头部（**唯一可点区域**）：标题 + 信息 + 备注 + 右列控件（左缘竖条已由核心 StripCard 提供）──
     h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick },
-      // 5px 方角通高竖条：成败的**唯一**图形表达；状态名放在它的悬停提示里（不再写可见文字）。
-      // 收进头部 ⇒ 这条 5px 也能点开（绝对定位仍相对块根，位置不变）——与卡片把状态条放进主行同理。
-      // 状态名挂**官方 Tooltip**（原生 title 太慢）；锚点就是这条真 DOM 的 span。
-      h(Tooltip, { label: statusLabel, side: 'top' },
-        h('span', {
-          className: `dsh-tdt-rec-bar${running ? ' ' + RUN_PULSE_CLASS : ''}`,
-          'aria-hidden': true,
-        })),
       // ── 左列：标题 + 下面那排信息 ──
       h('div', { className: 'dsh-tdt-rec-left' },
         h('div', { className: 'dsh-tdt-rec-r1' },

@@ -46,7 +46,7 @@ import { sortRows } from '../task-sort.js'
 import { debugLogOrder, dueLoadingMs, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { applyStyle, Button, Card, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
@@ -74,10 +74,7 @@ const TASK_LIST_CSS = [
   // 记录表头吸顶（内容区定高滚动、表头不动）：原注释声称由 `.dsh-tdt-rec-head th` 接管，
   // 但迁移时这条规则丢了、表头实际不吸顶；这里补回，底色随卡片面（--dshpc-surface-1）免得滚动时透内容。
   '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--dshpc-head-bg); }',
-  // 任务卡片：底色 + **hover 微高亮**（用户 2026-10-03）。
-  // 底色必须写在这里而不是 inline style —— inline 会盖掉下面的 `:hover`。
-  // 高亮用**淡蓝** `--dshpc-card-hover`：灰色高亮在卡片底色上几乎看不出来。
-  '.dsh-tdt-card { background: var(--dshpc-surface-1); }',
+  // 任务卡片外框已改接核心 `Card`（surface-1 底 + 边框 + 圆角，2026-11-06）⇒ 本仓不再写底色。
   // hover 只作用在**主行**（`dsh-tdt-card-row`：标题 / 状态 / 开关 / 箭头那一溜基本信息）。
   // 展开区是兄弟节点、不在这个 div 里 ⇒ 即便展开了，下面的设置 / 记录 / 日志也**不会**跟着变蓝
   // （否则展开后整页发蓝，反而晃眼，用户 2026-10-03）。
@@ -355,14 +352,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
 }
 
 // ── 卡片 ───────────────────────────────────────────────────────────────
-const cardStyle: Record<string, string | number> = {
-  display: 'block', width: '100%', boxSizing: 'border-box', textAlign: 'left',
-  marginBottom: '10px', borderRadius: 'var(--dshpc-radius-sm)',
-  border: `1px solid var(--dshpc-border)`, color: 'var(--dshpc-fg)',
-  transition: `border-color var(--dshpc-dur) var(--dshpc-ease), background var(--dshpc-dur) var(--dshpc-ease)`,
-  // ⚠️ **background 不放这里**：inline 背景的优先级高于 CSS class，会盖掉 `.dsh-tdt-card-row:hover` 的高亮。
-  // 底色走 CSS（`.dsh-tdt-card`）；hover 高亮走 `.dsh-tdt-card-row:hover`（只作用主行，展开区不跟着蓝）。
-}
+
 // ⚠️ 不带 `color`（r13 修）：标题可点后走 `.dsh-tdt-info-dep` 的 hover 变蓝——inline color 会把 :hover 压死
 //（鼠标移上去不变色的根因）；纯文本分支继承根色（--dshpc-fg），观感不变。
 const titleStyle: Record<string, string | number> = { fontSize: 'var(--dshpc-font-lg)', fontWeight: 600, lineHeight: 'var(--dshpc-line-md)' }
@@ -1160,12 +1150,20 @@ function TaskCard(props: {
   const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
 
-  return h('div', { ref: refOf, className: 'dsh-tdt-card', style: cardStyle },
-    // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
-    // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
-    // 主行自带卡片的 padding（卡片本身不再统一留白）⇒ hover 高亮能**边到边**铺满这一溜任务基本信息；
-    // 展开区是它的兄弟节点、**不在**这个 div 里 ⇒ hover 蓝不会蔓延到下面的设置 / 记录 / 日志（用户 2026-10-03）。
-    h('div', {
+  return h('div', { ref: refOf, style: { display: 'block', width: '100%', marginBottom: '10px' } },
+    // 外框 = 核心 `Card`（框式：surface-1 底 + 1px 边框 + 12 圆角）。
+    // 状态色条由卡片内的 `StatusRail` 表达（它有 tooltip 与运行脉冲），这里把核心卡片的左色条收成 0，
+    // 内距也归零、交给主行自己的 `12px 14px` ⇒ hover 高亮仍能边到边（用户 2026-10-03）。
+    h(Card, {
+      accent: 'neutral',
+      bar: { size: 0, inset: 0, gap: 0 },
+      style: { padding: 0 },
+    },
+      // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
+      // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
+      // 主行自带卡片的 padding（卡片本身不再统一留白）⇒ hover 高亮能**边到边**铺满这一溜任务基本信息；
+      // 展开区是它的兄弟节点、**不在**这个 div 里 ⇒ hover 蓝不会蔓延到下面的设置 / 记录 / 日志（用户 2026-10-03）。
+      h('div', {
       className: 'dsh-tdt-card-row',
       style: { display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '12px 14px' },
       onClick: () => {
@@ -1242,8 +1240,9 @@ function TaskCard(props: {
         ),
       ),
     ),
-    // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
-    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh }) : null,
+      // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
+      open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh }) : null,
+    ),
   )
 }
 
@@ -1389,6 +1388,8 @@ export function TaskListView(props: {
             ariaLabel: t('listFilterWorkspaceAll'),
             size: 'md',
             width: WS_WIDTH,
+            // 工作区候选可能很多：下拉必须带搜索框（核心 Picker 自带）。
+            searchable: true,
           }),
         ),
       ),

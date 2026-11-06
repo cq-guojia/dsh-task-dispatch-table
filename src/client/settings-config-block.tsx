@@ -15,7 +15,8 @@
  * ⚠️ **表单状态一律存服务端值**（毫秒），显示时才换算（`toDisplay`）。
  */
 import { createElement as h, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { Button, Input, notify, SectionHead, SelectField } from './ui'
+import { t as coreT } from 'dsh-plugin-core/utils'
+import { Button, ensureControlsStyle, Input, ModelPicker, notify, SectionHead, type PickerGroup } from './ui'
 import { fetchConfig, postConfig, fetchModelOptions, type ModelOption, type SettingsConfigValue } from './settings-data'
 import { HelpButton } from './task-editor'
 import { ensureTaskEditorStyle } from './task-editor-css'
@@ -90,7 +91,7 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
 
   const tt = useMemo(() => interpolateTranslate(t), [t])
 
-  useEffect(() => { ensureTaskEditorStyle() }, [])
+  useEffect(() => { ensureTaskEditorStyle(); ensureControlsStyle() }, [])
 
   useEffect(() => {
     let alive = true
@@ -216,24 +217,21 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
 
   const dirty = form !== null && baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline)
 
-  /** 供应商候选：从模型目录去重（目录读不到 ⇒ 只有「默认」一项）。 */
-  const providerOptions = (): Array<{ value: string; label: string }> => {
-    const seen = new Set<string>()
-    const out: Array<{ value: string; label: string }> = [{ value: '', label: t('settingsDefaultOption') }]
+  /** 模型分组（一组 = 一个供应商），给核心 `ModelPicker` 联动备用；值口径 = `${provider}/${id}`。 */
+  const modelGroups = (): PickerGroup[] => {
+    const byProvider = new Map<string, PickerGroup>()
     for (const m of models) {
-      if (m.provider === undefined || m.provider === '' || seen.has(m.provider)) continue
-      seen.add(m.provider)
-      out.push({ value: m.provider, label: m.provider })
+      if (m.provider === undefined || m.provider === '' || m.value === '') continue
+      // 服务端 label 是 `名称（供应商）`；分组后组头已是供应商，去掉重复尾缀。
+      const label = m.label.replace(`（${m.provider}）`, '')
+      const group = byProvider.get(m.provider)
+      if (group === undefined) {
+        byProvider.set(m.provider, { value: m.provider, label: m.provider, options: [{ value: `${m.provider}/${m.value}`, label }] })
+      } else {
+        group.options.push({ value: `${m.provider}/${m.value}`, label })
+      }
     }
-    return out
-  }
-
-  /** 模型候选：没选供应商 ⇒ 只剩「默认模型」一项 ⇒ 下拉灰掉、不可选。 */
-  const modelOptions = (): ModelOption[] => {
-    const provider = form?.defaultProvider ?? ''
-    const head: ModelOption[] = [{ value: '', label: t('editorFollowHost') }]
-    if (provider === '') return head
-    return [...head, ...models.filter(m => m.provider === provider)]
+    return [...byProvider.values()]
   }
 
   const renderField = (f: FieldDef): ReturnType<typeof h> => {
@@ -260,22 +258,36 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
         'aria-label': t(f.labelKey),
       })
     } else {
-      const opts = modelOptions()
-      control = h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--dshpc-space-2)' } },
-        h(SelectField, {
-          value: String(form!.defaultProvider), options: providerOptions(), block: true, size: 'md',
-          error: invalid,
-          onChange: (v: string) => {
-            update(f, '')
-            setForm(prev => prev === null ? prev : { ...prev, defaultProvider: v })
+      // 供应商 + 模型 = 核心 `ModelPicker` 联动态（两个下拉自动筛选；换供应商先清模型）。
+      // 值口径与核心一致（`provider/id`），本仓只把两段拆回 `defaultProvider` / `defaultModel`。
+      const groups = modelGroups()
+      const pairValue = form!.defaultProvider !== '' && form!.defaultModel !== ''
+        ? `${form!.defaultProvider}/${form!.defaultModel}`
+        : ''
+      control = h('div', { className: 'dsh-tdt-model-pair' },
+        h(ModelPicker, {
+          variant: 'cascade',
+          value: pairValue,
+          groups,
+          // 核心控件内置文案（供应商 / 模型 / 默认）走核心字典；本仓只覆盖自己那几个标签。
+          translate: coreT,
+          // 目录读不到 ⇒ 如实降级（不伪装成完整目录）；「默认」选项由核心内置。
+          degraded: groups.length === 0,
+          defaultLabel: t('settingsDefaultOption'),
+          placeholder: t('editorFollowHost'),
+          size: 'md',
+          className: invalid ? 'dsh-tdt-picker--error' : undefined,
+          onChange: (next: string) => {
+            if (next === '') {
+              update(f, '')
+              setForm(prev => prev === null ? prev : { ...prev, defaultProvider: '', defaultModel: '' })
+              return
+            }
+            const slash = next.indexOf('/')
+            const provider = slash < 0 ? '' : next.slice(0, slash)
+            const model = slash < 0 ? next : next.slice(slash + 1)
+            setForm(prev => prev === null ? prev : { ...prev, defaultProvider: provider, defaultModel: model })
           },
-          placeholder: t('settingsDefaultOption'), emptyLabel: t('editorNoOptions'), ariaLabel: t('settingsProvider'),
-        }),
-        h(SelectField, {
-          value: String(serverVal), options: opts, block: true, size: 'md',
-          disabled: opts.length <= 1, error: invalid,
-          onChange: (v: string) => { update(f, v) },
-          placeholder: t('editorFollowHost'), emptyLabel: t('editorNoOptions'), ariaLabel: t('settingsModel'),
         }),
       )
     }

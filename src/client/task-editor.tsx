@@ -93,13 +93,15 @@ import {
 	FieldHint,
 	IconButton,
 	MarqueeText,
+	ModelPicker,
 	notify as coreNotify,
 	NumberInput,
 	Segmented,
 	SelectField,
 	Button as TdtButton,
-	PrefixedInput as TdtPrefixedInput,
+	InputGroup,
 	Textarea,
+	type PickerGroup,
 } from "./ui";
 
 /**
@@ -812,8 +814,10 @@ export function definitionToDraft(
 // ─────────────────────── 布局小件 ───────────────────────
 
 /**
- * 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
- * 用户 2026-09-29：「任务名称」别单独占一行，位置紧张。
+ * 前置标签输入框 —— 核心 `InputGroup` 的薄包装（2026-11-06 改接）。
+ *
+ * 用户 2026-09-29：「任务名称」别单独占一行，位置紧张 ⇒ 标签塞进框里、与输入框**同格**；
+ * 这正是核心 `InputGroup.label` 的形态（同格灰底标题格），本仓不再自绘。
  */
 function PrefixedInput(props: {
 	prefix: string;
@@ -823,17 +827,17 @@ function PrefixedInput(props: {
 	/** 校验不通过：描红边（明暗自适应，与卡片 / 下拉同源）。 */
 	error?: boolean;
 }): ReactElement {
-	return h(TdtPrefixedInput, {
-		// 核心默认 sm(24)，沿用原基础层默认 lg(32)（与同排卡片一致）。
+	return h(InputGroup, {
+		// 与同排卡片一致的高度档（核心默认 lg = 32）。
 		size: "lg",
-		prefix: props.prefix,
+		label: props.prefix,
 		value: props.value,
 		placeholder: props.placeholder,
 		error: props.error,
 		"aria-label": props.prefix,
 		onChange: props.onChange,
-		// 撑满整行：PrefixedInput 根是 inline-flex（收缩盒），不指定宽度会缩到「前缀 + 默认 input 宽」，
-		// 比下面各张全宽卡片短一截（用户 2026-10-01 点名）。这一层是编辑器专用包装，无其它调用点。
+		// 撑满整行：InputGroup 根是 inline-flex（收缩盒），不指定宽度会缩到「标签 + 默认 input 宽」，
+		// 比下面各张全宽卡片短一截（用户 2026-10-01 点名）。
 		style: { width: "100%" },
 	});
 }
@@ -1106,6 +1110,50 @@ export const PAGE_MIN_WIDTH = 760;
  */
 const PROMPT_SELECT_BASE = "120px";
 const PROMPT_SELECT_WIDE = "180px";
+
+/**
+ * 模型下拉的分组数据（`ModelPicker` 的 `groups` 口径：一组 = 一个供应商）。
+ * 候选来自 `/options`（真实目录）；不在目录里的旧值补一组「当前」，
+ * 否则编辑老任务时看不见自己配的模型（值没丢，只是别处选了它）。
+ */
+function modelGroupsOf(
+	models: readonly EditorOption[],
+	current: string,
+): PickerGroup[] {
+	const byProvider = new Map<string, PickerGroup>();
+	for (const model of models) {
+		if (model.value === "") continue;
+		const slash = model.value.indexOf("/");
+		const provider = slash < 0 ? "" : model.value.slice(0, slash);
+		// label 由服务端拼成 `名称（供应商）`；分组后组头已经是供应商，去掉重复尾缀。
+		const label =
+			provider === ""
+				? model.label
+				: model.label.replace(`（${provider}）`, "");
+		const group = byProvider.get(provider);
+		if (group === undefined)
+			byProvider.set(provider, {
+				value: provider,
+				label: provider,
+				options: [{ value: model.value, label }],
+			});
+		else group.options.push({ value: model.value, label });
+	}
+	const groups = [...byProvider.values()];
+	if (
+		current !== "" &&
+		!groups.some((group) =>
+			group.options.some((option) => option.value === current),
+		)
+	) {
+		groups.push({
+			value: "__current",
+			label: "",
+			options: [{ value: current, label: current }],
+		});
+	}
+	return groups;
+}
 
 /** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
 const formatVersionTime = (iso: string): string => formatDateTime(iso);
@@ -2356,6 +2404,8 @@ export function TaskEditorDrawer(props: {
 				error: problemsByField("workspace"),
 				icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
 				width: PROMPT_SELECT_WIDE,
+				// 工作区可能很多：候选列表必须带搜索框（核心 Picker 自带）。
+				searchable: true,
 			}),
 			// 权限：紧挨工作区（用户 2026-09-29：选完工作区就定权限，两者同一件事的前后脚）。
 			h(SelectField, {
@@ -2371,21 +2421,22 @@ export function TaskEditorDrawer(props: {
 				width: PROMPT_SELECT_BASE,
 			}),
 			h("span", { className: "dsh-tdt-ed-spacer" }),
-			h(SelectField, {
+			// 选模型 = 核心 `ModelPicker` 分组态（一组 = 一个供应商）；「默认模型」是核心内置首项。
+			// ⚠️ 候选为空但草稿里**已经有模型**（宿主没接上 llm ⇒ degraded 时常发生）⇒ `modelGroupsOf`
+			// 会补一组「当前值」，否则编辑老任务时看不见自己配的是哪个（值没丢、保存也照写）。
+			h(ModelPicker, {
 				value: draft.model,
-				// ⚠️ 候选为空但草稿里**已经有模型**（宿主没接上 llm ⇒ degraded 时常发生）⇒ 补一项「当前值」，
-				// 否则编辑一条已配模型的老任务时，用户**看不见自己配的是哪个**（值没丢、保存也照写，只是看不见）。
-				options:
-					models.length > 0 || draft.model === ""
-						? models
-						: [{ value: draft.model, label: draft.model }],
+				variant: "grouped",
+				groups: modelGroupsOf(models, draft.model),
+				// 只有「默认模型」一项 ⇒ 如实降级，不伪装成完整目录。
+				degraded: models.length <= 1,
+				defaultLabel: t("editorFollowHost"),
+				placeholder: t("editorModelPh"),
+				size: "lg",
+				className: "dsh-tdt-ed-model",
 				onChange: (value) => {
 					patch({ model: value });
 				},
-				placeholder: t("editorModelPh"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorModel"),
-				width: PROMPT_SELECT_WIDE,
 			}),
 		),
 	);

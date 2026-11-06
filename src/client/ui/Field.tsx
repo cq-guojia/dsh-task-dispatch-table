@@ -46,6 +46,8 @@ export interface SelectFieldProps {
   size?: 'sm' | 'md' | 'lg'
   /** 校验不通过：描红。 */
   error?: boolean
+  /** 下拉内搜索框（工作区这类长候选必须开）。 */
+  searchable?: boolean
 }
 
 /**
@@ -77,6 +79,7 @@ export function SelectField(props: SelectFieldProps): ReactElement {
     width,
     ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
     ariaLabel: props.ariaLabel,
+    ...(props.searchable === true ? { searchable: true } : {}),
   })
 
   return props.title === undefined

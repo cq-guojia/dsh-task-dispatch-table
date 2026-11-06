@@ -2963,16 +2963,18 @@ try {
 			"utf8",
 		);
 		check(
-			"执行记录流水账进产物（RecordsTimelineView + 日期行 / 块容器 / 色条 / 两行条目 / 加载区类名）",
+			"执行记录流水账进产物（RecordsTimelineView + 日期行 / 块容器 / 核心色条 / 两行条目 / 加载区类名）",
 			clientJs.includes("RecordsTimelineView") &&
 				[
 					"dsh-tdt-rec-dayrow",
 					"dsh-tdt-rec-items",
-					"dsh-tdt-rec-bar",
+					"dshpc-card__bar",
 					"dsh-tdt-rec-r1",
 					"dsh-tdt-rec-r2",
 					"dsh-tdt-rec-foot",
-				].every((c) => clientJs.includes(c)),
+				].every((c) => clientJs.includes(c)) &&
+				// 色条已归核心 StripCard ⇒ 产物里不应再有本仓自绘的竖条类名。
+				!clientJs.includes("dsh-tdt-rec-bar"),
 		);
 		check(
 			"过滤行照任务列表：**左侧状态分段控件四档**（全部/成功/失败/进行中）+ 右侧工作区/任务（2026-10-06：时间范围控件已移除，默认拉全量）",
@@ -3003,16 +3005,13 @@ try {
 				!tlSrc.includes("--dshpc-z-sticky"),
 		);
 		check(
-			"块皮肤 = **状态色浅底**（色调类给局部变量）+ **5px 方角通高竖条**贴左缘 + 块间 **4px**",
-			/\.dsh-tdt-rec-item\{[^}]*background:var\(--rec-tone-soft,transparent\)/.test(
-				tlSrc,
-			) &&
-				/\.dsh-tdt-rec-bar\{[^}]*left:0;top:0;bottom:0;width:var\(--rec-bar-w,5px\)/.test(
-					tlSrc,
-				) &&
-				/\.dsh-tdt-rec-item\{[^}]*--rec-bar-w:5px/.test(tlSrc) &&
-				!/\.dsh-tdt-rec-bar\{[^}]*border-radius/.test(tlSrc) &&
-				/--rec-tone-soft:var\(--dshpc-success-soft\)/.test(tlSrc) &&
+			"块皮肤 = 核心 **StripCard**（左缘色条 + 状态色浅底，色调走 accent）+ 块间 **4px**；本仓不再写色调变量",
+			/h\(StripCard, \{/.test(tlSrc) &&
+				/accent: toneAccentOf\(tone\)/.test(tlSrc) &&
+				/\.dsh-tdt-rec-item\{[^}]*animation:dsh-tdt-rec-in/.test(tlSrc) &&
+				!tlSrc.includes("--rec-tone") &&
+				!tlSrc.includes("--rec-bar-w") &&
+				!tlSrc.includes("dsh-tdt-rec-bar") &&
 				/\.dsh-tdt-rec-items\{[^}]*gap:var\(--dshpc-space-1\)/.test(tlSrc),
 		);
 		check(
@@ -3108,15 +3107,14 @@ try {
 			tlSrc.includes("prefers-reduced-motion"),
 		);
 		check(
-			"不用图标表成败：色调走 statusToneOf 单源 + toneClassOf 映射（源码内无状态图标）",
+			"不用图标表成败：色调走 statusToneOf 单源 + toneAccentOf 映射到核心 accent（源码内无状态图标）",
 			/statusToneOf\(/.test(tlSrc) &&
-				/toneClassOf\(/.test(tlSrc) &&
-				[
-					"--dshpc-success",
-					"--dshpc-danger",
-					"--dshpc-warning",
-					"--dshpc-business",
-				].every((tk) => tlSrc.includes(`var(${tk})`)) &&
+				/toneAccentOf\(/.test(tlSrc) &&
+				/return 'success'/.test(tlSrc) &&
+				/return 'danger'/.test(tlSrc) &&
+				/return 'warning'/.test(tlSrc) &&
+				/return 'business'/.test(tlSrc) &&
+				!tlSrc.includes("toneClassOf") &&
 				!tlSrc.includes("StatusIcon") &&
 				!tlSrc.includes("IconCheckCircle"),
 		);
@@ -3241,7 +3239,7 @@ try {
 		);
 		check(
 			"第六轮：**容器不挂交互**（块根无 onClick / 无 cursor），点击与光标只在头部（含「有选中文字就不展开」守卫）",
-			/className: `dsh-tdt-rec-item \$\{toneClassOf\(tone\)\}/.test(tlSrc) &&
+			/className: `dsh-tdt-rec-item\$\{running \?/.test(tlSrc) &&
 				!/\.dsh-tdt-rec-item\{[^}]*cursor:pointer/.test(tlSrc) &&
 				/className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick/.test(
 					tlSrc,
@@ -3464,7 +3462,8 @@ try {
 		);
 		check(
 			"预计执行（虚线块）：与已执行共用同一 RecordItem，仅换虚线皮肤 + 占位字段（实际执行/时长/Token = 未执行/--/--）",
-			tlSrc.includes("dsh-tdt-rec-tone--planned") &&
+			tlSrc.includes("dsh-tdt-rec-item--planned") &&
+				/\.dsh-tdt-rec-item--planned\{[^}]*outline:1px dashed/.test(tlSrc) &&
 				tlSrc.includes("dsh-tdt-rec-tag--planned") &&
 				tlSrc.includes("plannedDeps") &&
 				tlSrc.includes("t('calNotExecuted')") &&
@@ -3472,10 +3471,10 @@ try {
 				clientJs.includes("planned: true"),
 		);
 		check(
-			"第四轮：条目**删掉可见状态文字**（成败只由 5px 竖条 + 状态浅底表达），状态名改挂竖条悬停提示",
+			"第四轮：条目**删掉可见状态文字**（成败只由核心色条 + 状态浅底表达）",
 			!tlSrc.includes("dsh-tdt-rec-state") &&
 				!tlSrc.includes("dsh-tdt-rec-statedot") &&
-				/h\(Tooltip, \{ label: statusLabel, side: 'top' \}/.test(tlSrc) &&
+				!tlSrc.includes("statusLabel") &&
 				!/title: statusLabel/.test(tlSrc),
 		);
 		check(
@@ -3491,10 +3490,10 @@ try {
 				/variant: 'outline',[\s\S]{0,160}t\('viewSession'\)/.test(tlSrc),
 		);
 		check(
-			"第四轮 / 第六轮：留白落在**头部**上（上/下/右 12、左 = 16 + 竖条宽；容器无 padding ⇒ hover 高亮顶到块边）",
-			/\.dsh-tdt-rec-main\{[^}]*padding:var\(--dshpc-space-3\) var\(--dshpc-space-3\) var\(--dshpc-space-3\) calc\(var\(--dshpc-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(
-				tlSrc,
-			) && !/\.dsh-tdt-rec-item\{[^}]*padding:/.test(tlSrc),
+			"第四轮 / 第六轮：内距交给核心 StripCard（12/12/12/20，色条宽度已含在内）⇒ 本仓头部不再自加 padding，也不自算竖条宽度",
+			/\.dsh-tdt-rec-main\{[^}]*padding:0;/.test(tlSrc) &&
+				!/\.dsh-tdt-rec-item\{[^}]*padding:/.test(tlSrc) &&
+				!/--rec-bar-w/.test(tlSrc),
 		);
 		check(
 			"第四轮：信息行 = **固定单行 + 溢出省略**，三个字段各带官方近似图标，Token 从右下角迁到行尾",
@@ -3723,8 +3722,8 @@ check(
 		!locSrc10.includes("explorerUp"),
 );
 check(
-	"第十轮·硬性规定：悬停提示一律**官方 Tooltip**，不再用原生 title（状态名 / 标题 / 信息行；备注不弹）",
-	/h\(Tooltip, \{ label: statusLabel, side: 'top' \}/.test(tlSrc10) &&
+	"第十轮·硬性规定：悬停提示一律**官方 Tooltip**，不再用原生 title（标题 / 信息行；状态名随核心色条不再单独挂、备注不弹）",
+	!/statusLabel/.test(tlSrc10) &&
 		/h\(Tooltip, \{ label, side: 'top' \}/.test(tlSrc10) &&
 		/h\(Tooltip, \{ label: title, side: 'top' \}/.test(tlSrc10) &&
 		!/title: statusLabel/.test(tlSrc10) &&
@@ -3752,13 +3751,15 @@ check(
 		!/recTag(Failed|Skipped|Running|Unknown)/.test(locSrc10),
 );
 check(
-	"第十一轮：状态标签 = **状态色实底 + 反色字**（背景吃 --rec-tone、字走 --dshpc-on-signal），字号小一号、padding 上下 3 / 左右 8",
+	"第十一轮：状态标签 = **状态色实底 + 反色字**（色调按语义落 tag 自己的类、字走 --dshpc-on-signal），字号小一号、padding 上下 3 / 左右 8",
 	/\.dsh-tdt-rec-tag\{[^}]*padding:3px 8px;/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-tag\{[^}]*background:var\(--rec-tone,var\(--dshpc-fg-3\)\);color:var\(--dshpc-on-signal\)/.test(
+		/\.dsh-tdt-rec-tag\{[^}]*background:var\(--dshpc-fg-3\);color:var\(--dshpc-on-signal\)/.test(
 			tlSrc10,
 		) &&
+		/\.dsh-tdt-rec-tag--bad\{background:var\(--dshpc-danger\);\}/.test(tlSrc10) &&
+		/\.dsh-tdt-rec-tag--warn\{background:var\(--dshpc-warning\);\}/.test(tlSrc10) &&
+		/\.dsh-tdt-rec-tag--busy\{background:var\(--dshpc-business\);\}/.test(tlSrc10) &&
 		/\.dsh-tdt-rec-tag\{[^}]*font-size:var\(--dshpc-font-xs\)/.test(tlSrc10) &&
-		!/\.dsh-tdt-rec-tag--(bad|warn|busy|neutral)\{/.test(tlSrc10) &&
 		!/\.dsh-tdt-rec-tag\{[^}]*min-width/.test(tlSrc10),
 );
 check(
@@ -3786,13 +3787,11 @@ check(
 		tlSrc10.indexOf("}, t('viewSession'))") > 0,
 );
 check(
-	"第十一轮：条目左内边距**从竖条右缘起算**（竖条宽度 --rec-bar-w 计入 padding-left）",
-	/\.dsh-tdt-rec-item\{[^}]*--rec-bar-w:5px/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-bar\{[^}]*width:var\(--rec-bar-w,5px\)/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-main\{[^}]*padding:var\(--dshpc-space-3\) var\(--dshpc-space-3\) var\(--dshpc-space-3\) calc\(var\(--dshpc-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(
-			tlSrc10,
-		) &&
-		/\.dsh-tdt-rec-exp\{[^}]*calc\(var\(--dshpc-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(
+	"第十一轮：色条宽度归核心 StripCard，本仓不再自算（--rec-bar-w / dsh-tdt-rec-bar 均已删）",
+	!tlSrc10.includes("--rec-bar-w") &&
+		!tlSrc10.includes("dsh-tdt-rec-bar") &&
+		/\.dsh-tdt-rec-main\{[^}]*padding:0;/.test(tlSrc10) &&
+		/\.dsh-tdt-rec-exp\{[^}]*padding:var\(--dshpc-space-2\) 0 0/.test(
 			tlSrc10,
 		),
 );
@@ -3830,8 +3829,9 @@ check(
 		locSrc10.includes("trLastMonth: '上月'"),
 );
 check(
-	"第十轮：展开时头部高亮**紧贴**分隔线（容器 gap 归零，不留距离）",
-	/\.dsh-tdt-rec-item\{[^}]*gap:0;/.test(tlSrc10),
+	"第十轮：展开时头部高亮**紧贴**分隔线（块根不设 gap ⇒ 头部底边直接接展开区的分隔线）",
+	!/\.dsh-tdt-rec-item\{[^}]*gap:/.test(tlSrc10) &&
+		/\.dsh-tdt-rec-exp\{[^}]*border-top:1px solid/.test(tlSrc10),
 );
 
 // ── 9. 依赖判定（决策 33：上游最近一条必须 succeeded）──

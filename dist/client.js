@@ -241,6 +241,9 @@ window.__ModuleLoader__.load({
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/datetime-css.generated.js
 		const DATETIME_CSS = "/* 日期时间选择器（DateTimePicker）。类名 dshpc-dt-*；配色只吃 token，明暗随 token 切换。\n   结构：触发器（range = 一个整条：两个日期区 + 样式画的灰隔条；single = 单日期）→ 浮层\n   （两个独立端框 + 两块独立日历 + 底部动作）。\n   浮层行为与 Picker 一致：portal 到 body、贴边翻转、点外关闭、无遮罩。 */\n.dshpc-dt{position:relative;display:inline-block;font-size:13px;line-height:20px}\n.dshpc-dt__trigger{\n  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;\n  max-width:100%;height:var(--dshpc-control-h-md);padding:0 10px;\n  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);\n  color:var(--dshpc-fg);background:var(--dshpc-surface-1);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);cursor:pointer;\n}\n/* 三档与 .dshpc-input 逐项对齐：高度同 control-h、内距 8/10/12、字号 sm 降到 font-sm（2026-11-06）。 */\n.dshpc-dt__trigger--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm)}\n.dshpc-dt__trigger--lg{height:var(--dshpc-control-h-lg);padding:0 12px}\n.dshpc-dt__trigger:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed;opacity:.7}\n/* 焦点与基础 Input 完全同款（点击即蓝描边 + 1px 光环）。 */\n.dshpc-dt__trigger:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__trigger-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-variant-numeric:tabular-nums}\n.dshpc-dt__trigger-label--empty{color:var(--dshpc-fg-3)}\n.dshpc-dt__cal{flex:none;color:var(--dshpc-fg-3)}\n/* range 触发器：一个整条里两个日期区 + 样式画出来的灰隔条（左右两条竖边），点整条都展开。 */\n/* 组撑满触发器内容高度，隔条才能上下顶到 border。 */\n.dshpc-dt__pair-group{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:8px}\n/* 两个日期区平分（flex:1 1 0）：开始 / 结束永远一样宽，不随内容偏袒。 */\n.dshpc-dt__pair-date{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__pair-date--empty{color:var(--dshpc-fg-3)}\n/* 隔条：上下顶到触发器 border（与边框连起来），中间隔出一块；块里放「到」的符号（-，用户 2026-10-24 拍板）。 */\n.dshpc-dt__pair-sep{\n  flex:none;align-self:stretch;width:22px;margin:0;\n  display:inline-flex;align-items:center;justify-content:center;\n  background:var(--dshpc-surface-sunken);\n  border-left:1px solid var(--dshpc-border);border-right:1px solid var(--dshpc-border);\n  color:var(--dshpc-fg-3);font-size:12px;line-height:1;\n}\n/* 默认宽：**固定**（选中前后不变），数值对照参考图实测（2x 屏，换算 CSS px）后\n   统一 -6px（用户 2026-10-24：实测值留得偏多）：\n   单值 day 128 / 时·分 153.2 / 秒 174.8；区间 day 269 / 分 341.4 / 秒 377.6。\n   ch = 字体里 \"0\" 的宽（日期 tabular-nums 等宽）⇒ 写成 Nch + 常数；常数同时兜住\n   默认占位「请选择日期时间」（7 汉字）不省略。调用方要另给宽：className 传 width。 */\n.dshpc-dt__trigger--w-day{width:calc(10ch + 56px)}\n.dshpc-dt__trigger--w-minute{width:calc(16ch + 38px)}\n.dshpc-dt__trigger--w-second{width:calc(19ch + 38px)}\n.dshpc-dt__trigger--wr-day{width:calc(20ch + 125px)}\n.dshpc-dt__trigger--wr-minute{width:calc(32ch + 111px)}\n.dshpc-dt__trigger--wr-second{width:calc(38ch + 104px)}\n\n/* 弹层表面积归 panel.css 的 popover 档（与选文件弹窗同档）：这里只留层序与内距。 */\n.dshpc-dt__pop{\n  z-index:var(--dshpc-z-popmenu);padding:10px;user-select:none;\n  font-size:13px;line-height:20px;\n}\n/* 两个独立端框（range）：按钮皮肤全走核心 Button，这里只管两根框的排布与内部文字。 */\n.dshpc-dt__ends{display:flex;gap:6px;margin-bottom:8px}\n.dshpc-dt__ends > .dshpc-btn{flex:1 1 0;min-width:0}\n.dshpc-dt__end-label{flex:none;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3);white-space:nowrap}\n.dshpc-dt__end-value{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__end-value--empty{color:var(--dshpc-fg-3)}\n\n.dshpc-dt__nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}\n.dshpc-dt__nav-group{display:flex;gap:2px}\n.dshpc-dt__nav-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__nav-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__nav-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__caption{font-size:13px;font-weight:600;color:var(--dshpc-fg);white-space:nowrap}\n\n/* 列宽弹性：弹层常被底部动作钮（英文 Today/Clear/Cancel/Confirm）撑得比日历宽，\n   固定 30px 会在右边留一大块空白。minmax(30px,1fr) ⇒ 中文时按钮短、格子仍 30px；\n   英文时按钮长、格子自动拉开填满，不留白（2026-11-06）。 */\n.dshpc-dt__grid{display:grid;grid-template-columns:repeat(7,minmax(30px,1fr));gap:2px}\n.dshpc-dt__wd{height:20px;font-size:11px;line-height:20px;color:var(--dshpc-fg-3);text-align:center}\n.dshpc-dt__cell{\n  height:26px;padding:0;font-size:12px;font-variant-numeric:tabular-nums;\n  color:var(--dshpc-fg);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__cell:hover{background:var(--dshpc-surface-sunken)}\n.dshpc-dt__cell:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__cell--out{color:var(--dshpc-fg-dim)}\n.dshpc-dt__cell--today{color:var(--dshpc-business);font-weight:600}\n/* 起 / 止端：品牌蓝实面反白（与 Segmented weekday 选中同口径）。\n   ⚠️ 字色用常量白 --dshpc-on-signal，不用 --dshpc-fg-inverse：后者跟宿主 label-primary-foreground，\n   暗色主题下是近黑 ⇒ 蓝底黑字（与 Segmented 2026-10-29 同一事故）。 */\n.dshpc-dt__cell--sel{background:var(--dshpc-business);color:var(--dshpc-on-signal);font-weight:600}\n.dshpc-dt__cell--sel:hover{background:var(--dshpc-business-hover)}\n\n/* 两块日历面板（range：左开始、右结束，各选各的）。 */\n.dshpc-dt__panels{display:flex;gap:14px;align-items:flex-start}\n/* 面板跟着 body 一起吃掉弹层多出来的宽，grid 的 1fr 才有东西可分；\n   range 两块日历各自 basis = 内容宽，多余空间才平分，不会互相挤窄。 */\n.dshpc-dt__panel{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}\n\n/* 左列（两个端框 + 两块日历）与右列（快捷档）并排；不传 presets 时只剩左列，布局与旧版一致。 */\n.dshpc-dt__layout{display:flex;align-items:stretch;gap:10px}\n.dshpc-dt__body{flex:1 1 auto;min-width:0}\n/* 右列高度由 layout 的 stretch 跟左边日历区拉齐，自己不撑高弹层；档位多了只在列内滚。\n   76px 容得下英文缩写最长那档 + 滚动条，中文两字居中，不随文案变宽（2026-11-06）。 */\n.dshpc-dt__side{\n  position:relative;flex:none;width:76px;\n  padding-left:9px;border-left:1px solid var(--dshpc-border-faint);\n}\n/* 右溢 10px 抵消面板 padding，滚动条才贴到面板自身 1px 边框内侧；内容用 padding-right 补回边距。 */\n.dshpc-dt__side-scroll{\n  position:absolute;inset:0 -10px 0 9px;padding-right:9px;\n  display:flex;flex-direction:column;gap:2px;overflow-y:auto;\n  border-right:1px solid transparent;\n}\n.dshpc-dt__side-scroll > .dshpc-btn{flex:none}\n\n.dshpc-dt__time{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:2px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__unit{display:flex;flex-direction:column;align-items:center;gap:2px}\n.dshpc-dt__unit-label{font-size:10px;line-height:14px;color:var(--dshpc-fg-3)}\n.dshpc-dt__step-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:34px;height:14px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__step-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__step-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__step-val{\n  width:34px;height:24px;padding:0;box-sizing:border-box;text-align:center;\n  font-size:13px;font-variant-numeric:tabular-nums;color:var(--dshpc-fg);\n  background:var(--dshpc-surface-sunken);border:1px solid var(--dshpc-border-heavy);\n  border-radius:var(--dshpc-radius-sm);outline:none;\n}\n.dshpc-dt__step-val:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__step-val:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed}\n.dshpc-dt__sep{padding-bottom:5px;color:var(--dshpc-fg-3);font-size:12px}\n\n.dshpc-dt__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__foot-side{display:flex;align-items:center;gap:6px}\n.dshpc-dt__warn{font-size:11px;color:var(--dshpc-warning-label);white-space:nowrap}\n";
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/input-group-css.generated.js
+		const INPUT_GROUP_CSS = "\n/* ── 组合输入框 InputGroup ─────────────────────────────────────────────\n   输入框 + 后置按钮（一枚或多枚）+ 可选前置标题，焊成一体。\n   与 SplitGroup 同一套外观口径：外框 / 圆角 / 相邻 1px 分隔 / 整体聚焦圈都由外壳画，\n   内件（.dshpc-input / .dshpc-btn / .dshpc-iconbtn）把自己的边框、圆角、外圈交出来。\n\n   高度默认吃 --dshpc-control-h-*（sm 24 / md 28 / lg 32）；调用方要自定义就在根节点\n   内联 height，这里让内件 height:100% 跟上 —— 内件档位高度只有 0,1,0，被本文件的\n   0,2,0 压掉，不会出现「外壳变高了、里面的框还是 32」。\n   （⚠️ 别改成不写 height:100% 只靠 stretch：input 有确定高度时 flex 不会拉伸它。） */\n/* min-width：输入格是 flex:1，没有它时 inline-flex 按占位文字宽收得很窄（搜索框 + 按钮的典型用法会难看）。\n   要更宽 / 更窄由调用方在外面套壳或给 className，不许在这里写死 max-width。 */\n.dshpc-igroup{display:inline-flex;align-items:stretch;min-width:200px;max-width:100%;box-sizing:border-box;overflow:hidden;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);}\n.dshpc-igroup--sm{height:var(--dshpc-control-h-sm);}\n.dshpc-igroup--md{height:var(--dshpc-control-h-md);}\n.dshpc-igroup--lg{height:var(--dshpc-control-h-lg);}\n.dshpc-igroup--error{border-color:var(--dshpc-danger);}\n/* 整体聚焦：内件自己的焦点圈交出来，由外壳画一整圈（各画各的会变成格内半圈） */\n.dshpc-igroup:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n\n/* 前置标题：与输入框同格，灰底区分（与 SplitGroup 左格同一口径） */\n.dshpc-igroup__label{display:inline-flex;align-items:center;flex:none;padding:0 8px;white-space:nowrap;\n  background:var(--dshpc-surface-sunken);color:var(--dshpc-fg-2);\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}\n.dshpc-igroup--md .dshpc-igroup__label,.dshpc-igroup--lg .dshpc-igroup__label{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n\n/* 输入格：交出边框 / 圆角 / 底色 / 焦点圈；宽度交给 flex（原生 width:100% 会和 flex-basis 打架） */\n.dshpc-igroup > .dshpc-input{flex:1 1 auto;width:auto;min-width:0;height:100%;border:0;border-radius:0;background:transparent;}\n.dshpc-igroup > .dshpc-input:focus{box-shadow:none;}\n\n/* 按钮格：交出边框与圆角；实心底色保留（右侧「确定」该有重量）。\n   纯图标钮本身是固定宽的方块，这里改成按高度撑出的正方形，自定义高度时才不会变成竖长条。 */\n.dshpc-igroup > .dshpc-btn,.dshpc-igroup > .dshpc-iconbtn{flex:none;height:100%;border-radius:0;}\n.dshpc-igroup > .dshpc-iconbtn{width:auto;aspect-ratio:1;}\n.dshpc-igroup > .dshpc-btn{border:0;}\n\n/* 分隔线：相邻兄弟的左描边，不额外插 DOM。后两条是给「清过边框」的格子补回来的，\n   必须写成 0,2,0 且写在上面的 border:0 之后 —— 否则被 border:0 压掉，格子之间没分隔。 */\n.dshpc-igroup > * + *{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n.dshpc-igroup > * + .dshpc-input{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n.dshpc-igroup > * + .dshpc-btn{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n";
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/display/section-head-css.generated.js
 		const SECTION_HEAD_CSS = "/* 分区标题行：标签（可选，画出来的短竖线）/ icon + 标题 + 右侧控件。 */\n.dshpc-section-head{display:flex;align-items:center;gap:var(--dshpc-space-2);\n  margin-bottom:var(--dshpc-space-3);}\n.dshpc-section-head--flush{margin-bottom:0;}\n\n.dshpc-section-head__bar{flex:none;width:4px;height:1em;border-radius:999px;\n  font-size:var(--dshpc-font-lg);background:var(--dshpc-fg-2);}\n\n.dshpc-section-head__icon{display:inline-flex;align-items:center;flex:none;\n  line-height:var(--dshpc-line-lg);color:var(--dshpc-fg-3);}\n\n.dshpc-section-head__title{font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);\n  font-weight:600;color:var(--dshpc-fg);flex:none;}\n\n.dshpc-section-head__right{flex:1;display:flex;align-items:center;\n  justify-content:flex-end;gap:var(--dshpc-space-2);min-width:0;}\n";
 		//#endregion
@@ -50715,6 +50718,11 @@ window.__ModuleLoader__.load({
 			}
 			return out;
 		}
+		/** 值落在哪个组里（按模型值反推供应商等场景）。 */
+		function groupOf$1(groups, value) {
+			if (value === "") return void 0;
+			return groups.find((g) => g.options.some((o) => o.value === value));
+		}
 		/** 触发器宽度解析：把 width / minWidth / maxWidth 译成内联样式。
 		* 定宽（width）忽略 min/max 并锁定三值；否则各自生效，缺省沿用 CSS 默认（min 120px、max 100%）。
 		* 数值按 px 处理，字符串原样透传。 */
@@ -54156,6 +54164,248 @@ window.__ModuleLoader__.load({
 			}, triggerRow, open ? (0, react$1.createElement)(FloatingPortal, null, pop) : null);
 		}
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/picker-icons.js
+		/**
+		* 领域选择器的默认前置图标（2026-10-20 用户：默认就带一个 icon，可换、可去掉）。
+		*
+		* ui 零官方依赖 ⇒ 自绘小 SVG（14px，跟 currentColor 走明暗）。
+		* 用法：不传 `icon` ⇒ 默认这颗；传 `null` ⇒ 不显示；传任意 ReactNode ⇒ 换成它。
+		*/
+		function glyph(path) {
+			return (0, react$1.createElement)("svg", {
+				width: 14,
+				height: 14,
+				viewBox: "0 0 16 16",
+				fill: "none",
+				"aria-hidden": true
+			}, path);
+		}
+		/** 模型：四角星 */
+		function sparkleIcon() {
+			return glyph((0, react$1.createElement)("path", {
+				d: "M8 1.8l1.6 4.1 4.1 1.6-4.1 1.6L8 13.2 6.4 9.1 2.3 7.5l4.1-1.6z",
+				stroke: "currentColor",
+				"stroke-width": 1.2,
+				"stroke-linejoin": "round"
+			}));
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/ModelPicker.js
+		function ModelPicker(props) {
+			ensureComponentStyles("picker", PICKER_CSS);
+			const tt = props.translate ?? t$1;
+			const value = props.value;
+			const variant = props.variant ?? "grouped";
+			const searchable = props.searchable ?? true;
+			const defaultOption = props.allowDefault === false ? void 0 : {
+				value: "",
+				label: props.defaultLabel ?? tt("modelDefault")
+			};
+			const catalog = (0, react$1.useSyncExternalStore)(modelCatalog.subscribe, modelCatalog.getSnapshot);
+			const groups = props.groups ?? (catalog.status === "ready" ? catalog.routes.map((route) => ({
+				value: route.provider,
+				label: route.displayName,
+				options: route.models.map((model) => ({
+					value: `${route.provider}/${model.id}`,
+					label: model.name ?? model.id
+				}))
+			})) : []);
+			const degraded = props.degraded ?? (catalog.status === "unavailable" || catalog.status === "ready" && groups.length === 0);
+			const icon = props.icon === void 0 ? sparkleIcon() : props.icon ?? void 0;
+			const emitModel = (v) => {
+				props.onChange?.(typeof v === "string" ? v : v[0] ?? "");
+			};
+			const [pickedProvider, setPickedProvider] = (0, react$1.useState)("");
+			const curGroup = groupOf$1(groups, value ?? "");
+			const provider = pickedProvider !== "" && groups.some((g) => g.value === pickedProvider) ? pickedProvider : curGroup?.value ?? "";
+			(0, react$1.useEffect)(() => {
+				if (value !== void 0 && value !== "") setPickedProvider("");
+			}, [value]);
+			if (variant === "grouped") return (0, react$1.createElement)(Picker, {
+				groups: defaultOption === void 0 ? groups : [{
+					value: "",
+					label: "",
+					options: [defaultOption]
+				}, ...groups],
+				value,
+				defaultValue: props.defaultValue,
+				icon,
+				placeholder: props.placeholder ?? tt("modelModel"),
+				degraded,
+				disabled: props.disabled,
+				clearable: props.clearable,
+				searchable,
+				hint: props.hint,
+				size: props.size,
+				placement: props.placement,
+				className: props.className,
+				onChange: emitModel
+			});
+			const group = groups.find((g) => g.value === provider);
+			const options = group === void 0 ? [] : flattenOptions([group]);
+			return (0, react$1.createElement)("div", { className: "dshpc-picker__row" }, (0, react$1.createElement)(Picker, {
+				options: groups.map((g) => ({
+					value: g.value,
+					label: g.label
+				})),
+				value: provider === "" ? void 0 : provider,
+				placeholder: tt("modelProvider"),
+				degraded,
+				disabled: props.disabled,
+				searchable: false,
+				onChange: (v) => {
+					setPickedProvider(typeof v === "string" ? v : v[0] ?? "");
+					props.onChange?.("");
+				}
+			}), (0, react$1.createElement)(Picker, {
+				options: defaultOption === void 0 ? options : [defaultOption, ...options],
+				value,
+				defaultValue: props.defaultValue,
+				icon,
+				placeholder: props.placeholder ?? tt("modelModel"),
+				degraded,
+				disabled: props.disabled === true || provider === "",
+				clearable: props.clearable,
+				searchable,
+				hint: props.hint,
+				size: props.size,
+				placement: props.placement,
+				className: props.className,
+				onChange: emitModel
+			}));
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/card-css.generated.js
+		const CARD_CSS = "\n/* ── Card / StripCard：Surface 外框 + 头部契约 + 色条 ─────────────────────\n   外框（底 / 边框 / 圆角 / 内距）全部来自 .dshpc-surface（src/ui/surface.css）：\n   本文件**不再写 border / border-radius**，圆角契约因此只有一个定义点（容器档 = 12）。\n   这里只管两件 Surface 不该知道的事：色条几何、头部布局。\n\n   色条几何默认值都可被 props 覆盖（Card.ts 写对应的 CSS 变量）：\n     --card-bar-size   条子粗细\n     --card-bar-inset  条子距卡片边缘的距离（= 贴边那一侧的内距）\n     --card-bar-gap    条子距内容的距离（= body 的 gap）\n     --card-bar-length 上下方位时的条长（100% = 跟内容同宽）\n   这些变量只在本文件消费（3 份文件一起引时，跨文件引用别处的变量会静默失效），\n   所以默认值必须写在这里，而不是令牌或别的皮肤里。 */\n.dshpc-card{\n  --card-accent:var(--dshpc-business);\n  --card-accent-soft:var(--dshpc-business-soft);\n  --card-bar-size:6px;\n  --card-bar-inset:12px;\n  --card-bar-gap:12px;\n  --card-bar-length:100%;\n}\n/* 档位 → token（照 records-timeline 的 tone 模式：一个变量切档，不写 5 套规则；浅底与色条同源）。 */\n.dshpc-card--success{--card-accent:var(--dshpc-success);--card-accent-soft:var(--dshpc-success-soft)}\n.dshpc-card--warning{--card-accent:var(--dshpc-warning);--card-accent-soft:var(--dshpc-warning-soft)}\n.dshpc-card--danger{--card-accent:var(--dshpc-danger);--card-accent-soft:var(--dshpc-danger-soft)}\n/* neutral 浅底借 chip 底（兄弟项目 mute 档同款：明暗都成立）。 */\n.dshpc-card--neutral{--card-accent:var(--dshpc-fg-4);--card-accent-soft:var(--dshpc-chip-bg)}\n/* 扩展八色（2026-10-29）：色条 + 浅底同源，软底走各自 -soft。 */\n.dshpc-card--purple{--card-accent:var(--dshpc-purple);--card-accent-soft:var(--dshpc-purple-soft)}\n.dshpc-card--pink{--card-accent:var(--dshpc-pink);--card-accent-soft:var(--dshpc-pink-soft)}\n.dshpc-card--cyan{--card-accent:var(--dshpc-cyan);--card-accent-soft:var(--dshpc-cyan-soft)}\n.dshpc-card--teal{--card-accent:var(--dshpc-teal);--card-accent-soft:var(--dshpc-teal-soft)}\n.dshpc-card--orange{--card-accent:var(--dshpc-orange);--card-accent-soft:var(--dshpc-orange-soft)}\n.dshpc-card--indigo{--card-accent:var(--dshpc-indigo);--card-accent-soft:var(--dshpc-indigo-soft)}\n.dshpc-card--rose{--card-accent:var(--dshpc-rose);--card-accent-soft:var(--dshpc-rose-soft)}\n.dshpc-card--slate{--card-accent:var(--dshpc-slate);--card-accent-soft:var(--dshpc-slate-soft)}\n\n/* body = 色条 + 头部。方向跟着条子贴的边切 ⇒ 四个方位只是「换一个方向的 flex 项」，\n   不用为每个方位各写一套定位。 */\n.dshpc-card__body{display:flex;gap:var(--card-bar-gap);min-width:0}\n.dshpc-card--bar-top .dshpc-card__body,\n.dshpc-card--bar-bottom .dshpc-card__body{flex-direction:column}\n\n/* 头部一行 = 主内容 + 右侧槽，**整体垂直居中**：调用方在 action 里裸放一个元素\n   （按钮 / 文字 / 图标）不用自己套容器居中；一行两行、右边怎么放由调用方在框内自定。 */\n.dshpc-card__head{display:flex;align-items:center;gap:8px;min-width:0}\n.dshpc-card--bar-left .dshpc-card__head,\n.dshpc-card--bar-right .dshpc-card__head{flex:1 1 auto}\n.dshpc-card__main{flex:1;min-width:0}\n.dshpc-card__side{display:flex;align-items:center;gap:6px;flex:none}\n\n/* 色条：左/右 = 竖向条（高度跟内容，最小一行）；上/下 = 横向条（长度默认跟内容同宽）。\n   右/下方位靠 order 排到头部之后，DOM 顺序始终不变。 */\n.dshpc-card__bar{flex:none;background:var(--card-accent);border-radius:var(--dshpc-radius-xs)}\n.dshpc-card--bar-left .dshpc-card__bar,\n.dshpc-card--bar-right .dshpc-card__bar{width:var(--card-bar-size);align-self:stretch;min-height:var(--dshpc-line-md)}\n.dshpc-card--bar-top .dshpc-card__bar,\n.dshpc-card--bar-bottom .dshpc-card__bar{width:var(--card-bar-length);height:var(--card-bar-size);align-self:flex-start}\n.dshpc-card--bar-right .dshpc-card__bar,\n.dshpc-card--bar-bottom .dshpc-card__bar{order:1}\n\n/* ── 外观一 · StripCard：同色系浅底 + 1px 不可见占位边框 + 方角 + 4px 通高方角色条贴左缘 ──\n   底色 / 方角 / 占位边框由 Surface 的三条修饰类提供（Card.ts 按 kind 传），此处只管内距与条子。 */\n.dshpc-card.dshpc-card--strip{\n  --card-bar-size:4px;--card-bar-inset:0;\n  padding:12px 12px 12px 20px;\n  background:var(--card-accent-soft,transparent);\n}\n/* 左内边距 20px = 16 留白 + 4 条宽 ⇒ 内容从色条右缘起算；色条绝对定位通高，跟着内容高度自适应。\n   特异性 0,3,0：压过上面 .dshpc-card--bar-left .dshpc-card__bar 的宽度规则，与注入顺序无关。 */\n.dshpc-card.dshpc-card--strip .dshpc-card__bar{position:absolute;left:0;top:0;bottom:0;width:4px;align-self:auto}\n\n/* ── 外观二 · Card：Surface 外框（底 + 1px 实色边框 + 圆角 12）+ 色条贴边那一侧的内距 ──\n   内距用 0,2,0 / 0,3,0 的长写法：高过 .dshpc-surface 的 padding 简写，与两份 CSS 的注入顺序无关。 */\n.dshpc-card.dshpc-card--bordered{padding:14px}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-left{padding-left:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-right{padding-right:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-top{padding-top:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-bottom{padding-bottom:var(--card-bar-inset)}\n\n.dshpc-card__toggle{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:24px;height:24px;padding:0;background:none;border:none;border-radius:var(--dshpc-radius-sm);\n  color:var(--dshpc-fg-3);cursor:pointer;\n}\n.dshpc-card__toggle:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n/* 箭头是 svg（Chevron），不是字形 ⇒ 不要 font-size；inline-flex 免掉 svg 的基线留白。 */\n.dshpc-card__caret{display:inline-flex;transition:transform .15s ease}\n.dshpc-card__caret.is-open{transform:rotate(180deg)}\n.dshpc-card__panel{margin-top:8px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/surface-css.generated.js
+		const SURFACE_CSS = "\n/* ── Surface · 纯框容器 ───────────────────────────────────────────────────\n   只回答「一块面长什么样」：底 / 边 / 圆角 / 内距，四根轴，零业务语义。\n   它是**圆角契约的唯一真源**：容器档 = --dshpc-radius-md(12)，与 Button / Input 同档，\n   外框永远不小于里面的控件 —— 杜绝「卡片 8 < 按钮 12」这类倒挂（2026-11-01）。\n\n   所有轴都用**变量**表达，修饰类只改这些变量、不改属性：\n   消费方（Card、下游插件）自己写规则时，无论两份 CSS 谁先注入，胜负都不依赖顺序。\n\n     tone    plain(默认 surface-1) / raised / sunken / subtle\n     border  默认 1px 实线；faint 更淡；none 透明（保留 1px 占位，不跳高）；\n             dashed 虚线（占位框用，线色仍是 border token）\n     radius  默认 md；none / sm / lg\n     padding 默认由调用方选档；none / sm(8) / md(12) / lg(16)\n   基类不带内距：容器要自己算四边内距时（如 Card 的色条贴边），不传 pad 档即可，不需要覆盖。 */\n.dshpc-surface{\n  position:relative;box-sizing:border-box;color:var(--dshpc-fg);font:inherit;text-align:left;\n  --surface-bg:var(--dshpc-surface-1);\n  --surface-border:var(--dshpc-border);\n  --surface-border-style:solid;\n  --surface-radius:var(--dshpc-radius-md);\n  --surface-pad:0;\n  border:1px var(--surface-border-style) var(--surface-border);\n  border-radius:var(--surface-radius);\n  background:var(--surface-bg);\n  padding:var(--surface-pad);\n}\n.dshpc-surface--tone-raised{--surface-bg:var(--dshpc-surface-raised)}\n.dshpc-surface--tone-sunken{--surface-bg:var(--dshpc-surface-sunken)}\n.dshpc-surface--tone-subtle{--surface-bg:var(--dshpc-chip-bg)}\n.dshpc-surface--border-faint{--surface-border:var(--dshpc-border-faint)}\n.dshpc-surface--border-none{--surface-border:transparent}\n.dshpc-surface--border-dashed{--surface-border-style:dashed}\n.dshpc-surface--radius-none{--surface-radius:0}\n.dshpc-surface--radius-sm{--surface-radius:var(--dshpc-radius-sm)}\n.dshpc-surface--radius-lg{--surface-radius:var(--dshpc-radius-lg)}\n.dshpc-surface--pad-none{--surface-pad:0}\n.dshpc-surface--pad-sm{--surface-pad:var(--dshpc-space-2)}\n.dshpc-surface--pad-md{--surface-pad:var(--dshpc-space-3)}\n.dshpc-surface--pad-lg{--surface-pad:var(--dshpc-space-4)}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/Surface.js
+		/**
+		* 拼 Surface 的类名。独立导出是给组合类容器（Card）用的：
+		* 容器要把 Surface 当外框、又不想吃它的内距时，传 `padding: null` 即可。
+		*/
+		function surfaceClass(options = {}) {
+			const tone = options.tone ?? "plain";
+			const border = options.border ?? true;
+			const radius = options.radius ?? "md";
+			const padding = options.padding === void 0 ? "md" : options.padding;
+			return [
+				"dshpc-surface",
+				tone === "plain" ? "" : `dshpc-surface--tone-${tone}`,
+				border === true ? "" : `dshpc-surface--border-${border}`,
+				radius === "md" ? "" : `dshpc-surface--radius-${radius}`,
+				padding === null ? "" : `dshpc-surface--pad-${padding}`
+			].filter((name) => name !== "").join(" ");
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/display/Card.js
+		/** 色条档位（映射到 design 的 token，不新增 token；也接受任意 CSS 颜色值）。 */
+		const CARD_ACCENTS = [
+			"business",
+			"success",
+			"warning",
+			"danger",
+			"neutral",
+			"purple",
+			"pink",
+			"cyan",
+			"teal",
+			"orange",
+			"indigo",
+			"rose",
+			"slate"
+		];
+		/** 数字按 px 写进 CSS 变量，字符串原样透传。 */
+		function lengthOf(value) {
+			return typeof value === "number" ? `${value}px` : value;
+		}
+		/**
+		* 内部共享壳：两个公开组件（`Card` / `StripCard`）只是 `kind` 不同——
+		* 一个组件一种外观，import 即表明用的是哪种。
+		*
+		* 外框（底 / 边框 / 圆角）来自 `Surface`（圆角统一 12）；本壳只管色条几何与头部布局。
+		* 两种外观的头部都是**整体垂直居中**（`align-items:center`）：调用方在 `action` 里
+		* 裸放一个元素（按钮 / 文字 / 图标）即垂直居中，不用自己套容器；框内一行两行、
+		* 右侧放什么、悬停浮出的按钮，都由调用方在框内自定——外壳只提供框与居中。
+		*/
+		function CardShell(kind, props) {
+			ensureComponentStyles("surface", SURFACE_CSS);
+			ensureComponentStyles("card", CARD_CSS);
+			const tt = props.translate ?? t$1;
+			const accent = props.accent ?? "business";
+			const isPreset = CARD_ACCENTS.includes(accent);
+			const bar = props.bar ?? {};
+			const side = kind === "strip" ? "left" : bar.side ?? "left";
+			const classes = [
+				surfaceClass(kind === "strip" ? {
+					radius: "none",
+					border: "none",
+					padding: null
+				} : { padding: null }),
+				"dshpc-card",
+				kind === "strip" ? "dshpc-card--strip" : "dshpc-card--bordered",
+				`dshpc-card--bar-${side}`,
+				isPreset ? `dshpc-card--${accent}` : "",
+				props.className ?? ""
+			].filter((s) => s !== "").join(" ");
+			const vars = {};
+			if (!isPreset) vars["--card-accent"] = accent;
+			if (bar.size !== void 0) vars["--card-bar-size"] = lengthOf(bar.size);
+			if (bar.inset !== void 0) vars["--card-bar-inset"] = lengthOf(bar.inset);
+			if (bar.gap !== void 0) vars["--card-bar-gap"] = lengthOf(bar.gap);
+			if (bar.length !== void 0) vars["--card-bar-length"] = lengthOf(bar.length);
+			const style = {
+				...props.style,
+				...vars
+			};
+			return (0, react$1.createElement)("div", {
+				className: classes,
+				style
+			}, (0, react$1.createElement)("div", { className: "dshpc-card__body" }, (0, react$1.createElement)("span", {
+				className: "dshpc-card__bar",
+				"aria-hidden": true
+			}), (0, react$1.createElement)("div", { className: "dshpc-card__head" }, (0, react$1.createElement)("div", { className: "dshpc-card__main" }, props.children ?? null), props.action === void 0 && props.onToggle === void 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-card__side" }, props.action ?? null, props.onToggle === void 0 ? null : (0, react$1.createElement)("button", {
+				type: "button",
+				className: "dshpc-card__toggle",
+				"aria-label": tt("cardToggle"),
+				"aria-expanded": props.expanded === true,
+				onClick: props.onToggle
+			}, (0, react$1.createElement)("span", { className: props.expanded === true ? "dshpc-card__caret is-open" : "dshpc-card__caret" }, (0, react$1.createElement)(Chevron, { size: 12 })))))), props.panel === void 0 || props.expanded !== true ? null : (0, react$1.createElement)("div", { className: "dshpc-card__panel" }, props.panel));
+		}
+		/**
+		* 卡片（框式）：复用 `Surface` 外框（surface 底 + 1px 边框 + 圆角 12），
+		* 色条默认贴左缘、6px 粗、圆角短条（高度随内容）；`bar.side` 可换成右/上/下。
+		* 头部整体垂直居中；悬停浮出的按钮、一行两行由调用方在框内自定。
+		*
+		* ```tsx
+		* h(Card, {
+		*   accent: 'warning',
+		*   bar: { side: 'right', inset: 10, gap: 8 },
+		*   action: h(Button, { size: 'sm', variant: 'ghost' }, '跳过'),
+		* }, h('div', null, '标题 + 内容'))
+		* ```
+		*/
+		function Card(props) {
+			return CardShell("bordered", props);
+		}
+		/**
+		* 条带卡片（浅底式）：同色系浅底 + 1px 不可见占位边框 + 方角 + 左缘 4px 通高方角色条（贴左缘）。
+		* 与 `Card` 同一份 props，头部同样整体垂直居中。
+		*
+		* ```tsx
+		* h(StripCard, {
+		*   accent: 'success',
+		*   expanded: open, onToggle: () => setOpen(!open),
+		*   panel: h('div', null, '展开详情'),
+		* }, h('div', null, '标题 + 元信息'))
+		* ```
+		*/
+		function StripCard(props) {
+			return CardShell("strip", props);
+		}
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/display/SectionHead.js
 		/**
 		* 模块标题行（UI 基础层）：**标签（可选，画出来的短竖线）/ icon（可选）+ 标题 + 右侧控件**。
@@ -55438,28 +55688,6 @@ window.__ModuleLoader__.load({
 				}
 			}) : null), props.hint);
 		}
-		/** 前缀 + 文本输入。 */
-		function PrefixedInput$1(props) {
-			ensureComponentStyles("field", FIELD_CSS$1);
-			const { prefix, value, onChange, placeholder, size = "lg", error, disabled, type, className, style } = props;
-			const locked = useOverlayLocked();
-			const off = disabled === true || locked;
-			return (0, react$1.createElement)("div", {
-				className: `dshpc-pfx dshpc-pfx${sizeClass(size)}${error === true ? " dshpc-pfx--error" : ""}${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
-				style
-			}, (0, react$1.createElement)("span", { className: "dshpc-pfx__label" }, prefix), (0, react$1.createElement)("input", {
-				type: type ?? "text",
-				value,
-				placeholder,
-				disabled: off,
-				"aria-label": props["aria-label"],
-				title: props.title,
-				className: "dshpc-pfx__input",
-				onChange: (event) => {
-					onChange(event.target.value);
-				}
-			}));
-		}
 		/**
 		* 数字步进输入：显式 `− / +` 按钮 + 可输入数字。
 		*
@@ -55534,6 +55762,122 @@ window.__ModuleLoader__.load({
 					bump(1);
 				}
 			})), props.hint);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/inputs/InputGroup.js
+		/**
+		* 组合输入框 —— 输入框 + 后置按钮组（+ 可选前置标题）焊成一体（L2 组件皮肤，P3）
+		*
+		* 外观与 {@link SplitGroup} 同一套口径：外框 / 圆角 / 相邻 1px 分隔 / 整体聚焦圈都由外壳画，
+		* 内件（Input、Button、IconButton）把自己的边框、圆角、外圈交出来。区别只有一条：
+		* **这里持状态** —— 输入值受控于调用方，提交点与撤销栈在控件内部。
+		*
+		* 用法：
+		*   h(InputGroup, {
+		*     label: '任务名', value, onChange: setValue, undoable: true,
+		*     actions: [
+		*       { label: '返回', variant: 'ghost', onClick: () => close() },
+		*       { label: '确定', variant: 'primary', onClick: save },
+		*     ],
+		*   })
+		*
+		* 撤销口径：Enter / 失焦 / 点任一动作 = 一次提交，把提交前的值压栈；点撤销弹回栈顶。
+		* 父级直接改 `value`（如外部清空）不算编辑，不进栈。
+		*/
+		/**
+		* 渲染一个「输入框 + 按钮组」组合控件。
+		*
+		* @param props 见 {@link InputGroupProps}。
+		* @returns 组合控件元素。
+		*/
+		function InputGroup(props) {
+			ensureComponentStyles("input-group", INPUT_GROUP_CSS);
+			ensureComponentStyles("field", FIELD_CSS$1);
+			ensureComponentStyles("button", BUTTON_CSS$1);
+			const { value, onChange, label, placeholder, size = "lg", height, error, disabled, actions = [], undoable = false, undoLabel = t$1("inputUndo"), onSubmit } = props;
+			const committed = (0, react$1.useRef)(value);
+			const [undoStack, setUndoStack] = (0, react$1.useState)([]);
+			const commit = () => {
+				if (value === committed.current) return;
+				const prev = committed.current;
+				committed.current = value;
+				setUndoStack((stack) => [...stack, prev]);
+			};
+			const undo = () => {
+				const prev = undoStack[undoStack.length - 1];
+				if (prev === void 0) return;
+				setUndoStack((stack) => stack.slice(0, -1));
+				committed.current = prev;
+				onChange(prev);
+			};
+			const nodes = [];
+			if (label !== void 0) nodes.push((0, react$1.createElement)("span", {
+				key: "label",
+				className: "dshpc-igroup__label"
+			}, label));
+			nodes.push((0, react$1.createElement)(Input, {
+				key: "input",
+				value,
+				onChange,
+				placeholder,
+				size,
+				disabled,
+				"aria-label": props["aria-label"],
+				onBlur: commit,
+				onKeyDown: (event) => {
+					if (event.key !== "Enter") return;
+					event.preventDefault();
+					commit();
+					if (onSubmit !== void 0) onSubmit(value);
+				}
+			}));
+			if (undoable) nodes.push((0, react$1.createElement)(IconButton, {
+				key: "undo",
+				variant: "plain",
+				size,
+				icon: "↶",
+				label: undoLabel,
+				disabled: disabled === true || undoStack.length === 0,
+				onClick: undo
+			}));
+			actions.forEach((action, i) => {
+				if (action.label === void 0 && (action.icon === void 0 || action.icon === null)) return;
+				const run = () => {
+					commit();
+					return action.onClick();
+				};
+				const off = disabled === true || action.disabled === true;
+				const onlyIcon = action.label === void 0;
+				nodes.push(onlyIcon ? (0, react$1.createElement)(IconButton, {
+					key: `action-${String(i)}`,
+					variant: "plain",
+					size,
+					icon: action.icon,
+					label: action.ariaLabel ?? t$1("inputAction"),
+					disabled: off,
+					onClick: run
+				}) : (0, react$1.createElement)(Button$2, {
+					key: `action-${String(i)}`,
+					variant: action.variant ?? "info",
+					size,
+					icon: action.icon,
+					width: action.width,
+					loadingText: action.loadingText,
+					disabled: off,
+					onClick: run
+				}, action.label));
+			});
+			const className = `dshpc-igroup dshpc-igroup--${size}${error === true ? " dshpc-igroup--error" : ""}${props.className !== void 0 && props.className !== "" ? ` ${props.className}` : ""}`;
+			return withHint((0, react$1.createElement)("div", {
+				role: "group",
+				"aria-label": props["aria-label"] ?? label,
+				id: props.id,
+				className,
+				style: height === void 0 ? props.style : {
+					height,
+					...props.style
+				}
+			}, nodes), props.hint);
 		}
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Textarea.js
@@ -57994,7 +58338,8 @@ window.__ModuleLoader__.load({
 				className: cls === "" ? void 0 : cls,
 				width,
 				...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
-				ariaLabel: props.ariaLabel
+				ariaLabel: props.ariaLabel,
+				...props.searchable === true ? { searchable: true } : {}
 			});
 			return props.title === void 0 ? picker : (0, react$1.createElement)("span", {
 				title: props.title,
@@ -58525,28 +58870,14 @@ window.__ModuleLoader__.load({
      容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
    容器**无 padding、无 cursor**：留白落在头部（这样 hover 高亮正好顶到块边，与卡片主行同观感）。 */
 /* ⚠️ gap 必须是 0：展开时头部的高亮区要**紧贴**下面那条分隔线（用户 2026-10-05：中间别留距离）。 */
-/* ⚠️ --rec-bar-w：左缘竖条的**唯一宽度源**。条子占的是块内的真实宽度 ⇒ 内容的左内边距要把它**加进去**
-   （用户 2026-10-05：左边距应该从竖条的**右边缘**开始算，不是从块的左边缘）⇒ 见 .dsh-tdt-rec-main / -exp。 */
-.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;--rec-bar-w:5px;box-sizing:border-box;
-  border:1px solid transparent;
-  background:var(--rec-tone-soft,transparent);color:var(--dshpc-fg);font:inherit;text-align:left;
+/* 左缘竖条与块底浅底色已归核心 StripCard（2026-11-06）⇒ 本仓不再自算色条宽度、也不维护色调变量。 */
+/* 块底 / 左缘色条 / 浅底色 = 核心 StripCard（2026-11-06 改接，色调走 accent）⇒ 本仓只留块级动画。
+   「预计执行」= 预期、未落实：在核心条带外再套一圈虚线（outline 不会被核心的 border 规则盖掉）。 */
+.dsh-tdt-rec-item{position:relative;box-sizing:border-box;color:var(--dshpc-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--dshpc-dur-fast) var(--dshpc-ease);}
-/* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --dshpc-* token ——
-   token 只在核心 token 层（dsh-plugin-core/design）定义；块底那条「状态色浅底」的 token 就在那里）。 */
-.dsh-tdt-rec-tone--ok{--rec-tone:var(--dshpc-success);--rec-tone-soft:var(--dshpc-success-soft);}
-.dsh-tdt-rec-tone--bad{--rec-tone:var(--dshpc-danger);--rec-tone-soft:var(--dshpc-danger-soft);}
-.dsh-tdt-rec-tone--warn{--rec-tone:var(--dshpc-warning);--rec-tone-soft:var(--dshpc-warning-soft);}
-.dsh-tdt-rec-tone--busy{--rec-tone:var(--dshpc-business);--rec-tone-soft:var(--dshpc-business-soft);}
-/* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
-.dsh-tdt-rec-tone--mute{--rec-tone:var(--dshpc-fg-3);--rec-tone-soft:var(--dshpc-chip-bg);}
-/* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。
-   用户 2026-10-06：虚线与竖条都走**同一支正蓝**（--dshpc-business），不要调暗、更不要灰。
-   用户 2026-10-06 续：虚线**只包上/右/下**，左边不包——左缘是那条实心蓝竖条（--rec-bar-w），虚线从它右边起到最右；蓝色调淡一点。 */
-.dsh-tdt-rec-tone--planned{--rec-tone:var(--dshpc-business);--rec-tone-soft:var(--dshpc-business-soft);border-style:dashed;border-color:color-mix(in srgb,var(--dshpc-business) 50%,transparent);border-left:0;}
-/* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
-   状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
-.dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--dshpc-fg-3));}
-/* 运行中脉动走统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse）：条子直接挂 RUN_PULSE_CLASS，不再另写一份动画。 */
+.dsh-tdt-rec-item--planned{outline:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);outline-offset:-1px;}
+/* 运行中脉动：色条由核心渲染，本域只把统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse）挂到它上面。 */
+.dsh-tdt-rec-item--running .dshpc-card__bar{animation:dsh-tdt-run-pulse var(--dshpc-dur-run) var(--dshpc-ease) infinite;}
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
   .dsh-tdt-rec-item{animation:none;}
@@ -58556,15 +58887,14 @@ window.__ModuleLoader__.load({
    **只有鼠标悬停**才叠一层中性半透明（不盖掉块底的状态色浅底）。
    ⚠️ 2026-10-04 第七轮：删掉「展开态常亮」——用户原话「如果我鼠标不移到这一块，它是不变色的，
    还是没展开时的颜色呀。只是鼠标移到这一块，它才换一个颜色」；展开与否**不再影响**头部底色。 */
-/* 左内边距 = --dshpc-space-4 **+ 竖条宽度**（从竖条右缘起算，不与条子叠在一起）。 */
-.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;
-  padding:var(--dshpc-space-3) var(--dshpc-space-3) var(--dshpc-space-3) calc(var(--dshpc-space-4) + var(--rec-bar-w,5px));}
+/* 内距由核心 StripCard 统一给（12 / 12 / 12 / 20，色条已含在内）⇒ 头部不再自己加 padding。 */
+.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;padding:0;}
 .dsh-tdt-rec-head{cursor:pointer;}
 .dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--dshpc-hover),var(--dshpc-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--dshpc-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;}
 /* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
-   字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --dshpc-on-signal，一眼就是个带色的牌子。
+   字是一个反色」）⇒ 底色按语义直接吃实面色，字走实面反色 --dshpc-on-signal，一眼就是个带色的牌子。
    ⚠️ 高度 / 圆角**跟着右列「查看会话」按钮走同一档令牌**，但**总高度比按钮矮 2px**（用户 2026-10-05 续：
      不要和按钮一模一样，总高 -2 ⇒ 24-2=22px，用固定的 height 减 2，padding / 圆角 / 字号**其他不变**）——
      高度 height:calc(var(--dshpc-control-h-sm) - 2px)（border-box ⇒ 含边框在内 22）、
@@ -58572,8 +58902,12 @@ window.__ModuleLoader__.load({
    ⚠️ 宽度仍**自适应**（不写 min-width，字多就长、字少就短）：padding 上下 3px / 左右 8px。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
   height:calc(var(--dshpc-control-h-sm) - 2px);padding:3px 8px;border-radius:var(--dshpc-radius-md);
-  background:var(--rec-tone,var(--dshpc-fg-3));color:var(--dshpc-on-signal);
+  background:var(--dshpc-fg-3);color:var(--dshpc-on-signal);
   font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);white-space:nowrap;}
+/* 标签底色按语义取实面色（块底的浅底已归核心 StripCard，这里只服务这枚小牌子）。 */
+.dsh-tdt-rec-tag--bad{background:var(--dshpc-danger);}
+.dsh-tdt-rec-tag--warn{background:var(--dshpc-warning);}
+.dsh-tdt-rec-tag--busy{background:var(--dshpc-business);}
 /* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
 .dsh-tdt-rec-tag--planned{background:transparent;color:var(--dshpc-business);border:1px dashed color-mix(in srgb,var(--dshpc-business) 50%,transparent);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--dshpc-space-2);min-width:0;}
@@ -58629,8 +58963,9 @@ window.__ModuleLoader__.load({
    ⚠️ **不可点、无 cursor**：展开出来的内容（产出物 / 前置 / 日志）要能直接拖选复制
       （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 /* 展开区同样从竖条右缘起算 ⇒ 展开后的内容与头部标题**左对齐**（条子是通高的，也压在展开区上）。 */
+/* 左右 / 底部内距同样由核心 StripCard 给，这里只留「与头部之间那 8px + 分隔线」。 */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--dshpc-space-2);
-  padding:var(--dshpc-space-2) var(--dshpc-space-3) var(--dshpc-space-3) calc(var(--dshpc-space-4) + var(--rec-bar-w,5px));
+  padding:var(--dshpc-space-2) 0 0;
   border-top:1px solid var(--dshpc-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
@@ -58746,13 +59081,12 @@ window.__ModuleLoader__.load({
 		* 语义色调 → 块的色调类名（色值本身全在 CSS 里读 --dshpc-* / --dshpc-*-soft，
 		* 业务侧只做「哪一档」的映射；档位由 `status-text.ts` 的 `statusToneOf` 单源决定）。
 		*/
-		function toneClassOf(tone) {
-			if (tone === "ok") return "dsh-tdt-rec-tone--ok";
-			if (tone === "bad") return "dsh-tdt-rec-tone--bad";
-			if (tone === "warn") return "dsh-tdt-rec-tone--warn";
-			if (tone === "busy") return "dsh-tdt-rec-tone--busy";
-			if (tone === "planned") return "dsh-tdt-rec-tone--planned";
-			return "dsh-tdt-rec-tone--mute";
+		function toneAccentOf(tone) {
+			if (tone === "ok") return "success";
+			if (tone === "bad") return "danger";
+			if (tone === "warn") return "warning";
+			if (tone === "busy" || tone === "planned") return "business";
+			return "neutral";
 		}
 		/** 执行时长（与卡片面板同口径：`dispatched_at ?? scheduled_at` → `finished_at`）。 */
 		function durationOf(row) {
@@ -58784,7 +59118,6 @@ window.__ModuleLoader__.load({
 				text: statusTextOf(row.status, t),
 				tone: row.status === "failed" ? "bad" : row.status === "skipped" ? "warn" : running ? "busy" : "neutral"
 			};
-			const statusLabel = isPlanned ? t("calPlanTag") : statusTextOf(row.status, t);
 			const plannedTagNode = isPlanned ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-tag dsh-tdt-rec-tag--planned" }, (0, react$1.createElement)("span", { style: {
 				display: "inline-flex",
 				alignItems: "center",
@@ -58852,16 +59185,13 @@ window.__ModuleLoader__.load({
 				})}`,
 				side: "top"
 			}, (0, react$1.createElement)("span", { style: fieldInnerStyle }, formatTokenCount(tokens)))) : null;
-			return (0, react$1.createElement)("div", { className: `dsh-tdt-rec-item ${toneClassOf(tone)}` }, (0, react$1.createElement)("div", {
+			return (0, react$1.createElement)(StripCard, {
+				accent: toneAccentOf(tone),
+				className: `dsh-tdt-rec-item${running ? " dsh-tdt-rec-item--running" : ""}${tone === "planned" ? " dsh-tdt-rec-item--planned" : ""}`
+			}, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-rec-main dsh-tdt-rec-head",
 				onClick: onHeadClick
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: statusLabel,
-				side: "top"
-			}, (0, react$1.createElement)("span", {
-				className: `dsh-tdt-rec-bar${running ? " " + RUN_PULSE_CLASS : ""}`,
-				"aria-hidden": true
-			})), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-left" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r1" }, onViewTask === void 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+			}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-left" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r1" }, onViewTask === void 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label,
 				side: "top"
 			}, (0, react$1.createElement)("span", { style: {
@@ -75924,6 +76254,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
    核心 Picker 的根是 inline-block（max-width:100%），这里给行内子项放行收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
+/* 选模型（核心 ModelPicker 分组态）：比工作区小一档，最小宽度下先让出空间（用户 2026-11-06 真机反馈）。 */
+.dsh-tdt-ed-model{width:140px;}
+/* 设置页「供应商 + 模型」联动态：两个下拉**等宽定住**（核心 __row 默认 flex，按内容自适应会跳宽）。 */
+.dsh-tdt-model-pair .dshpc-picker__row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2);}
+.dsh-tdt-model-pair .dshpc-picker__row > .dshpc-picker{width:100%;min-width:0;}
+.dsh-tdt-model-pair .dshpc-picker__row .dshpc-picker__trigger{width:100%;}
 /* 提示词大输入框已改接核心 Textarea（dsh-plugin-core/ui，2026-11-06）；本地皮肤整段删除，此处不再自写。 */
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
@@ -76982,13 +77318,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			return draft;
 		}
 		/**
-		* 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
-		* 用户 2026-09-29：「任务名称」别单独占一行，位置紧张。
+		* 前置标签输入框 —— 核心 `InputGroup` 的薄包装（2026-11-06 改接）。
+		*
+		* 用户 2026-09-29：「任务名称」别单独占一行，位置紧张 ⇒ 标签塞进框里、与输入框**同格**；
+		* 这正是核心 `InputGroup.label` 的形态（同格灰底标题格），本仓不再自绘。
 		*/
 		function PrefixedInput(props) {
-			return (0, react$1.createElement)(PrefixedInput$1, {
+			return (0, react$1.createElement)(InputGroup, {
 				size: "lg",
-				prefix: props.prefix,
+				label: props.prefix,
 				value: props.value,
 				placeholder: props.placeholder,
 				error: props.error,
@@ -77192,6 +77530,43 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		*/
 		const PROMPT_SELECT_BASE = "120px";
 		const PROMPT_SELECT_WIDE = "180px";
+		/**
+		* 模型下拉的分组数据（`ModelPicker` 的 `groups` 口径：一组 = 一个供应商）。
+		* 候选来自 `/options`（真实目录）；不在目录里的旧值补一组「当前」，
+		* 否则编辑老任务时看不见自己配的模型（值没丢，只是别处选了它）。
+		*/
+		function modelGroupsOf(models, current) {
+			const byProvider = /* @__PURE__ */ new Map();
+			for (const model of models) {
+				if (model.value === "") continue;
+				const slash = model.value.indexOf("/");
+				const provider = slash < 0 ? "" : model.value.slice(0, slash);
+				const label = provider === "" ? model.label : model.label.replace(`（${provider}）`, "");
+				const group = byProvider.get(provider);
+				if (group === void 0) byProvider.set(provider, {
+					value: provider,
+					label: provider,
+					options: [{
+						value: model.value,
+						label
+					}]
+				});
+				else group.options.push({
+					value: model.value,
+					label
+				});
+			}
+			const groups = [...byProvider.values()];
+			if (current !== "" && !groups.some((group) => group.options.some((option) => option.value === current))) groups.push({
+				value: "__current",
+				label: "",
+				options: [{
+					value: current,
+					label: current
+				}]
+			});
+			return groups;
+		}
 		/** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
 		const formatVersionTime = (iso) => formatDateTime(iso);
 		/**
@@ -77939,7 +78314,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				ariaLabel: t("editorWorkspace"),
 				error: problemsByField("workspace"),
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
-				width: PROMPT_SELECT_WIDE
+				width: PROMPT_SELECT_WIDE,
+				searchable: true
 			}), (0, react$1.createElement)(SelectField, {
 				value: draft.permission,
 				options: permissionOptions,
@@ -77951,19 +78327,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				ariaLabel: t("editorPermission"),
 				title: t("editorPermissionHint"),
 				width: PROMPT_SELECT_BASE
-			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react$1.createElement)(SelectField, {
+			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react$1.createElement)(ModelPicker, {
 				value: draft.model,
-				options: models.length > 0 || draft.model === "" ? models : [{
-					value: draft.model,
-					label: draft.model
-				}],
+				variant: "grouped",
+				groups: modelGroupsOf(models, draft.model),
+				degraded: models.length <= 1,
+				defaultLabel: t("editorFollowHost"),
+				placeholder: t("editorModelPh"),
+				size: "lg",
+				className: "dsh-tdt-ed-model",
 				onChange: (value) => {
 					patch({ model: value });
-				},
-				placeholder: t("editorModelPh"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorModel"),
-				width: PROMPT_SELECT_WIDE
+				}
 			})));
 			const fileInputRef = (0, react$1.useRef)(null);
 			const addAttachment = (att) => {
@@ -78945,6 +79320,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			(0, react$1.useEffect)(() => {
 				ensureTaskEditorStyle();
+				ensureControlsStyle();
 			}, []);
 			(0, react$1.useEffect)(() => {
 				let alive = true;
@@ -79103,32 +79479,27 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				return form[f.key] !== defaults[f.key];
 			};
 			const dirty = form !== null && baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline);
-			/** 供应商候选：从模型目录去重（目录读不到 ⇒ 只有「默认」一项）。 */
-			const providerOptions = () => {
-				const seen = /* @__PURE__ */ new Set();
-				const out = [{
-					value: "",
-					label: t("settingsDefaultOption")
-				}];
+			/** 模型分组（一组 = 一个供应商），给核心 `ModelPicker` 联动备用；值口径 = `${provider}/${id}`。 */
+			const modelGroups = () => {
+				const byProvider = /* @__PURE__ */ new Map();
 				for (const m of models) {
-					if (m.provider === void 0 || m.provider === "" || seen.has(m.provider)) continue;
-					seen.add(m.provider);
-					out.push({
+					if (m.provider === void 0 || m.provider === "" || m.value === "") continue;
+					const label = m.label.replace(`（${m.provider}）`, "");
+					const group = byProvider.get(m.provider);
+					if (group === void 0) byProvider.set(m.provider, {
 						value: m.provider,
-						label: m.provider
+						label: m.provider,
+						options: [{
+							value: `${m.provider}/${m.value}`,
+							label
+						}]
+					});
+					else group.options.push({
+						value: `${m.provider}/${m.value}`,
+						label
 					});
 				}
-				return out;
-			};
-			/** 模型候选：没选供应商 ⇒ 只剩「默认模型」一项 ⇒ 下拉灰掉、不可选。 */
-			const modelOptions = () => {
-				const provider = form?.defaultProvider ?? "";
-				const head = [{
-					value: "",
-					label: t("editorFollowHost")
-				}];
-				if (provider === "") return head;
-				return [...head, ...models.filter((m) => m.provider === provider)];
+				return [...byProvider.values()];
 			};
 			const renderField = (f) => {
 				const serverVal = form[f.key];
@@ -79160,40 +79531,37 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 						"aria-label": t(f.labelKey)
 					});
 				} else {
-					const opts = modelOptions();
-					control = (0, react$1.createElement)("div", { style: {
-						display: "grid",
-						gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-						gap: "var(--dshpc-space-2)"
-					} }, (0, react$1.createElement)(SelectField, {
-						value: String(form.defaultProvider),
-						options: providerOptions(),
-						block: true,
+					const groups = modelGroups();
+					const pairValue = form.defaultProvider !== "" && form.defaultModel !== "" ? `${form.defaultProvider}/${form.defaultModel}` : "";
+					control = (0, react$1.createElement)("div", { className: "dsh-tdt-model-pair" }, (0, react$1.createElement)(ModelPicker, {
+						variant: "cascade",
+						value: pairValue,
+						groups,
+						translate: t$1,
+						degraded: groups.length === 0,
+						defaultLabel: t("settingsDefaultOption"),
+						placeholder: t("editorFollowHost"),
 						size: "md",
-						error: invalid,
-						onChange: (v) => {
-							update(f, "");
+						className: invalid ? "dsh-tdt-picker--error" : void 0,
+						onChange: (next) => {
+							if (next === "") {
+								update(f, "");
+								setForm((prev) => prev === null ? prev : {
+									...prev,
+									defaultProvider: "",
+									defaultModel: ""
+								});
+								return;
+							}
+							const slash = next.indexOf("/");
+							const provider = slash < 0 ? "" : next.slice(0, slash);
+							const model = slash < 0 ? next : next.slice(slash + 1);
 							setForm((prev) => prev === null ? prev : {
 								...prev,
-								defaultProvider: v
+								defaultProvider: provider,
+								defaultModel: model
 							});
-						},
-						placeholder: t("settingsDefaultOption"),
-						emptyLabel: t("editorNoOptions"),
-						ariaLabel: t("settingsProvider")
-					}), (0, react$1.createElement)(SelectField, {
-						value: String(serverVal),
-						options: opts,
-						block: true,
-						size: "md",
-						disabled: opts.length <= 1,
-						error: invalid,
-						onChange: (v) => {
-							update(f, v);
-						},
-						placeholder: t("editorFollowHost"),
-						emptyLabel: t("editorNoOptions"),
-						ariaLabel: t("settingsModel")
+						}
 					}));
 				}
 				return (0, react$1.createElement)("div", {
@@ -79253,7 +79621,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
 			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--dshpc-font-sm); }`,
 			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--dshpc-head-bg); }",
-			".dsh-tdt-card { background: var(--dshpc-surface-1); }",
 			".dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }",
 			".dsh-tdt-rec-row:hover { background: var(--dshpc-plate-hover); }",
 			".dsh-tdt-rec-alt { background: var(--dshpc-plate); }"
@@ -79454,17 +79821,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				}
 			})));
 		}
-		const cardStyle$1 = {
-			display: "block",
-			width: "100%",
-			boxSizing: "border-box",
-			textAlign: "left",
-			marginBottom: "10px",
-			borderRadius: "var(--dshpc-radius-sm)",
-			border: `1px solid var(--dshpc-border)`,
-			color: "var(--dshpc-fg)",
-			transition: `border-color var(--dshpc-dur) var(--dshpc-ease), background var(--dshpc-dur) var(--dshpc-ease)`
-		};
 		const titleStyle = {
 			fontSize: "var(--dshpc-font-lg)",
 			fontWeight: 600,
@@ -80275,8 +80631,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react$1.createElement)("div", {
 				ref: refOf,
-				className: "dsh-tdt-card",
-				style: cardStyle$1
+				style: {
+					display: "block",
+					width: "100%",
+					marginBottom: "10px"
+				}
+			}, (0, react$1.createElement)(Card, {
+				accent: "neutral",
+				bar: {
+					size: 0,
+					inset: 0,
+					gap: 0
+				},
+				style: { padding: 0 }
 			}, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-card-row",
 				style: {
@@ -80383,7 +80750,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				onOpenSession,
 				onViewTask,
 				refresh
-			}) : null);
+			}) : null));
 		}
 		function TaskListView(props) {
 			const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces, onCreate } = props;
@@ -80492,7 +80859,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("listFilterWorkspaceAll"),
 				size: "md",
-				width: WS_WIDTH
+				width: WS_WIDTH,
+				searchable: true
 			}))), visible.length === 0 ? rows.length === 0 && !ready ? null : rows.length === 0 ? (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
@@ -80788,16 +81156,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		*/
 		/** 模块之间的纵向间距（唯一一份，三块共用）。 */
 		const SECTION_GAP = { marginTop: "var(--dshpc-space-4)" };
-		applyStyle("domain:settings", `
-.dsh-tdt-settings-card{
-  box-sizing:border-box;
-  border:none;
-  border-radius:0;
-  border-left:4px solid color-mix(in srgb,var(--dshpc-fg) 14%,transparent);
-  background:color-mix(in srgb,var(--dshpc-fg) 3%,transparent);
-  padding:var(--dshpc-space-4);
-}
-`);
+		/**
+		* 三块灰框 = 核心 `StripCard` 中性色（左缘 4px 色条 + 极淡底色，直角色块）。
+		* 原本是本仓手写的 `.dsh-tdt-settings-card`，2026-11-06 按用户指正改为核心件。
+		*/
 		function SettingsPage({ t }) {
 			return (0, react$1.createElement)("div", { style: {
 				width: "100%",
@@ -80806,8 +81168,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			} }, (0, react$1.createElement)("div", {
 				id: PANEL_CONTENT_ID,
 				style: PANEL_CONTENT_STYLE
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-settings-card" }, (0, react$1.createElement)(SettingsConfigBlock, { t })), (0, react$1.createElement)("div", {
-				className: "dsh-tdt-settings-card",
+			}, (0, react$1.createElement)(StripCard, { accent: "neutral" }, (0, react$1.createElement)(SettingsConfigBlock, { t })), (0, react$1.createElement)(StripCard, {
+				accent: "neutral",
 				style: SECTION_GAP
 			}, (0, react$1.createElement)(SettingsLogBlock, { t }))));
 		}
@@ -81475,7 +81837,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("listFilterWorkspaceAll"),
 				size: "md",
-				width: 120
+				width: 120,
+				searchable: true
 			}), (0, react$1.createElement)(TaskPicker, {
 				value: taskId,
 				onChange: setTaskId,

@@ -67,7 +67,16 @@ import type { SegmentedProps } from 'dsh-plugin-core/ui'
 export type SegmentedItem<T extends string = string> = SegmentedProps<T>['items'][number]
 export { FieldHint, type FieldHintProps } from 'dsh-plugin-core/ui'
 export { DateTimePicker, type DateTimeOutput } from 'dsh-plugin-core/ui'
+// 「名字 + 输入框」同格组合：核心 InputGroup（label 与输入框同格灰底）。
+export { InputGroup, type InputGroupProps, type InputGroupAction } from 'dsh-plugin-core/ui'
 export { notify } from 'dsh-plugin-core/ui'
+// 选模型（分组 / 联动两态）与卡片框（框式 / 条带式）：核心唯一的模型选择与卡片外观实现。
+export {
+  ModelPicker, Card, StripCard,
+  type ModelPickerProps, type ModelPickerVariant,
+  type CardAccent, type CardBarOptions, type CardSharedProps,
+  type PickerGroup, type PickerOption,
+} from 'dsh-plugin-core/ui'
 export { SelectField, type SelectFieldProps } from './Field'
 export { TaskPicker, type TaskOption, type TaskPickerProps } from './TaskPicker'
 export { TimeRange, type TimeRangeProps, type TimeRangeLabels, type TimePresetLabels } from './TimeRange'

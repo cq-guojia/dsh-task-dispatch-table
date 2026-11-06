@@ -611,6 +611,8 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
             ariaLabel: t('listFilterWorkspaceAll'),
             size: 'md',
             width: 120,
+            // 工作区候选可能很多：下拉必须带搜索框（核心 Picker 自带）。
+            searchable: true,
           }),
           h(TaskPicker, {
             value: taskId,

@@ -1,7 +1,7 @@
 # 核心控件 `Picker` / `DateTimePicker` / `FieldHint` / `notify`（源码级事实）
 
 - **类型**：外部事实（`dsh-plugin-core` 的 UI 基础控件）
-- **适用版本**：`dsh-plugin-core@0.35.0`（`dist/ui/inputs/Picker.js`、`DateTimePicker.js`、`picker-css.generated.js`、`dist/ui/display/FieldHint.js`、`dist/ui/feedback/Toast.js`；均为 `dist/ui/index.d.ts` 的导出面）
+- **适用版本**：`dsh-plugin-core@0.35.0`（`dist/ui/inputs/Picker.js`、`DateTimePicker.js`、`ModelPicker.js`、`WorkspacePicker.js`、`InputGroup.js`、`picker-css.generated.js`、`dist/ui/display/FieldHint.js`、`Card.js`、`StripCard.js`、`dist/ui/feedback/Toast.js`；均为 `dist/ui/index.d.ts` 的导出面）
 - **状态**：已核实（2026-11-06，读实现源码，非试错）
 - **来源**：`node_modules/dsh-plugin-core/dist/ui/…`
 - **配套**：[`plugin-core-dock.md`](plugin-core-dock.md)、[`plugin-core-session.md`](plugin-core-session.md)、[`../../design/ui-style-guide.md`](../ui-style-guide.md) §二「唯一实现表」
@@ -19,6 +19,11 @@
 | `showToast` | 函数 | 一次性提示（可带 `onDismiss`） |
 | `LoadingToast` / `showLoading` | 组件 / 函数 | 进行中提示 |
 | `Segmented` | React 组件 | 分段控件（用户口语里的「滑块」） |
+| `ModelPicker` | React 组件 | 选模型（`grouped` 分组下拉 / `cascade` 供应商↔模型联动） |
+| `WorkspacePicker` | React 组件 | 选工作区（数据自动来自宿主工作区快照；**本仓未用**，原因见 §八） |
+| `InputGroup` | React 组件 | 「名字 + 输入框」同格组合（`label` 灰底标题格；任务名称 / 编号用） |
+| `Card` / `StripCard` | React 组件 | 卡片外框：框式（Surface 底 + 边框 + 圆角 12） / 浅底条带式（左缘 4px 通高方角条） |
+| `CardAccent` / `CardBarOptions` / `CardSharedProps` | 类型 | 外框色调档 / 色条几何 / 共用 props |
 
 **核心没有的东西**（不要找、也不要自造等价物后再声称是核心）：
 
@@ -68,11 +73,62 @@
 | 常驻态 | 核心提示**不支持常驻后由状态撤除**（本仓 JSON 非法这类持续态改为「进入非法时弹一次长停留提示」） |
 | 外观 | info 为中性灰卡、success 绿、error 红、warning 橙；都带图标，位置默认屏幕底部居中（**不再浮在业务底栏上方**） |
 
-## 六、复核命令（升级核心后照跑）
+## 六、`ModelPicker` 硬契约
+
+| 点 | 事实 |
+|---|---|
+| variant | `grouped`（默认）：**一个下拉**，供应商做组头、模型列在下面，不与别物联动；`cascade`：**两个下拉**，先选供应商、模型跟着筛 |
+| 值口径 | `onChange` 一律发最终模型值 `${provider}/${id}`；`''` = 默认模型（没选），调用方自己处理 |
+| cascade 换供应商 | 先发 `''`（旧模型不属于新供应商）；内部 `pickedProvider` 保留用户所选供应商 |
+| 数据来源 | **不传 `groups` 就读宿主真实模型目录**（`connectHost` 的 `modelsPath`）⇒ 本仓为了复用自有 `HostLlmModelInfo` 数据而**显式传 `groups`** |
+| searchable | **默认开**（关掉要显式 `searchable:false`） |
+| `translate` | 类型是 `dsh-plugin-core/utils` 的 `Translate`；本仓 `t` 键集更大、类型不兼容 ⇒ `import { t as coreT } from 'dsh-plugin-core/utils'` |
+| 宽度 | 核心不提供定宽档；按使用点给根 `className`（本仓编辑器 `.dsh-tdt-ed-model{width:140px}`）。**注意最小宽度**：`cascade` 是两个触发器并排，父容器需给 `min-width:0` 与网格分栏 |
+
+本仓两处用法：编辑器提示词区 = `grouped`（`task-editor.tsx`，`modelGroupsOf` 把自有模型列表转 `PickerGroup[]`）；设置页默认模型 = `cascade`（`settings-config-block.tsx`，`''` 时清空 `defaultProvider` / `defaultModel` 两段）。
+
+## 七、`Card` / `StripCard` 硬契约
+
+| 点 | 事实 |
+|---|---|
+| 两种外观 | `Card` = 「框式」：`Surface` 底 + 1px 边框 + 圆角 12，色条默认左侧 6px **短条**（高度随内容）；`StripCard` = 「浅底式」：同色系浅底 + 1px 不可见占位边框 + **方角** + 左缘 4px **通高**方角条（贴左缘） |
+| 共用 props | `accent`（`business/success/warning/danger/neutral/...` 档位，或任意 CSS 色）、`bar`（`{side,size,inset,gap,length}`）、`expanded`、`onToggle`、`action`、`children`、`panel`、`className`、`style`、`translate` |
+| `children` 落点 | 落在 `__main`（在 `__head` 内、`flex:1;min-width:0` 的块容器）⇒ 多个子节点**自然上下堆叠**；本仓把展开区作为 children 兄弟节点，不走 `panel`（`panel` 自带 `border-top`，会与既有分隔线重复） |
+| 隐藏色条 | `Card` 的色条宽 = `var(--card-bar-size)` ⇒ `bar:{size:0,inset:0,gap:0}` 即不可见；`style:{padding:0}` 覆盖 `--bordered` 的 14px 内距 |
+| `StripCard` 的 `bar.side` | 固定贴左，忽略此项 |
+| 色调 | 本仓执行记录：ok→success、bad→danger、warn→warning、busy / planned→business、其余→neutral（`toneAccentOf`）；设置页两块用 `neutral` |
+
+## 八、`WorkspacePicker`（核心提供，但本仓未采用）
+
+| 点 | 事实 |
+|---|---|
+| 数据 | **自动来自宿主工作区快照**，调用方不传候选 |
+| 值口径 | `workspaceId`（单选 `string`；`mode:'multiple'` 时 `string[]`） |
+| `allowDefault` | 默认提供「所有工作区」项（只在单选出现）；选中发 `''` |
+| `searchable` | **默认关**（要就显式 `true`） |
+| 未采用原因 | 本仓任务定义里存的是**工作区标题**（`target.workspace`），不是 workspaceId；换成该控件要改写值语义与数据面。本轮改为给核心 `Picker` 开 `searchable:true`，保持值语义不变。**若将来任务定义改存 workspaceId，应改接它** |
+
+## 九、`InputGroup` / `PrefixedInput`（两种「名字 + 输入框」形态的区别）
+
+| 点 | `InputGroup`（核心推荐） | `PrefixedInput`（本仓曾用） |
+|---|---|---|
+| 外观 | `label` 与输入框**同格**、灰底标题格，整组一体 | 前缀是**灰字**（非灰底）+ 右侧 1px 分隔线 |
+| 用户口径 | 2026-11-06「前面一个名字，后面一个输入框」= 这个 | 不是这个 |
+| 额外能力 | `actions`（后置按钮组）、`undoable`（撤销）、`onSubmit`（Enter） | 无 |
+| 宽度 | 根 `inline-flex` ⇒ 撑满整行要自己 `style.width` | 同 |
+| 校验 | `error` 描红整组（核心负责） | `error` 描红框 |
+
+本仓 `task-editor.tsx` 的 `PrefixedInput` 包装已改底为 `InputGroup`（任务名称 / 编号两处）。
+
+## 十、复核命令（升级核心后照跑）
 
 ```bash
 node -p "require('./node_modules/dsh-plugin-core/package.json').version"
 grep -n "interface PickerProps" -A 40 node_modules/dsh-plugin-core/dist/ui/inputs/Picker.d.ts
 grep -n "interface DateTimePickerProps" -A 30 node_modules/dsh-plugin-core/dist/ui/inputs/DateTimePicker.d.ts
 grep -n "NotifyOptions" -A 20 node_modules/dsh-plugin-core/dist/ui/feedback/Toast.d.ts
+grep -n "interface ModelPickerProps" -A 35 node_modules/dsh-plugin-core/dist/ui/inputs/ModelPicker.d.ts
+grep -n "interface WorkspacePickerProps" -A 30 node_modules/dsh-plugin-core/dist/ui/inputs/WorkspacePicker.d.ts
+grep -n "interface InputGroupProps" -A 35 node_modules/dsh-plugin-core/dist/ui/inputs/InputGroup.d.ts
+grep -n "interface CardSharedProps" -A 30 node_modules/dsh-plugin-core/dist/ui/display/Card.d.ts
 ```
