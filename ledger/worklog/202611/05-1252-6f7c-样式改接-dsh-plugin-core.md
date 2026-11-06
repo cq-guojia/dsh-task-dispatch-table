@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 01:03:25 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 02:00:59 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -349,6 +349,41 @@ h(ChatViewFrame, {
 
 **本地复测**：dist 已更新，重启 `dsh web` + 硬刷新即可；无需重新 `add`。
 
+### 2026-11-06 · P3 二次改接：文件浏览外壳也交给核心（用户「你这还是手搓的」）
+
+**用户原话**：「包括文件浏览，你看你的文件浏览还是自己手搓的，核心已经提供了好吧。你好好把核心的文档读一下，看核心里面有什么。」
+
+**上一刀漏在哪**（已核实）：上一轮只把**文件树 / 预览体**换成核心 `FileBrowser`，外壳仍是本地手搓的——`src/client/file-browser.tsx`（约 100 行）自建：
+
+- `<aside class="dsh-tdt-sv-preview">` 右侧 dock、固定宽度、`position:sticky`
+- `.dsh-tdt-sv-resizer` 拖拽条与 `startResize`（指针夹取、rAF、宽度持久化）
+- `rootOfSession` / `rootOfWorkspace` / `resolvePath` 自己解析路径根
+- 任务编辑器里的选择器浮层（portal + 自算 fixed 坐标 + 自实现 Esc / 点外关闭）
+
+**核心其实两个命令式入口就全包了**（`docs/help/explorer.md` + `dist/adv/explorer/open.js` 源码核实）：
+
+| 核心入口 | 接管了什么 |
+|---|---|
+| `openFilePreview({ mount, path, sessionId, ... })` | 右侧分栏整个外壳：把 mount 补成 flex 行、主区伸展、宽度持久化 / 夹取、拖拽条、Esc / ✕ 关闭还原；已有 dock 时就地重画（保留用户拖过的宽度） |
+| `pickWorkspaceFile({ anchor, placement, filter, ... })` | 选择器浮层：锚定模态、八档方位（`left-end` = 旧浮层位置）、Esc / 点外关闭、▾ 切工作区，Promise 给 `{ path(绝对), isDir, workspaceRel?, workspace? }` |
+
+另外核心在 `documentElement` 发布 `--dshpc-page-inset-right`（右侧核心 dock 总占宽），弹窗遮罩直接消费它，**本仓不再存预览宽度**。
+
+**本轮改动**：
+
+| 文件 | 改了什么 |
+|---|---|
+| `src/client/index.ts` | 删 `PREVIEW_WIDTH_KEY` / `readPreviewWidth` / `clampPreviewWidth` / `previewWidth` state / `startResize` / `lastWorkspaceSessionId`；预览改为 effect 调 `openFilePreview({ mount: '#dsh-tdt-root' })`；`canPreview` 改判 `getFsFace() !== undefined`（FS 路由与 remote.workspaceFiles 无关）；卸载时 `close()`；`--dsh-tdt-preview-w` 变量删除 |
+| `src/client/file-browser.tsx` | **整文件删除** |
+| `src/client/task-editor.tsx` | 选择器改 `pickWorkspaceFile`（锚点方按钮、`left-end`、`sessionId` 作相对基准、`rootName` 兜底）；删 `pickerWs` / `pickerPanelRef` / Esc / 点外两个 effect / `createPortal` 浮层 / `workspaceFiles` prop |
+| `src/client/archive-session-css.ts` | 删预览 dock + resizer + resizing 隔离规则；遮罩 `right` 改 `calc(var(--dshpc-page-inset-right,0px) + var(--dsh-tdt-editor-w,0px))` |
+| `src/client/task-editor-css.ts`、`ui/controls-css.ts` | 注释里对旧 dock / 旧 resizer 的引用改到核心 `dshpc-dock__panel` |
+| `scripts/smoke.mjs` | 13 条预览 dock 断言改核心等价物（`openFilePreview` / `dshpc-dock__panel` / `dshpc-dock__resizer` / 让位变量 / 本地 dock 已删的反断言）；`coreOnly` 补 `--dshpc-dock-h`（核心运行期写入） |
+
+**验证**：`build` ✅ · `typecheck` ✅ · `smoke` 753 / 0 ✅ · `koc-codelint` 无新增（剩余 14 条均为既有 B 类告警）。
+
+**仍待用户拍板**：Toast（P2，建议 B：核心补 sticky + 关闭钮）；会话预览 P4（等核心插槽）。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -361,3 +396,4 @@ h(ChatViewFrame, {
 - 2026-11-06 00:36:26 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P1 全量改接核心完成（本地控件/CSS 删除）；P3 文件浏览与预览整体切 dsh-plugin-core/adv/explorer（新增 fs 路由、file-preview.tsx 752 行删除、死 CSS 91 行删除），build/typecheck/smoke 753/0；P2 Toast 与 P4 会话预览因核心缺能力待拍板
 - 2026-11-06 00:51:15 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览拍板走 B：worklog 固化核心插槽 API 建议（headerSlot/bodyLeadSlot/turnTailSlot/actionsSlot）、替换会丢的 8 项功能对位、可直接搬的插槽代码与迁移步骤；当前 session-view.ts 不动，等核心支持
 - 2026-11-06 01:03:25 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 修复本地首启 import failed: process is not defined —— tsdown.client.config.ts 加 define process.env.NODE_ENV=production（floating-ui 模块级判断），smoke 加回归断言；build/typecheck/smoke 754/0
+- 2026-11-06 02:00:59 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P3 二次改接完成：file-browser.tsx 整文件删除，页面预览改核心 openFilePreview（dock/拖拽/关闭归 PanelDock，遮罩读 --dshpc-page-inset-right），附件选择器改核心 pickWorkspaceFile；build/typecheck/smoke 753/0，codelint 无新增；worklog 与 docs/design/external/plugin-core-explorer.md 已回写
