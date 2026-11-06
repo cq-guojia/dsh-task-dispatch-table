@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 01:03:25 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 06:15:56 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -45,7 +45,7 @@
 - [ ] P1 基础控件替换：Button/IconButton、Checkbox、Segmented、Textarea、Input/PrefixedInput/NumberInput、LiveText、MarqueeText、SectionHead、Loading、BackToTop、DateTime、CodeViewer → 核心同名件
 - [ ] P2 反馈层：自绘 toast → 核心 notify/Toast；Modal/Confirm/Alert → 核心 `skin`
 - [ ] P3 文件浏览 / 预览：`file-browser.tsx` / `file-preview.tsx` → `dsh-plugin-core/adv/explorer`
-- [ ] P4 会话预览：`session-view.ts` + `mirror/*`（13 文件）+ `archive-session-css.ts` → `adv/session`（SessionViewModal + openSessionView）；本仓只留业务接线
+- [x] **P4 会话预览（2026-11-06）**：核心 `0.35.0` 补齐插槽后，`session-view.ts` 改薄包装、`mirror/*` 只剩 `Deliverables.tsx`、`archive-session-css.ts` 只剩两组规则，见「2026-11-06 · P4 会话预览改接核心」
 - [ ] P5 业务样式重构：`editor-css` / `info-css` / 内联字面量 / 自绘浮层 → 核心 token + 核心件
 - [ ] P6 文档回写：`ui-style-guide.md` / `ui-foundation.md` / `external/session-view-ui-map.md` / `features.md`
 - [ ] 收尾统计：替换前 / 后本项目自留样式行数与类名数量，确认「样式很少」；build + smoke + typecheck + 专家复核
@@ -349,6 +349,42 @@ h(ChatViewFrame, {
 
 **本地复测**：dist 已更新，重启 `dsh web` + 硬刷新即可；无需重新 `add`。
 
+### 2026-11-06 · P4 会话预览改接核心（核心 0.35.0 补齐插槽）
+
+**用户原话**：「先把修改的内容提交。然后获取一下核心控件的最新版本，它已经把这些槽位添加了，你好好看看，然后开始修改」
+
+**核心新能力**（`dsh-plugin-core@0.35.0`，源码核实，契约已回写 [`docs/design/external/plugin-core-session.md`](../../../docs/design/external/plugin-core-session.md)）：
+`SessionViewModal` 新增 `title` / `header` / `headerActions` / `bodyHeader` / `bodyFooter` 五个槽位；
+`bodyHeader` 在滚动列最顶端、`bodyFooter` 在最后一条内容之后（有 turn-tail 时进它的 `tailSlot`）；
+遮罩 `dshpc-overlay` 自动读 `--dshpc-page-inset-right` 让位右侧分栏；`openSessionView` 已是完整数据链
+（retain / 首轮 inbox / 图片 loader）。
+
+**本轮改动**：
+
+| 文件 | 改了什么 |
+|---|---|
+| `src/client/session-view.ts` | 1471 行 → 约 190 行薄包装：`openSessionView` 转发核心（补 retain 来源名）；`SessionViewModal` 渲染核心弹窗，三块业务内容进槽位（`title` 任务名可点 / `bodyHeader` 接收·随附 / `bodyFooter` 交付补差 + 过程文件）。保留对外 props 形状 ⇒ `index.ts` 调用点不大改 |
+| `src/client/mirror/*` | 删 14 个文件（ChatView / ChatNodeSeat / ChatGroupSeat / MessageItem / MessageIconActions / ReasoningRow / TurnProcessNodeView / TurnTriggerNodeView / TurnTailNodeView / TurnUsagePanel / GenericCommandCard / StatDialog / message-chrome / process-groups）；只留 `Deliverables.tsx`（交付补差网格），并裁掉不再使用的 PresentRow |
+| `src/client/archive-session-css.ts` | 339 行 → 约 95 行：删外壳 / 滚动 / 消息行 / 树 / 拖拽 / 让位等全部镜像类，只留 `tfc*`（顶部区）与 `deliv*`（交付卡兜底） |
+| `src/client/index.ts` | 删 `workspaceFiles` 整条链（TaskPage prop / `filesRef` / dotted `remote.workspaceFiles` 探测与诊断日志）——文件链接现在只看核心 `onOpenFile`；只改注释、不动其它逻辑 |
+| `scripts/smoke.mjs` | 会话预览断言改到新实现：自绘回退类 → 核心 `dshpc-sv-*`；确认框 / 重试 / 拖拽 / 让位 → 核心等价物；`bodyHeader` / `bodyFooter` 接线断言；`present.host` / `workspaceFiles` 探测断言改为「已删」 |
+| 文档 | 新增 `docs/design/external/plugin-core-session.md`（0.35.0 槽位契约）；更新 `features.md`、`archive-session-view.md`（现状覆盖 + 历史沿革）、`session-view-ui-map.md`（镜像已移交）、`ui-style-guide.md`（已知例外表清掉镜像类条目）、`docs/README.md`（外部事实索引） |
+
+**交付文件「补差」怎么做**（只说这一处，别重复问）：核心按快照 turn 级 `deliverables.presented` 在最后画网格；
+本仓 `task_instances.outputs` 是回执落库权威值，老任务快照里可能是空。`session-view.ts` 订阅快照算出已画路径集合，
+`bodyFooter` 只渲染 `outputs` 里**不在集合内**的那些 ⇒ 同一文件不会同屏两次，老任务也看得见。
+
+**已知取舍（核心当前契约没有的）**：
+
+1. 顶部「随附」区已解析路径的文件，气泡里仍会出现官方附件卡（核心未暴露「附件卡让位」钩子）——信息重复，不是错误。
+2. 弹窗遮罩只让位 `--dshpc-page-inset-right`（核心 dock）；页面左侧编辑抽屉与弹窗同屏时不再额外让位（自绘 overlay 已删）。
+3. 归档会话「继续对话」按核心语义：未归档直接跳官方会话页，归档才走 fork 确认框（此前本仓一律 fork）。
+4. `t` 不透传核心（两个字典键不同），核心文案走它自己的 i18n。
+
+**验证**：`build` ✅ · `typecheck` ✅ · `smoke` 738 项通过 / 14 项失败（14 项均为**既有**失败：
+断言里用单引号匹配源码双引号，`index.ts` / `task-editor.tsx` 在 HEAD 已是双引号，与本次改动无关）·
+`koc-codelint` 无新增（剩余 12 条均为既有 B 类告警）。
+
 ### 2026-11-06 · P3 二次改接：文件浏览外壳也交给核心（用户「你这还是手搓的」）
 
 **用户原话**：「包括文件浏览，你看你的文件浏览还是自己手搓的，核心已经提供了好吧。你好好把核心的文档读一下，看核心里面有什么。」
@@ -396,3 +432,4 @@ h(ChatViewFrame, {
 - 2026-11-06 00:36:26 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P1 全量改接核心完成（本地控件/CSS 删除）；P3 文件浏览与预览整体切 dsh-plugin-core/adv/explorer（新增 fs 路由、file-preview.tsx 752 行删除、死 CSS 91 行删除），build/typecheck/smoke 753/0；P2 Toast 与 P4 会话预览因核心缺能力待拍板
 - 2026-11-06 00:51:15 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览拍板走 B：worklog 固化核心插槽 API 建议（headerSlot/bodyLeadSlot/turnTailSlot/actionsSlot）、替换会丢的 8 项功能对位、可直接搬的插槽代码与迁移步骤；当前 session-view.ts 不动，等核心支持
 - 2026-11-06 01:03:25 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 修复本地首启 import failed: process is not defined —— tsdown.client.config.ts 加 define process.env.NODE_ENV=production（floating-ui 模块级判断），smoke 加回归断言；build/typecheck/smoke 754/0
+- 2026-11-06 06:15:56 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览改接核心完成：核心升至 dsh-plugin-core@0.35.0（title/header/headerActions/bodyHeader/bodyFooter 槽位），session-view.ts 1471→约190 行薄包装，删 mirror 14 文件只留 Deliverables.tsx，archive-session-css 339→约95 行；删 present.host 与 remote.workspaceFiles 探测；build/typecheck 通过，smoke 738/14（14 项均为既有单引号断言失配）
