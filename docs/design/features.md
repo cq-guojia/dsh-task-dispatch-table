@@ -18,7 +18,7 @@
 | **设置页** | 顶部一级 tab「设置」整页，**两块**：① **插件设置** —— 配置编辑的正式主场（7 项，一行两个；每项「自定义」徽章 + 「恢复默认」；无改动保存灰；点保存一次查全部问题并逐项描红 + 统一 Toast）；② **插件日志** —— 查 `plugin_log`（自动刷新默认勾选 / 刷新 / 显示 N 条在最右；表头不吸顶、level 语义着色、时间定宽 + 正文占满剩余）。配置**存自有状态库**（meta 表 `pluginConfig` 键），优先级 默认值 < 宿主基线 < 数据库 | `settings-page.tsx` + `settings-config-block.tsx` + `settings-log-block.tsx` + `db-table.tsx` + `settings-data.ts` | ✅ **完成封卷**（2026-10-08 多轮真机反馈重修；冒烟 726/0） | [features/settings.md](features/settings.md) |
 | **插件配置页** | 宿主设置页里的插件配置（默认 provider / model 等）；设置页落地后定位为**旧入口 / 兜底** | `config-panel.tsx` | ✅ 落码（暂不退役） | — |
 | **查看会话（归档会话弹窗）** | 执行记录点开会话内容；头部「继续对话（开分支）」 | `session-view.ts` + `mirror/` | ✅ 真机验证通过 | [features/archive-session-view.md](features/archive-session-view.md) |
-| **产出物打开与预览** | 右侧预览分栏：md / 代码 / 图片 / PDF + 目录浏览（面包屑） | `file-preview.tsx` + `file-browser.tsx` | ✅ 真机验证通过 | [features/artifact-opening.md](features/artifact-opening.md) |
+| **产出物打开与预览** | 右侧预览分栏：md / 代码 / 图片 / PDF + 目录浏览（面包屑） | 核心 `openFilePreview` / `pickWorkspaceFile`（`dsh-plugin-core/adv/explorer`） | ✅ 真机验证通过 | [features/artifact-opening.md](features/artifact-opening.md) |
 | **附加文件（选择 / 上传）** | link（工作区已有文件，只记路径）+ upload（本地文件落盘任务目录） | `task-assets.ts` + `POST /attachment` | 🔵 落码（真机待验） | [../../worklog/attachments-upload.md](../worklog/attachments-upload.md) |
 | **依赖（前置任务）** | 上游判定 + 写库瞬间冻结「命中哪条上游实例 + 其产出」+ 下传给下游 | `depends_on` + `reconcile.ts` | ✅ 真机验证通过 | [features/dependency-snapshot.md](features/dependency-snapshot.md) |
 

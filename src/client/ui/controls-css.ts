@@ -11,7 +11,7 @@
  * 本文件只剩**核心没有**的三类业务件：产出物 chip / 行式文件按钮、时分的弹层与列、下拉锚点与省略号，
  * 外加「过程文件」块。
  */
-import { applyStyle } from './style'
+import { applyStyle } from "./style";
 
 /** 产出物图标 chip / 行式文件按钮的皮肤规则。 */
 export const BUTTON_CSS = `
@@ -46,18 +46,18 @@ export const BUTTON_CSS = `
 .dsh-tdt-filechip--inline{display:inline-flex;padding:2px 6px;font-size:var(--dshpc-font-sm);}
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-chip,.dsh-tdt-filechip{transition:none;}}
-`
+`;
 
 /** 开关 / 拖拽分隔条的皮肤规则（核心没有的宿主件）。 */
 export const FIELD_CSS = `
 /* 官方 Switch 包装统一：选中 = success 绿。 */
 .dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
 
-/* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
-   具体 z-index 由 .dsh-tdt-ed-resizer / .dsh-tdt-sv-resizer 各自补。 */
+/* 拖拽分隔条（本仓编辑分栏用；预览 dock 的拖拽条已归核心 PanelDock）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
+   z-index 由 .dsh-tdt-ed-resizer 补。 */
 .dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
 .dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover,rgba(38,49,72,.06));}
-`
+`;
 
 /** 时分的弹层与列（本仓唯一实现：核心暂无「纯时分」档）。 */
 export const DATETIME_CSS = `
@@ -88,7 +88,7 @@ export const DATETIME_CSS = `
 .dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--dshpc-border);}
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-time__opt{transition:none;}}
-`
+`;
 
 /** 下拉锚点 / 省略号的皮肤规则（核心 `Picker` 暂缺 error/title，本仓 `SelectField` 保留）。 */
 export const SELECT_CSS = `
@@ -100,7 +100,7 @@ export const SELECT_CSS = `
 
 /* 省略号三件套（ui-style-guide §三「待抽象 #1」的收敛点）：**新代码一律挂这个类**，不再各写一遍。 */
 .dsh-tdt-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-`
+`;
 
 /** 「过程文件」块的皮肤规则（2026-10-10：回执过程文件桶的次级展示件）。 */
 export const PROCESS_FILES_CSS = `
@@ -117,14 +117,17 @@ export const PROCESS_FILES_CSS = `
 .dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-proc-head{transition:none;}}
-`
+`;
 
 /** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
-export const CONTROLS_DOMAIN = 'controls'
+export const CONTROLS_DOMAIN = "controls";
 
 /**
  * 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
  */
 export function ensureControlsStyle(): void {
-  applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS + PROCESS_FILES_CSS)
+	applyStyle(
+		CONTROLS_DOMAIN,
+		BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS + PROCESS_FILES_CSS,
+	);
 }

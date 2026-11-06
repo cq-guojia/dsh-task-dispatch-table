@@ -6,34 +6,18 @@
 //
 // 颜色一律引用 `--dshpc-*`（由核心 token 层 `dsh-plugin-core/design` 定义，明/暗自动跟随，括号内为兜底值）；
 // 布局 token 取聊天专属 --dsh-chat-*（0.1.7-RC.2 核实的真值，带兜底）。不引用任何宿主内部符号。
-import { applyStyle } from './ui'
+import { applyStyle } from "./ui";
 
 /** 弹窗根类名前缀（历史遗留；注入已统一走 ui/style.ts）。 */
-export const SV_STYLE_ID = 'dsh-task-dispatch-table-archive-session'
+export const SV_STYLE_ID = "dsh-task-dispatch-table-archive-session";
 
 /** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 export const ARCHIVE_SESSION_CSS = `
-/* 弹窗让位右侧分栏：预览 dock（--dsh-tdt-preview-w）+ 编辑分栏（--dsh-tdt-editor-w，U21 起）
-   两条都算进来 ⇒ 右侧留出的宽度 = 两者之和（缺省各 0），弹窗不遮盖任何一条分栏；
-   两条同时开着时也是一个加法，无需特判（用户 2026-10-01 Q4）。
+/* 弹窗让位右侧分栏：预览 dock 的宽度由核心 PanelDock 发布在 documentElement 的
+   --dshpc-page-inset-right（核心 openFilePreview 的约定变量），编辑分栏是本仓的 --dsh-tdt-editor-w。
+   两条都算进来 ⇒ 弹窗不遮盖任何一条分栏；两条同时开着时也是一个加法，无需特判（用户 2026-10-01 Q4）。
    与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/features/artifact-opening.md §四-C）。 */
-.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dshpc-mask,rgba(0,0,0,.45));transition:right .12s var(--dshpc-ease,ease);}
-/* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
-   滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
-   sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
-   弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。
-   ⚠️ **本条不设 z-index**：它是 sticky 布局成员、不是浮层；一旦给它显式正 z-index，就会无条件
-   压过宿主 portal 到 body 的弹窗（「系统设置」等，官方 Modal 后挂载居上只在**同层**时成立）
-   ⇒ 真机 2026-10-05「侧边栏盖住宿主设置弹窗」。去掉后由 DOM 顺序裁决，宿主弹窗回到上层。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));box-shadow:var(--dshpc-shadow-2,0 12px 32px rgba(0,0,0,.4));}
-/* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize，**不画任何线**（用户 2026-09-28）。
-   高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
-   **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
-   （--dshpc-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
-/* z-index 7：必须高于源码态 CodeViewer 内容（复制钮 z-index:5 + cm-editor 正文）；
-   z-index:5 时会被 CodeViewer 复制钮/代码体盖住，真机 2026-10-04 表现为「浅灰竖条在源码标题行处断开」即此。 */
-/* 拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index:7（高于 CodeViewer 复制钮，真机 2026-10-04）。 */
-.dsh-tdt-sv-resizer{z-index:7;}
+.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dshpc-page-inset-right,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dshpc-mask,rgba(0,0,0,.45));transition:right .12s var(--dshpc-ease,ease);}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 面板底色 = 官方会话面 --dshpc-surface-base（官方 chat 页即此色）：
    官方 ReasoningRow 展开行是 sticky + background:var(--dshpc-surface-base)（ReasoningRow.module.css），
@@ -221,18 +205,13 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-turnerr-code{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font:var(--dshpc-code-font,12px/18px var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
 .dsh-tdt-sv-turnerr-warn{color:var(--dshpc-warning,#f5a623);margin-right:6px;font-weight:600;}
 
-/* ── U11 产出物预览（决策 39）：页面级 dock 预览面（弹窗与整页共用，见上方 dock 规则） ──
-   旧「弹窗内右侧分栏」那两条规则已随第三轮上提删除（预览面唯一且页面级）。 */
+/* ── U11 产出物预览（决策 39）：页面级预览面（弹窗与整页共用同一个核心 openFilePreview dock） ──
+   旧「弹窗内右侧分栏」那条规则已随第三轮上提删除（预览面唯一且页面级）。 */
 /* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
    ⇒ 向右拖（缩小）时指针走进 PDF 就卡死（真机 2026-10-03）。拖动期间整片 iframe 让出指针事件。 */
 .dsh-tdt-root.dsh-tdt-resizing iframe{pointer-events:none;}
-/* 拖拽期把 dock 的布局/绘制**隔离**：改宽度不再牵动整页重排（dock 内常驻上万行高亮 DOM，
-   不隔离时每帧重排全页 ⇒ 真机 2026-10-04「挪很久才动一下」）。 */
-.dsh-tdt-root.dsh-tdt-resizing .dsh-tdt-sv-preview-dock{contain:layout paint;will-change:width;}
-.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));background:var(--dshpc-surface-base,#1a1a1a);}
-/* 文件浏览 / 预览（面包屑 / 目录树 / 源码 / HTML 预览）已整体改用核心 dsh-plugin-core/adv/explorer，
-   本地 .dsh-tdt-sv-preview-head/body/tree/cm-* 等 91 行规则已删（2026-11-06）；此处只留 dock 外壳。 */
-.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:var(--dshpc-font-sm);line-height:1.6;color:var(--dshpc-fg-2,rgba(128,128,128,.95));padding:8px 0;}
+/* 文件浏览 / 预览（面包屑 / 目录树 / 源码 / HTML 预览）已整体改用核心 dsh-plugin-core/adv/explorer
+   （页面级预览走核心 openFilePreview，自带 PanelDock 外壳；本地 dock / 拖拽 / 预览体规则已删，2026-11-06）。 */
 /* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
 /* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
 .dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--dshpc-fg-2,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:var(--dshpc-font-sm);display:flex;}
@@ -350,11 +329,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 .dsh-tdt-sv-attBody{flex-direction:column;gap:1px;min-width:0;display:flex;}
 .dsh-tdt-sv-attName{color:var(--dshpc-fg);text-overflow:ellipsis;white-space:nowrap;font-size:var(--dshpc-font-sm);font-weight:500;line-height:var(--dshpc-line-sm);overflow:hidden;}
 .dsh-tdt-sv-attMeta{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);}
-`
+`;
 
 /**
  * 幂等注入（走 ui/style.ts 单一 <style>）。SSR / 无 document 环境静默跳过。
  */
 export function ensureArchiveSessionStyle(): void {
-  applyStyle('domain:session-view', ARCHIVE_SESSION_CSS)
+	applyStyle("domain:session-view", ARCHIVE_SESSION_CSS);
 }

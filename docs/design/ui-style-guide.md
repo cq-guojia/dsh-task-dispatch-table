@@ -94,7 +94,7 @@
 | 紧凑树开关 20×20 | `archive-session-css.ts` `.dsh-tdt-sv-tree-toggle` | 树行密度专用第四档 |
 | 随字号缩放行高 | `archive-session-css.ts` `calc(Npx + var(--dsh-content-font-delta))` | 承担字号自适应，换 token 会丢掉缩放能力 |
 | 会话镜像官方样式 | `archive-session-css.ts` 的 `--dsh-content-*` / `--dsh-chat-*` | `ui-foundation.md` §九 边界（复刻官方会话面） |
-| 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`file-browser.tsx` 菜单项 / 面包屑 / 树 toggle；`task-list.tsx` chip；`mirror/*` 折叠头 | 语义非普通按钮，走各自专用类与计算属性 |
+| 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`task-list.tsx` chip；`mirror/*` 折叠头（面包屑 / 树 toggle 已归核心 `dsh-plugin-core/adv/explorer`） | 语义非普通按钮，走各自专用类与计算属性 |
 | **宿主值导入例外：官方 `Toast`** | `index.ts` 的保存成功提示（`import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'`） | 2026-10-04 评审登记：官件自带明暗自适应 + 淡入淡出，这里只要「一次性轻提示」，且与 `FloatingToast`（操作结果提示）分工不同。**除它之外业务文件不许再引宿主值**；若将来要收编，随 `FloatingToast` 收编一并处理 |
 
 ### 待抽象（2026-10-01 审计登记；**2026-10-05 已收口**——见下表逐条 ✅）

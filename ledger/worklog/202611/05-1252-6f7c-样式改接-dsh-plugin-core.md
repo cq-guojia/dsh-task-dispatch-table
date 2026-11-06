@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 02:00:59 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 01:03:25 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -396,4 +396,3 @@ h(ChatViewFrame, {
 - 2026-11-06 00:36:26 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P1 全量改接核心完成（本地控件/CSS 删除）；P3 文件浏览与预览整体切 dsh-plugin-core/adv/explorer（新增 fs 路由、file-preview.tsx 752 行删除、死 CSS 91 行删除），build/typecheck/smoke 753/0；P2 Toast 与 P4 会话预览因核心缺能力待拍板
 - 2026-11-06 00:51:15 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览拍板走 B：worklog 固化核心插槽 API 建议（headerSlot/bodyLeadSlot/turnTailSlot/actionsSlot）、替换会丢的 8 项功能对位、可直接搬的插槽代码与迁移步骤；当前 session-view.ts 不动，等核心支持
 - 2026-11-06 01:03:25 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 修复本地首启 import failed: process is not defined —— tsdown.client.config.ts 加 define process.env.NODE_ENV=production（floating-ui 模块级判断），smoke 加回归断言；build/typecheck/smoke 754/0
-- 2026-11-06 02:00:59 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P3 二次改接完成：file-browser.tsx 整文件删除，页面预览改核心 openFilePreview（dock/拖拽/关闭归 PanelDock，遮罩读 --dshpc-page-inset-right），附件选择器改核心 pickWorkspaceFile；build/typecheck/smoke 753/0，codelint 无新增；worklog 与 docs/design/external/plugin-core-explorer.md 已回写

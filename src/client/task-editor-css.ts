@@ -6,14 +6,14 @@
 // 用 CSS 而不是内联样式的只有两类：**伪类**（:hover / :focus-within / ::placeholder）
 // 与整页外壳骨架；控件内部的度量仍在 editor-fields.tsx 里内联（照官方 Input 逐条抄）。
 
-import { applyStyle } from './ui'
+import { applyStyle } from "./ui";
 
 /** 样式标签 id（历史遗留；注入已统一走 ui/style.ts）。 */
-export const ED_STYLE_ID = 'dsh-task-dispatch-table-task-editor'
+export const ED_STYLE_ID = "dsh-task-dispatch-table-task-editor";
 
 export const TASK_EDITOR_CSS = `
-/* 分栏：**占布局的一列**（U21，2026-10-01）——与 U11 预览 dock（archive-session-css.ts 的
-   .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，   sticky + 100vh 让它在页面滚动时
+/* 分栏：**占布局的一列**（U21，2026-10-01）——与右侧预览 dock（核心 openFilePreview 的
+   .dshpc-dock__panel）同一套形态：根容器的 flex 成员，sticky + 100vh 让它在页面滚动时
    保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
    旧的遮罩层已废：用户要求「别盖住主窗口」。
    宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 520（用户 2026-10-02 定）。
@@ -127,9 +127,9 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-view-prompt{min-width:0;max-height:100px;overflow:hidden;}
 .dsh-tdt-ed-view-prompt--open{max-height:none;}
 .dsh-tdt-ed-view-empty{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
-`
+`;
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 export function ensureTaskEditorStyle(): void {
-  applyStyle('domain:editor', TASK_EDITOR_CSS)
+	applyStyle("domain:editor", TASK_EDITOR_CSS);
 }

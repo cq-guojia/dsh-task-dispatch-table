@@ -45,7 +45,7 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		let react_dom = require("react-dom");
 		react_dom = __toESM(react_dom, 1);
-		require("react-dom/client");
+		let react_dom_client = require("react-dom/client");
 		//#region src/client/format.ts
 		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
 		function pad2$2(value) {
@@ -3023,7 +3023,7 @@ window.__ModuleLoader__.load({
 		//#region node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs
 		const min = Math.min;
 		const max = Math.max;
-		const round = Math.round;
+		const round$1 = Math.round;
 		const floor = Math.floor;
 		const createCoords = (v) => ({
 			x: v,
@@ -3035,7 +3035,7 @@ window.__ModuleLoader__.load({
 			bottom: "top",
 			top: "bottom"
 		};
-		function clamp(start, value, end) {
+		function clamp$1(start, value, end) {
 			return max(start, min(value, end));
 		}
 		function evaluate(value, param) {
@@ -3852,7 +3852,7 @@ window.__ModuleLoader__.load({
 					const mainAxis = getOppositeAxis(crossAxis);
 					let mainAxisCoord = coords[mainAxis];
 					let crossAxisCoord = coords[crossAxis];
-					const clampCoord = (axis, coord) => clamp(coord + overflow[axis === "y" ? "top" : "left"], coord, coord - overflow[axis === "y" ? "bottom" : "right"]);
+					const clampCoord = (axis, coord) => clamp$1(coord + overflow[axis === "y" ? "top" : "left"], coord, coord - overflow[axis === "y" ? "bottom" : "right"]);
 					if (checkMainAxis) mainAxisCoord = clampCoord(mainAxis, mainAxisCoord);
 					if (checkCrossAxis) crossAxisCoord = clampCoord(crossAxis, crossAxisCoord);
 					const limitedCoords = limiter.fn({
@@ -3936,7 +3936,7 @@ window.__ModuleLoader__.load({
 			const hasOffset = isHTMLElement(element);
 			const offsetWidth = hasOffset ? element.offsetWidth : width;
 			const offsetHeight = hasOffset ? element.offsetHeight : height;
-			const shouldFallback = round(width) !== offsetWidth || round(height) !== offsetHeight;
+			const shouldFallback = round$1(width) !== offsetWidth || round$1(height) !== offsetHeight;
 			if (shouldFallback) {
 				width = offsetWidth;
 				height = offsetHeight;
@@ -3955,8 +3955,8 @@ window.__ModuleLoader__.load({
 			if (!isHTMLElement(domElement)) return createCoords(1);
 			const rect = domElement.getBoundingClientRect();
 			const { width, height, $ } = getCssDimensions(domElement);
-			let x = ($ ? round(rect.width) : rect.width) / width;
-			let y = ($ ? round(rect.height) : rect.height) / height;
+			let x = ($ ? round$1(rect.width) : rect.width) / width;
+			let y = ($ ? round$1(rect.height) : rect.height) / height;
 			if (!x || !Number.isFinite(x)) x = 1;
 			if (!y || !Number.isFinite(y)) y = 1;
 			return {
@@ -5223,6 +5223,9 @@ window.__ModuleLoader__.load({
 			}, props.text));
 		}
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/overlay-css.generated.js
+		const OVERLAY_CSS = "/* 浮层公共骨架：遮罩 + 头部。Modal（居中）/ SideSheet（侧边）/ 选文件弹窗（锚定）共用这一份，\n   各家各自 registerStyle 同一份（幂等），谁也不许再抄一份遮罩。\n   关闭钮的皮肤在 panel.css（.dshpc-panel__close，旧类名作别名），不在这里再写一份。 */\n\n/* 遮罩 = 宿主遮罩变量 --dsw-alias-bg-mask-1（与官方 Modal / 兄弟项目 --tdt-mask 同一条真值，用户 2026-10-20）。 */\n/* 右边界让位页面级分栏（PanelDock 发布的 --dshpc-page-inset-right，用户 2026-10-22）：\n   分栏不被压暗、照常可点；浮层在这块**剩下**的区域里排版，就像整页被推出去一样。 */\n.dshpc-overlay{\n  position:fixed;inset:0 var(--dshpc-page-inset-right,0px) 0 0;\n  background:var(--dshpc-mask);\n}\n/* 锁定态：禁用手势挂在遮罩上（面板外那一圈也要一致）。 */\n.dshpc-overlay[data-dshpc-locked]{cursor:not-allowed}\n/* 锁定时的透明点击层：吃指针、不改任何外观（变灰由各控件自己的 :disabled 负责）。\n   全透明是刻意的 —— 盖一层灰会让人以为界面坏了。 */\n.dshpc-lock-catcher{position:absolute;inset:0;z-index:1;cursor:not-allowed}\n/* 锁定态：消费方自绘的原生表单元素也「看起来禁用」。\n   整条选择器包在 :where() 里 = 特异性 0 —— 消费方任意一条自己的规则都能盖回来，我们只当默认值。\n   只写 opacity / cursor 两个属性；不想被灰就在自己元素上写 --dshpc-lock-dim: 1。\n   解锁 = 规则不再匹配，不存在「还原」，也就不会冲掉别人写的样式。 */\n:where(.dshpc-locked button:not(:disabled),.dshpc-locked input:not(:disabled),.dshpc-locked select:not(:disabled),.dshpc-locked textarea:not(:disabled)){\n  opacity:var(--dshpc-lock-dim);cursor:not-allowed;\n}\n/* 居中档（Modal）：z 走 modal 档。 */\n.dshpc-overlay--center{\n  display:flex;align-items:center;justify-content:center;\n  z-index:var(--dshpc-z-modal);\n}\n/* 侧边档（SideSheet）：面板 absolute 贴边，不需要 flex 居中；z 走 drawer 档（低于 modal）。 */\n.dshpc-overlay--side{z-index:var(--dshpc-z-drawer)}\n/* 锚定档（选文件弹窗）：遮罩照旧压暗 + 点外部关闭，面板自己 fixed 贴锚点，这里不做布局。 */\n.dshpc-overlay--plain{z-index:var(--dshpc-z-panel)}\n\n/* 头部四槽：左图标 / 标题组 / 弹性间隔 / 右侧动作区 + 关闭钮。\n   上下内距必须相等（18/12 会让标题离面板顶远、离分隔线近，用户 2026-11-02）。 */\n.dshpc-overlay-head{\n  display:flex;align-items:center;gap:8px;padding:18px;\n  border-bottom:1px solid var(--dshpc-border);flex-wrap:wrap;\n}\n.dshpc-overlay-head__heading{display:flex;align-items:center;gap:8px;min-width:0;flex:0 1 auto}\n.dshpc-overlay-head__lead{flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:16px;line-height:1}\n/* 标题组：第一行 = 标题 + 右侧小块（徽标紧跟标题），第二行 = 副标题。 */\n.dshpc-overlay-head__titlegroup{display:flex;flex-direction:column;gap:2px;min-width:0;flex:0 1 auto}\n.dshpc-overlay-head__titlerow{display:flex;align-items:center;gap:8px;min-width:0}\n.dshpc-overlay-head__title{font-size:var(--dshpc-font-lg);font-weight:600;line-height:1.4;min-width:0}\n/* 标题下副标题行（兄弟项目 .dsh-tdt-sv-sid：等宽字体、caption 色、可换行）。 */\n.dshpc-overlay-head__sid{font-family:var(--ds-font-family-code,monospace);font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);word-break:break-all}\n.dshpc-overlay-head__extra{flex:none;display:inline-flex;align-items:center}\n.dshpc-overlay-head__spacer{flex:1 1 auto;min-width:8px}\n.dshpc-overlay-head__actions{flex:none;display:flex;align-items:center;gap:8px}\n";
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/infra/panel-css.generated.js
 		const PANEL_CSS = "/* 浮层面板皮肤（2026-11-03 用户定：皮肤统一，只改样式不动交互）。\n *\n * 这份文件是**所有「浮起来的框」的皮肤真源**。定位（fixed / absolute、贴谁、怎么翻转、多大的\n * 层序）留在各自控件里，这里只管表面四件：底色 / 描边宽 / 圆角 / 阴影。\n * ⚠️ 组件 CSS 里不许再写这四个字面值 —— 想改外观就改这里，别在消费方另起一套。\n *\n * 三档（差异只在这三段定义，别处分叉）：\n *   --modal    居中模态（Modal / ConfirmModal / AlertModal 家族）\n *   --popover  贴锚点的浮层面板（pickWorkspaceFile 选文件弹窗、DateTimePicker 弹层）\n *   --menu     下拉菜单（文件浏览器 ▾ 选层、Picker 下拉）\n *\n * 不并入三档的：PanelDock 与 SideSheet 是**贴边家族**（side-panel.css 的\n * .dshpc-side-surface，surface-base、无外描边）—— 2026-11-02 拍板「两者皮肤一模一样」，\n * 一个是布局成员、一个是贴边抽屉，都不是浮层。\n */\n.dshpc-panel{\n  background:var(--dshpc-panel-bg);color:var(--dshpc-fg);\n  border:var(--dshpc-panel-bw) solid var(--dshpc-border);\n  border-radius:var(--dshpc-panel-radius);box-shadow:var(--dshpc-panel-shadow);\n}\n.dshpc-panel--modal{\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:3px;\n  --dshpc-panel-radius:var(--dshpc-radius-xl);\n  --dshpc-panel-shadow:var(--dshpc-shadow-2);\n  overflow:hidden;\n}\n.dshpc-panel--popover{\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:1px;\n  --dshpc-panel-radius:var(--dshpc-radius-lg);\n  --dshpc-panel-shadow:var(--dshpc-shadow-2);\n  overflow:hidden;\n  /* 与 menu 同口径的加重描边；日期弹层与选文件弹窗共用这一档（2026-11-06）。 */\n  border-color:var(--dshpc-border-heavy);\n}\n.dshpc-panel--menu{\n  /* 菜单底与模态同一层（用户 2026-11-03：别用页面底色，暗色下看着全黑）。 */\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:1px;\n  /* 圆角与 popover 档统一成 lg（2026-11-06 用户：下拉框也改成 16）。 */\n  --dshpc-panel-radius:var(--dshpc-radius-lg);\n  --dshpc-panel-shadow:var(--dshpc-shadow-1);\n  /* 下拉菜单同样加重描边；modal 的 3px 边框不动。 */\n  border-color:var(--dshpc-border-heavy);\n}\n\n/* 浮层唯一的关闭钮（20×20 方角图标位）。\n   旧类名 .dshpc-overlay-head__close 保留为别名：消费方写在旧类名上的覆盖仍生效。 */\n.dshpc-panel__close,.dshpc-overlay-head__close{\n  display:inline-flex;align-items:center;justify-content:center;flex:none;\n  width:20px;height:20px;padding:0;border:none;border-radius:var(--dshpc-radius-sm);\n  background:transparent;color:var(--dshpc-fg-3);font-family:inherit;font-size:13px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-panel__close:hover,.dshpc-overlay-head__close:hover{background:var(--dshpc-hover);color:var(--dshpc-fg)}\n.dshpc-panel__close:focus-visible,.dshpc-overlay-head__close:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n";
 		//#endregion
@@ -5238,6 +5241,18 @@ window.__ModuleLoader__.load({
 		* 为什么不做成「一个万能 Panel 组件」：那会把定位也吞进来，等于要求所有浮层同一套交互。
 		* 这里只统一皮肤，不统一行为。
 		*/
+		/** 皮肤载体：`dshpc-panel` + 档位类，别的地方不要手拼这两个类。 */
+		function PanelSurface(props) {
+			ensureComponentStyles("panel", PANEL_CSS);
+			const className = `dshpc-panel dshpc-panel--${props.tier}${props.className === void 0 || props.className === "" ? "" : ` ${props.className}`}`;
+			return (0, react$1.createElement)("div", {
+				...props.attrs,
+				className,
+				style: props.style,
+				role: props.role,
+				onClick: props.stopPropagation === true ? (event) => event.stopPropagation() : void 0
+			}, props.children ?? null);
+		}
 		/** 浮层唯一那枚关闭钮（20×20 方角）；位置由各自的头部决定，这个件不管定位。 */
 		function PanelClose(props) {
 			ensureComponentStyles("panel", PANEL_CSS);
@@ -5267,6 +5282,17 @@ window.__ModuleLoader__.load({
 			return (0, react$1.useContext)(LockedContext);
 		}
 		LockedContext.Provider;
+		/** 遮罩 + 承载盒。右边界让位分栏的规则只有这一份。 */
+		function OverlayMask(props) {
+			ensureComponentStyles("overlay", OVERLAY_CSS);
+			return (0, react$1.createElement)("div", {
+				...props.attrs,
+				className: `dshpc-overlay dshpc-overlay--${props.kind}`,
+				onClick: () => {
+					if (props.closeOnMask) props.onClose?.();
+				}
+			}, props.children ?? null);
+		}
 		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/inputs/picker-css.generated.js
 		const PICKER_CSS = "\n.dshpc-picker{position:relative;display:inline-block;max-width:100%;font-size:13px;line-height:20px}\n.dshpc-picker__trigger{\n  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;\n  min-width:120px;max-width:100%;height:28px;padding:0 8px;\n  color:var(--dshpc-fg);background:var(--dshpc-surface-1);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);cursor:pointer;\n}\n.dshpc-picker__trigger:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed;opacity:.7}\n/* 聚焦（键盘或点击选中）时与全站一致的蓝色描边；菜单打开后焦点会进去，触发器自然失去焦点。 */\n.dshpc-picker__trigger:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 文字默认靠左（吃掉剩余宽度），不给 space-between 把短文案推到中间的机会；\n   确实要居中就显式传 align=\"center\"。 */\n.dshpc-picker__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}\n.dshpc-picker__trigger--center .dshpc-picker__label{text-align:center}\n.dshpc-picker__caret{flex:none;color:var(--dshpc-fg-3)}\n.dshpc-picker__icon{display:inline-flex;flex:none;color:var(--dshpc-fg-2)}\n.dshpc-picker__option-icon{display:inline-flex;flex:none;color:var(--dshpc-fg-2)}\n/* 下拉面板只留定位 / 滚动 / 字号：底色·描边·圆角·阴影来自 panel.css 的 menu 档。 */\n.dshpc-picker__menu{\n  z-index:var(--dshpc-z-popmenu);max-height:280px;overflow:auto;padding:4px;\n  /* 菜单经 FloatingPortal 挂到 body，脱离 .dshpc-picker，须显式字号，否则继承 body 的大字号 */\n  font-size:13px;line-height:20px;\n}\n/* 尺寸档（与 Field 的 sm/md/lg 对应）。 */\n.dshpc-picker__trigger--sm{height:24px;font-size:12px}\n.dshpc-picker__trigger--lg{height:32px}\n/* 键盘游标所在项（无 hover 也要看得见）。 */\n.dshpc-picker__option[data-active='true']{background:var(--dshpc-surface-sunken);outline:1px solid var(--dshpc-border)}\n.dshpc-picker__option--clear{color:var(--dshpc-fg-3)}\n.dshpc-picker__search{\n  width:100%;height:28px;margin-bottom:4px;padding:0 8px;box-sizing:border-box;\n  color:var(--dshpc-fg);background:var(--dshpc-surface-sunken);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);outline:none;\n}\n.dshpc-picker__search::placeholder{color:var(--dshpc-fg-3)}\n.dshpc-picker__group-label{\n  padding:6px 8px 2px;color:var(--dshpc-fg-3);font-size:11px;\n}\n.dshpc-picker__option{\n  display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n  color:var(--dshpc-fg);white-space:nowrap;\n}\n.dshpc-picker__option:hover{background:var(--dshpc-surface-sunken)}\n.dshpc-picker__option--active{background:var(--dshpc-open-bg);color:var(--dshpc-business)}\n.dshpc-picker__option--disabled{color:var(--dshpc-fg-dim);cursor:not-allowed}\n/* 选项文字吃掉剩余宽度：超长省略号（配合 MarqueeText hover 跑马灯），不撑宽菜单。 */\n.dshpc-picker__option-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.dshpc-picker__tick{width:12px;color:var(--dshpc-business)}\n.dshpc-picker__empty{padding:8px;color:var(--dshpc-fg-3);text-align:center}\n.dshpc-picker__degraded{\n  padding:6px 8px;margin-bottom:4px;border-radius:var(--dshpc-radius-sm);\n  color:var(--dshpc-warning-label);background:color-mix(in srgb,var(--dshpc-warning) 12%,transparent);\n  font-size:11px;\n}\n.dshpc-picker__row{display:flex;align-items:center;gap:8px}\n/* 「显示更多」吸在滚动容器底部：不新增滚动层，列表再长也点得到。 */\n.dshpc-picker__more{\n  position:sticky;bottom:0;display:block;width:100%;margin-top:4px;padding:6px 8px;\n  color:var(--dshpc-business);background:var(--dshpc-surface-1);\n  border:0;border-top:1px solid var(--dshpc-border-faint);cursor:pointer;\n  font-size:12px;line-height:20px;text-align:center;\n}\n.dshpc-picker__more:hover{background:var(--dshpc-surface-sunken)}\n";
@@ -6854,6 +6880,12 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/feedback/feedback-css.generated.js
+		const FEEDBACK_CSS = "/* 遮罩与头部在 overlay.css，表面（底色/描边/圆角/阴影）在 panel.css 的 --modal 档，\n   这里只剩**家族布局与尺寸**。三者各管一段，别再把皮肤抄回来。 */\n.dshpc-modal{\n  display:flex;flex-direction:column;box-sizing:border-box;\n}\n/* body = 唯一滚动容器：内距与滚动都归它（滚动条贴面板右缘，不被内距挤进来）；\n   内容按流排，不设 height:100%、不自己开滚动条。\n   透明右边框 = 让滚动条与面板右缘隔 1px（口径见 style.md §滚动条让位）。 */\n.dshpc-modal__body{flex:1 1 auto;min-height:0;overflow:auto;padding:17px 18px;border-right:1px solid transparent}\n/* 底栏与头部同一口径（2026-11-02 用户）：上下内距相等、内容垂直居中、默认带一条分隔线。\n   线可由消费方关掉（Modal 的 footerDivider=false）—— 确认框家族本来就没有线（与头部一致）。 */\n.dshpc-modal .dshpc-modal__foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:18px;border-top:1px solid var(--dshpc-border)}\n.dshpc-modal .dshpc-modal__foot--bare{border-top:none}\n/* 底栏左侧的过程提示：吃掉按钮之外的剩余宽，超长交给 FlipText 省略 / hover 跑马灯。 */\n.dshpc-modal .dshpc-modal__notice{flex:1 1 auto;min-width:0;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3)}\n/* 自绘 toast 的样式在 2026-11-03 删除：Toast 早已改走宿主 toast()（Toast.ts 的 showNative），\n   .dshpc-toast* 这几个类没有任何消费者，留着只是死样式（还带着裸 z-index 与裸阴影）。 */\n.dshpc-error__retry{\n  margin-top:8px;color:var(--dshpc-link);cursor:pointer;background:none;border:none;padding:0;\n}\n/* 原生弹窗演示：经宿主 Modal 的 contentClassName 注入，证明宿主内容区尺寸可经类名自定义。 */\n.dshpc-native-demo-content{max-width:520px}\n/* 头部信号图标（AlertModal 按 severity 注入）：自含配色，色值在 tokens.css 的 --dshpc-sev-*。 */\n.dshpc-alert-sev{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:12px;color:var(--dshpc-on-signal);flex:none}\n.dshpc-alert-sev--info{background:var(--dshpc-sev-info)}\n.dshpc-alert-sev--success{background:var(--dshpc-sev-success)}\n.dshpc-alert-sev--warning{background:var(--dshpc-sev-warning)}\n.dshpc-alert-sev--error{background:var(--dshpc-sev-error)}\n/* 小确认框家族（sm）：严格抄兄弟项目 renderConfirm 的 dialogStyle（task-list.tsx:456）——\n   360px 宽 / 18px 内距 / 头部无分隔线 / 说明文字 fg-2 / 底部按钮右对齐。 */\n.dshpc-modal--sm{padding:18px}\n.dshpc-modal--sm .dshpc-overlay-head{padding:0 0 8px;border-bottom:none}\n.dshpc-modal--sm .dshpc-modal__body{padding:0 0 14px;overflow:visible;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-2);line-height:var(--dshpc-line-sm)}\n.dshpc-modal--sm .dshpc-modal__foot{padding:0;border-top:none}\n/* 锁定态（locked）：只给透明点击层做定位锚点，**不压任何遮罩** —— 盖灰会让人以为界面坏了；\n   变灰是各控件自己 :disabled 的事（Button / Input / Picker … 本来就有那套样式）。 */\n.dshpc-modal--locked{position:relative}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/infra/side-panel-css.generated.js
+		const SIDE_PANEL_CSS = "/* 侧边面板的公共皮肤 —— PanelDock（占宽分栏）与 SideSheet（覆盖抽屉）共用这一份。\n *\n * 分界：**皮肤在这里，定位各自写**。两者唯一的形态差异就是「怎么占位」——\n * PanelDock 用 sticky 占宽挤窄主区（panel-dock.css），SideSheet 用 absolute 盖在页面上（side-sheet.css）。\n *\n * 类名沿用 dshpc-dock__* 前缀：那是既有公开面（文档与消费方都在用），\n * 这里只搬文件不改名；新增的中性类是 .dshpc-side-surface（外观基类）。 */\n\n/* 入场：宽度从 0 长出来（keyframes 只写 from，终点取内联 / 状态宽度）。两边共用。 */\n@keyframes dshpc-side-in{from{width:0;opacity:0;overflow:hidden}}\n\n/* 外观基类：背景 / 文字色 / 阴影 / 纵向 flex。**不含** position、高度、边框方向、动画触发。 */\n.dshpc-side-surface{\n  box-sizing:border-box;\n  display:flex;flex-direction:column;flex:0 0 auto;min-width:0;\n  background:var(--dshpc-surface-base);color:var(--dshpc-fg);\n  box-shadow:var(--dshpc-shadow-2);\n  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease);\n  animation:dshpc-side-in .22s var(--dshpc-ease);\n}\n\n/* 头部：右侧 34px = 8(边距) + 20(关钮) + 6(呼吸)：给绝对定位的关钮留位，标题/extra 不从它底下钻。 */\n.dshpc-dock__head{\n  flex:none;display:flex;align-items:center;gap:8px;\n  padding:10px 34px 10px 14px;\n  border-bottom:1px solid var(--dshpc-border-faint);\n}\n/* 图标位 / 标题右侧的内容位：消费方传 ReactNode，可塞多个；库只负责排布，不抢宽度。 */\n.dshpc-dock__lead{display:inline-flex;align-items:center;gap:6px;flex:none;color:var(--dshpc-fg-2)}\n.dshpc-dock__extra{display:inline-flex;align-items:center;gap:6px;flex:none;margin-left:auto}\n/* 自定义头部：整行归调用方 —— 不加内边距/边框/背景，也不给关钮留内联空间（关钮是绝对定位的）。 */\n.dshpc-dock__head--custom{display:block;padding:0;border-bottom:none}\n.dshpc-dock__title{\n  flex:1 1 auto;min-width:0;\n  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\n  font-size:var(--dshpc-font-md);font-weight:600;\n}\n/* 关闭钮：20×20 方角图标位（与 Modal 的关闭钮同规格，不借 Picker 触发器皮肤）。 */\n.dshpc-dock__close{\n  display:inline-flex;align-items:center;justify-content:center;flex:none;\n  width:20px;height:20px;padding:0;border:none;border-radius:var(--dshpc-radius-sm);\n  background:transparent;color:var(--dshpc-fg-3);\n  font-family:inherit;font-size:13px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-dock__close:hover{background:var(--dshpc-hover);color:var(--dshpc-fg)}\n.dshpc-dock__close:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 头部关钮：绝对定位（top 10 / right 8），锚点是面板本身 —— 正文滚动它不跟滚。 */\n.dshpc-dock__close--abs{position:absolute;top:10px;right:8px;z-index:8}\n/* 浮动关钮：无头部面板用，略收一点边距。 */\n.dshpc-dock__close--floating{\n  position:absolute;top:6px;right:6px;z-index:8;\n  background:var(--dshpc-surface-menu);border:1px solid var(--dshpc-border-faint);\n}\n\n/* 内容区自己滚（面板高度锁死，内容不设内部滚动就会把页面撑高）。\n   透明右边框 = 滚动条与面板右缘隔 1px（口径见 style.md §滚动条让位）。 */\n.dshpc-dock__body{flex:1 1 auto;min-height:0;overflow:auto;border-right:1px solid transparent}\n\n/* 拖拽条：6px 命中区，**自己不画任何线**（贴在朝内那一侧，镜像由各自的定位文件做）。\n   hover / 拖动时把面板自己的边框染成蓝 —— 蓝线只准改原线，不准在旁边再加一条。\n   z-index 7 必须高于面板内容里的浮层（复制钮一类），否则命中区会被内容盖住。 */\n.dshpc-dock__resizer{\n  position:absolute;left:0;top:0;bottom:0;width:6px;\n  z-index:7;cursor:col-resize;background:transparent;\n}\n.dshpc-side-surface:has(> .dshpc-dock__resizer:hover),\n.dshpc-side-surface--resizing{\n  /* 原线保留「上下渐隐」工作区指示条质感：把面板自己的那条边框换成同款渐变。\n     面板四边里只有朝内一侧有宽度，所以渐变只落在那一侧。 */\n  border-image:linear-gradient(180deg,transparent,var(--dshpc-business) 30% 70%,transparent) 1;\n}\n/* 拖动期：① <iframe>（PDF / HTML 预览）是独立文档，会吞掉父文档的 pointermove ——\n   让出指针事件；② contain 把重排隔离在面板内，否则每帧改宽都会牵动整页重排。 */\n.dshpc-side-surface--resizing{contain:layout paint;will-change:width}\n.dshpc-side-surface--resizing iframe{pointer-events:none}\n\n/* 动效礼貌：系统声明减少动效时退化为瞬时（功能不受影响）。 */\n@media (prefers-reduced-motion:reduce){\n  .dshpc-side-surface{animation:none}\n}\n";
+		//#endregion
 		//#region node_modules/dsh-plugin-core/dist/ui/layout/resizer.js
 		/** 开始一次拖拽调宽（监听 window 的 pointermove / pointerup，松手自动清理）。 */
 		function startResizeLayoutWidth(opts) {
@@ -7744,6 +7776,456 @@ window.__ModuleLoader__.load({
 			}, ...rendered.map((entry) => renderItem(entry, leavingSet.has(entry.id))));
 		}
 		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/layout/panel-dock-logic.js
+		/**
+		* 停靠面板的状态逻辑（纯函数，零 React / 零 DOM）。
+		*
+		* 只记三件事：**哪些面板开着**、**每栏多宽**、**哪些收起成了耳朵**。
+		* 内容与头部不在这里——那是调用方在页面里声明的东西（`<DockPanel id="…">…</DockPanel>`），
+		* 与 Ant Design `Tabs` 的 `activeKey` + `<TabPane>` 同一分工：
+		* **显隐归状态，结构归 children**。
+		*
+		* 口径（用户 2026-10-20 定案）：
+		*   · 组名 = 窗口，一对一：`open('A')` 再 `open('A')` 只是重复打开，不新增一栏；
+		*   · 未到上限 ⇒ 追加；到上限 ⇒ 返回 `{ ok: false, reason: 'limit' }`，不静默丢弃；
+		*   · 关一栏即腾位，之后可以开新组名；
+		*   · 没有多份同名、没有自动淘汰、没有 tab 切换。
+		*
+		* 收起（用户 2026-10-28 定案）= **面板退出布局、换成一只独立的固定耳朵**，不是把栏宽缩细：
+		*   · `collapsePanel` 把组名从 `ids` 移到 `collapsed`，**宽度留着**（展开要回到原宽）；
+		*   · 耳朵是另一块 fixed 浮层，不在这里表达布局——这里只记「谁收起了」。
+		*/
+		/** 默认窗口的保留名：`open()` 不传 id 时用它。 */
+		const DEFAULT_PANEL_ID = "default";
+		function emptyDock() {
+			return {
+				ids: [],
+				widths: {},
+				collapsed: []
+			};
+		}
+		/** 夹到 [min, max]；`max` 缺省表示不设上限。NaN / Infinity 一律落回 min。 */
+		function clampWidth(value, min, max) {
+			const wide = Number.isFinite(value) ? value : min;
+			return Math.max(min, Math.round(max === void 0 || !Number.isFinite(max) ? wide : Math.min(wide, max)));
+		}
+		function isOpen(state, id) {
+			return state.ids.includes(id);
+		}
+		function isCollapsed(state, id) {
+			return state.collapsed.includes(id);
+		}
+		/**
+		* 打开一栏。已开 ⇒ 原样返回（`created: false`，位置不变）；
+		* 未开且已满 ⇒ 返回失败结果，状态不动。打开即撤销同名耳朵。
+		*/
+		function openPanel(state, id, maxPanels) {
+			if (isOpen(state, id)) return {
+				state,
+				result: {
+					ok: true,
+					id,
+					created: false
+				}
+			};
+			if (state.ids.length >= maxPanels) return {
+				state,
+				result: {
+					ok: false,
+					id,
+					reason: "limit"
+				}
+			};
+			return {
+				state: {
+					ids: [...state.ids, id],
+					widths: state.widths,
+					collapsed: state.collapsed.filter((item) => item !== id)
+				},
+				result: {
+					ok: true,
+					id,
+					created: true
+				}
+			};
+		}
+		/**
+		* 关一栏；不存在即原样返回（幂等）。宽度记忆随栏一起丢弃。
+		* 对已收起的耳朵也生效 —— 「关闭」= 彻底不留，耳朵一起抹掉（用户 2026-10-28 口径）。
+		*/
+		function closePanel(state, id) {
+			const open = isOpen(state, id);
+			const ear = isCollapsed(state, id);
+			if (!open && !ear) return state;
+			const widths = { ...state.widths };
+			delete widths[id];
+			return {
+				ids: open ? state.ids.filter((item) => item !== id) : state.ids,
+				widths,
+				collapsed: ear ? state.collapsed.filter((item) => item !== id) : state.collapsed
+			};
+		}
+		/** 记某栏宽度（已夹过）；值没变时原样返回，避免无谓重渲染。 */
+		function setPanelWidth(state, id, width) {
+			if (!isOpen(state, id)) return state;
+			if (state.widths[id] === width) return state;
+			return {
+				ids: state.ids,
+				widths: {
+					...state.widths,
+					[id]: width
+				},
+				collapsed: state.collapsed
+			};
+		}
+		/**
+		* 收起一栏：退出布局（从 `ids` 移除，**立即不占宽**），转入耳朵列表。
+		* 宽度**不删**——耳朵展开时要回到原宽。只对开着的栏生效。
+		*/
+		function collapsePanel(state, id) {
+			if (!isOpen(state, id)) return state;
+			return {
+				ids: state.ids.filter((item) => item !== id),
+				widths: state.widths,
+				collapsed: state.collapsed.includes(id) ? state.collapsed : [...state.collapsed, id]
+			};
+		}
+		/** 展开耳朵：移出耳朵列表、回到打开列表末尾；宽度照旧（`collapsePanel` 没删）。 */
+		function expandPanel(state, id) {
+			if (!isCollapsed(state, id)) return state;
+			return {
+				ids: state.ids.includes(id) ? state.ids : [...state.ids, id],
+				widths: state.widths,
+				collapsed: state.collapsed.filter((item) => item !== id)
+			};
+		}
+		/** 其他栏宽度之和（算「这一栏最多能拖多宽」用）。 */
+		function othersWidth(state, id, fallbackOf) {
+			return state.ids.reduce((sum, item) => {
+				if (item === id) return sum;
+				return sum + (state.widths[item] ?? fallbackOf(item));
+			}, 0);
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/layout/panel-dock-css.generated.js
+		const PANEL_DOCK_CSS = "/* 停靠栏 = **布局成员**，不是浮层：它占宽度、把主区真正挤窄（兄弟项目 2026-09-28：\n   「分栏压过来，不是盖上去」）。所以调用方必须把它放进自己的 flex 根里。\n   皮肤（头部 / 拖拽条 / 关闭钮 / 背景阴影）在 side-panel.css，与 SideSheet 共用。 */\n.dshpc-dock{display:flex;flex:0 0 auto;align-self:stretch;min-width:0}\n/* dock 不再替主区让缝（原 --dshpc-dock-gap 的 1px margin 已删，用户 2026-11-02）：\n   滚动条与容器边缘的 1px 统一由滚动容器自己的透明边框提供（见 style.md §滚动条让位），\n   主区容器带了让位，滚动条与这条分隔线之间自然还是 1px。别再往这里加 margin。 */\n\n/* 自动加的宿主行（openFilePreview 加 / 关闭即摘）：消费方那行不必自己写 flex。\n   只让「第一个非预览子项」当主区伸展，其余直接子项不动（页脚条、工具条不误伤）；\n   display 不在这里写死 —— 本来就是 grid 等布局的元素保持原样，由 TS 侧按计算值补 flex。 */\n.dshpc-dock-host{min-width:0;min-height:0}\n.dshpc-dock-host>:not([data-dshpc-file-preview]){min-width:0}\n.dshpc-dock-host>:first-child:not([data-dshpc-file-preview]){flex:1 1 auto}\n\n/* 单栏**占位**：sticky + 视口高让它在页面滚动时保持可见，同时仍然占宽度。\n   ⚠️ **本条刻意不设 z-index**：布局成员一旦带正 z-index，就会无条件压过宿主 portal 到 body 的\n   弹窗（兄弟项目 2026-10-05 真机事故「侧边栏盖住宿主设置弹窗」）。层序交给 DOM 顺序裁决。\n   外观来自 .dshpc-side-surface（side-panel.css），这里只管怎么占位与朝哪边描边。 */\n.dshpc-dock__panel{\n  position:sticky;top:0;align-self:stretch;\n  /* 高度默认视口高（整页场景）；嵌在定高容器里时由调用方给 --dshpc-dock-h（如 420px / 100%）。 */\n  height:var(--dshpc-dock-h,100vh);max-height:var(--dshpc-dock-h,100vh);\n  border-left:1px solid var(--dshpc-border);\n}\n/* 收起的出场：宽度收到 0、透明淡出；落定后组件才真正摘掉这一栏（JS 延时 220ms 配合）。 */\n.dshpc-dock__panel--closing{\n  width:0!important;min-width:0!important;opacity:0;border-left-width:0;\n  transition:width .2s var(--dshpc-ease),opacity .2s var(--dshpc-ease),border-left-width .2s var(--dshpc-ease);\n}\n\n/* 拖动期：① <iframe>（PDF / HTML 预览）是独立文档，会吞掉父文档的 pointermove，\n   向右拖进 iframe 就卡死 —— 整片让出指针事件；② contain 把重排隔离在栏内，\n   否则每帧改宽度都会牵动整页重排（兄弟项目 2026-10-04 真机「挪很久才动一下」）。 */\n.dshpc-dock.dshpc-dock--resizing iframe{pointer-events:none}\n.dshpc-dock.dshpc-dock--resizing .dshpc-dock__panel{contain:layout paint;will-change:width}\n\n/* 收起钮：**待在面板自己的框里**（用户 2026-10-28 三轮：占面板内部空间，不伸到外面去）。\n   left:0 从内侧贴着分隔线 —— 贴线的一边不描边（线是面板自己的 border-left），页签与线不重合。\n   20×44（用户 2026-10-28 四轮定尺寸）；实色底（--dshpc-plate，明暗各有实值），hover 亮一档。\n   padding-right:2px 是**视觉居中**：右侧是圆角，箭头往直线那边挪 1px（用户 2026-10-28 四轮）。 */\n.dshpc-dock__collapse{\n  position:absolute;left:0;top:50%;transform:translateY(-50%);\n  z-index:8;display:inline-flex;align-items:center;justify-content:center;\n  width:20px;height:44px;padding:0 2px 0 0;\n  border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  border-right:1px solid var(--dshpc-border);\n  border-left:none;\n  border-radius:0 var(--dshpc-radius-sm) var(--dshpc-radius-sm) 0;\n  background:var(--dshpc-plate);color:var(--dshpc-fg-3);\n  font-family:inherit;font-size:16px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-dock__collapse:hover{background:var(--dshpc-plate-hover);color:var(--dshpc-fg)}\n.dshpc-dock__collapse:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n\n/* 收起后的浮动耳朵：**fixed 贴右缘、垂直居中、独立于分栏**（用户 2026-10-28 定稿：\n   小页签挂中间、里面放面板图标、不显示文字，箭头与收起钮反向）。多个按收起顺序纵向堆叠。\n   z 走 ear 档（高于弹窗遮罩，2026-11-04）：面板在弹窗下面时，耳朵仍是唯一能点到的入口。\n   DOM 上 portal 到 body（PanelDock.ts），否则会被弹窗的 stacking context 关在里面。 */\n.dshpc-dock__ears{\n  position:fixed;top:50%;right:0;transform:translateY(-50%);\n  z-index:var(--dshpc-z-ear,1080);\n  display:flex;flex-direction:column;gap:8px;align-items:flex-end;\n  pointer-events:none;\n}\n.dshpc-dock__ear{\n  pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;\n  /* 与收起钮**同尺寸**（20×44，用户 2026-10-28 四轮）：上/下/左描边，贴右缘的一侧不描。\n     实色底（--dshpc-plate），不用透明色 —— 透明底下透出东西很难看。\n     padding-left:2px 是**视觉居中**：左侧是圆角，箭头往直线（右缘）那边挪 1px。 */\n  width:20px;height:44px;box-sizing:border-box;padding:0 0 0 2px;\n  border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  border-left:1px solid var(--dshpc-border);\n  border-right:none;\n  border-radius:var(--dshpc-radius-sm) 0 0 var(--dshpc-radius-sm);\n  background:var(--dshpc-plate);color:var(--dshpc-fg-2);\n  cursor:pointer;font-family:inherit;line-height:1;\n  animation:dshpc-ear-in .2s var(--dshpc-ease);\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n/* 入场：从右缘外滑进来，别「突然出现」（用户 2026-10-28）。 */\n@keyframes dshpc-ear-in{from{opacity:0;transform:translateX(14px)}}\n.dshpc-dock__ear:hover{background:var(--dshpc-plate-hover);color:var(--dshpc-fg)}\n.dshpc-dock__ear:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 与收起钮的箭头同一字号（16px）：收进去前后箭头一模一样大（用户 2026-10-28）。 */\n.dshpc-dock__ear-arrow{font-size:16px;color:var(--dshpc-fg-3)}\n.dshpc-dock__ear:hover .dshpc-dock__ear-arrow{color:var(--dshpc-fg)}\n/* 动效礼貌：系统声明减少动效时全部关掉，收起退化为瞬时、功能不受影响。 */\n@media (prefers-reduced-motion:reduce){\n  .dshpc-dock__panel{animation:none}\n  .dshpc-dock__panel--closing{transition:none}\n  .dshpc-dock__ear{animation:none}\n}\n";
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/ui/layout/PanelDock.js
+		/**
+		* 停靠面板（PanelDock）—— 可停靠的右侧分栏容器。
+		*
+		* 形态：**布局成员，不是浮层**。占宽度、把主区挤窄，因此必须由调用方放进自己的
+		* flex 根容器里；不能像 Modal 那样自挂 `document.body`（自挂只能遮盖、挤不窄）。
+		*
+		* 分工照成熟组件库的通行做法（Ant Design `Tabs` / `Drawer` 同一套）：
+		*   · **结构写在调用点** —— `<PanelDock dock={dock}><DockPanel id="files">…</DockPanel></PanelDock>`；
+		*   · **显隐归状态** —— `dock.open('files')` / `dock.close('files')`，只传 id，不传内容；
+		*   · **头部可控** —— `title` / `icon` / `extra` 三件套；要更自由就 `header` 整块替换，`header={null}` 表示不要头部；
+		*   · **关闭钮可退让** —— `closable={false}` 不出；`closeButton="floating"` 浮在右上角，不占头部布局。
+		*/
+		const INSET_VAR = "--dshpc-page-inset-right";
+		const dockInsets = /* @__PURE__ */ new Map();
+		let dockSeq = 0;
+		function publishInset(key, width, el) {
+			for (const [stale, entry] of dockInsets) if (entry.el !== null && !entry.el.isConnected) dockInsets.delete(stale);
+			if (width > 0) dockInsets.set(key, {
+				width,
+				el
+			});
+			else dockInsets.delete(key);
+			if (typeof document === "undefined") return;
+			let total = 0;
+			for (const entry of dockInsets.values()) total += entry.width;
+			const style = document.documentElement.style;
+			if (total > 0) style.setProperty(INSET_VAR, `${Math.round(total)}px`);
+			else style.removeProperty(INSET_VAR);
+		}
+		/**
+		* 声明一个面板。**它自己不渲染任何东西**——由父级 `<PanelDock>` 读它的 props 后统一画。
+		* 因此必须作为 `<PanelDock>` 的**直接子元素**（可以条件渲染成 `null`）。
+		*/
+		function DockPanel(_props) {
+			return null;
+		}
+		function readStoredWidth(key) {
+			try {
+				if (typeof localStorage === "undefined") return null;
+				const raw = localStorage.getItem(key);
+				if (raw === null) return null;
+				const value = Number(raw);
+				return Number.isFinite(value) ? value : null;
+			} catch {
+				return null;
+			}
+		}
+		function writeStoredWidth(key, width) {
+			try {
+				if (typeof localStorage === "undefined") return;
+				localStorage.setItem(key, String(width));
+			} catch {}
+		}
+		/**
+		* 造一个面板控制器。状态在它身上，组件用 `useSyncExternalStore` 订阅。
+		*
+		* 为什么状态不放在组件里：开门/关门常常发生在按钮 onClick、事件回调里（命令式），
+		* 而**内容与头部仍在调用点声明**——这正是 Tabs 那种「状态 + children」的分工。
+		*/
+		function createPanelDock(options = {}) {
+			const maxPanels = options.maxPanels ?? 3;
+			const defaultWidth = options.defaultWidth ?? 460;
+			const minWidth = options.minWidth ?? 320;
+			const storageKey = options.storageKey ?? "dshpc-dock";
+			const widthKey = (id) => storageKey === false ? "" : `${storageKey}:width:${id}`;
+			let state = emptyDock();
+			const listeners = /* @__PURE__ */ new Set();
+			const emit = (next) => {
+				if (next === state) return;
+				state = next;
+				for (const listener of listeners) listener();
+			};
+			const controller = {
+				defaults: {
+					maxPanels,
+					defaultWidth,
+					minWidth
+				},
+				open(id = DEFAULT_PANEL_ID) {
+					const { state: next, result } = openPanel(state, id, maxPanels);
+					if (result.ok && result.created) {
+						const stored = storageKey === false ? null : readStoredWidth(widthKey(id));
+						emit(stored === null ? next : setPanelWidth(next, id, stored));
+						options.onOpen?.({
+							id,
+							created: true
+						});
+					} else if (result.ok) emit(next);
+					else options.onLimitReached?.({ id });
+					return result;
+				},
+				close(id = DEFAULT_PANEL_ID, reason = "api") {
+					if (!isOpen(state, id) && !isCollapsed(state, id)) return;
+					if (options.onBeforeClose?.({
+						id,
+						reason
+					}) === false) return;
+					emit(closePanel(state, id));
+					options.onClose?.({
+						id,
+						reason
+					});
+				},
+				toggle(id = DEFAULT_PANEL_ID) {
+					if (controller.isOpen(id)) {
+						controller.close(id, "api");
+						return {
+							ok: true,
+							id,
+							created: false
+						};
+					}
+					return controller.open(id);
+				},
+				collapse(id = DEFAULT_PANEL_ID) {
+					if (!isOpen(state, id)) return;
+					emit(collapsePanel(state, id));
+				},
+				expand(id = DEFAULT_PANEL_ID) {
+					if (!isCollapsed(state, id)) return;
+					if (state.ids.length >= maxPanels) {
+						options.onLimitReached?.({ id });
+						return;
+					}
+					emit(expandPanel(state, id));
+				},
+				isOpen(id = DEFAULT_PANEL_ID) {
+					return isOpen(state, id);
+				},
+				isCollapsed(id = DEFAULT_PANEL_ID) {
+					return isCollapsed(state, id);
+				},
+				ids() {
+					return state.ids;
+				},
+				setWidth(id, width) {
+					const next = setPanelWidth(state, id, width);
+					if (next === state) return;
+					emit(next);
+					if (storageKey !== false) writeStoredWidth(widthKey(id), width);
+					options.onResize?.({
+						id,
+						width
+					});
+				},
+				subscribe(listener) {
+					listeners.add(listener);
+					return () => {
+						listeners.delete(listener);
+					};
+				},
+				getSnapshot() {
+					return state;
+				}
+			};
+			return controller;
+		}
+		/** 收集直接子元素里的 `<DockPanel>`；顺序即渲染顺序（与打开顺序无关，稳定）。 */
+		function panesOf(children) {
+			const out = [];
+			react$1.Children.forEach(children, (child) => {
+				if ((0, react$1.isValidElement)(child) && child.type === DockPanel) out.push(child.props);
+			});
+			return out;
+		}
+		/** 停靠栏本体：只渲染「开着的」面板，结构取自对应的 `<DockPanel>`。 */
+		function PanelDock(props) {
+			ensureComponentStyles("side-panel", SIDE_PANEL_CSS);
+			ensureComponentStyles("panel-dock", PANEL_DOCK_CSS);
+			ensureComponentStyles("feedback", FEEDBACK_CSS);
+			const tt = props.translate ?? t$1;
+			const state = (0, react$1.useSyncExternalStore)(props.dock.subscribe, props.dock.getSnapshot, props.dock.getSnapshot);
+			const rootRef = (0, react$1.useRef)(null);
+			const panelRefs = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			const panes = panesOf(props.children);
+			const { defaultWidth, minWidth: fallbackMin } = props.dock.defaults;
+			const widthOf = (pane) => clampWidth(state.widths[pane.id] ?? pane.width ?? defaultWidth, pane.minWidth ?? fallbackMin, pane.maxWidth);
+			const earLabelOf = (id) => {
+				const pane = panes.find((item) => item.id === id);
+				if (pane === void 0) return id;
+				if (typeof pane.title === "string") return pane.title;
+				if (typeof pane.ariaLabel === "string") return pane.ariaLabel;
+				return id;
+			};
+			const [closing, setClosing] = (0, react$1.useState)([]);
+			const collapseWithAnim = (id) => {
+				setClosing((prev) => prev.includes(id) ? prev : [...prev, id]);
+				window.setTimeout(() => {
+					setClosing((prev) => prev.filter((item) => item !== id));
+					props.dock.collapse(id);
+				}, 220);
+			};
+			const prevIds = (0, react$1.useRef)(state.ids);
+			(0, react$1.useEffect)(() => {
+				const gone = prevIds.current.filter((id) => !state.ids.includes(id) && !state.collapsed.includes(id));
+				prevIds.current = state.ids;
+				if (gone.length === 0) return;
+				setClosing((prev) => [...prev, ...gone.filter((id) => !prev.includes(id))]);
+				window.setTimeout(() => setClosing((prev) => prev.filter((id) => !gone.includes(id))), 220);
+			}, [state.ids, state.collapsed]);
+			const insetKey = (0, react$1.useRef)("");
+			if (insetKey.current === "") insetKey.current = `dock-${++dockSeq}`;
+			const restWidth = (paneId) => othersWidth(state, paneId, (id) => {
+				const other = panes.find((item) => item.id === id);
+				return other === void 0 ? defaultWidth : widthOf(other);
+			});
+			const totalWidth = panes.filter((pane) => state.ids.includes(pane.id)).reduce((sum, pane) => sum + widthOf(pane), 0);
+			(0, react$1.useEffect)(() => {
+				publishInset(insetKey.current, state.ids.length > 0 ? totalWidth : 0, rootRef.current);
+			});
+			(0, react$1.useEffect)(() => () => {
+				publishInset(insetKey.current, 0, null);
+			}, []);
+			for (const id of state.ids) if (!panes.some((pane) => pane.id === id)) console.warn(`[dsh-plugin-core] PanelDock: 面板 "${id}" 已打开但没有对应的 <DockPanel id="${id}"> 声明`);
+			const beginResize = (pane, event) => {
+				const element = panelRefs.current.get(pane.id);
+				if (element === void 0 || typeof window === "undefined") return;
+				const startX = event.clientX;
+				const startWidth = widthOf(pane);
+				const min = pane.minWidth ?? fallbackMin;
+				const mainMin = props.mainMinWidth ?? 480;
+				element.classList.add("dshpc-dock__panel--resizing");
+				startResizeLayoutWidth({
+					startEvent: event,
+					root: rootRef.current,
+					rootClass: "dshpc-dock--resizing",
+					rafThrottle: true,
+					compute: (clientX) => {
+						const viewportMax = window.innerWidth - restWidth(pane.id) - mainMin;
+						const businessMax = pane.maxWidth ?? Number.POSITIVE_INFINITY;
+						const max = Math.min(viewportMax, businessMax);
+						return clampWidth(startWidth + (startX - clientX), min, Math.max(min, max));
+					},
+					onMove: (width) => {
+						element.style.width = `${width}px`;
+						publishInset(insetKey.current, restWidth(pane.id) + width, rootRef.current);
+					},
+					onCommit: (width) => {
+						element.classList.remove("dshpc-dock__panel--resizing");
+						props.dock.setWidth(pane.id, width);
+					}
+				});
+			};
+			const headerCloseOf = (pane) => {
+				const closable = pane.closable !== false;
+				const mode = pane.closeButton ?? "auto";
+				const hasHeader = pane.header !== null;
+				if (!closable || !(mode === "header" || mode === "auto" && hasHeader)) return null;
+				return (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dshpc-dock__close dshpc-dock__close--abs",
+					"aria-label": tt("dockClose"),
+					onClick: () => props.dock.close(pane.id, "button")
+				}, pane.closeIcon ?? "✕");
+			};
+			const renderHeader = (pane) => {
+				if (pane.header === null) return null;
+				if (pane.header !== void 0) return (0, react$1.createElement)("div", { className: "dshpc-dock__head dshpc-dock__head--custom" }, pane.header);
+				return (0, react$1.createElement)("div", { className: "dshpc-dock__head" }, pane.icon === void 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-dock__lead" }, pane.icon), (0, react$1.createElement)("div", { className: "dshpc-dock__title" }, pane.title), pane.extra === void 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-dock__extra" }, pane.extra));
+			};
+			const floatingCloseOf = (pane) => {
+				if (pane.closable === false) return null;
+				const mode = pane.closeButton ?? "auto";
+				const hasHeader = pane.header !== null;
+				if (mode !== "floating" && !(mode === "auto" && !hasHeader)) return null;
+				return (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dshpc-dock__close dshpc-dock__close--floating",
+					"aria-label": tt("dockClose"),
+					onClick: () => props.dock.close(pane.id, "button")
+				}, pane.closeIcon ?? "✕");
+			};
+			const rootClass = `dshpc-dock${state.ids.length > 0 ? " dshpc-dock--open" : ""}${props.className === void 0 ? "" : ` ${props.className}`}`;
+			const ears = state.collapsed.length === 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-dock__ears" }, state.collapsed.map((id) => {
+				const label = earLabelOf(id);
+				return (0, react$1.createElement)("button", {
+					key: id,
+					type: "button",
+					className: "dshpc-dock__ear",
+					"aria-label": `${label} · ${tt("dockExpand")}`,
+					onClick: () => props.dock.expand(id)
+				}, (0, react$1.createElement)("span", {
+					className: "dshpc-dock__ear-arrow",
+					"aria-hidden": true
+				}, "‹"));
+			}));
+			return (0, react$1.createElement)("div", {
+				ref: rootRef,
+				className: rootClass
+			}, panes.filter((pane) => state.ids.includes(pane.id) || closing.includes(pane.id)).map((pane) => (0, react$1.createElement)("section", {
+				key: pane.id,
+				ref: (element) => {
+					if (element === null) panelRefs.current.delete(pane.id);
+					else panelRefs.current.set(pane.id, element);
+				},
+				className: `dshpc-side-surface dshpc-dock__panel${closing.includes(pane.id) ? " dshpc-dock__panel--closing" : ""}`,
+				style: { width: `${widthOf(pane)}px` },
+				"data-panel": pane.id,
+				"aria-label": pane.ariaLabel ?? (typeof pane.title === "string" ? pane.title : pane.id)
+			}, (0, react$1.createElement)("div", {
+				className: "dshpc-dock__resizer",
+				role: "separator",
+				"aria-orientation": "vertical",
+				"aria-label": tt("dockResize"),
+				onPointerDown: (event) => {
+					beginResize(pane, event);
+				}
+			}), (0, react$1.createElement)("button", {
+				type: "button",
+				className: "dshpc-dock__collapse",
+				"aria-label": tt("dockCollapse"),
+				onClick: () => collapseWithAnim(pane.id)
+			}, "›"), renderHeader(pane), headerCloseOf(pane), floatingCloseOf(pane), (0, react$1.createElement)("div", { className: "dshpc-dock__body" }, pane.children ?? null))), ears === null || typeof document === "undefined" ? null : (0, react_dom.createPortal)(ears, document.body));
+		}
+		//#endregion
 		//#region src/client/ui/style.ts
 		/**
 		* 样式注入器（薄壳）：实现全部交给 `dsh-plugin-core` 的 style kit。
@@ -7834,8 +8316,8 @@ window.__ModuleLoader__.load({
 /* 官方 Switch 包装统一：选中 = success 绿。 */
 .dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
 
-/* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
-   具体 z-index 由 .dsh-tdt-ed-resizer / .dsh-tdt-sv-resizer 各自补。 */
+/* 拖拽分隔条（本仓编辑分栏用；预览 dock 的拖拽条已归核心 PanelDock）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
+   z-index 由 .dsh-tdt-ed-resizer 补。 */
 .dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
 .dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--dshpc-hover,rgba(38,49,72,.06));}
 `;
@@ -54522,27 +55004,11 @@ window.__ModuleLoader__.load({
 		//#region src/client/archive-session-css.ts
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
-/* 弹窗让位右侧分栏：预览 dock（--dsh-tdt-preview-w）+ 编辑分栏（--dsh-tdt-editor-w，U21 起）
-   两条都算进来 ⇒ 右侧留出的宽度 = 两者之和（缺省各 0），弹窗不遮盖任何一条分栏；
-   两条同时开着时也是一个加法，无需特判（用户 2026-10-01 Q4）。
+/* 弹窗让位右侧分栏：预览 dock 的宽度由核心 PanelDock 发布在 documentElement 的
+   --dshpc-page-inset-right（核心 openFilePreview 的约定变量），编辑分栏是本仓的 --dsh-tdt-editor-w。
+   两条都算进来 ⇒ 弹窗不遮盖任何一条分栏；两条同时开着时也是一个加法，无需特判（用户 2026-10-01 Q4）。
    与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/features/artifact-opening.md §四-C）。 */
-.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dshpc-mask,rgba(0,0,0,.45));transition:right .12s var(--dshpc-ease,ease);}
-/* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
-   滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
-   sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
-   弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。
-   ⚠️ **本条不设 z-index**：它是 sticky 布局成员、不是浮层；一旦给它显式正 z-index，就会无条件
-   压过宿主 portal 到 body 的弹窗（「系统设置」等，官方 Modal 后挂载居上只在**同层**时成立）
-   ⇒ 真机 2026-10-05「侧边栏盖住宿主设置弹窗」。去掉后由 DOM 顺序裁决，宿主弹窗回到上层。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));box-shadow:var(--dshpc-shadow-2,0 12px 32px rgba(0,0,0,.4));}
-/* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize，**不画任何线**（用户 2026-09-28）。
-   高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
-   **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
-   （--dshpc-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
-/* z-index 7：必须高于源码态 CodeViewer 内容（复制钮 z-index:5 + cm-editor 正文）；
-   z-index:5 时会被 CodeViewer 复制钮/代码体盖住，真机 2026-10-04 表现为「浅灰竖条在源码标题行处断开」即此。 */
-/* 拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index:7（高于 CodeViewer 复制钮，真机 2026-10-04）。 */
-.dsh-tdt-sv-resizer{z-index:7;}
+.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dshpc-page-inset-right,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dshpc-mask,rgba(0,0,0,.45));transition:right .12s var(--dshpc-ease,ease);}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 面板底色 = 官方会话面 --dshpc-surface-base（官方 chat 页即此色）：
    官方 ReasoningRow 展开行是 sticky + background:var(--dshpc-surface-base)（ReasoningRow.module.css），
@@ -54730,18 +55196,13 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-turnerr-code{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font:var(--dshpc-code-font,12px/18px var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
 .dsh-tdt-sv-turnerr-warn{color:var(--dshpc-warning,#f5a623);margin-right:6px;font-weight:600;}
 
-/* ── U11 产出物预览（决策 39）：页面级 dock 预览面（弹窗与整页共用，见上方 dock 规则） ──
-   旧「弹窗内右侧分栏」那两条规则已随第三轮上提删除（预览面唯一且页面级）。 */
+/* ── U11 产出物预览（决策 39）：页面级预览面（弹窗与整页共用同一个核心 openFilePreview dock） ──
+   旧「弹窗内右侧分栏」那条规则已随第三轮上提删除（预览面唯一且页面级）。 */
 /* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
    ⇒ 向右拖（缩小）时指针走进 PDF 就卡死（真机 2026-10-03）。拖动期间整片 iframe 让出指针事件。 */
 .dsh-tdt-root.dsh-tdt-resizing iframe{pointer-events:none;}
-/* 拖拽期把 dock 的布局/绘制**隔离**：改宽度不再牵动整页重排（dock 内常驻上万行高亮 DOM，
-   不隔离时每帧重排全页 ⇒ 真机 2026-10-04「挪很久才动一下」）。 */
-.dsh-tdt-root.dsh-tdt-resizing .dsh-tdt-sv-preview-dock{contain:layout paint;will-change:width;}
-.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dshpc-border,rgba(128,128,128,.35));background:var(--dshpc-surface-base,#1a1a1a);}
-/* 文件浏览 / 预览（面包屑 / 目录树 / 源码 / HTML 预览）已整体改用核心 dsh-plugin-core/adv/explorer，
-   本地 .dsh-tdt-sv-preview-head/body/tree/cm-* 等 91 行规则已删（2026-11-06）；此处只留 dock 外壳。 */
-.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:var(--dshpc-font-sm);line-height:1.6;color:var(--dshpc-fg-2,rgba(128,128,128,.95));padding:8px 0;}
+/* 文件浏览 / 预览（面包屑 / 目录树 / 源码 / HTML 预览）已整体改用核心 dsh-plugin-core/adv/explorer
+   （页面级预览走核心 openFilePreview，自带 PanelDock 外壳；本地 dock / 拖拽 / 预览体规则已删，2026-11-06）。 */
 /* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
 /* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
 .dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--dshpc-fg-2,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:var(--dshpc-font-sm);display:flex;}
@@ -58149,7 +58610,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			return typeof error === "object" && error !== null && error.name === "AbortError";
 		}
 		/** 宿主绝对路径形态（/ 开头或 Windows 盘符）。 */
-		function isAbsoluteish$1(p) {
+		function isAbsoluteish(p) {
 			return p.startsWith("/") || p.startsWith("\\") || /^[a-zA-Z]:[\\/]/.test(p);
 		}
 		function matchesFilter(path, isDir, filter) {
@@ -58185,7 +58646,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const normalized = normalizePath(dir);
 			const drive = /^([a-zA-Z]):(\/|$)/.exec(normalized);
 			const body = drive === null ? normalized : normalized.slice(2);
-			const isAbs = drive === null && isAbsoluteish$1(normalized);
+			const isAbs = drive === null && isAbsoluteish(normalized);
 			const segs = body.split("/").filter((s) => s.length > 0);
 			const out = [];
 			let acc = "";
@@ -58210,7 +58671,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		* 与 `workspaceAnchorForPath` 的区别：这里不要求该工作区有会话 —— 浏览已经不吃会话了。
 		*/
 		function workspaceOfPath(path, items) {
-			if (!isAbsoluteish$1(path)) return null;
+			if (!isAbsoluteish(path)) return null;
 			const target = normalizePath(path);
 			let best = null;
 			let bestLen = -1;
@@ -58899,7 +59360,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		*/
 		const FS_ROOT = "/";
 		/** 目录浏览器面板。详见 {@link FileBrowserProps}。 */
-		function FileBrowser$1(props) {
+		function FileBrowser(props) {
 			ensureComponentStyles("explorer", EXPLORER_CSS);
 			ensureComponentStyles("panel", PANEL_CSS);
 			useLocale();
@@ -58962,7 +59423,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			const rootBase = anchorMatch?.path ?? props.rootPath ?? sessionAnchor?.path ?? anchors.find((item) => item.path !== void 0)?.path;
 			/** 任意入参 → 绝对路径（FS 面只认绝对路径）。 */
 			const absOf = (0, react$1.useCallback)((p) => {
-				if (isAbsoluteish$1(p)) return normalizePath(p);
+				if (isAbsoluteish(p)) return normalizePath(p);
 				if (rootBase === void 0 || rootBase === "") return p === "" ? FS_ROOT : p;
 				return p === "" ? normalizePath(rootBase) : normalizePath(`${rootBase}/${p.replace(/^\/+/, "")}`);
 			}, [rootBase]);
@@ -59487,70 +59948,371 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		function getFsFace() {
 			return current;
 		}
-		//#endregion
-		//#region src/client/file-browser.tsx
-		/** 绝对路径判定（POSIX `/` 或 Windows 盘符）。 */
-		function isAbsoluteish(path) {
-			return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path);
-		}
-		/** 会话所属工作区的绝对根（宿主快照真值；拿不到 = ''）。 */
-		function rootOfSession(sessionId) {
-			return workspaceList.getSnapshot().find((ws) => (ws.sessionIds ?? []).includes(sessionId))?.path ?? "";
-		}
-		/** 按显示名取工作区绝对根（选择器用；拿不到 = ''）。 */
-		function rootOfWorkspace(name) {
-			if (name === void 0) return "";
-			return workspaceList.getSnapshot().find((ws) => ws.title === name)?.path ?? "";
-		}
-		/** 相对路径拼到根上（只处理 `/` 与 Windows 分隔符；不引入 path 依赖）。 */
-		function resolvePath(root, path) {
-			if (path === "") return root;
-			if (isAbsoluteish(path) || root === "") return path;
-			return `${root.replace(/[\\/]+$/, "")}/${path}`;
+		function clamp(value, low, high) {
+			return Math.min(Math.max(value, low), Math.max(low, high));
 		}
 		/**
-		* 文件浏览 / 预览（页面级 dock 或选择器浮层）。
-		* 浏览本体全部走核心；这里只负责外壳与路径口径。
+		* 决定最终落在哪一侧：优先侧够用就守，够不上但对侧更宽敞就翻过去，两边都窄就守原侧交给夹紧。
+		*
+		* @param preferred 是否落在「正方向」（下方 / 右侧）。
+		* @param own 优先那侧的可用空间。
+		* @param other 对侧的可用空间。
+		* @param min 该侧「够用」的门槛（竖向是 `PICKER_MIN_H`，横向是 `PICKER_MIN_W`）。
+		* @returns 最终是否落在正方向。
 		*/
-		function FileBrowser(props) {
-			const { officeToPdf, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props;
+		function flipSide(preferred, own, other, min) {
+			if (own >= min) return preferred;
+			return other > own ? !preferred : preferred;
+		}
+		/**
+		* 算面板盒子。
+		*
+		* @param anchor 锚点矩形（按钮的 `getBoundingClientRect()`）。
+		* @param viewport 视口尺寸。
+		* @param placement 展开方位，默认 `'auto'`（= 旧行为，不破坏既有调用）。
+		* @returns 四舍五入到整数像素的 `{ left, top, width, height }`。
+		*/
+		function placePicker(anchor, viewport, placement = "auto") {
+			const vw = viewport.width;
+			const vh = viewport.height;
+			const GAP = 12;
+			const EDGE = 12;
+			const fullWidth = Math.min(480, Math.max(vw - 24, 0));
+			if (placement === "auto") {
+				const availBelow = vh - EDGE - (anchor.bottom + GAP);
+				const availAbove = anchor.top - GAP - EDGE;
+				const below = flipSide(true, availBelow, availAbove, 240);
+				const height = Math.max(Math.min(480, below ? availBelow : availAbove), 160);
+				return round({
+					left: clamp(anchor.left, EDGE, vw - EDGE - fullWidth),
+					top: below ? clamp(Math.min(anchor.bottom + GAP, vh - EDGE - height), EDGE, vh - EDGE - height) : clamp(anchor.top - GAP - height, EDGE, vh - EDGE - height),
+					width: fullWidth,
+					height
+				});
+			}
+			if (placement.startsWith("bottom") || placement.startsWith("top")) {
+				const belowAvail = vh - EDGE - (anchor.bottom + GAP);
+				const aboveAvail = anchor.top - GAP - EDGE;
+				const startAligned = placement.endsWith("start");
+				const prefersBelow = placement.startsWith("bottom");
+				const below = flipSide(prefersBelow, prefersBelow ? belowAvail : aboveAvail, prefersBelow ? aboveAvail : belowAvail, 240);
+				const height = Math.max(Math.min(480, below ? belowAvail : aboveAvail), 160);
+				return round({
+					left: clamp(startAligned ? anchor.left : anchor.right - fullWidth, EDGE, vw - EDGE - fullWidth),
+					top: clamp(below ? anchor.bottom + GAP : anchor.top - GAP - height, EDGE, vh - EDGE - height),
+					width: fullWidth,
+					height
+				});
+			}
+			const startAligned = placement.endsWith("start");
+			const rightAvail = vw - EDGE - (anchor.right + GAP);
+			const leftAvail = anchor.left - GAP - EDGE;
+			const prefersRight = placement.startsWith("right");
+			const toRight = flipSide(prefersRight, prefersRight ? rightAvail : leftAvail, prefersRight ? leftAvail : rightAvail, 240);
+			const width = Math.max(Math.min(480, toRight ? rightAvail : leftAvail), Math.min(240, Math.max(vw - 24, 0)));
+			const height = Math.min(480, Math.max(vh - 24, 0));
+			return round({
+				left: clamp(toRight ? anchor.right + GAP : anchor.left - GAP - width, EDGE, vw - EDGE - width),
+				top: clamp(startAligned ? anchor.top : anchor.bottom - height, EDGE, vh - EDGE - height),
+				width,
+				height
+			});
+		}
+		function round(box) {
+			return {
+				left: Math.round(box.left),
+				top: Math.round(box.top),
+				width: Math.round(box.width),
+				height: Math.round(box.height)
+			};
+		}
+		//#endregion
+		//#region node_modules/dsh-plugin-core/dist/adv/explorer/open.js
+		/**
+		* 入参路径解析成**绝对路径**（`''` = 虚拟根）。用户 2026-11-03 定：绝对/相对都收。
+		*
+		* 相对路径必须有一个基准：显式 `sessionId` 所属工作区优先，其次「最近有会话的工作区」。
+		* 解析不出 ⇒ `null`（调用方提示 `explorerNoBase`，不猜）。
+		*/
+		function resolveStartPath(path, anchors, sessionId) {
+			if (path === "") return "";
+			if (isAbsoluteish(path)) return normalizePath(path);
+			const base = (sessionId === void 0 ? void 0 : anchors.find((item) => item.sessionIds?.includes(sessionId) === true && item.path !== void 0))?.path ?? anchors.find((item) => item.path !== void 0)?.path;
+			if (base === void 0) return null;
+			return normalizePath(`${normalizePath(base)}/${path.replace(/^\/+/, "")}`);
+		}
+		/**
+		* 给 `FileBrowser` 的 `rootPath`：路径所属工作区的真实根（dock 与 picker 共用这一份推导）。
+		* 顺序 = 当前路径命中 > 指定会话所属 > 第一个带 path 的工作区（2026-11-03 从两处重复代码合并）。
+		*/
+		function rootPathOf(path, anchors, sessionId) {
+			return workspaceOfPath(path, anchors)?.path ?? (sessionId === void 0 ? void 0 : anchors.find((item) => item.sessionIds?.includes(sessionId) === true)?.path) ?? anchors.find((item) => item.path !== void 0)?.path;
+		}
+		function warnNotWired(api, filesMissing) {
+			console.warn(`[dsh-plugin-core/adv/explorer] ${api}: ` + (filesMissing ? "没有文件面（client apply 里没调 connectFs，或宿主没注册 serveFsRoute）" : "相对路径找不到工作区基准（宿主 workspaces 里没有带 path 的工作区）") + " ⇒ 放弃本次操作");
+		}
+		/** 预览侧边栏的挂载容器 id（全站唯一，重复打开先关旧的）。 */
+		const PREVIEW_HOST_ID = "dshpc-file-preview-host";
+		/** dock 里的面板 id（本 container 里只有一个）。 */
+		const PREVIEW_PANEL_ID = "file-preview";
+		/**
+		* 挂载宿主行自动补的类：主区伸展 / 子项不收溢出的规则挂在它下面（`src/ui/layout/panel-dock.css`）。
+		* 消费方不必自己写 —— 打开时加、关闭时摘。
+		*/
+		const DOCK_HOST_CLASS = "dshpc-dock-host";
+		let activePreview = null;
+		/**
+		* 打开工作区文件/文件夹的**停靠**预览（分栏：挤窄 `mount` 左边的兄弟，不是盖上去）。
+		* 重复打开会关掉上一个（同侧边栏位）。
+		*
+		* 消费方最少写法（`connectHost(ctx)` + `connectFs({ path })` 已接线）：
+		* `openFilePreview({ mount, path })` —— 路径解析、工作区匹配都由核心自己解。
+		*/
+		function openFilePreview(options) {
+			if (typeof document === "undefined") return null;
+			const mount = typeof options.mount === "string" ? document.querySelector(options.mount) : options.mount;
+			if (mount === null) {
+				console.warn(`[dsh-plugin-core/adv/explorer] openFilePreview: mount 选择器解析不到元素（${String(options.mount)}） ⇒ 放弃本次操作`);
+				return null;
+			}
+			const custom = options.content !== void 0;
 			const files = getFsFace();
-			const root = picker === true ? rootOfWorkspace(rootName) : rootOfSession(sessionId);
-			const startPath = resolvePath(root, path);
-			return (0, react$1.createElement)("aside", {
-				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
-				"data-preview-dock": dock === true ? true : void 0,
-				style: style ?? void 0
-			}, onResizeStart === void 0 ? null : (0, react$1.createElement)("div", {
-				className: "dsh-tdt-resizer dsh-tdt-sv-resizer",
-				role: "separator",
-				"aria-orientation": "vertical",
-				title: t("previewResize"),
-				onPointerDown: (event) => {
-					onResizeStart(event);
+			const anchors = options.workspaceAnchors ?? workspaceList.getSnapshot();
+			if (!custom && files === void 0) {
+				warnNotWired("openFilePreview", true);
+				return null;
+			}
+			const start = custom ? "" : resolveStartPath(options.path ?? "", anchors, options.sessionId);
+			if (!custom && start === null) {
+				warnNotWired("openFilePreview", false);
+				return null;
+			}
+			if (custom && options.path !== void 0) console.warn("[dsh-plugin-core/adv/explorer] openFilePreview: content 与 path 只能二选一，path 已忽略");
+			const opts = {
+				...options,
+				mount,
+				path: custom ? void 0 : options.path,
+				rootPath: options.rootPath ?? rootPathOf(start ?? "", anchors, options.sessionId)
+			};
+			if (activePreview !== null) {
+				activePreview.keepWidth();
+				activePreview.adopt(mount);
+				activePreview.draw(opts, start ?? "");
+				return {
+					close: activePreview.close,
+					path: opts.path ?? ""
+				};
+			}
+			const container = document.createElement("div");
+			container.id = PREVIEW_HOST_ID;
+			container.setAttribute("data-dshpc-file-preview", "");
+			container.style.cssText = "display:contents";
+			let hostEl = null;
+			let hostPrevDisplay = "";
+			let hostHadClass = false;
+			const restoreHost = () => {
+				if (hostEl === null) return;
+				hostEl.style.display = hostPrevDisplay;
+				if (!hostHadClass) hostEl.classList.remove(DOCK_HOST_CLASS);
+				hostEl = null;
+			};
+			const adopt = (next) => {
+				if (next === hostEl) return;
+				restoreHost();
+				if (next === document.body) console.warn("[dsh-plugin-core/adv/explorer] openFilePreview: 不要传 document.body —— PanelDock 是布局成员（停靠右侧 + 挤窄主区）。请传你页面里包住主区的那个元素。");
+				hostPrevDisplay = next.style.display;
+				hostHadClass = next.classList.contains(DOCK_HOST_CLASS);
+				next.classList.add(DOCK_HOST_CLASS);
+				const display = typeof getComputedStyle === "function" ? getComputedStyle(next).display : "";
+				if (display !== "flex" && display !== "inline-flex") next.style.display = "flex";
+				next.appendChild(container);
+				hostEl = next;
+			};
+			adopt(mount);
+			const dock = createPanelDock({
+				maxPanels: 1,
+				defaultWidth: options.width ?? 460,
+				minWidth: options.minWidth ?? 320,
+				onClose: () => {
+					close();
 				}
-			}), files === void 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, t("previewRenderFailed")) : (0, react$1.createElement)(FileBrowser$1, {
-				files,
-				officeToPdf,
-				rootPath: root === "" ? void 0 : root,
-				sessionId,
-				path: startPath,
-				rootName,
-				workspaces,
-				onSelectWorkspace,
-				translate: t$1,
-				picker,
-				onPick: onPick === void 0 ? void 0 : (picked) => {
-					onPick(picked.workspaceRel ?? picked.path, picked.isDir);
-				},
-				onClose,
-				style: {
-					flex: "1 1 auto",
-					minWidth: 0,
-					minHeight: 0,
-					height: "100%"
+			});
+			dock.open(PREVIEW_PANEL_ID);
+			let closed = false;
+			const root = (0, react_dom_client.createRoot)(container);
+			const close = () => {
+				if (closed) return;
+				closed = true;
+				if (activePreview?.close === close) activePreview = null;
+				window.removeEventListener("keydown", onKeyDown);
+				root.unmount();
+				container.remove();
+				restoreHost();
+				options.onClose?.();
+			};
+			const onKeyDown = (event) => {
+				if (event.key === "Escape") close();
+			};
+			window.addEventListener("keydown", onKeyDown);
+			ensureComponentStyles("panel-dock", PANEL_DOCK_CSS, getStyleKit());
+			ensureComponentStyles("feedback", FEEDBACK_CSS, getStyleKit());
+			let pinnedWidth = null;
+			const keepWidth = () => {
+				const panel = container.querySelector(".dshpc-dock__panel");
+				if (panel === null) return;
+				const width = Math.round(panel.getBoundingClientRect().width);
+				if (width < (options.minWidth ?? 320)) return;
+				pinnedWidth = width;
+				dock.setWidth(PREVIEW_PANEL_ID, width);
+			};
+			let openSeq = 0;
+			const draw = (o, start) => {
+				if (dock.isCollapsed(PREVIEW_PANEL_ID)) dock.expand(PREVIEW_PANEL_ID);
+				const revision = ++openSeq;
+				root.render((0, react$1.createElement)("div", { style: {
+					display: "contents",
+					["--dshpc-dock-h"]: "100%"
+				} }, (0, react$1.createElement)(PanelDock, {
+					dock,
+					mainMinWidth: o.mainMinWidth ?? 480,
+					translate: o.translate
+				}, (0, react$1.createElement)(DockPanel, {
+					id: PREVIEW_PANEL_ID,
+					header: null,
+					closeButton: o.closeButton ?? "none",
+					ariaLabel: o.title,
+					width: pinnedWidth ?? o.width ?? 460,
+					minWidth: o.minWidth ?? 320,
+					maxWidth: o.maxWidth
+				}, o.content !== void 0 ? (0, react$1.createElement)(react$1.Fragment, { key: `custom:${revision}` }, o.content()) : (0, react$1.createElement)(FileBrowser, {
+					files: getFsFace(),
+					officeToPdf: o.officeToPdf ?? null,
+					path: start,
+					focusLine: o.line,
+					revision,
+					workspaces: o.workspaces,
+					workspaceAnchors: o.workspaceAnchors,
+					onSelectWorkspace: o.onSelectWorkspace,
+					translate: o.translate,
+					onClose: close,
+					style: {
+						height: "100%",
+						minHeight: 0
+					}
+				})))));
+			};
+			draw(opts, start ?? "");
+			activePreview = {
+				adopt,
+				keepWidth,
+				draw,
+				close
+			};
+			return {
+				close,
+				path: opts.path ?? ""
+			};
+		}
+		/**
+		* 弹出「选择文件」模态弹窗，Promise 返回选中结果；取消（Esc / 点外部 / ✕）resolve `null`。
+		*
+		* **面板内容与 `openFilePreview` 完完全全是同一个 `FileBrowser`**（不是复制一套）：
+		* 差别只有 ① 承载（这里挂在锚点旁的弹窗面板里，那边挂在核心 PanelDock 分栏里）、
+		* ② `picker` 形态参数（点文件即回传、行尾按钮变「选择」）。
+		*/
+		function pickWorkspaceFile(options) {
+			return new Promise((resolve) => {
+				if (typeof document === "undefined") {
+					resolve(null);
+					return;
 				}
-			}));
+				const files = getFsFace();
+				const anchors = workspaceList.getSnapshot();
+				if (files === void 0) {
+					warnNotWired("pickWorkspaceFile", true);
+					resolve(null);
+					return;
+				}
+				const start = resolveStartPath(options.path ?? "", anchors, options.sessionId);
+				if (start === null) {
+					warnNotWired("pickWorkspaceFile", false);
+					resolve(null);
+					return;
+				}
+				let settled = false;
+				const panelStyle = {
+					position: "fixed",
+					display: "flex",
+					flexDirection: "column"
+				};
+				const anchor = options.anchor ?? null;
+				if (anchor !== null) {
+					const box = placePicker(anchor.getBoundingClientRect(), {
+						width: window.innerWidth,
+						height: window.innerHeight
+					}, options.placement ?? "auto");
+					panelStyle.left = box.left;
+					panelStyle.top = box.top;
+					panelStyle.width = box.width;
+					panelStyle.height = box.height;
+				} else {
+					panelStyle.width = `min(480px,calc(100vw - 24px))`;
+					panelStyle.height = 480;
+				}
+				const finish = (result) => {
+					if (settled) return;
+					settled = true;
+					window.removeEventListener("keydown", onKeyDown);
+					root.unmount();
+					mount.remove();
+					if (result === null) options.onCancel?.();
+					resolve(result);
+				};
+				const onKeyDown = (event) => {
+					if (event.key === "Escape") finish(null);
+				};
+				window.addEventListener("keydown", onKeyDown);
+				const mount = document.createElement("div");
+				document.body.appendChild(mount);
+				ensureComponentStyles("panel-dock", PANEL_DOCK_CSS, getStyleKit());
+				ensureComponentStyles("feedback", FEEDBACK_CSS, getStyleKit());
+				const root = (0, react_dom_client.createRoot)(mount);
+				root.render((0, react$1.createElement)(OverlayMask, {
+					kind: "plain",
+					closeOnMask: true,
+					onClose: () => finish(null),
+					attrs: { "data-dshpc-picker-backdrop": "" }
+				}, (0, react$1.createElement)(PanelSurface, {
+					tier: "popover",
+					role: "dialog",
+					attrs: {
+						"data-dshpc-picker-panel": "",
+						"aria-modal": "true"
+					},
+					style: panelStyle,
+					stopPropagation: true
+				}, (0, react$1.createElement)(FileBrowser, {
+					files,
+					officeToPdf: options.officeToPdf ?? null,
+					path: start,
+					rootName: options.rootName,
+					sessionId: options.sessionId,
+					rootPath: rootPathOf(start, anchors, options.sessionId),
+					workspaces: options.workspaces,
+					onSelectWorkspace: options.onSelectWorkspace,
+					picker: true,
+					filter: options.filter,
+					translate: options.translate,
+					onPick: (picked) => finish(picked),
+					onClose: () => finish(null),
+					style: {
+						flex: "1 1 auto",
+						width: "100%",
+						minWidth: 0,
+						minHeight: 0
+					}
+				}))));
+			});
 		}
 		//#endregion
 		//#region src/task-sort.ts
@@ -59766,8 +60528,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		//#endregion
 		//#region src/client/task-editor-css.ts
 		const TASK_EDITOR_CSS = `
-/* 分栏：**占布局的一列**（U21，2026-10-01）——与 U11 预览 dock（archive-session-css.ts 的
-   .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，   sticky + 100vh 让它在页面滚动时
+/* 分栏：**占布局的一列**（U21，2026-10-01）——与右侧预览 dock（核心 openFilePreview 的
+   .dshpc-dock__panel）同一套形态：根容器的 flex 成员，sticky + 100vh 让它在页面滚动时
    保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
    旧的遮罩层已废：用户要求「别盖住主窗口」。
    宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 520（用户 2026-10-02 定）。
@@ -71046,7 +71808,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
 			/**
 			* 带 `{name}` 占位符的文案席位（复用 locales 的替换器；本页 `t` 是**无参**形态）。
 			* ⚠️ 声明位置必须**早于** `validateTaskDraft` 的调用点（约 1332 / 2311）：那条校验用到
@@ -71145,36 +71907,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			};
 			const [pickerOpen, setPickerOpen] = (0, react$1.useState)(false);
 			const [uploading, setUploading] = (0, react$1.useState)(false);
-			const [pickerWs, setPickerWs] = (0, react$1.useState)("");
 			const pickerAnchorRef = (0, react$1.useRef)(null);
-			const pickerPanelRef = (0, react$1.useRef)(null);
-			(0, react$1.useEffect)(() => {
-				if (!pickerOpen) return;
-				const onKeyDown = (event) => {
-					if (event.key !== "Escape") return;
-					event.preventDefault();
-					setPickerOpen(false);
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => {
-					document.removeEventListener("keydown", onKeyDown);
-				};
-			}, [pickerOpen]);
-			(0, react$1.useEffect)(() => {
-				if (!pickerOpen) return;
-				const onPointerDown = (event) => {
-					const target = event.target;
-					if (!(target instanceof Element)) return;
-					if (pickerPanelRef.current?.contains(target) === true) return;
-					if (pickerAnchorRef.current?.contains(target) === true) return;
-					if (target.closest("[role=\"menu\"], [role=\"menuitem\"], [class*=\"menusurface\" i], [class*=\"menuitem\" i]") !== null) return;
-					setPickerOpen(false);
-				};
-				document.addEventListener("pointerdown", onPointerDown, true);
-				return () => {
-					document.removeEventListener("pointerdown", onPointerDown, true);
-				};
-			}, [pickerOpen]);
 			const [uploadError, setUploadError] = (0, react$1.useState)(null);
 			/**
 			* 刚上传、还没保存的附件：文件已在**服务端临时区**，但绝对路径只有服务端知道 ⇒ 由上传回包带回来存这里
@@ -71429,6 +72162,41 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				patch({ attachments: [...draft.attachments, att] });
 			};
 			const makeId = () => typeof crypto !== "undefined" && crypto.randomUUID !== void 0 ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+			/**
+			* 选择工作区文件：整段交给核心 `pickWorkspaceFile`——锚定在方按钮左侧、下缘齐平的模态，
+			* Esc / 点外 / ▾ 切工作区都由核心接管；回调给的是**绝对路径**（`workspaceRel` 是相对该工作区的路径）。
+			* 默认落点 = 任务已选工作区的根（`sessionId` 同时是相对路径基准）；没有锚点会话 ⇒ 核心给根选择面。
+			*/
+			const openPicker = () => {
+				const anchor = pickerAnchorRef.current;
+				if (anchor === null || pickerOpen) return;
+				const workspace = draft.workspace !== "" ? draft.workspace : workspaces[0]?.value ?? "";
+				setPickerOpen(true);
+				pickWorkspaceFile({
+					anchor,
+					placement: "left-end",
+					sessionId: workspaceAnchors?.[workspace],
+					rootName: workspace === "" ? void 0 : workspace,
+					workspaces: workspaces.map((item) => item.value),
+					officeToPdf: officeToPdf ?? void 0,
+					translate: t$1
+				}).then((picked) => {
+					setPickerOpen(false);
+					if (picked === null) return;
+					const ref = picked.workspaceRel ?? picked.path;
+					const name = ref.slice(Math.max(ref.lastIndexOf("/"), ref.lastIndexOf("\\")) + 1);
+					addAttachment({
+						id: makeId(),
+						name,
+						kind: "link",
+						ref,
+						workspace: picked.workspace ?? workspace,
+						isDir: picked.isDir
+					});
+				}, () => {
+					setPickerOpen(false);
+				});
+			};
 			const uploadErrText = (code) => {
 				if (code === "file-type-not-allowed") return t("editorUploadErrType");
 				if (code === "payload-too-large" || code === "body-too-large") return t("editorUploadErrSize");
@@ -71623,14 +72391,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				ref: pickerAnchorRef,
 				"aria-haspopup": "dialog",
 				"aria-expanded": pickerOpen,
-				onClick: () => {
-					if (pickerOpen) {
-						setPickerOpen(false);
-						return;
-					}
-					setPickerWs(draft.workspace !== "" ? draft.workspace : workspaces[0]?.value ?? "");
-					setPickerOpen(true);
-				},
+				onClick: openPicker,
 				style: {
 					display: "flex",
 					flexDirection: "column",
@@ -72292,75 +73053,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					setConfirmDiscard(false);
 					onClose();
 				}
-			}) : null), pickerOpen && pickerAnchorRef.current !== null ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
-				ref: pickerPanelRef,
-				role: "dialog",
-				"aria-label": t("editorPickWorkspaceFile"),
-				style: (() => {
-					const rect = pickerAnchorRef.current.getBoundingClientRect();
-					return {
-						position: "fixed",
-						zIndex: 1100,
-						display: "flex",
-						flexDirection: "column",
-						overflow: "hidden",
-						right: Math.max(12, window.innerWidth - rect.left),
-						bottom: Math.max(12, window.innerHeight - rect.bottom),
-						width: "min(480px, calc(100vw - 24px))",
-						height: Math.min(660, Math.max(240, rect.top - 12)),
-						background: "var(--dshpc-surface-2, #2a2e33)",
-						border: `1px solid var(--dshpc-border)`,
-						borderRadius: "var(--dshpc-radius-md)",
-						boxShadow: "var(--dshpc-shadow-2)"
-					};
-				})()
-			}, (() => {
-				const anchorSessionId = (workspaceAnchors ?? {})[pickerWs] ?? "";
-				return workspaceFiles !== null && workspaceFiles !== void 0 && anchorSessionId !== "" ? (0, react$1.createElement)(FileBrowser, {
-					key: `${pickerWs}:${anchorSessionId}`,
-					officeToPdf,
-					sessionId: anchorSessionId,
-					path: "",
-					rootName: pickerWs,
-					workspaces: workspaces.map((w) => w.value),
-					onSelectWorkspace: (name) => {
-						setPickerWs(name);
-					},
-					t,
-					onClose: () => {
-						setPickerOpen(false);
-					},
-					picker: true,
-					onPick: (p, isDir) => {
-						const name = p.slice(Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")) + 1);
-						addAttachment({
-							id: makeId(),
-							name,
-							kind: "link",
-							ref: p,
-							workspace: pickerWs,
-							isDir
-						});
-						setPickerOpen(false);
-					},
-					style: {
-						flex: "1 1 auto",
-						width: "100%",
-						minWidth: 0,
-						minHeight: 0,
-						borderLeft: "none"
-					}
-				}) : (0, react$1.createElement)("div", { style: {
-					flex: "1 1 auto",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					padding: "24px",
-					textAlign: "center",
-					color: "var(--dshpc-fg-2)",
-					fontSize: "var(--dshpc-font-md)"
-				} }, t("editorPickerNoSession"));
-			})()), document.body) : null);
+			}) : null));
 		}
 		//#endregion
 		//#region src/fs-route.ts
@@ -76349,32 +77042,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 		};
 		/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
 		const encodeModelValue = (provider, id) => `${provider}/${id}`;
-		/** 预览宽度持久化键（宽度是纯本地偏好，落 localStorage；读写都容错，隐私模式也不崩）。 */
-		const PREVIEW_WIDTH_KEY = "dsh-tdt-preview-width";
-		/** 宽度区间：下限保住可读性，上限给内容留地方（不超过视口 70%）。 */
-		const PREVIEW_MIN = 320;
-		const PREVIEW_MAX_RATIO = .7;
-		const PREVIEW_DEFAULT = 460;
-		/** 读上次宽度（无效 / 越界一律回默认）。 */
-		function readPreviewWidth() {
-			try {
-				const raw = window.localStorage.getItem(PREVIEW_WIDTH_KEY);
-				const value = raw === null ? NaN : Number(raw);
-				if (!Number.isFinite(value)) return PREVIEW_DEFAULT;
-				return clampPreviewWidth(value);
-			} catch {
-				return PREVIEW_DEFAULT;
-			}
-		}
 		/**
-		* 夹到允许区间（上限按当前视口算，故运行时求值）。
-		* @param value - 目标宽度。
-		* @param reserved - 右侧**另一条**分栏（编辑分栏）已占的宽度：两条分栏同时开着时也要给主面板
-		*   留够最小宽度（用户 2026-10-01 Q3；不足时下限优先）。
+		* 页面右侧已被核心分栏占掉的宽度（px）。
+		*
+		* 预览 dock 现在完全由核心 `openFilePreview` 的 `PanelDock` 管（宽度、拖拽、开合都由它），
+		* 核心把「右侧已占宽」发布在 documentElement 的 `--dshpc-page-inset-right`（PanelDock.js 的
+		* `publishInset`）。本仓只消费这个约定变量，不再自己存一份宽度 state。
 		*/
-		function clampPreviewWidth(value, reserved = 0) {
-			const avail = Math.min(Math.floor(window.innerWidth * PREVIEW_MAX_RATIO), window.innerWidth - 760 - reserved);
-			return Math.min(Math.max(Math.round(value), PREVIEW_MIN), Math.max(PREVIEW_MIN, Math.floor(avail)));
+		function pageInsetRight() {
+			const raw = document.documentElement.style.getPropertyValue("--dshpc-page-inset-right").trim();
+			const value = Number.parseFloat(raw);
+			return Number.isFinite(value) ? Math.round(value) : 0;
 		}
 		/**
 		* 实例行的产出物（决策 32③写回的列：JSON 数组，兼容逗号串）。
@@ -76491,8 +77169,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			/** 编辑分栏宽度（真源在这里：另一个 dock 与全屏会话弹窗都要拿它算可用宽度）。 */
 			const [editorWidth, setEditorWidth] = (0, react$1.useState)(() => readEditorWidth());
 			const [preview, setPreview] = (0, react$1.useState)(null);
-			const [previewWidth, setPreviewWidth] = (0, react$1.useState)(() => readPreviewWidth());
-			const previewTaken = preview === null ? 0 : previewWidth;
+			const previewHandleRef = (0, react$1.useRef)(null);
+			const previewTaken = preview === null ? 0 : pageInsetRight();
 			const editorTaken = editor === null ? 0 : editorWidth;
 			/** 编辑分栏宽度变化回调（拖拽松手）：落 state + 持久化。 */
 			const changeEditorWidth = (0, react$1.useCallback)((next) => {
@@ -76500,17 +77178,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				writeEditorWidth(next);
 			}, []);
 			/**
-			* 两条分栏同开（或视口变化）时重新夹一遍宽度 ⇒ 主面板始终拿得到最小宽度 760
-			* （不足时按各自下限兜住，宁可主面板出横向滚动条也不许分栏被压塌）。
+			* 编辑分栏宽度的可用上限要减去预览 dock 已占的宽度（预览开合 / 视口变化时重夹）
+			* ⇒ 主面板始终拿得到最小宽度 760（不足时按下限兜住，宁可主面板出横向滚动条）。
 			*/
 			(0, react$1.useEffect)(() => {
 				const reClamp = () => {
 					setEditorWidth((cur) => {
 						const next = clampEditorWidth(cur, previewTaken);
-						return next === cur ? cur : next;
-					});
-					setPreviewWidth((cur) => {
-						const next = clampPreviewWidth(cur, editorTaken);
 						return next === cur ? cur : next;
 					});
 				};
@@ -76520,49 +77194,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 					window.removeEventListener("resize", reClamp);
 				};
 			}, [previewTaken, editorTaken]);
-			const lastWorkspaceSessionId = (0, react$1.useRef)(null);
-			const canPreview = workspaceFiles !== null;
+			const canPreview = getFsFace() !== void 0;
 			const openFile = (0, react$1.useCallback)((sessionId, path) => {
 				if (!canPreview) return;
-				lastWorkspaceSessionId.current = sessionId;
 				setPreview((prev) => ({
 					sessionId,
 					path,
 					seq: (prev?.seq ?? 0) + 1
 				}));
 			}, [canPreview]);
-			const closePreview = (0, react$1.useCallback)(() => {
-				setPreview(null);
-			}, []);
-			/**
-			* 拖拽调宽：指针移动期间只在 dock 上改 CSS 变量值，松手才落 state（避免每帧重渲染整页）。
-			*
-			* 拖拽不再「顺手选中文字」（用户 2026-10-02，与编辑分栏同一处理）：pointerdown 的默认动作会
-			* 开一次文本选区 ⇒ ① preventDefault 掐掉默认动作；② 拖动期间 `body.user-select:none`，
-			* pointerup 恢复，并清掉已有选区。
-			*/
-			const startResize = (0, react$1.useCallback)((start) => {
-				const startX = start.clientX;
-				const startWidth = previewWidth;
-				startResizeLayoutWidth({
-					startEvent: start,
-					compute: (clientX) => clampPreviewWidth(startWidth - (clientX - startX), editorTaken),
-					onMove: (w) => {
-						const rootEl = document.getElementById("dsh-tdt-root");
-						const dockEl = rootEl?.querySelector(".dsh-tdt-sv-preview-dock");
-						if (dockEl !== null) dockEl.style.width = `${w}px`;
-						else rootEl?.style.setProperty("--dsh-tdt-preview-w", `${w}px`);
-					},
-					onCommit: (w) => {
-						setPreviewWidth(w);
-						try {
-							window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(w));
-						} catch {}
-					},
-					rootClass: "dsh-tdt-resizing",
-					rafThrottle: true
-				});
-			}, [previewWidth, editorTaken]);
 			const overview = useTaskOverview();
 			/**
 			* 事件推送接入（design/event-push.md §七）：主列表订阅「定义 / 配置 / 强制刷新」与「运行态」事件。
@@ -77053,14 +77693,31 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				});
 			};
 			const hasRaw = raw.trim() !== "";
-			const previewW = preview === null ? 0 : previewWidth;
+			(0, react$1.useEffect)(() => {
+				if (preview === null) return;
+				previewHandleRef.current = openFilePreview({
+					mount: "#dsh-tdt-root",
+					path: preview.path,
+					sessionId: preview.sessionId,
+					officeToPdf,
+					translate: t$1,
+					workspaces: editorOptions.workspaces.map((item) => item.value),
+					maxWidth: Math.max(320, Math.min(Math.floor(window.innerWidth * .7), window.innerWidth - 760 - editorTaken)),
+					onClose: () => {
+						previewHandleRef.current = null;
+						setPreview(null);
+					}
+				});
+			}, [preview]);
+			(0, react$1.useEffect)(() => () => {
+				previewHandleRef.current?.close();
+			}, []);
 			ensureToastStyle();
 			ensureUiBase();
 			return (0, react$1.createElement)("div", {
 				id: "dsh-tdt-root",
 				className: "dsh-tdt-root",
 				style: {
-					["--dsh-tdt-preview-w"]: `${previewW}px`,
 					["--dsh-tdt-editor-w"]: `${editorTaken}px`,
 					display: "flex",
 					alignItems: "flex-start",
@@ -77254,28 +77911,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				onOpenFile: canPreview ? openFile : void 0,
 				onViewTask: openViewer,
 				resolvedAttachments: editor.mode === "edit" ? overview.rows.find((item) => item.id === editor.id)?.attachments : void 0,
-				workspaceFiles,
 				officeToPdf,
 				workspaceAnchors: editorOptions.workspaceAnchors
-			}) : null, preview !== null && workspaceFiles !== null ? (0, react$1.createElement)(FileBrowser, {
-				key: `${preview.sessionId}:${preview.path}:${preview.seq}`,
-				officeToPdf,
-				sessionId: preview.sessionId,
-				path: preview.path,
-				t,
-				dock: true,
-				onResizeStart: startResize,
-				onClose: closePreview,
-				rootName: editorOptions.workspaces.find((w) => editorOptions.workspaceAnchors[w.value] === preview.sessionId)?.value,
-				workspaces: editorOptions.workspaces.map((w) => w.value),
-				onSelectWorkspace: (name) => {
-					const anchor = editorOptions.workspaceAnchors[name];
-					if (anchor !== void 0 && anchor !== preview.sessionId) setPreview((prev) => prev === null ? null : {
-						sessionId: anchor,
-						path: "",
-						seq: prev.seq + 1
-					});
-				}
 			}) : null);
 		}
 		/**
