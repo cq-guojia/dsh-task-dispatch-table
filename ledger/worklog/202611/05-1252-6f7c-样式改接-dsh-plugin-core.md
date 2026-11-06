@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 13:38:07 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 14:10:55 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -595,3 +595,4 @@ h(ChatViewFrame, {
 - 2026-11-06 12:41:50 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4f：展开内容改居左、产出物图标改核心 IconButton、保存前后端校验工作区存在性；设置页 cascade 供应商框小一档=核心 ModelPicker 漏传 size（已登记给核心）；执行路径已核实不会用未知工作区跑
 - 2026-11-06 13:13:11 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P5 工作区身份改存 id（向下兼容）：① 新增 tasks.migrateWorkspaceIds / setWorkspaceDefinitionInline；② 启动迁移 + 单条保存 + 整批 tasksInline 保存统一改存 workspace.id 并校验真实存在；③ 调度 Loop A / 手动执行按标题解析成功后就地写回 id；④ client 下拉 value=id、显示走 workspaceLabelOf、TaskPicker/日历/列表筛选归一；⑤ 新增 external/dsh-workspace-identity.md（id=randomUUID，rename 不变，删除重建换 id）。验证：typecheck/build 通过，smoke 741/752（11 条既有失败）。
 - 2026-11-06 13:38:07 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 更正上条：撤销启动式批量迁移与保存期标题归一，兼容只在执行期；任务右侧「执行时长 + Token」并成一行；本插件所有区域滚动条统一 1px（.dsh-tdt-root 后代规则，下拉走核心 .dshpc-scroll-thin）；typecheck/build/smoke(741过11既有败) 全过
+- 2026-11-06 14:10:55 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 2026-11-06 全量审计手搓 UI：编辑卡/查看档块头改核心 Surface+SectionHead，状态标签/附件类型/草稿标记改 Chip，文字链/重置/更多改 Button link，运行态转圈改 Loader，JSON 逃生口改 Textarea；清理 11 处旧皮肤规则；typecheck/build/smoke 741 过（11 条既有失败）
