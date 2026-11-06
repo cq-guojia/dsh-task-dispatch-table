@@ -1268,6 +1268,7 @@ export function TaskListView(props: {
         h(Segmented<'all' | 'enabled' | 'disabled' | 'abnormal'>, {
           value: filter,
           size: 'md',
+          bordered: false,
           tone: 'business',
           items: [
             { value: 'all', label: t('listFilterAll') },

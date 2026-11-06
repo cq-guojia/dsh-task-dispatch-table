@@ -222,6 +222,7 @@ export function TaskViewPanel(props: {
               id: 'dsh-tdt-ed-view-promptmode',
               value: promptMode,
               size: 'sm',
+              bordered: false,
               tone: 'business',
               items: [
                 { value: 'source', label: t('editorViewSourceCode') },

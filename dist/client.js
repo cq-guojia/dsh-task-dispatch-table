@@ -77745,6 +77745,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 				id: "dsh-tdt-ed-view-promptmode",
 				value: promptMode,
 				size: "sm",
+				bordered: false,
 				tone: "business",
 				items: [{
 					value: "source",
@@ -82385,6 +82386,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			} }, (0, react$1.createElement)(Segmented, {
 				value: filter,
 				size: "md",
+				bordered: false,
 				tone: "business",
 				items: [
 					{
@@ -83386,6 +83388,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--dshpc-
 			}, `← ${t("backToConversation")}`), (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react$1.createElement)("div", { style: headerRightStyle }, (0, react$1.createElement)(Segmented, {
 				value: tab,
 				size: "md",
+				bordered: false,
 				tone: "business",
 				items: [
 					{

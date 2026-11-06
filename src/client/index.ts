@@ -1601,6 +1601,7 @@ function TaskPage(props: {
 							h(Segmented<"config" | "records" | "calendar" | "settings">, {
 								value: tab,
 								size: "md",
+								bordered: false,
 								tone: "business",
 								items: [
 									{ value: "config", label: t("tabConfig") },
