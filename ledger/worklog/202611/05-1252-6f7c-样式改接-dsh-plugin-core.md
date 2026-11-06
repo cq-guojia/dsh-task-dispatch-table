@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 06:15:56 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-06 07:38:40 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -46,6 +46,7 @@
 - [ ] P2 反馈层：自绘 toast → 核心 notify/Toast；Modal/Confirm/Alert → 核心 `skin`
 - [ ] P3 文件浏览 / 预览：`file-browser.tsx` / `file-preview.tsx` → `dsh-plugin-core/adv/explorer`
 - [x] **P4 会话预览（2026-11-06）**：核心 `0.35.0` 补齐插槽后，`session-view.ts` 改薄包装、`mirror/*` 只剩 `Deliverables.tsx`、`archive-session-css.ts` 只剩两组规则，见「2026-11-06 · P4 会话预览改接核心」
+- [x] **P4b 任务编辑分栏（2026-11-06 用户追加）**：右侧「新建 / 查看任务」分栏外壳改挂核心 `PanelDock`，与文件预览同页双分栏；删自绘面板 / 拖拽条 / 宽度记忆，见「2026-11-06 · P4b 编辑分栏改接核心 PanelDock」
 - [ ] P5 业务样式重构：`editor-css` / `info-css` / 内联字面量 / 自绘浮层 → 核心 token + 核心件
 - [ ] P6 文档回写：`ui-style-guide.md` / `ui-foundation.md` / `external/session-view-ui-map.md` / `features.md`
 - [ ] 收尾统计：替换前 / 后本项目自留样式行数与类名数量，确认「样式很少」；build + smoke + typecheck + 专家复核
@@ -420,6 +421,39 @@ h(ChatViewFrame, {
 
 **仍待用户拍板**：Toast（P2，建议 B：核心补 sticky + 关闭钮）；会话预览 P4（等核心插槽）。
 
+### 2026-11-06 · P4b 编辑分栏改接核心 PanelDock
+
+用户原话（2026-11-06）：
+
+> 就是新建任务的右边那个分栏，你点开去建任务，或者是查看一个任务，不是右边的分栏里弹出来了吗？那个分栏也用核心控件的。核心控件是支持打开双分栏的，也就是说，你的文件浏览设置一个分栏，任务的新建和查看用另一个分栏。
+
+**读源码得到的契约**（`dsh-plugin-core@0.35.0`，详见 [`docs/design/external/plugin-core-dock.md`](../../docs/design/external/plugin-core-dock.md)）：
+
+- `PanelDock` 是横向 flex 行里的布局成员；`DockPanel` 必须直接挂它下面；显隐用 `dock.open(id)` / `close(id)`。
+- 同页**多个独立实例**并存（预览一条、任务一条），核心把各实例宽度**求和**写 `--dshpc-page-inset-right`。
+- 宽度记忆按 `storageKey` + 栏 id；夹宽只作用于**本实例**（`mainMinWidth`），跨实例不互算。
+- `closable:false` 不出核心 ✕；`header:null` 时头由内容自己画；收起耳朵由核心画。
+
+**改动**：
+
+| 文件 | 改了什么 |
+|---|---|
+| `src/client/index.ts` | `createPanelDock({ maxPanels: 1, defaultWidth: 520, minWidth: 520, storageKey: 'dsh-tdt-editor' })`；`PanelDock + DockPanel(id='task-editor')` 作为 `#dsh-tdt-root` 的 flex 成员；`editor` state 有值即 `open`、无值即 `close`；删 `editorWidth` state / `changeEditorWidth` / resize 重夹 effect / `previewTaken` / `pageInsetRight()` / `--dsh-tdt-editor-w`；预览 `maxWidth` 改读编辑 dock 快照宽度 |
+| `src/client/task-editor.tsx` | 删 `width` / `onWidthChange` / `reserved` props 与 `startResize`（指针手势、禁选、CSS 变量）；删 `clampEditorWidth` / `readEditorWidth` / `writeEditorWidth` / `EDITOR_WIDTH_*`；返回根从 `.dsh-tdt-ed-panel` 改为 `.dsh-tdt-ed-content`（只留内容本体） |
+| `src/client/task-editor-css.ts` | 删 `.dsh-tdt-ed-panel` / `.dsh-tdt-ed-resizer`；加 `.dsh-tdt-ed-content`（`height:100%` 填满核心 body，内部自滚） |
+| `src/client/ui/index.ts` | 删 `startResizeLayoutWidth` 再导出；补 `createPanelDock` / `PanelDock` / `DockPanel` 及类型 |
+| `src/client/ui/controls-css.ts` | 删 `.dsh-tdt-resizer` 命中区皮肤（两条分栏都归核心） |
+| `scripts/smoke.mjs` | 4 条断言改核心等价物（拖拽条 / 编辑外壳 / dock 宽度选项 / 自绘 resizer 已删） |
+| `docs/` | 新建 `external/plugin-core-dock.md`（PanelDock 源码级契约）；`creation-edit.md`、`artifact-opening.md`、`ui-style-guide.md`、`ui-foundation.md`、`features.md`、`README.md` 回写 |
+
+**验证**：`typecheck` ✅ · `build` ✅ · `smoke` 738 / 14（14 项均为既有单引号断言失配，与本次无关）· 新改写的 4 条断言全过。
+
+**已知取舍**：
+
+1. 跨实例不互算宽度：编辑分栏拖拽只保 `mainMinWidth = 760`，不把预览宽度当预留（核心契约如此）；但**打开预览时**会按编辑分栏当前宽度给它算 `maxWidth`，主要路径不会挤掉主区。
+2. 收起的分栏内容仍在内存（`editor` state 不丢）；再点任一任务的编辑 / 查看会重新展开 —— 这是核心收起耳朵的语义，不是关闭。
+3. 关闭仍走内容里的 ✕ / Esc / 脏确认三入口（核心 ✕ 已关），不会出现两套确认。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -433,3 +467,4 @@ h(ChatViewFrame, {
 - 2026-11-06 00:51:15 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览拍板走 B：worklog 固化核心插槽 API 建议（headerSlot/bodyLeadSlot/turnTailSlot/actionsSlot）、替换会丢的 8 项功能对位、可直接搬的插槽代码与迁移步骤；当前 session-view.ts 不动，等核心支持
 - 2026-11-06 01:03:25 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 修复本地首启 import failed: process is not defined —— tsdown.client.config.ts 加 define process.env.NODE_ENV=production（floating-ui 模块级判断），smoke 加回归断言；build/typecheck/smoke 754/0
 - 2026-11-06 06:15:56 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4 会话预览改接核心完成：核心升至 dsh-plugin-core@0.35.0（title/header/headerActions/bodyHeader/bodyFooter 槽位），session-view.ts 1471→约190 行薄包装，删 mirror 14 文件只留 Deliverables.tsx，archive-session-css 339→约95 行；删 present.host 与 remote.workspaceFiles 探测；build/typecheck 通过，smoke 738/14（14 项均为既有单引号断言失配）
+- 2026-11-06 07:38:40 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · P4b 编辑分栏改接核心 PanelDock 完成：index.ts 用 createPanelDock+PanelDock/DockPanel（同页双分栏），删自绘面板/拖拽条/宽度记忆与 --dsh-tdt-editor-w；task-editor 只留内容本体；typecheck/build 通过，smoke 738/14（14 项均为既有断言失配）；新增 external/plugin-core-dock.md
