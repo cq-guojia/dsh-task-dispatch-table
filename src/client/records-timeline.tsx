@@ -486,18 +486,19 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         }, h('span', { style: fieldInnerStyle }, formatTokenCount(tokens))))
       : null)
 
-  return h(StripCard, {
-    // ⚠️ **容器不挂任何交互**（照任务卡片：容器不挂 onClick → 头部挂 → 展开区是兄弟节点）：
-    //    光标 / 点击 / 键盘都只在下面的「头部」上 ⇒ 展开出来的内容既不是手指、也不会误触展开，可安心拖选复制。
-    //    展开与否只驱动「展开区是否渲染」与箭头上的 aria-expanded。
+  // 2026-11-08 核心 0.35.6：`hoverScope: 'head'` 只让头部变色，展开内容必须放进 `panel`
+  // （放 children 会被塞进 __body ⇒ 点开后整块跟着变，用户点名的刺眼效果）。
+  // 头部与展开区先各自算好，最后一次性交给 StripCard；容器仍不挂任何交互。
+  const cardProps = {
     // 色条 + 浅底 = 核心 `StripCard`（成败色调走 accent，运行中由下方类名给核心色条挂统一脉动）。
     accent: toneAccentOf(tone),
     className: `dsh-tdt-rec-item${running ? ' dsh-tdt-rec-item--running' : ''}${tone === 'planned' ? ' dsh-tdt-rec-item--planned' : ''}`,
-    // 整卡 hover 变色归核心 0.35.4 的 hoverable（本仓不再自写 :hover）。
     hoverable: true,
-  },
-    // ── 头部（**唯一可点区域**）：标题 + 信息 + 备注 + 右列控件（左缘竖条已由核心 StripCard 提供）──
-    h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick },
+    hoverScope: 'head' as const,
+    expanded: open,
+  }
+  // ── 头部（**唯一可点区域**）：标题 + 信息 + 备注 + 右列控件（左缘竖条已由核心 StripCard 提供）──
+  const head = h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick },
       // ── 左列：标题 + 下面那排信息 ──
       h('div', { className: 'dsh-tdt-rec-left' },
         h('div', { className: 'dsh-tdt-rec-r1' },
@@ -589,7 +590,6 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
             }, h(IconButton, {
               variant: 'plain',
               size: 'md',
-              dense: true,
               icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
               label: baseNameOf(path),
               // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
@@ -644,13 +644,13 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
           )
           : null,
       ),
-    ),
-    // ── 展开区（**不可点、无 cursor**：内容要能直接拖选复制）：第一排产出物 → 第二排前置任务 →
-    //    再往下是该次执行的事件流水。父级已不可点 ⇒ 不再需要拦冒泡。 ──
-    // ⚠️ 只有当**确有内容**（有产出 / 有前置 / 日志非空 / 拉取出错）时才渲染展开区本身——
-    //    否则连那条分隔线 + 内边距都不要画，免得空点一下只露一个空框（用户 2026-10-06）。
-    (open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || (events !== null && events.length > 0)))
-      ? h('div', { className: 'dsh-tdt-rec-exp' },
+    )
+  // ── 展开区（**不可点、无 cursor**：内容要能直接拖选复制）：第一排产出物 → 第二排前置任务 →
+  //    再往下是该次执行的事件流水。父级已不可点 ⇒ 不再需要拦冒泡。 ──
+  // ⚠️ 只有当**确有内容**（有产出 / 有前置 / 日志非空 / 拉取出错）时才渲染展开区本身——
+  //    否则连那条分隔线 + 内边距都不要画，免得空点一下只露一个空框（用户 2026-10-06）。
+  const expandedPanel = (open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || (events !== null && events.length > 0)))
+    ? h('div', { className: 'dsh-tdt-rec-exp' },
         outputs.length === 0
           ? null
           : h(Fragment, null,
@@ -662,7 +662,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               outputs.map(path => h(Button, {
                 key: path,
                 // 文件行 = 核心 Button 的 ghost 档（图标 + 文字；2026-11-06 全站收口，不再用行式文件按钮类）。
-                variant: 'ghost', size: 'sm', dense: true,
+                variant: 'ghost', size: 'sm',
                 icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
                 disabled: !canOpenFile,
                 onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
@@ -716,7 +716,6 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                         }, h(IconButton, {
                           variant: 'plain',
                           size: 'md',
-                          dense: true,
                           icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
                           label: baseNameOf(path),
                           // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
@@ -740,14 +739,12 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                           }, '…')
                           : null,
                       ),
-                    // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。有会话才落右列：
-                    // 靠右 + 上下居中，且不再把左列那两行撑高。
-                    // 外观走基础层官方配方「链接型文字钮」（核心 Button variant='link'：无边框、链接色、
-                    // hover 下划线）—— 用户 2026-10-04：「不要边框，不要黑、不要灰」。
+                    // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。有会话才落右列。
+                    // 2026-11-08 用户点名：不要纯文字链接，改核心 `secondary` 档 = 灰底、无描边。
                     depHasSid
                       ? h(Button, {
                         size: 'sm',
-                        variant: 'link',
+                        variant: 'secondary',
                         onClick: (event: { stopPropagation: () => void }) => {
                           event.stopPropagation()
                           openSession(depSid as string)
@@ -806,8 +803,8 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                   )),
                 ),
       )
-      : null,
-  )
+    : null
+  return h(StripCard, { ...cardProps, panel: expandedPanel }, head)
 })
 
 export interface RecordsTimelineProps {

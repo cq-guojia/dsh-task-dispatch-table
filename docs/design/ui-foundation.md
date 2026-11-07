@@ -375,9 +375,9 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string
 | **P2 按钮 + 图标钮** | 15+ 套 → 3 variant × 2 size | `Button` / `IconButton` | 各页面按钮外观归一 |
 | **P3 输入 + 下拉** | 3 套 CSS + 3 处原生 + 官方 2 处 → 1 套 | `Field`（Input / Select / PrefixedInput）+ `Textarea` + `Checkbox`（经 U20 #6 上提，2026-10-05） | 高度只剩两档 |
 | **P4 开关 + 日期时间 + 浮层** | 开关 2 处重复覆盖合并；日期时间全内联转皮肤；卡/浮层/Toast 归一 | `SwitchToggle` / `DateTime` / 容器皮肤 | 明暗特判只剩 token 层 |
-| **P5 收尾** | 删 3 份 `C` 表 → 0；内联数值字面量清零；注释与代码对齐（现状清单见 [`../worklog/ui-foundation.md`](../worklog/ui-foundation.md) §六） | 干净的基础层 | 冒烟反例断言全绿 + `npm run typecheck` |
+| **P5 收尾** | 删 3 份 `C` 表 → 0；内联数值字面量清零；注释与代码对齐（现状清单见 [`../worklog/ui-foundation.md`](../worklog/ui-foundation.md) §六） | 干净的基础层 | 冒烟反例断言全绿 + `pnpm typecheck` |
 
-**每期通用纪律**（照 [`ui-style-guide.md`](ui-style-guide.md) 执行）：`npm run build` → `npm run smoke` → `npm run typecheck` → 明暗双主题真机走查 → 回写 PROGRESS/worklog。
+**每期通用纪律**（照 [`ui-style-guide.md`](ui-style-guide.md) 执行）：`pnpm build` → `pnpm smoke` → `pnpm typecheck` → 明暗双主题真机走查 → 回写 PROGRESS/worklog。
 
 ---
 

@@ -257,7 +257,7 @@ export function TaskViewPanel(props: {
       // 里只读原文同一套 `surfaceClass` 配方）：2026-11-08 用户点名不再自己挑底色。
       hasPrompt
         ? h('div', {
-            className: `${surfaceClass({ tone: 'sunken', border: 'none', radius: 'sm', padding: 'sm' })} dsh-tdt-ed-view-doc`,
+            className: `${surfaceClass({ tone: 'sunken', border: 'none' })} dsh-tdt-ed-view-doc`,
             style: { marginTop: 8 },
           },
           h('div', { className: `dsh-tdt-ed-view-prompt${promptMode === 'source' ? ' dsh-tdt-ed-view-prompt--source' : ''}${promptOpen || isShort ? ' dsh-tdt-ed-view-prompt--open' : ''}` },

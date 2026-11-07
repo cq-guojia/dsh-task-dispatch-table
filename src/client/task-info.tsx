@@ -206,9 +206,9 @@ export function taskInfoBaseFields(props: {
             // 不许再用 pill / 自绘灰框）。服务端给出绝对路径 + 预览锚点会话才可点（同一 openFile 入口），
             // 缺任一个（老版本 / 拿不到锚点）⇒ `disabled`，不给假入口。
             const canOpen = absPath !== undefined && absPath !== null && anchor !== undefined && anchor !== null && onOpenFile !== undefined
-            // dense = 核心 0.35.4 紧凑图标档：图标放大一档、按钮高度不变（用户 2026-11-07 点名）。
+            // 2026-11-08：不再用 dense 放大档（用户点名「放大的图标特别丑」），保持核心默认图标大小。
             return h(Button, {
-              key, variant: 'ghost', size: 'sm', dense: true, icon,
+              key, variant: 'ghost', size: 'sm', icon,
               disabled: !canOpen,
               onClick: canOpen ? (): void => { onOpenFile(anchor, absPath) } : undefined,
               style: { maxWidth: '100%', minWidth: 0 },
@@ -286,9 +286,14 @@ export function lastRunFields(props: {
     disabled: !canOpenSession,
     onClick: sid !== null && onOpenSession !== undefined ? () => { onOpenSession(sid) } : undefined,
   })
-  const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } }, h(MarqueeText, { text: sessionName }))
+  // 2026-11-08：会话名不能再写 `maxWidth:'100%'` —— 前面那颗放大镜 icon 没算进去，
+  // icon + 100% 把整行撑出字段格，底部冒出横向滚动条（用户点名的「那条线」）。
+  // 改成 flex 吃掉**扣掉 icon 之后**的剩余宽度；省略号 + hover 跑马灯由核心 MarqueeText
+  // 在自己的裁剪盒里负责，永远不会撑出容器。
+  const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } },
+    h(MarqueeText, { text: sessionName, style: { maxWidth: '100%', minWidth: 0 } }))
   const sessionLinkStyle: Record<string, string | number> = {
-    display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', boxSizing: 'border-box',
+    display: 'inline-flex', alignItems: 'center', gap: '6px', flex: '1 1 auto', minWidth: 0, boxSizing: 'border-box',
     padding: 0, font: 'inherit', fontSize: 'var(--dshpc-font-sm)', textAlign: 'left',
     cursor: canOpenSession ? 'pointer' : 'default',
   }
@@ -361,7 +366,7 @@ export function lastRunFields(props: {
           outputs.map(output => h(Button, {
             key: output,
             // 文件行 = **核心 Button 的 ghost 档**（图标 + 文字，全站同一套皮肤）。
-            variant: 'ghost', size: 'sm', dense: true,
+            variant: 'ghost', size: 'sm',
             icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: output, size: 14 }),
             disabled: !canOpenFile,
             onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },

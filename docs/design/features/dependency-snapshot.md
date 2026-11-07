@@ -93,7 +93,7 @@ resolvedDeps?: ResolvedDependency[]
 
 ### 冒烟（已加，§四⑤）
 
-如改动点清单所列五组断言，随 `npm run smoke` 跑。
+如改动点清单所列五组断言，随 `pnpm smoke` 跑。
 
 ### 真机复验（待做）
 

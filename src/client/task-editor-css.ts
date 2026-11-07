@@ -111,7 +111,10 @@ export const TASK_EDITOR_CSS = `
 /* 源码态（核心 CodeViewer）：不截断、不裁切 ⇒ 右上角自带的复制 IconButton 完整可见。
    之前统一套 5 行截断，11 行的短提示词切到源码后连复制钮都被挡住（2026-11-08 用户点名）。
    复制钮本身是核心 CodeViewer 的普通 md IconButton，这里**不写任何放大 / 缩小它的样式**。 */
-.dsh-tdt-ed-view-prompt--source{max-height:none;overflow:visible;}
+.dsh-tdt-ed-view-prompt--source{max-height:none;overflow:visible;
+  /* 2026-11-08：最小高度 = (复制 IconButton 的 md 高度 + 它离顶 6px) × 2，
+     短提示词也能让浮动复制钮落在边框垂直中间，不再贴在底边；长了就随内容长，钮仍在右上角。 */
+  min-height:calc((var(--dshpc-control-h-md) + 6px) * 2);}
 .dsh-tdt-ed-view-empty{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 `;
 

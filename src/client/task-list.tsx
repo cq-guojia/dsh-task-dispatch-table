@@ -862,7 +862,7 @@ function TaskExpandPanel(props: {
                         outputs.slice(0, 3).map(output => h(Tooltip, {
                           key: output, label: baseNameOf(output), side: 'top',
                         }, h(IconButton, {
-                          variant: 'plain', size: 'md', dense: true,
+                          variant: 'plain', size: 'md',
                           icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: output, size: 16 }),
                           label: baseNameOf(output),
                           // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
@@ -1087,8 +1087,12 @@ function TaskCard(props: {
       accent: 'neutral',
       bar: { size: 0, inset: 0, gap: 0 },
       style: { padding: 0 },
-      // 整卡 hover 变色归核心 0.35.4 的 hoverable（本仓不再自写 :hover）。
+      // 2026-11-08 核心 0.35.6：hoverScope 'head' = 只有头部区变色，展开区完全不变。
+      // 前提是展开内容必须放进 `panel`（放 children 会被塞进 __body，hover 会蔓延到整块）。
       hoverable: true,
+      hoverScope: 'head',
+      expanded: open,
+      panel: open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh, workspaces }) : null,
     },
       // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
       // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
@@ -1170,8 +1174,6 @@ function TaskCard(props: {
         ),
       ),
     ),
-      // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
-      open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh, workspaces }) : null,
     ),
   )
 }

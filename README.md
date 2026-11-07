@@ -106,13 +106,13 @@ Configuration is stored in the plugin's own state database, so it survives host 
 ## Development
 
 ```bash
-npm install
-npm run build        # builds host first, then client
-npm run typecheck
-npm run smoke        # smoke tests against dist/
+pnpm install
+pnpm build        # builds host first, then client
+pnpm typecheck
+pnpm smoke        # smoke tests against dist/
 ```
 
-> **`dist/` is a build artefact committed to git** — dsh installs plugins from git/npm without running build scripts, so after changing `src/` you must run `npm run build` and commit `dist/` with it, or the change will not take effect.
+> **`dist/` is a build artefact committed to git** — dsh installs plugins from git/npm without running build scripts, so after changing `src/` you must run `pnpm build` and commit `dist/` with it, or the change will not take effect.
 
 ## License
 

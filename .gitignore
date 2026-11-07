@@ -11,3 +11,6 @@ lib/
 *.log
 .env
 .env.local
+
+# 包管理器固定 pnpm：防 npm install 重新生成 npm 锁文件、造成双锁并存
+package-lock.json

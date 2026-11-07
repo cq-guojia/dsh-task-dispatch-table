@@ -17,15 +17,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 依赖一律 pnpm：版本读 package.json 的 packageManager，锁文件为 pnpm-lock.yaml。
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'   # 必须 npm 11.5.1+，否则无 OIDC 支持 → 404
           registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
+          cache: 'pnpm'
 
-      - run: node --version && npm --version
-      - run: npm ci
-      - run: npm run build
+      - run: node --version && npm --version && pnpm --version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
 
       # npm 信任发布已勾选「Allow npm publish」：npm 11+ 自动走 OIDC，无需 NPM_TOKEN。
       - run: npm publish --provenance

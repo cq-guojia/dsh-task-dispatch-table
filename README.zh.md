@@ -106,13 +106,13 @@ dsh plugin --profile web add dsh-task-dispatch-table
 ## 开发
 
 ```bash
-npm install
-npm run build        # 先构建 host，再构建 client
-npm run typecheck
-npm run smoke        # 直接测 dist/ 产物
+pnpm install
+pnpm build        # 先构建 host，再构建 client
+pnpm typecheck
+pnpm smoke        # 直接测 dist/ 产物
 ```
 
-> **`dist/` 是提交进 git 的构建产物**——dsh 从 git/npm 安装插件时不跑构建脚本，所以改了 `src/` 必须重新 `npm run build` 并把 `dist/` 一并提交，否则改动不生效。
+> **`dist/` 是提交进 git 的构建产物**——dsh 从 git/npm 安装插件时不跑构建脚本，所以改了 `src/` 必须重新 `pnpm build` 并把 `dist/` 一并提交，否则改动不生效。
 
 ## License
 

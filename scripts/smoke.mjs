@@ -1,6 +1,6 @@
 // 冒烟测试：验证决策 25 的两处底层改造（刻度化调度 + 执行身份/防重）以及旧库可继续用。
 //
-// 跑法：npm run smoke（先 npm run build，本脚本直接引 dist 产物，测的是真正要发布的代码）。
+// 跑法：pnpm smoke（先 pnpm build，本脚本直接引 dist 产物，测的是真正要发布的代码）。
 // 刻意不引任何测试框架：零新增依赖，宿主环境装不了也照样能跑。
 
 import { randomUUID } from "node:crypto";
@@ -3044,8 +3044,9 @@ try {
 				idxSrc.includes("onOpenFile: canPreview ? openFile : undefined"),
 		);
 		check(
-			"三层交互（照任务卡片）：容器不可点、头部可点、展开区不可点；整卡 hover 变色归核心 StripCard 的 hoverable（本仓不再自写 :hover）",
-			/h\(StripCard, \{[\s\S]{0,800}hoverable: true/.test(tlSrc) &&
+			"2026-11-08：三层交互照旧（容器不点 / 头可点 / 展开区不点），展开内容走核心 panel，只头部 hover 变色",
+			/const cardProps = \{[\s\S]{0,600}hoverScope: 'head' as const[\s\S]{0,200}expanded: open/.test(tlSrc) &&
+				/h\(StripCard, \{ \.\.\.cardProps, panel: expandedPanel \}, head\)/.test(tlSrc) &&
 				!/\.dsh-tdt-rec-head:hover/.test(tlSrc) &&
 				!/dsh-tdt-rec-item--open/.test(tlSrc) &&
 				!/\.dsh-tdt-rec-item\{[^}]*border-bottom:1px solid/.test(tlSrc),
@@ -3394,8 +3395,9 @@ try {
 				!locSrc.includes("本次取自"),
 		);
 		check(
-			"第七轮：查看会话改**无边框链接型**小按钮（核心 variant='link'）并落 ListRow 的 actions 右列",
-			/variant: 'link'/.test(depArea) &&
+			"2026-11-08：前置任务「查看会话」改核心 secondary 灰底无描边按钮（反向：不再是纯文字 link），仍落 ListRow 的 actions 右列",
+			/variant: 'secondary',[\s\S]{0,400}t\('viewSession'\)\)/.test(depArea) &&
+				!/variant: 'link',[\s\S]{0,400}t\('viewSession'\)\)/.test(depArea) &&
 				!/variant: 'ghost'/.test(depArea) &&
 				!/variant: 'outline'/.test(depArea) &&
 				/actions: h\('div', \{ className: 'dsh-tdt-rec-depright' \}/.test(tlSrc),
@@ -3591,20 +3593,21 @@ try {
 			clientJs.includes("dshpc-listrow"),
 	);
 	check(
-		"任务卡片 / 执行记录卡 hover 全归核心 hoverable，本仓不再自写 :hover 变色",
+		"2026-11-08 核心 0.35.6：两张卡都走 hoverable + hoverScope:'head' + expanded/panel，展开内容放 panel ⇒ 只有头部 hover 变色，本仓不再自写 :hover",
 		(() => {
 			const listSrc = readFileSync(join(process.cwd(), "src", "client", "task-list.tsx"), "utf8");
 			const recSrc = readFileSync(join(process.cwd(), "src", "client", "records-timeline.tsx"), "utf8");
-			return /h\(Card, \{[\s\S]{0,300}hoverable: true/.test(listSrc) &&
-				/h\(StripCard, \{[\s\S]{0,800}hoverable: true/.test(recSrc) &&
+			return /h\(Card, \{[\s\S]{0,400}hoverable: true[\s\S]{0,400}hoverScope: 'head'[\s\S]{0,400}panel: open/.test(listSrc) &&
+				/hoverable: true[\s\S]{0,200}hoverScope: 'head' as const[\s\S]{0,100}expanded: open/.test(recSrc) &&
+				/h\(StripCard, \{ \.\.\.cardProps, panel: expandedPanel \}, head\)/.test(recSrc) &&
 				!listSrc.includes(".dsh-tdt-card-row:hover") &&
 				!recSrc.includes(".dsh-tdt-rec-head:hover");
 		})(),
 	);
 	check(
-		"文件 / 文件夹预览图标全站走核心 dense（图标放大一档、按钮高度不变）",
+		"2026-11-08：文件 / 复制图标一律用核心默认尺寸（反向：全站不再有 dense 放大档）",
 		["task-info.tsx", "records-timeline.tsx", "process-files.tsx", "task-file-context.tsx", "task-list.tsx"].every(
-			(file) => readFileSync(join(process.cwd(), "src", "client", file), "utf8").includes("dense: true"),
+			(file) => !readFileSync(join(process.cwd(), "src", "client", file), "utf8").includes("dense: true"),
 		),
 	);
 	check(
@@ -6388,13 +6391,16 @@ console.log("\n[14] runtime-index");
 			"utf8",
 		);
 		check(
-			"基础信息「任务会话」：放大镜走核心 IconButton 的 background（灰底座归核心）+ 会话名走核心 Button link；不再用独立「查看会话」按钮",
+			"基础信息「任务会话」（2026-11-08 宽度修复）：放大镜走核心 IconButton 的 background + 会话名走核心 Button link，宽度扣掉 icon 后由 MarqueeText 在裁剪盒内省略 / 跑马灯，不再撑出横向滚动条",
 			ti.includes("t('infoSession')") &&
 				ti.includes("variant: 'link'") &&
 				!ti.includes("dsh-tdt-info-session ") &&
 				ti.includes("children: sessionChip") &&
 				ti.includes("session_title") &&
-				ti.includes("MarqueeText, { text: sessionName }") &&
+				ti.includes("MarqueeText, { text: sessionName, style: { maxWidth: '100%', minWidth: 0 } }") &&
+				ti.includes("h('span', { style: { flex: '1 1 auto', minWidth: 0 } }") &&
+				ti.includes("display: 'inline-flex', alignItems: 'center', gap: '6px', flex: '1 1 auto', minWidth: 0, boxSizing: 'border-box'") &&
+				!ti.includes("MarqueeText, { text: sessionName }") &&
 				ti.includes("IconSearchOutlineRegular") &&
 				// 2026-11-06 用户点名：**要灰色底座**，走核心 IconButton 的 background（hover 由核心压深）。
 				ti.includes("h(IconButton, {") &&
@@ -6693,7 +6699,7 @@ console.log("\n[14] runtime-index");
 		);
 
 		check(
-			"提示词区（r13 续 + 2026-11-08）：短竖线标 + 预览约 5 行截断 / 源码态不截断 + 就地「源码 / 预览」分段 + 文字「展开 / 收起」按钮 + 文档区走核心 sunken 档",
+			"提示词区（r13 续 + 2026-11-08）：短竖线标 + 预览约 5 行截断 / 源码态不截断且有最小高度 + 就地「源码 / 预览」分段 + 文字「展开 / 收起」按钮 + 文档区走核心 sunken 默认圆角档",
 			tv.includes("t('editorViewSourceCode')") &&
 				tv.includes("t('editorModePreview')") &&
 				tv.includes("t('editorViewExpand')") &&
@@ -6711,12 +6717,16 @@ console.log("\n[14] runtime-index");
 				tec.includes("max-height:100px") &&
 				tec.includes(".dsh-tdt-ed-view-prompt--open{max-height:none;}") &&
 				tec.includes(".dsh-tdt-ed-view-expchevron") &&
-				// 文档区 = 核心 Surface 的 sunken 档（专门显示只读文档 / 源码区）；本仓不自写皮肤。
+				// 文档区 = 核心 Surface 的 sunken 档（专门显示只读文档 / 源码区）；本仓不自写皮肤，
+				// 圆角 / 内距吃核心默认 md 档（自挑 sm 档圆角不对，2026-11-08 用户点名）。
 				!tec.includes(".dsh-tdt-ed-view-promptbox{") &&
-				tv.includes("surfaceClass({ tone: 'sunken', border: 'none', radius: 'sm', padding: 'sm' })") &&
-				// 源码态不截断 ⇒ 核心 CodeViewer 自带的普通 md 复制 IconButton 完整可见。
+				tv.includes("surfaceClass({ tone: 'sunken', border: 'none' })") &&
+				!tv.includes("surfaceClass({ tone: 'sunken', border: 'none', radius:") &&
+				// 源码态不截断 ⇒ 核心 CodeViewer 自带的普通 md 复制 IconButton 完整可见；
+				// 最小高度 = (md 控件高 + 离顶 6px) × 2 ⇒ 短提示词也能让浮动复制钮落在垂直中间。
 				tv.includes("dsh-tdt-ed-view-prompt--source") &&
-				tec.includes(".dsh-tdt-ed-view-prompt--source{max-height:none;overflow:visible;}") &&
+				tec.includes(".dsh-tdt-ed-view-prompt--source{max-height:none;overflow:visible;") &&
+				tec.includes("min-height:calc((var(--dshpc-control-h-md) + 6px) * 2);") &&
 				!tec.includes(".dsh-tdt-ed-view-more") &&
 				!lcSrc.includes("editorViewFullscreen"),
 		);

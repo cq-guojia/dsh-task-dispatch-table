@@ -231,7 +231,7 @@ export function useResync(handler: () => void): void   // 重连成功时触发�
 
 **第 6 步 · 页面接入**：主列表（`index.ts` 的 `useTaskOverview`）、执行记录（`records-timeline.tsx`）、日程（`task-calendar.tsx`）订阅相关 type，按 §七模型处理；**卡片面板无需单独订阅**（主列表刷新经 `runSig` 自动驱动其重取）；**保留现有轮询不动**。
 
-**第 7 步 · 构建与验收**：`npm run build`（产物入 `dist/`）→ `npm run smoke` → `npm run typecheck` → 提交（含 dist）。
+**第 7 步 · 构建与验收**：`pnpm build`（产物入 `dist/`）→ `pnpm smoke` → `pnpm typecheck` → 提交（含 dist）。
 
 ---
 

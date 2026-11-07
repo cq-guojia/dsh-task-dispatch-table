@@ -158,8 +158,8 @@
 
 ## 六、提交前自检（照抄执行）
 
-1. `npm run build`（`dist/` 必须一起提交——本仓硬约定）。
-2. `npm run typecheck` + `npm run smoke`（冒烟测的是 `dist/` 产物）。
+1. `pnpm build`（`dist/` 必须一起提交——本仓硬约定）。
+2. `pnpm typecheck` + `pnpm smoke`（冒烟测的是 `dist/` 产物）。
 3. 反例自查（比断言更硬，直接在仓库里搜）：
    - 业务文件（`task-list.tsx` / `task-editor.tsx` / `index.ts` / `config-panel.tsx` / `file-*.tsx`）里 `--dsw-alias-` 出现次数 = **0**；
    - 同上文件里 `body[data-ds-dark-theme]` = **0**；
