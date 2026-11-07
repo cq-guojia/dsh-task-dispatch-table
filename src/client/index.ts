@@ -1527,7 +1527,7 @@ function TaskPage(props: {
 		"div",
 		{
 			id: "dsh-tdt-root",
-			className: "dsh-tdt-root",
+			className: "dsh-tdt-root dshpc-scroll-thin",
 			style: {
 				display: "flex",
 				alignItems: "flex-start",
@@ -1536,7 +1536,7 @@ function TaskPage(props: {
 		},
 		h(
 			"div",
-			{ style: { ...pageStyle, flex: "1 1 auto", minWidth: 0 } },
+			{ className: "dshpc-scroll-thin", style: { ...pageStyle, flex: "1 1 auto", minWidth: 0 } },
 			// 抬头：**与任务列表同宽居中**（用户 2026-09-30：主窗口标题也得收拢，不能全屏铺开）；
 			// 标题下面不再写时间与提示（用户 2026-09-30：只留「← 返回会话」和标题）。
 			h(
@@ -1698,7 +1698,7 @@ function TaskPage(props: {
 										),
 										hasRaw
 											? h("pre", {
-													className: surfaceClass({ tone: "sunken", border: "none", radius: "sm", padding: "sm" }),
+													className: `${surfaceClass({ tone: "sunken", border: "none", radius: "sm", padding: "sm" })} dshpc-scroll-thin`,
 													style: preStyle,
 												}, raw)
 											: null,
@@ -1918,7 +1918,7 @@ function TaskPage(props: {
 											data.warns.length === 0
 												? h("p", { style: hintStyle }, t("debugNoWarns"))
 												: h("pre", {
-														className: surfaceClass({ tone: "sunken", border: "none", radius: "sm", padding: "sm" }),
+														className: `${surfaceClass({ tone: "sunken", border: "none", radius: "sm", padding: "sm" })} dshpc-scroll-thin`,
 														style: preStyle,
 													}, data.warns.join("\n")),
 
@@ -2446,7 +2446,7 @@ function TaskPageHost(props: {
 	if (scope === null) {
 		return h(
 			"div",
-			{ style: pageStyle },
+			{ className: "dshpc-scroll-thin", style: pageStyle },
 			h(
 				"div",
 				{ style: panelHeaderStyle },

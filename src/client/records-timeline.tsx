@@ -33,7 +33,7 @@
 //   ② 续拉失败给提示 + 重试，并**暂停自动续拉**（否则哨兵把失败刷成重试风暴）；
 //   ③ `IntersectionObserver` **只建一次**（最新逻辑走 ref）；
 //   ④ 请求序号作废旧响应 + 失败不清空已有列表。
-import { createElement as h, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { createElement as h, Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular,
   IconFolderCloseRegular, IconQueueOutlineRegular, Tooltip,
@@ -46,7 +46,7 @@ import { ProcessFiles } from './process-files'
 import { workspaceLabelOf } from './workspace-options'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
-  Button, Chip, ensureRunningStyle, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, StripCard, TaskPicker, type CardAccent,
+  Button, Chip, ensureRunningStyle, IconButton, ListRow, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, StripCard, TaskPicker, type CardAccent,
   applyStyle,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
@@ -184,11 +184,7 @@ const RECORDS_CSS = `
    ⚠️ 只继承 font-family、**不要 font:inherit**：font:inherit 会把数字字号拉成父级头部字号，
    使折叠态圈码比展开态（同款 class、固定 11px）数字大一圈——用户 2026-10-05 指出两处「1、2」大小不一致。 */
 .dsh-tdt-rec-depmark--btn{appearance:none;-webkit-appearance:none;cursor:pointer;font-family:inherit;}
-/* 展开态前置格整块可点：手指提示（只有接了 onViewTask 才挂这个类）。 */
-.dsh-tdt-rec-dep--click{cursor:pointer;}
-/* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --dshpc-hover）；框内任务名 hover **不变色**
-   （整框已给反馈，名字再变蓝是多余——用户 2026-10-05；只在此作用域关掉 .dsh-tdt-info-dep 的 hover 蓝）。 */
-.dsh-tdt-rec-dep--click:hover{background:var(--dshpc-chip-bg-hover);}
+/* 2026-11-08：整格可点的手指 + hover 提亮已由核心 ListRow 接管（--click 那套自绘 hover 删除）。 */
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
 .dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}
@@ -199,8 +195,9 @@ const RECORDS_CSS = `
       （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 /* 展开区同样从竖条右缘起算 ⇒ 展开后的内容与头部标题**左对齐**（条子是通高的，也压在展开区上）。 */
 /* 左右 / 底部内距同样由核心 StripCard 给，这里只留「与头部之间那 8px + 分隔线」。 */
+/* 2026-11-07：分隔线上下各留 8px（原来只有线下有 padding，线贴着头部最后一行文字）。 */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--dshpc-space-2);
-  padding:var(--dshpc-space-2) 0 0;
+  margin-top:var(--dshpc-space-2);padding:var(--dshpc-space-2) 0 0;
   border-top:1px solid var(--dshpc-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
@@ -215,9 +212,9 @@ const RECORDS_CSS = `
    ③ 留白与圆角整体放大到约 1.5~2 倍（用户：「看着就是贴边，很挤」「完全看不出来圆角」）。 */
 .dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--dshpc-space-2);min-width:0;}
 .dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2) var(--dshpc-space-3);}
-.dsh-tdt-rec-dep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
-  column-gap:var(--dshpc-space-3);min-width:0;
-  padding:var(--dshpc-space-2) var(--dshpc-space-3);border-radius:var(--dshpc-radius-sm);background:var(--dshpc-chip-bg);}
+/* 2026-11-08 用户点名：前置任务那个「带底色的框」改核心 ListRow（常态带底、hover 提亮、
+   整行可点）。本仓**只留布局**：底色 / 圆角 / 内距 / hover 全交给核心，不再自绘第二套皮肤。 */
+.dsh-tdt-rec-dep{min-width:0;}
 .dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--dshpc-space-1);min-width:0;overflow:hidden;}
 /* 前置格**右列**：产出物图标 → 查看会话。**整列不折行**（用户 2026-10-04：页面拉伸时不要把内容
    压成折行）⇒ 挤的时候先让左列的名字 / 时间省略，右列控件始终完整可见。 */
@@ -656,17 +653,23 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
       ? h('div', { className: 'dsh-tdt-rec-exp' },
         outputs.length === 0
           ? null
-          : h('div', { className: 'dsh-tdt-rec-expouts' },
-            outputs.map(path => h(Button, {
-              key: path,
-              // 文件行 = 核心 Button 的 ghost 档（图标 + 文字；2026-11-06 全站收口，不再用行式文件按钮类）。
-              variant: 'ghost', size: 'sm', dense: true,
-              icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
-              disabled: !canOpenFile,
-              onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
-              style: { flex: '0 0 auto', maxWidth: '100%' },
-              // 文件名**限宽 40ch + 超长跑马灯**（与卡片附件区同一口径；用户：设个最大宽度，超过了就跑马灯）
-            }, h(MarqueeText, { text: baseNameOf(path), style: { maxWidth: '40ch', minWidth: 0 } }))),
+          : h(Fragment, null,
+            // 2026-11-07：补回主文件排的小标题，与「其他产出」「前置任务」「执行日志」同级。
+            // 历史核查：本展开区从未有过这个标题；会话弹窗顶部的「交付文件」区块是 2026-09-28
+            // 因官方交付卡无区块标题被用户否决删除的，与此无关。这里按「产出 / 其他产出」成对补回。
+            h('div', { className: 'dsh-tdt-rec-evtitle' }, t('colOutputs')),
+            h('div', { className: 'dsh-tdt-rec-expouts' },
+              outputs.map(path => h(Button, {
+                key: path,
+                // 文件行 = 核心 Button 的 ghost 档（图标 + 文字；2026-11-06 全站收口，不再用行式文件按钮类）。
+                variant: 'ghost', size: 'sm', dense: true,
+                icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
+                disabled: !canOpenFile,
+                onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
+                style: { flex: '0 0 auto', maxWidth: '100%' },
+                // 文件名**限宽 40ch + 超长跑马灯**（与卡片附件区同一口径；用户：设个最大宽度，超过了就跑马灯）
+              }, h(MarqueeText, { text: baseNameOf(path), style: { maxWidth: '40ch', minWidth: 0 } }))),
+            ),
           ),
         // 过程文件（次级）：跟在主文件那排之后，同样可点开预览。
         h(ProcessFiles, {
@@ -690,44 +693,18 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                 const depSid = dep.sessionId
                 const depHasSid = depSid !== null && depSid !== ''
                 const depCanOpen = openFile !== undefined && depHasSid
-                return h('div', {
+                // 2026-11-08 用户点名：这个「带底色的框」改核心 `ListRow`（常态带底 + hover
+                // 提亮 + 整行可点），本仓只管左右两槽里装什么，不再自己画底 / 圆角 / 内距。
+                return h(ListRow, {
                   key: `${dep.task}#${dep.instanceId}`,
-                  className: `dsh-tdt-rec-dep${onViewTask !== undefined ? ' dsh-tdt-rec-dep--click' : ''}`,
-                  // 整格可点开该前置任务的查看档（用户 2026-10-05）；「查看会话」与产出物图标各自 stopPropagation 抢回自己的动作。
-                  onClick: onViewTask === undefined ? undefined : (event: { stopPropagation: () => void }) => {
-                    event.stopPropagation()
-                    onViewTask(dep.task)
-                  },
-                },
-                  h('div', { className: 'dsh-tdt-rec-depmid' },
-                    h('div', { className: 'dsh-tdt-rec-depname' },
-                      h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)),
-                      // 任务名可点（r12）⇒ 右侧栏以查看档打开这个前置任务；未接回调时保持纯文本。
-                      onViewTask === undefined
-                        ? h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
-                          h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task)))
-                        : h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
-                          h(Button, {
-                            variant: 'link', size: 'sm',
-                            style: { minWidth: 0, fontSize: 'inherit' },
-                            onClick: (event: { stopPropagation(): void }) => {
-                              event.stopPropagation()
-                              onViewTask(dep.task)
-                            },
-                          }, h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task)))),
-                    ),
-                    !isPlanned && h('div', { className: 'dsh-tdt-rec-depmeta' },
-                      // 「执行于 <完整时刻>」—— 书面表达 + **全量长格式**（用户 2026-10-04 第七轮：否掉
-                      // 「本次取自前一天…」那种口语说法，「哪一天、几点几分几秒，全都给显示出来」）。
-                      // 单行省略、悬停看全量；stampOf = formatDateTime(iso, { seconds: true })。
-                      h(Tooltip, { label: stampOf(dep.scheduledAt), side: 'top' },
-                        h('span', { className: 'dsh-tdt-ellipsis' },
-                          tt('recordsDepFrom', { time: stampOf(dep.scheduledAt) }))),
-                    ),
-                  ),
+                  className: 'dsh-tdt-rec-dep',
+                  hoverable: true,
+                  // 整行可点开该前置任务的查看档（用户 2026-10-05）；核心 `actions` 槽外层自带
+                  // stopPropagation ⇒ 右列按钮不会连带触发整行。
+                  onClick: onViewTask === undefined ? undefined : () => { onViewTask(dep.task) },
                   // ── 右列（**整列不折行**，用户 2026-10-04：拉伸时别把内容压成折行）──
                   //    顺序：产出物图标 → 查看会话。
-                  h('div', { className: 'dsh-tdt-rec-depright' },
+                  actions: h('div', { className: 'dsh-tdt-rec-depright' },
                     depOuts.length === 0
                       ? null
                       : h('span', { className: 'dsh-tdt-rec-chiprow' },
@@ -777,6 +754,33 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                         },
                       }, t('viewSession'))
                       : null,
+                  ),
+                },
+                  h('div', { className: 'dsh-tdt-rec-depmid' },
+                    h('div', { className: 'dsh-tdt-rec-depname' },
+                      h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)),
+                      // 任务名可点（r12）⇒ 右侧栏以查看档打开这个前置任务；未接回调时保持纯文本。
+                      onViewTask === undefined
+                        ? h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
+                          h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task)))
+                        : h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
+                          h(Button, {
+                            variant: 'link', size: 'sm',
+                            style: { minWidth: 0, fontSize: 'inherit' },
+                            onClick: (event: { stopPropagation(): void }) => {
+                              event.stopPropagation()
+                              onViewTask(dep.task)
+                            },
+                          }, h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task)))),
+                    ),
+                    !isPlanned && h('div', { className: 'dsh-tdt-rec-depmeta' },
+                      // 「执行于 <完整时刻>」—— 书面表达 + **全量长格式**（用户 2026-10-04 第七轮：否掉
+                      // 「本次取自前一天…」那种口语说法，「哪一天、几点几分几秒，全都给显示出来」）。
+                      // 单行省略、悬停看全量；stampOf = formatDateTime(iso, { seconds: true })。
+                      h(Tooltip, { label: stampOf(dep.scheduledAt), side: 'top' },
+                        h('span', { className: 'dsh-tdt-ellipsis' },
+                          tt('recordsDepFrom', { time: stampOf(dep.scheduledAt) }))),
+                    ),
                   ),
                 )
               }),

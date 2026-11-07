@@ -59,7 +59,8 @@ export const TASK_EDITOR_CSS = `
 /* 选模型（核心 ModelPicker 分组态）：比工作区小一档，最小宽度下先让出空间（用户 2026-11-06 真机反馈）。
    触发器必须填满定宽根，否则值短时触发器缩到 min-width(120)、右缘留白 ⇒ 看着没靠右；
    margin-left:auto 兜底，让它在任何排布下都贴右缘（用户 2026-11-06）。 */
-.dsh-tdt-ed-model{width:140px;margin-left:auto;}
+/* 2026-11-07：分栏拉大时模型框跟着自适应变宽，但封顶 260px；默认宽度仍是 140px。 */
+.dsh-tdt-ed-model{width:clamp(140px,18%,260px);margin-left:auto;}
 .dsh-tdt-ed-model .dshpc-picker__trigger{width:100%;}
 /* 设置页「供应商 + 模型」联动态：两个下拉**等宽定住**（核心 __row 默认 flex，按内容自适应会跳宽）。 */
 .dsh-tdt-model-pair .dshpc-picker__row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2);}
@@ -107,6 +108,10 @@ export const TASK_EDITOR_CSS = `
 /* 提示词默认**约 5 行**截断（用户 2026-10-05）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
 .dsh-tdt-ed-view-prompt{min-width:0;max-height:100px;overflow:hidden;}
 .dsh-tdt-ed-view-prompt--open{max-height:none;}
+/* 源码态（核心 CodeViewer）：不截断、不裁切 ⇒ 右上角自带的复制 IconButton 完整可见。
+   之前统一套 5 行截断，11 行的短提示词切到源码后连复制钮都被挡住（2026-11-08 用户点名）。
+   复制钮本身是核心 CodeViewer 的普通 md IconButton，这里**不写任何放大 / 缩小它的样式**。 */
+.dsh-tdt-ed-view-prompt--source{max-height:none;overflow:visible;}
 .dsh-tdt-ed-view-empty{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 `;
 

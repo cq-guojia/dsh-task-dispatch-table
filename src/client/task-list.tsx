@@ -402,9 +402,10 @@ const panelWrapStyle: Record<string, string | number> = {
   borderTop: `1px dashed var(--dshpc-border)`, paddingTop: '10px', paddingLeft: '14px', paddingRight: '14px', paddingBottom: '12px',
 }
 const panelBarStyle: Record<string, string | number> = {
-  // 表底**贴着**虚线（用户 2026-10-02）：去掉上外边距，只留虚线上方的内边距。
-  // 面板总高不变（`panelBoxStyle` 定高 + 内容区 flex:1 自动吃掉这 10px）。
-  paddingTop: '10px', borderTop: `1px dashed var(--dshpc-border)`,
+  // 2026-11-08 用户点名删掉底栏上方那条 1px dashed（截图里「其他产出」正下方那条 border）：
+  // 它是 2026-10-02「表底贴着虚线」留下的手搓线，横跨三个 tab、不专属任何一块内容，没有语义。
+  // 只保留 10px 上内距 ⇒ 面板总高不变（`panelBoxStyle` 定高 + 内容区 flex:1 自动吃掉这 10px）。
+  paddingTop: '10px',
   display: 'flex', alignItems: 'center', gap: '8px',
 }
 /**
@@ -711,13 +712,13 @@ function TaskExpandPanel(props: {
       // 两栏：左配置（约 58%）+ 右最近执行（约 42%，**独立滚动**）；整块仍在同一个定高盒内 ⇒ 切 tab 高度不蹦。
       h('div', { style: infoWrapStyle },
         // 左栏：任务配置（纸表格：标签 + 值，逐行留白；不再显示提示词）。
-        h('div', { className: 'dsh-tdt-info-cfg', style: infoConfigStyle },
+        h('div', { className: 'dsh-tdt-info-cfg dshpc-scroll-thin', style: infoConfigStyle },
           h('div', { style: infoGroupTitleStyle }, t('infoSectionConfig')),
           // 前置任务名可点（2026-10-05）⇒ 右侧栏以查看档打开它（`onViewTask`，暂未接时为纯文本）。
           taskInfoBaseFields({ t, view, onOpenFile, onViewTask }),
         ),
         // 右栏：只看「上次执行」一条（用户 2026-10-03：别那么麻烦，成功显成功、失败显失败），内容多只滚这一栏。
-        h('div', { style: infoRecentStyle },
+        h('div', { className: 'dshpc-scroll-thin', style: infoRecentStyle },
           h('div', { style: infoGroupTitleStyle }, t('infoLastRun')),
           infoError !== null
             ? h('div', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
@@ -779,7 +780,7 @@ function TaskExpandPanel(props: {
       ),
       recError !== null ? h('span', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-danger)' } }, `${t('cardLoadFailed')}：${recError}`) : null,
     ),
-    h('div', { style: panelScrollFillStyle },
+    h('div', { className: 'dshpc-scroll-thin', style: panelScrollFillStyle },
       records === null
         ? null
         : records.length === 0
@@ -968,7 +969,7 @@ function TaskExpandPanel(props: {
     ),
     // 日志整区（用户 2026-10-03）：**不套框** —— 上面一条线（与执行记录表头上沿线同色 `--dshpc-border`），
     // 从这条线一直到下方虚线，整块铺上日志原本的底色；日志直接铺在里面。
-    h('div', { style: logAreaStyle },
+    h('div', { className: 'dshpc-scroll-thin', style: logAreaStyle },
       logs === null
         ? null
         : logs.length === 0

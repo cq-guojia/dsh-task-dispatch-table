@@ -48,7 +48,9 @@ export function ProcessFiles(props: {
         if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen((value) => !value) }
       },
     },
-      h('span', { style: { fontSize: 'var(--dshpc-font-sm)', fontWeight: 400 } }, t('procFilesTitle', { count: list.length })),
+      // 与「产出」标题同一档（2026-11-07）：小字 + 浅灰。不写 color 就继承 --dshpc-fg，
+      // 深色主题下会白得盖过主文件标题（用户点名「为什么其他产出是白色的」）。
+      h('span', { style: { fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('procFilesTitle', { count: list.length })),
       // 三角不另绑 onClick：点击冒泡到整行，避免同一次点击切换两回。
       h(IconButton, {
         variant: 'plain',

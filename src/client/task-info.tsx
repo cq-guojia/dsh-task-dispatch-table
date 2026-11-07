@@ -355,18 +355,18 @@ export function lastRunFields(props: {
       ? null
       : h('div', { style: { marginTop: '14px' } },
         h('div', { style: { marginBottom: '6px', fontSize: 'var(--dshpc-font-xs)', color: 'var(--dshpc-fg-3)' } }, t('colOutputs')),
-        h('div', { style: { display: 'flex', flexDirection: 'column' } },
+        // 与「其他产出」同款**横向平铺**（2026-11-07 用户拍板）：一个一个文件往右排，
+        // 文件名没超 40ch 就一直铺，放不下才换行；不再一列竖排、也不再 block 撑满整行。
+        h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '2px 4px', minWidth: 0 } },
           outputs.map(output => h(Button, {
             key: output,
-            // 文件行 = **核心 Button 的 ghost 档**（图标 + 文字，与「其他产出」标题同一套皮肤）：2026-11-06 用户点名
-            // 「红框那个是哪来的样式？核心哪有这种样式？……要不然你就用 button 的样式」。
-            variant: 'ghost', size: 'sm', block: true, dense: true,
+            // 文件行 = **核心 Button 的 ghost 档**（图标 + 文字，全站同一套皮肤）。
+            variant: 'ghost', size: 'sm', dense: true,
             icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: output, size: 14 }),
             disabled: !canOpenFile,
             onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },
-            // block + icon 默认会为了让「图标 + 文案」整体居中而补右内边距；这里要左对齐成清单行。
-            style: { justifyContent: 'flex-start' },
-          }, h(MarqueeText, { text: baseNameOf(output), style: { flex: '1 1 auto', minWidth: 0 } }))),
+            style: { flex: '0 0 auto', maxWidth: '100%' },
+          }, h(MarqueeText, { text: baseNameOf(output), style: { maxWidth: '40ch', minWidth: 0 } }))),
         ),
       ),
     // 过程文件（次级）：与产出物清单同一份数据源，上次执行处默认展开。

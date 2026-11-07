@@ -63,18 +63,10 @@ export const PROCESS_FILES_CSS = `
 
 `;
 
-/** 1 像素滚动条（用户 2026-11-06：所有区域滚动条统一细线）。 */
-export const SCROLL_CSS = `
-/* ── 1 像素滚动条：本插件界面内**所有**滚动区统一 ───────────────────────────
-   主面板 / 卡片展开区 / 编辑分栏 / 预览分栏全在 .dsh-tdt-root 之内 ⇒ 一条后代选择器全覆盖，
-   使用点不必各自挂类。下拉菜单经 FloatingPortal 挂到 body、不在 root 内；核心 Picker 的列表
-   已自带 .dshpc-scroll-thin（同为 1px），无需重复实现。
-   ⚠️ 只写 ::-webkit-scrollbar：一旦同时写 scrollbar-width，Chrome 会切到规范化滚动条
-   并忽略这里的 1px（核心 panel.css 同款结论）。 */
-.dsh-tdt-root::-webkit-scrollbar, .dsh-tdt-root *::-webkit-scrollbar{width:1px;height:1px;}
-.dsh-tdt-root::-webkit-scrollbar-thumb, .dsh-tdt-root *::-webkit-scrollbar-thumb{background:var(--dshpc-border-heavy);}
-.dsh-tdt-root::-webkit-scrollbar-track, .dsh-tdt-root *::-webkit-scrollbar-track{background:transparent;}
-`;
+/** 细滚动条只认核心的 `.dshpc-scroll-thin`（3px，design/tokens 域全局注入、挂类即生效）。
+ *  2026-11-08 用户点名删掉本仓自绘的 1px 版：本插件**不再定义任何 ::-webkit-scrollbar 规则**。
+ *  该类只作用于挂它的那个容器（外加其 .cm-scroller 后代），所以每个 `overflow:auto` 的容器
+ *  都要自己挂 `dshpc-scroll-thin`，见各组件。 */
 
 /** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 export const CONTROLS_DOMAIN = "controls";
@@ -85,6 +77,6 @@ export const CONTROLS_DOMAIN = "controls";
 export function ensureControlsStyle(): void {
 	applyStyle(
 		CONTROLS_DOMAIN,
-		BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS + SCROLL_CSS,
+		BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS,
 	);
 }

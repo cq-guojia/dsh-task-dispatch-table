@@ -1123,9 +1123,12 @@ export const PAGE_MIN_WIDTH = 760;
  * 以「权限」为基准 120px，工作区 / 模型 = 1.5 倍 = 180px。
  * 不再按选项文字自适应宽度——那样换一个选项宽度就变一下（先各自撑到上限、三个都长才开始挤），
  * 观感一直在跳；用户很清楚自己选的工作区和模型，显示不下就省略号（MarqueeText 悬停可读全名）。
+ * 2026-11-07：分栏拉大时跟着父宽变宽、各自封顶；`clamp` 下限就是原来的定宽 ⇒ 默认观感不变。
+ * ⚠️ 核心 `Picker.resolveTriggerSizing` 一收到 `width` 就把 width / minWidth / maxWidth 全设为它，
+ *    所以「下限 + 弹性 + 上限」必须写进**这一个** CSS 表达式，另传 maxWidth 会被忽略。
  */
-const PROMPT_SELECT_BASE = "120px";
-const PROMPT_SELECT_WIDE = "180px";
+const PROMPT_SELECT_BASE = "clamp(120px, 14%, 200px)";
+const PROMPT_SELECT_WIDE = "clamp(180px, 22%, 300px)";
 
 /**
  * 模型下拉的分组数据（`ModelPicker` 的 `groups` 口径：一组 = 一个供应商）。
@@ -1554,6 +1557,7 @@ function PromptEditorModal(props: {
 				: h(
 						"div",
 						{
+							className: "dshpc-scroll-thin",
 							style: {
 								flex: "1 1 auto",
 								minWidth: 0,
@@ -1603,6 +1607,7 @@ function PromptEditorModal(props: {
 							: h(
 									"div",
 									{
+										className: "dshpc-scroll-thin",
 										style: {
 											display: "flex",
 											flexDirection: "column",
@@ -2289,9 +2294,9 @@ export function TaskEditorDrawer(props: {
 		}),
 		// 底部一行：左 = 工作区（真实工作区列表，P1 接）；工作区右侧 = 权限档位（决策 50）；
 		// 右 = 模型（不填 = 默认模型）。
-		// 三框宽度**全部定宽**（用户 2026-10-02）：以权限框为基准 PROMPT_SELECT_BASE(120)，
-		// 工作区 / 模型 = 1.5 倍(180)。不再按内容自适应 —— 以前换选项宽度就跟着变（先撑到 cap、
-		// 三个都长才开始挤），观感一直在跳；用户很清楚自己选的工作区 / 模型，显示不下就省略号。
+		// 三框宽度下限沿用 2026-10-02 的定宽口径（权限 120 / 工作区 180 / 模型 140），
+		// 2026-11-07 起分栏拉大时按父宽比例跟着变宽、各自封顶（见 PROMPT_SELECT_*）。
+		// 仍不按选项文字自适应 —— 换选项宽度就跟着变，观感一直在跳；显示不下就省略号。
 		h(
 			"div",
 			{ className: "dsh-tdt-ed-card-foot" },
@@ -2312,26 +2317,18 @@ export function TaskEditorDrawer(props: {
 				searchable: true,
 			}),
 			// 权限：紧挨工作区（用户 2026-09-29：选完工作区就定权限，两者同一件事的前后脚）。
-			// 悬停说明走官方 `Tooltip`（2026-11-06：不再用 SelectField 的原生 title 兜底）。
-			h(
-				Tooltip,
-				{ label: t("editorPermissionHint"), side: "top" },
-				h(
-					"span",
-					{ style: { display: "inline-flex", minWidth: 0 } },
-					h(SelectField, {
-						value: draft.permission,
-						options: permissionOptions,
-						onChange: (value) => {
-							patch({ permission: value as PermissionMode });
-						},
-						placeholder: t("editorPermDefault"),
-						emptyLabel: t("editorNoOptions"),
-						ariaLabel: t("editorPermission"),
-						width: PROMPT_SELECT_BASE,
-					}),
-				),
-			),
+			// 2026-11-07：悬停说明去掉（那句提示太长，用户点名不要）；档位名自明，不再套 Tooltip。
+			h(SelectField, {
+				value: draft.permission,
+				options: permissionOptions,
+				onChange: (value) => {
+					patch({ permission: value as PermissionMode });
+				},
+				placeholder: t("editorPermDefault"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorPermission"),
+				width: PROMPT_SELECT_BASE,
+			}),
 			h("span", { className: "dsh-tdt-ed-spacer" }),
 			// 选模型 = 核心 `ModelPicker` 分组态（一组 = 一个供应商）；「默认模型」是核心内置首项。
 			// ⚠️ 候选为空但草稿里**已经有模型**（宿主没接上 llm ⇒ degraded 时常发生）⇒ `modelGroupsOf`
@@ -2839,7 +2836,7 @@ export function TaskEditorDrawer(props: {
 							marginRight: "4px",
 						},
 					},
-					t("editorSchedForecast") + "：",
+					`${t("editorSchedForecast")}：`,
 				),
 				// 关键片段（时间 / 「每 N 分钟执行一次」）加粗提亮（用户 2026-09-30：方法要支持样式参数）。
 				renderSchedule(scheduleSpecFromDraft(draft), t, {
@@ -3474,7 +3471,7 @@ export function TaskEditorDrawer(props: {
 					// 正文：查看档 = 只读人话视图（自己取「上次执行」）；编辑档 = 表单（或其上的全屏子面板）。
 					h(
 						"div",
-						{ className: "dsh-tdt-ed-body", ref: bodyRef },
+						{ className: "dsh-tdt-ed-body dshpc-scroll-thin", ref: bodyRef },
 						viewTab === "view"
 							? h(TaskViewPanel, {
 									t,

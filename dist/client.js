@@ -59071,25 +59071,17 @@ window.__ModuleLoader__.load({
 .dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
 
 `;
-		/** 1 像素滚动条（用户 2026-11-06：所有区域滚动条统一细线）。 */
-		const SCROLL_CSS = `
-/* ── 1 像素滚动条：本插件界面内**所有**滚动区统一 ───────────────────────────
-   主面板 / 卡片展开区 / 编辑分栏 / 预览分栏全在 .dsh-tdt-root 之内 ⇒ 一条后代选择器全覆盖，
-   使用点不必各自挂类。下拉菜单经 FloatingPortal 挂到 body、不在 root 内；核心 Picker 的列表
-   已自带 .dshpc-scroll-thin（同为 1px），无需重复实现。
-   ⚠️ 只写 ::-webkit-scrollbar：一旦同时写 scrollbar-width，Chrome 会切到规范化滚动条
-   并忽略这里的 1px（核心 panel.css 同款结论）。 */
-.dsh-tdt-root::-webkit-scrollbar, .dsh-tdt-root *::-webkit-scrollbar{width:1px;height:1px;}
-.dsh-tdt-root::-webkit-scrollbar-thumb, .dsh-tdt-root *::-webkit-scrollbar-thumb{background:var(--dshpc-border-heavy);}
-.dsh-tdt-root::-webkit-scrollbar-track, .dsh-tdt-root *::-webkit-scrollbar-track{background:transparent;}
-`;
+		/** 细滚动条只认核心的 `.dshpc-scroll-thin`（3px，design/tokens 域全局注入、挂类即生效）。
+		*  2026-11-08 用户点名删掉本仓自绘的 1px 版：本插件**不再定义任何 ::-webkit-scrollbar 规则**。
+		*  该类只作用于挂它的那个容器（外加其 .cm-scroller 后代），所以每个 `overflow:auto` 的容器
+		*  都要自己挂 `dshpc-scroll-thin`，见各组件。 */
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 		const CONTROLS_DOMAIN = "controls";
 		/**
 		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
 		*/
 		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS + SCROLL_CSS);
+			applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS);
 		}
 		// src/client/ui/Field.tsx
 		/**
@@ -59418,8 +59410,8 @@ window.__ModuleLoader__.load({
 					}
 				}
 			}, (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--dshpc-font-sm)",
-				fontWeight: 400
+				fontSize: "var(--dshpc-font-xs)",
+				color: "var(--dshpc-fg-3)"
 			} }, t("procFilesTitle", { count: list.length })), (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "sm",
@@ -59740,11 +59732,7 @@ window.__ModuleLoader__.load({
    ⚠️ 只继承 font-family、**不要 font:inherit**：font:inherit 会把数字字号拉成父级头部字号，
    使折叠态圈码比展开态（同款 class、固定 11px）数字大一圈——用户 2026-10-05 指出两处「1、2」大小不一致。 */
 .dsh-tdt-rec-depmark--btn{appearance:none;-webkit-appearance:none;cursor:pointer;font-family:inherit;}
-/* 展开态前置格整块可点：手指提示（只有接了 onViewTask 才挂这个类）。 */
-.dsh-tdt-rec-dep--click{cursor:pointer;}
-/* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --dshpc-hover）；框内任务名 hover **不变色**
-   （整框已给反馈，名字再变蓝是多余——用户 2026-10-05；只在此作用域关掉 .dsh-tdt-info-dep 的 hover 蓝）。 */
-.dsh-tdt-rec-dep--click:hover{background:var(--dshpc-chip-bg-hover);}
+/* 2026-11-08：整格可点的手指 + hover 提亮已由核心 ListRow 接管（--click 那套自绘 hover 删除）。 */
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
 .dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}
@@ -59755,8 +59743,9 @@ window.__ModuleLoader__.load({
       （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 /* 展开区同样从竖条右缘起算 ⇒ 展开后的内容与头部标题**左对齐**（条子是通高的，也压在展开区上）。 */
 /* 左右 / 底部内距同样由核心 StripCard 给，这里只留「与头部之间那 8px + 分隔线」。 */
+/* 2026-11-07：分隔线上下各留 8px（原来只有线下有 padding，线贴着头部最后一行文字）。 */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--dshpc-space-2);
-  padding:var(--dshpc-space-2) 0 0;
+  margin-top:var(--dshpc-space-2);padding:var(--dshpc-space-2) 0 0;
   border-top:1px solid var(--dshpc-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
@@ -59771,9 +59760,9 @@ window.__ModuleLoader__.load({
    ③ 留白与圆角整体放大到约 1.5~2 倍（用户：「看着就是贴边，很挤」「完全看不出来圆角」）。 */
 .dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--dshpc-space-2);min-width:0;}
 .dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2) var(--dshpc-space-3);}
-.dsh-tdt-rec-dep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
-  column-gap:var(--dshpc-space-3);min-width:0;
-  padding:var(--dshpc-space-2) var(--dshpc-space-3);border-radius:var(--dshpc-radius-sm);background:var(--dshpc-chip-bg);}
+/* 2026-11-08 用户点名：前置任务那个「带底色的框」改核心 ListRow（常态带底、hover 提亮、
+   整行可点）。本仓**只留布局**：底色 / 圆角 / 内距 / hover 全交给核心，不再自绘第二套皮肤。 */
+.dsh-tdt-rec-dep{min-width:0;}
 .dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--dshpc-space-1);min-width:0;overflow:hidden;}
 /* 前置格**右列**：产出物图标 → 查看会话。**整列不折行**（用户 2026-10-04：页面拉伸时不要把内容
    压成折行）⇒ 挤的时候先让左列的名字 / 时间省略，右列控件始终完整可见。 */
@@ -60084,7 +60073,7 @@ window.__ModuleLoader__.load({
 				},
 				"aria-expanded": open,
 				style: { transform: open ? "rotate(180deg)" : "none" }
-			})) : null)), open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)(Button$1, {
+			})) : null)), open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("colOutputs")), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)(Button$1, {
 				key: path,
 				variant: "ghost",
 				size: "sm",
@@ -60107,7 +60096,7 @@ window.__ModuleLoader__.load({
 					maxWidth: "40ch",
 					minWidth: 0
 				}
-			})))), (0, react$1.createElement)(ProcessFiles, {
+			}))))), (0, react$1.createElement)(ProcessFiles, {
 				paths: processOutputs,
 				defaultOpen: true,
 				onOpen: canOpenFile ? (path) => {
@@ -60119,13 +60108,49 @@ window.__ModuleLoader__.load({
 				const depSid = dep.sessionId;
 				const depHasSid = depSid !== null && depSid !== "";
 				const depCanOpen = openFile !== void 0 && depHasSid;
-				return (0, react$1.createElement)("div", {
+				return (0, react$1.createElement)(ListRow, {
 					key: `${dep.task}#${dep.instanceId}`,
-					className: `dsh-tdt-rec-dep${onViewTask !== void 0 ? " dsh-tdt-rec-dep--click" : ""}`,
-					onClick: onViewTask === void 0 ? void 0 : (event) => {
-						event.stopPropagation();
+					className: "dsh-tdt-rec-dep",
+					hoverable: true,
+					onClick: onViewTask === void 0 ? void 0 : () => {
 						onViewTask(dep.task);
-					}
+					},
+					actions: (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depright" }, depOuts.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, depOuts.slice(0, depOuts.length > DEP_OUT_MAX ? 4 : DEP_OUT_MAX).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+						key: path,
+						label: baseNameOf(path),
+						side: "top"
+					}, (0, react$1.createElement)(IconButton, {
+						variant: "plain",
+						size: "md",
+						dense: true,
+						icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+							path,
+							size: 16
+						}),
+						label: baseNameOf(path),
+						title: "",
+						disabled: !depCanOpen,
+						onClick: (event) => {
+							event.stopPropagation();
+							if (depCanOpen) openFile?.(depSid, path);
+						}
+					}))), depOuts.length > DEP_OUT_MAX ? (0, react$1.createElement)("button", {
+						type: "button",
+						className: "dsh-tdt-chip dsh-tdt-chip--label",
+						"aria-label": t("viewSession"),
+						disabled: !depHasSid,
+						onClick: (event) => {
+							event.stopPropagation();
+							if (depHasSid) openSession(depSid);
+						}
+					}, "…") : null), depHasSid ? (0, react$1.createElement)(Button$1, {
+						size: "sm",
+						variant: "link",
+						onClick: (event) => {
+							event.stopPropagation();
+							openSession(depSid);
+						}
+					}, t("viewSession")) : null)
 				}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmid" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depname" }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, String(index + 1)), onViewTask === void 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					label: depTitleOf(dep.task),
 					side: "top"
@@ -60146,42 +60171,7 @@ window.__ModuleLoader__.load({
 				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, depTitleOf(dep.task))))), !isPlanned && (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmeta" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					label: stampOf(dep.scheduledAt),
 					side: "top"
-				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, tt("recordsDepFrom", { time: stampOf(dep.scheduledAt) }))))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depright" }, depOuts.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, depOuts.slice(0, depOuts.length > DEP_OUT_MAX ? 4 : DEP_OUT_MAX).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-					key: path,
-					label: baseNameOf(path),
-					side: "top"
-				}, (0, react$1.createElement)(IconButton, {
-					variant: "plain",
-					size: "md",
-					dense: true,
-					icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-						path,
-						size: 16
-					}),
-					label: baseNameOf(path),
-					title: "",
-					disabled: !depCanOpen,
-					onClick: (event) => {
-						event.stopPropagation();
-						if (depCanOpen) openFile?.(depSid, path);
-					}
-				}))), depOuts.length > DEP_OUT_MAX ? (0, react$1.createElement)("button", {
-					type: "button",
-					className: "dsh-tdt-chip dsh-tdt-chip--label",
-					"aria-label": t("viewSession"),
-					disabled: !depHasSid,
-					onClick: (event) => {
-						event.stopPropagation();
-						if (depHasSid) openSession(depSid);
-					}
-				}, "…") : null), depHasSid ? (0, react$1.createElement)(Button$1, {
-					size: "sm",
-					variant: "link",
-					onClick: (event) => {
-						event.stopPropagation();
-						openSession(depSid);
-					}
-				}, t("viewSession")) : null));
+				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, tt("recordsDepFrom", { time: stampOf(dep.scheduledAt) }))))));
 			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? null : events === null ? null : events.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
 				key: event.seq,
 				className: "dsh-tdt-rec-evrow"
@@ -77016,7 +77006,8 @@ window.__ModuleLoader__.load({
 /* 选模型（核心 ModelPicker 分组态）：比工作区小一档，最小宽度下先让出空间（用户 2026-11-06 真机反馈）。
    触发器必须填满定宽根，否则值短时触发器缩到 min-width(120)、右缘留白 ⇒ 看着没靠右；
    margin-left:auto 兜底，让它在任何排布下都贴右缘（用户 2026-11-06）。 */
-.dsh-tdt-ed-model{width:140px;margin-left:auto;}
+/* 2026-11-07：分栏拉大时模型框跟着自适应变宽，但封顶 260px；默认宽度仍是 140px。 */
+.dsh-tdt-ed-model{width:clamp(140px,18%,260px);margin-left:auto;}
 .dsh-tdt-ed-model .dshpc-picker__trigger{width:100%;}
 /* 设置页「供应商 + 模型」联动态：两个下拉**等宽定住**（核心 __row 默认 flex，按内容自适应会跳宽）。 */
 .dsh-tdt-model-pair .dshpc-picker__row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2);}
@@ -77064,6 +77055,10 @@ window.__ModuleLoader__.load({
 /* 提示词默认**约 5 行**截断（用户 2026-10-05）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
 .dsh-tdt-ed-view-prompt{min-width:0;max-height:100px;overflow:hidden;}
 .dsh-tdt-ed-view-prompt--open{max-height:none;}
+/* 源码态（核心 CodeViewer）：不截断、不裁切 ⇒ 右上角自带的复制 IconButton 完整可见。
+   之前统一套 5 行截断，11 行的短提示词切到源码后连复制钮都被挡住（2026-11-08 用户点名）。
+   复制钮本身是核心 CodeViewer 的普通 md IconButton，这里**不写任何放大 / 缩小它的样式**。 */
+.dsh-tdt-ed-view-prompt--source{max-height:none;overflow:visible;}
 .dsh-tdt-ed-view-empty{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 `;
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
@@ -77559,12 +77554,13 @@ window.__ModuleLoader__.load({
 				color: "var(--dshpc-fg-3)"
 			} }, t("colOutputs")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
-				flexDirection: "column"
+				flexWrap: "wrap",
+				gap: "2px 4px",
+				minWidth: 0
 			} }, outputs.map((output) => (0, react$1.createElement)(Button$1, {
 				key: output,
 				variant: "ghost",
 				size: "sm",
-				block: true,
 				dense: true,
 				icon: output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: output,
@@ -77574,11 +77570,14 @@ window.__ModuleLoader__.load({
 				onClick: () => {
 					if (canOpenFile && onOpenFile !== void 0 && sid !== null) onOpenFile(sid, output);
 				},
-				style: { justifyContent: "flex-start" }
+				style: {
+					flex: "0 0 auto",
+					maxWidth: "100%"
+				}
 			}, (0, react$1.createElement)(MarqueeText, {
 				text: baseNameOf(output),
 				style: {
-					flex: "1 1 auto",
+					maxWidth: "40ch",
 					minWidth: 0
 				}
 			}))))), (0, react$1.createElement)(ProcessFiles, {
@@ -77757,13 +77756,15 @@ window.__ModuleLoader__.load({
 					size: 12,
 					className: promptOpen ? "dsh-tdt-ed-view-expchevron dsh-tdt-ed-view-expchevron-open" : "dsh-tdt-ed-view-expchevron"
 				})))) : null
-			}), hasPrompt ? (0, react$1.createElement)(Surface, {
-				tone: "subtle",
-				border: "none",
-				radius: "sm",
-				padding: "sm",
+			}), hasPrompt ? (0, react$1.createElement)("div", {
+				className: `${surfaceClass({
+					tone: "sunken",
+					border: "none",
+					radius: "sm",
+					padding: "sm"
+				})} dsh-tdt-ed-view-doc`,
 				style: { marginTop: 8 }
-			}, (0, react$1.createElement)("div", { className: `dsh-tdt-ed-view-prompt${promptOpen || isShort ? " dsh-tdt-ed-view-prompt--open" : ""}` }, promptMode === "source" ? (0, react$1.createElement)(CodeViewer, {
+			}, (0, react$1.createElement)("div", { className: `dsh-tdt-ed-view-prompt${promptMode === "source" ? " dsh-tdt-ed-view-prompt--source" : ""}${promptOpen || isShort ? " dsh-tdt-ed-view-prompt--open" : ""}` }, promptMode === "source" ? (0, react$1.createElement)(CodeViewer, {
 				text: draft.prompt,
 				path: "prompt.md",
 				t: t$1
@@ -78342,9 +78343,12 @@ window.__ModuleLoader__.load({
 		* 以「权限」为基准 120px，工作区 / 模型 = 1.5 倍 = 180px。
 		* 不再按选项文字自适应宽度——那样换一个选项宽度就变一下（先各自撑到上限、三个都长才开始挤），
 		* 观感一直在跳；用户很清楚自己选的工作区和模型，显示不下就省略号（MarqueeText 悬停可读全名）。
+		* 2026-11-07：分栏拉大时跟着父宽变宽、各自封顶；`clamp` 下限就是原来的定宽 ⇒ 默认观感不变。
+		* ⚠️ 核心 `Picker.resolveTriggerSizing` 一收到 `width` 就把 width / minWidth / maxWidth 全设为它，
+		*    所以「下限 + 弹性 + 上限」必须写进**这一个** CSS 表达式，另传 maxWidth 会被忽略。
 		*/
-		const PROMPT_SELECT_BASE = "120px";
-		const PROMPT_SELECT_WIDE = "180px";
+		const PROMPT_SELECT_BASE = "clamp(120px, 14%, 200px)";
+		const PROMPT_SELECT_WIDE = "clamp(180px, 22%, 300px)";
 		/**
 		* 模型下拉的分组数据（`ModelPicker` 的 `groups` 口径：一组 = 一个供应商）。
 		* 候选来自 `/options`（真实目录）；不在目录里的旧值补一组「当前」，
@@ -78620,12 +78624,15 @@ window.__ModuleLoader__.load({
 				onCreateEditor: readonly === true ? void 0 : (view) => {
 					view.focus();
 				}
-			})) : (0, react$1.createElement)("div", { style: {
-				flex: "1 1 auto",
-				minWidth: 0,
-				overflow: "auto",
-				padding: "14px 18px"
-			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+			})) : (0, react$1.createElement)("div", {
+				className: "dshpc-scroll-thin",
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0,
+					overflow: "auto",
+					padding: "14px 18px"
+				}
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text: value,
 				labels: MD_LABELS
 			})), showVersions ? (0, react$1.createElement)("div", { style: {
@@ -78643,12 +78650,15 @@ window.__ModuleLoader__.load({
 				fontSize: "var(--dshpc-font-sm)",
 				color: "var(--dshpc-fg-2)",
 				lineHeight: "1.6"
-			} }, t("editorNewTaskNoVersions")) : (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				flexDirection: "column",
-				minHeight: 0,
-				overflow: "auto"
-			} }, versions.length === 0 ? (0, react$1.createElement)("p", { style: {
+			} }, t("editorNewTaskNoVersions")) : (0, react$1.createElement)("div", {
+				className: "dshpc-scroll-thin",
+				style: {
+					display: "flex",
+					flexDirection: "column",
+					minHeight: 0,
+					overflow: "auto"
+				}
+			}, versions.length === 0 ? (0, react$1.createElement)("p", { style: {
 				padding: "0 12px",
 				fontSize: "var(--dshpc-font-sm)",
 				color: "var(--dshpc-fg-2)"
@@ -79079,13 +79089,7 @@ window.__ModuleLoader__.load({
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
 				width: PROMPT_SELECT_WIDE,
 				searchable: true
-			}), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: t("editorPermissionHint"),
-				side: "top"
-			}, (0, react$1.createElement)("span", { style: {
-				display: "inline-flex",
-				minWidth: 0
-			} }, (0, react$1.createElement)(SelectField, {
+			}), (0, react$1.createElement)(SelectField, {
 				value: draft.permission,
 				options: permissionOptions,
 				onChange: (value) => {
@@ -79095,7 +79099,7 @@ window.__ModuleLoader__.load({
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorPermission"),
 				width: PROMPT_SELECT_BASE
-			}))), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react$1.createElement)(ModelPicker, {
+			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react$1.createElement)(ModelPicker, {
 				value: draft.model,
 				variant: "grouped",
 				groups: modelGroupsOf(models, draft.model),
@@ -79446,7 +79450,7 @@ window.__ModuleLoader__.load({
 				color: "var(--dshpc-fg)",
 				fontWeight: 600,
 				marginRight: "4px"
-			} }, t("editorSchedForecast") + "："), renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--dshpc-fg)" } })), (0, react$1.createElement)("div", { style: {
+			} }, `${t("editorSchedForecast")}：`), renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--dshpc-fg)" } })), (0, react$1.createElement)("div", { style: {
 				borderTop: `1px dashed var(--dshpc-border)`,
 				marginTop: "10px"
 			} })), (0, react$1.createElement)("div", {
@@ -79786,7 +79790,7 @@ window.__ModuleLoader__.load({
 				title: "",
 				onClick: requestClose
 			})))), (0, react$1.createElement)("div", {
-				className: "dsh-tdt-ed-body",
+				className: "dsh-tdt-ed-body dshpc-scroll-thin",
 				ref: bodyRef
 			}, viewTab === "view" ? (0, react$1.createElement)(TaskViewPanel, {
 				t,
@@ -81555,7 +81559,6 @@ window.__ModuleLoader__.load({
 		};
 		const panelBarStyle = {
 			paddingTop: "10px",
-			borderTop: `1px dashed var(--dshpc-border)`,
 			display: "flex",
 			alignItems: "center",
 			gap: "8px"
@@ -81879,14 +81882,17 @@ window.__ModuleLoader__.load({
 					}))
 				};
 				return (0, react$1.createElement)("div", { style: panelBoxStyle }, (0, react$1.createElement)("div", { style: infoWrapStyle }, (0, react$1.createElement)("div", {
-					className: "dsh-tdt-info-cfg",
+					className: "dsh-tdt-info-cfg dshpc-scroll-thin",
 					style: infoConfigStyle
 				}, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), taskInfoBaseFields({
 					t,
 					view,
 					onOpenFile,
 					onViewTask
-				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
+				})), (0, react$1.createElement)("div", {
+					className: "dshpc-scroll-thin",
+					style: infoRecentStyle
+				}, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
 					fontSize: "var(--dshpc-font-xs)",
 					color: "var(--dshpc-danger)"
 				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : infoLast === null ? (0, react$1.createElement)("div", { style: {
@@ -81954,7 +81960,10 @@ window.__ModuleLoader__.load({
 			}), t("limitSuffix")), recError !== null ? (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--dshpc-font-xs)",
 				color: "var(--dshpc-danger)"
-			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react$1.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, recStatus !== "" && recStatus !== "all" || recRange.from !== "" || recRange.to !== "" ? t("cardRecordsEmptyFiltered") : t("cardRecordsEmpty")) : (0, react$1.createElement)(Table, {
+			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react$1.createElement)("div", {
+				className: "dshpc-scroll-thin",
+				style: panelScrollFillStyle
+			}, records === null ? null : records.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, recStatus !== "" && recStatus !== "all" || recRange.from !== "" || recRange.to !== "" ? t("cardRecordsEmptyFiltered") : t("cardRecordsEmpty")) : (0, react$1.createElement)(Table, {
 				ariaLabel: t("cardTabRecords"),
 				density: "compact",
 				selectedKeys: openInstance === null ? [] : [openInstance],
@@ -82148,7 +82157,10 @@ window.__ModuleLoader__.load({
 			}), t("limitSuffix")), logError !== null ? (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--dshpc-font-xs)",
 				color: "var(--dshpc-danger)"
-			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react$1.createElement)("div", { style: logAreaStyle }, logs === null ? null : logs.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : logs.map((row) => (0, react$1.createElement)("div", {
+			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react$1.createElement)("div", {
+				className: "dshpc-scroll-thin",
+				style: logAreaStyle
+			}, logs === null ? null : logs.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : logs.map((row) => (0, react$1.createElement)("div", {
 				key: row.seq,
 				style: logRowStyle
 			}, (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react$1.createElement)("span", { style: {
@@ -83378,17 +83390,20 @@ window.__ModuleLoader__.load({
 			ensureUiBase();
 			return (0, react$1.createElement)("div", {
 				id: "dsh-tdt-root",
-				className: "dsh-tdt-root",
+				className: "dsh-tdt-root dshpc-scroll-thin",
 				style: {
 					display: "flex",
 					alignItems: "flex-start",
 					minHeight: "100%"
 				}
+			}, (0, react$1.createElement)("div", {
+				className: "dshpc-scroll-thin",
+				style: {
+					...pageStyle,
+					flex: "1 1 auto",
+					minWidth: 0
+				}
 			}, (0, react$1.createElement)("div", { style: {
-				...pageStyle,
-				flex: "1 1 auto",
-				minWidth: 0
-			} }, (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				justifyContent: "center"
 			} }, (0, react$1.createElement)("div", { style: {
@@ -83471,12 +83486,12 @@ window.__ModuleLoader__.load({
 				workspaces: editorOptions.workspaces,
 				onCreate: openCreate
 			}) : tab === "settings" ? (0, react$1.createElement)(SettingsPage, { t }) : data === void 0 ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react$1.createElement)("pre", {
-				className: surfaceClass({
+				className: `${surfaceClass({
 					tone: "sunken",
 					border: "none",
 					radius: "sm",
 					padding: "sm"
-				}),
+				})} dshpc-scroll-thin`,
 				style: preStyle
 			}, raw) : null) : null, (0, react$1.createElement)(QuickToolbar, { anchorId: "dsh-tdt-main" })), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
 				t,
@@ -83818,7 +83833,10 @@ window.__ModuleLoader__.load({
 		function TaskPageHost(props) {
 			const { t, viewRef, forkRef, openRef, officeRef, onBack } = props;
 			const scope = (0, react$1.useSyncExternalStore)(subscribeScope, getScopeValue);
-			if (scope === null) return (0, react$1.createElement)("div", { style: pageStyle }, (0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)(Button$1, {
+			if (scope === null) return (0, react$1.createElement)("div", {
+				className: "dshpc-scroll-thin",
+				style: pageStyle
+			}, (0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: onBack

@@ -28,7 +28,7 @@ import {
   type TaskInfoBaseView,
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
-import { Button, Chip, CodeViewer, SectionHead, Segmented, Surface } from './ui'
+import { Button, Chip, CodeViewer, SectionHead, Segmented, surfaceClass } from './ui'
 // 事件推送（2026-10-06 补缺口）：查看档的「上次执行」原来只在挂载/换任务时取一次 ⇒ 页面开着时
 // 该任务跑完是看不见的（它上面没有会带它重取的父级，父级 `runSig` 那条只覆盖卡片里的 info/records/logs）。
 import { useEvents, useResync } from './event-subscribe'
@@ -253,10 +253,14 @@ export function TaskViewPanel(props: {
           )
           : null,
       }),
-      // 文档区：极淡底包住整段（源码 / 预览 都是一份文档 / 代码），与上方标签拉开距离（r13 续）。
+      // 文档区 = 核心 Surface 的 `sunken` 档（专门显示下沉的只读文档 / 源码区，与本仓会话弹窗
+      // 里只读原文同一套 `surfaceClass` 配方）：2026-11-08 用户点名不再自己挑底色。
       hasPrompt
-        ? h(Surface, { tone: 'subtle', border: 'none', radius: 'sm', padding: 'sm', style: { marginTop: 8 } },
-          h('div', { className: `dsh-tdt-ed-view-prompt${promptOpen || isShort ? ' dsh-tdt-ed-view-prompt--open' : ''}` },
+        ? h('div', {
+            className: `${surfaceClass({ tone: 'sunken', border: 'none', radius: 'sm', padding: 'sm' })} dsh-tdt-ed-view-doc`,
+            style: { marginTop: 8 },
+          },
+          h('div', { className: `dsh-tdt-ed-view-prompt${promptMode === 'source' ? ' dsh-tdt-ed-view-prompt--source' : ''}${promptOpen || isShort ? ' dsh-tdt-ed-view-prompt--open' : ''}` },
             promptMode === 'source'
               ? h(CodeViewer, { text: draft.prompt, path: 'prompt.md', t: coreT })
               : h(MarkdownText, { text: draft.prompt, labels: MD_LABELS })))

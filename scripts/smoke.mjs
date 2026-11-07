@@ -3321,24 +3321,22 @@ try {
 				!/dsh-tdt-rec-tip/.test(tlSrc),
 		);
 		check(
-			"第七轮：展开区**第二排**前置清单 = 一排两个，每格「左列两行 + 右列按钮」两列网格（整格可点开任务查看档：onViewTask 时挂 --click + onClick stopPropagation；查看会话 / 产出物图标各自抢回动作）",
+			"第七轮 + 2026-11-08：展开区第二排前置清单 = 一排两个；每格改核心 ListRow（整行可点 + hover 提亮 + 右列走 actions 槽），本仓不再自绘底色框",
 			/className: 'dsh-tdt-rec-depsec'/.test(tlSrc) &&
-				/className: `dsh-tdt-rec-dep\$\{onViewTask !== undefined \? ' dsh-tdt-rec-dep--click' : ''\}`,/.test(
-					tlSrc,
-				) &&
-				/onClick: onViewTask === undefined \? undefined : \(event: \{ stopPropagation: \(\) => void \}\) => \{[\s\S]{0,120}onViewTask\(dep\.task\)/.test(
-					tlSrc,
-				) &&
+				/h\(ListRow, \{/.test(tlSrc) &&
+				/className: 'dsh-tdt-rec-dep'/.test(tlSrc) &&
+				/hoverable: true/.test(tlSrc) &&
+				/onClick: onViewTask === undefined \? undefined : \(\) => \{ onViewTask\(dep\.task\) \}/.test(tlSrc) &&
+				/actions: h\('div', \{ className: 'dsh-tdt-rec-depright' \}/.test(tlSrc) &&
 				/\.dsh-tdt-rec-depgrid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(
-					tlSrc,
-				) &&
-				/\.dsh-tdt-rec-dep\{display:grid;grid-template-columns:minmax\(0,1fr\) auto;align-items:center;/.test(
 					tlSrc,
 				) &&
 				/className: 'dsh-tdt-rec-depmid'/.test(tlSrc) &&
 				/const depHasSid = depSid !== null && depSid !== ''/.test(tlSrc) &&
 				/openSession\(depSid as string\)/.test(tlSrc) &&
-				/t\('listSectionDepends'\)/.test(tlSrc),
+				/t\('listSectionDepends'\)/.test(tlSrc) &&
+				!/dsh-tdt-rec-dep--click/.test(tlSrc) &&
+				!/\.dsh-tdt-rec-dep\{[^}]*(background|border-radius|padding):/.test(tlSrc),
 		);
 		// 时间范围控件（基础层）：宽度不许写死 ⇒ 走默认（inline-flex 刚好包住内容）
 		const trSrc = readFileSync(
@@ -3396,22 +3394,19 @@ try {
 				!locSrc.includes("本次取自"),
 		);
 		check(
-			"第七轮：查看会话改**无边框链接型**小按钮（核心 variant='link'）并落右列靠右居中",
+			"第七轮：查看会话改**无边框链接型**小按钮（核心 variant='link'）并落 ListRow 的 actions 右列",
 			/variant: 'link'/.test(depArea) &&
 				!/variant: 'ghost'/.test(depArea) &&
 				!/variant: 'outline'/.test(depArea) &&
-				/\.dsh-tdt-rec-dep\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/.test(
-					tlSrc,
-				),
+				/actions: h\('div', \{ className: 'dsh-tdt-rec-depright' \}/.test(tlSrc),
 		);
 		check(
-			"第七轮：前置格留白与圆角放大到约 1.5~2 倍（走 token 档位，反向：内部再无 2px 裸值间距）",
-			/\.dsh-tdt-rec-dep\{[^}]*padding:var\(--dshpc-space-2\) var\(--dshpc-space-3\)/.test(
-				tlSrc,
-			) &&
-				/\.dsh-tdt-rec-dep\{[^}]*border-radius:var\(--dshpc-radius-sm\)/.test(
-					tlSrc,
-				) &&
+			"2026-11-08：前置格皮肤全交核心 ListRow（本仓只留布局，不再自绘底色 / 圆角 / 内距 / 网格）",
+			/h\(ListRow, \{/.test(tlSrc) &&
+				!/\.dsh-tdt-rec-dep\{[^}]*padding:/.test(tlSrc) &&
+				!/\.dsh-tdt-rec-dep\{[^}]*border-radius:/.test(tlSrc) &&
+				!/\.dsh-tdt-rec-dep\{[^}]*background:/.test(tlSrc) &&
+				!/\.dsh-tdt-rec-dep\{[^}]*display:grid/.test(tlSrc) &&
 				/\.dsh-tdt-rec-depgrid\{[^}]*gap:var\(--dshpc-space-2\) var\(--dshpc-space-3\)/.test(
 					tlSrc,
 				) &&
@@ -6282,8 +6277,21 @@ console.log("\n[14] runtime-index");
 		// 表底贴虚线：底栏去掉 marginTop（面板总高由 panelBoxStyle 定高保持不变）。
 		const barBlock = /const panelBarStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? "";
 		check(
-			"表底贴着虚线（底栏去掉 marginTop），面板高度不变",
-			barBlock.includes("borderTop:") && !barBlock.includes("marginTop"),
+			"2026-11-08：底栏不再画 1px dashed（「其他产出」正下方那条 border），只留 10px 上内距保面板高度",
+			!barBlock.includes("borderTop") && !barBlock.includes("marginTop") && barBlock.includes("paddingTop: '10px'"),
+		);
+		check(
+			"2026-11-08：细滚动条只挂核心 dshpc-scroll-thin（3px）；本仓不再自绘 1px 滚动条皮肤",
+			(() => {
+				const cc = readFileSync(join(process.cwd(), "src", "client", "ui", "controls-css.ts"), "utf8");
+				const scrollSrc = ["index.ts", "task-list.tsx", "task-editor.tsx"]
+					.map((f) => readFileSync(join(process.cwd(), "src", "client", f), "utf8"))
+					.join("\n");
+				return !cc.includes("SCROLL_CSS =") &&
+					!cc.includes("width:1px;height:1px") &&
+					!scrollSrc.includes("dsh-tdt-root *::-webkit-scrollbar") &&
+					scrollSrc.includes("dshpc-scroll-thin");
+			})(),
 		);
 		check(
 			"新增格式 helper：计划执行 / 实际开始 / 时长（H:MM:SS·MM:SS）",
@@ -6685,7 +6693,7 @@ console.log("\n[14] runtime-index");
 		);
 
 		check(
-			"提示词区（r13 续）：标题前短竖线标（非整块长线）+ 约 5 行截断 + 就地「源码 / 预览」分段 + 文字「展开 / 收起」按钮（带方向小箭头）+ 极淡文档底（无全屏、无底部查看全部）",
+			"提示词区（r13 续 + 2026-11-08）：短竖线标 + 预览约 5 行截断 / 源码态不截断 + 就地「源码 / 预览」分段 + 文字「展开 / 收起」按钮 + 文档区走核心 sunken 档",
 			tv.includes("t('editorViewSourceCode')") &&
 				tv.includes("t('editorModePreview')") &&
 				tv.includes("t('editorViewExpand')") &&
@@ -6703,9 +6711,12 @@ console.log("\n[14] runtime-index");
 				tec.includes("max-height:100px") &&
 				tec.includes(".dsh-tdt-ed-view-prompt--open{max-height:none;}") &&
 				tec.includes(".dsh-tdt-ed-view-expchevron") &&
-				// 极淡文档底走核心 Surface（本仓不再自写 .dsh-tdt-ed-view-promptbox 皮肤）。
+				// 文档区 = 核心 Surface 的 sunken 档（专门显示只读文档 / 源码区）；本仓不自写皮肤。
 				!tec.includes(".dsh-tdt-ed-view-promptbox{") &&
-				tv.includes("h(Surface, { tone: 'subtle', border: 'none', radius: 'sm', padding: 'sm'") &&
+				tv.includes("surfaceClass({ tone: 'sunken', border: 'none', radius: 'sm', padding: 'sm' })") &&
+				// 源码态不截断 ⇒ 核心 CodeViewer 自带的普通 md 复制 IconButton 完整可见。
+				tv.includes("dsh-tdt-ed-view-prompt--source") &&
+				tec.includes(".dsh-tdt-ed-view-prompt--source{max-height:none;overflow:visible;}") &&
 				!tec.includes(".dsh-tdt-ed-view-more") &&
 				!lcSrc.includes("editorViewFullscreen"),
 		);
