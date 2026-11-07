@@ -141,7 +141,8 @@ function FileChip(props: { file: FileLine }): ReturnType<typeof h> {
   return h(Button, {
     variant: 'ghost',
     size: 'sm',
-    // 2026-11-08：用户点名「放大的图标特别丑」⇒ 不再用 dense 放大档，保持核心默认图标大小。
+    // dense = 核心紧凑图标档：图标放大一档、按钮高度不变（文件图标统一口径）。
+    dense: true,
     icon: file.isDir ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: file.iconPath, size: 14 }),
     disabled: !clickable,
     onClick: file.onClick,

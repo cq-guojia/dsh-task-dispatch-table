@@ -66,7 +66,7 @@ export function ProcessFiles(props: {
         list.map((path) => h(Button, {
           key: path,
           // 文件行 = 核心 Button 的 ghost 档（图标 + 文字，与产出物清单同一套皮肤；2026-11-06 全站收口）。
-          variant: 'ghost', size: 'sm',
+          variant: 'ghost', size: 'sm', dense: true,
           icon: isDirPath(path) ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
           disabled: onOpen === undefined,
           onClick: onOpen === undefined ? undefined : () => { onOpen(path) },

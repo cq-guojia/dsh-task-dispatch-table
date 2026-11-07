@@ -862,7 +862,7 @@ function TaskExpandPanel(props: {
                         outputs.slice(0, 3).map(output => h(Tooltip, {
                           key: output, label: baseNameOf(output), side: 'top',
                         }, h(IconButton, {
-                          variant: 'plain', size: 'md',
+                          variant: 'plain', size: 'md', dense: true,
                           icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: output, size: 16 }),
                           label: baseNameOf(output),
                           // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。

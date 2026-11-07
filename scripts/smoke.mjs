@@ -3605,10 +3605,14 @@ try {
 		})(),
 	);
 	check(
-		"2026-11-08：文件 / 复制图标一律用核心默认尺寸（反向：全站不再有 dense 放大档）",
-		["task-info.tsx", "records-timeline.tsx", "process-files.tsx", "task-file-context.tsx", "task-list.tsx"].every(
-			(file) => !readFileSync(join(process.cwd(), "src", "client", file), "utf8").includes("dense: true"),
-		),
+		"文件 / 文件夹预览图标全站走核心 dense（图标放大一档、按钮高度不变）；源码态复制 IconButton 走核心默认 md、不带 dense",
+		(() => {
+			const viewSrc = readFileSync(join(process.cwd(), "src", "client", "task-view.tsx"), "utf8");
+			return ["task-info.tsx", "records-timeline.tsx", "process-files.tsx", "task-file-context.tsx", "task-list.tsx"].every(
+				(file) => readFileSync(join(process.cwd(), "src", "client", file), "utf8").includes("dense: true"),
+			) && !viewSrc.includes("dense") &&
+				/h\(CodeViewer, \{ text: draft\.prompt, path: 'prompt\.md', t: coreT \}\)/.test(viewSrc);
+		})(),
 	);
 	check(
 		"编辑分栏按钮全站收口核心：无官方 primitives Button、无原生 button、无 TdtButton 别名",

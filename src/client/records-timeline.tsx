@@ -590,6 +590,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
             }, h(IconButton, {
               variant: 'plain',
               size: 'md',
+              dense: true,
               icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
               label: baseNameOf(path),
               // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
@@ -662,7 +663,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               outputs.map(path => h(Button, {
                 key: path,
                 // 文件行 = 核心 Button 的 ghost 档（图标 + 文字；2026-11-06 全站收口，不再用行式文件按钮类）。
-                variant: 'ghost', size: 'sm',
+                variant: 'ghost', size: 'sm', dense: true,
                 icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
                 disabled: !canOpenFile,
                 onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
@@ -716,6 +717,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                         }, h(IconButton, {
                           variant: 'plain',
                           size: 'md',
+                          dense: true,
                           icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
                           label: baseNameOf(path),
                           // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。

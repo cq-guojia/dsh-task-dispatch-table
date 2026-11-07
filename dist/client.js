@@ -59429,6 +59429,7 @@ window.__ModuleLoader__.load({
 				key: path,
 				variant: "ghost",
 				size: "sm",
+				dense: true,
 				icon: isDirPath$1(path) ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 14
@@ -60039,6 +60040,7 @@ window.__ModuleLoader__.load({
 			}, (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
+				dense: true,
 				icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 16
@@ -60085,6 +60087,7 @@ window.__ModuleLoader__.load({
 				key: path,
 				variant: "ghost",
 				size: "sm",
+				dense: true,
 				icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 14
@@ -60129,6 +60132,7 @@ window.__ModuleLoader__.load({
 					}, (0, react$1.createElement)(IconButton, {
 						variant: "plain",
 						size: "md",
+						dense: true,
 						icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 							path,
 							size: 16
@@ -67348,6 +67352,7 @@ window.__ModuleLoader__.load({
 			return (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
+				dense: true,
 				icon: file.isDir ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: file.iconPath,
 					size: 14
@@ -77399,6 +77404,7 @@ window.__ModuleLoader__.load({
 						key,
 						variant: "ghost",
 						size: "sm",
+						dense: true,
 						icon,
 						disabled: !canOpen,
 						onClick: canOpen ? () => {
@@ -77579,6 +77585,7 @@ window.__ModuleLoader__.load({
 				key: output,
 				variant: "ghost",
 				size: "sm",
+				dense: true,
 				icon: output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: output,
 					size: 14
@@ -82078,6 +82085,7 @@ window.__ModuleLoader__.load({
 							}, (0, react$1.createElement)(IconButton, {
 								variant: "plain",
 								size: "md",
+								dense: true,
 								icon: output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 									path: output,
 									size: 16
