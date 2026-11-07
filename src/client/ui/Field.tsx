@@ -8,7 +8,7 @@
  * 空列表 ⇒ 禁用并显示业务空态文案（不塞假值）。
  */
 import { createElement as h, type ReactElement, type ReactNode } from 'react'
-import { Picker } from 'dsh-plugin-core/ui'
+import { Picker, type PickerGroup } from 'dsh-plugin-core/ui'
 import { ensureControlsStyle } from './controls-css'
 
 /** 下拉 / 日期 / 时分的选项（value = 写进任务定义的真值）。 */
@@ -20,8 +20,10 @@ export interface EditorOption {
 export interface SelectFieldProps {
   /** 当前值。 */
   value: string
-  /** 选项。 */
-  options: EditorOption[]
+  /** 分组候选（给了就优先于 options；空组由调用方过滤）。 */
+  groups?: PickerGroup[]
+  /** 选项（未给 groups 时使用）。 */
+  options?: EditorOption[]
   /** 选中回调。 */
   onChange: (value: string) => void
   /** 未选中时的占位。 */
@@ -55,7 +57,10 @@ export interface SelectFieldProps {
 export function SelectField(props: SelectFieldProps): ReactElement {
   ensureControlsStyle()
   const size = props.size ?? 'lg'
-  const empty = props.options.length === 0
+  const groups = props.groups
+  const empty = groups === undefined
+    ? (props.options ?? []).length === 0
+    : groups.every((group) => group.options.length === 0)
   const usable = !empty && props.disabled !== true
   const width = props.width ?? (props.block === true ? '100%' : undefined)
   const cls = [
@@ -64,7 +69,7 @@ export function SelectField(props: SelectFieldProps): ReactElement {
   ].filter(Boolean).join(' ')
 
   const picker = h(Picker, {
-    options: props.options,
+    ...(groups === undefined ? { options: props.options ?? [] } : { groups }),
     value: props.value,
     onChange: (next: string | string[]) => {
       if (typeof next === 'string') props.onChange(next)

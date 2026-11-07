@@ -184,3 +184,36 @@ grep -n "interface TableSharedProps\|interface TableColumn\|interface TableRow" 
 grep -n "confirmModal\|alertModal" -A 10 node_modules/dsh-plugin-core/dist/ui/feedback/modal-host.d.ts
 grep -n "bordered\|tone" -A 3 node_modules/dsh-plugin-core/dist/ui/inputs/Segmented.d.ts
 ```
+
+## 十二、编辑分栏改接时核实的核心事实（适用版本 `dsh-plugin-core@0.35.3`）
+
+2026-11-07 读 `dist/ui/actions/Button.d.ts` / `Button.js`、`dist/ui/inputs/Picker.d.ts` /
+`picker-logic.d.ts` / `Segmented.d.ts`、`src/ui/actions/button.css` / `src/ui/inputs/segmented.css`
+与 `docs/help/ui.md` 核实（读实现源码，非运行时试错）。
+
+| 结论 | 证据 |
+|---|---|
+| `Button` 有 18 档 `variant`；`secondary` = 中性灰实心（`--btn-bg:var(--dshpc-hover)`）、**无描边**；`outline` 带描边；`ghost` 常态透明 | `src/ui/actions/button.css:49-56` |
+| `size` 三档 `sm`/`md`/`lg` = 24/28/32px，默认 `lg`；`block:true` = `display:flex;width:100%` | `dist/ui/actions/Button.d.ts:5-10,41-42`、`button.css:24-28` |
+| `Button` **不透传外部 ref**（`attrs.ref = btnRef` 覆盖 `rest.ref`）⇒ 要 DOM 锚点就把 ref 挂外层容器 | `dist/ui/actions/Button.js:170` |
+| `IconButton` 只有 `plain`/`outline`/`danger` 三档，`label` 必填且默认写成原生 `title`，无 `block` | `Button.d.ts:62-87`、`Button.js:222-223` |
+| `Picker` 支持 `groups?: PickerGroup[]`（`{value,label,options}`）；`searchable` 默认 false；`width`/`minWidth`/`maxWidth` 可用；`keywords` 只参与搜索 | `dist/ui/inputs/Picker.d.ts:7-10,42-47`、`picker-logic.d.ts:2-16` |
+| **空分组不会自动隐藏**：每组恒渲染一个 div，只有搜索过滤会丢掉零命中组 ⇒ 调用方自己过滤空组 | `dist/ui/inputs/Picker.js:217-219`、`picker-logic.js:20-25` |
+| `PickerOption.label` 只能是 string；没有 `renderOption` / 行插槽，`icon` 是唯一可插的 ReactNode | `picker-logic.d.ts:4-8`、`Picker.js:238-244` |
+| `Segmented` 的 `bordered` 默认 false（无描边），整条灰底来自 `--dshpc-seg-track` | `dist/ui/inputs/Segmented.d.ts:62-63`、`src/ui/inputs/segmented.css:14` |
+
+### 已核实的缺口：核心没有「行条目 / 可选项行」组件
+
+`dist/ui/index.d.ts:1-45` 的导出面与 `src/ui/` 全表均无 `ListRow` / `OptionRow` /
+`SelectableRow` / `FileRow` 一类控件。现有近似件都不满足「整行常态带底色 + hover 提亮 +
+整行可点 + 右侧可放多个操作按钮」：
+
+| 件 | 差在哪 |
+|---|---|
+| `Button variant:'secondary' block` | 能给出整块灰底 + hover 提亮，但它是**单个 `<button>`**，无 actions 槽，内嵌 `IconButton` 会形成 button 嵌 button |
+| `.dshpc-filechip--block`（纯 CSS，无组件 / props / 导出） | 平时 `background:transparent`、**只有 hover 才出浅底**，语义也是单个按钮（`button.css:112-128`） |
+| `Chip` | 只做胶囊标签，无右侧操作槽（`docs/help/ui.md:401,403`） |
+| `Card` / `StripCard` | 根节点没有 `onClick`，只有 `action?: ReactNode` 右上操作区 |
+
+⇒ 本仓「附加文件行 / 前置任务条目」暂不改接（不手写 CSS 顶替），等核心补该控件；
+需补的 API 建议见台账本任务过程文档的「续做（2026-11-07）」节。

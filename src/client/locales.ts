@@ -138,9 +138,9 @@ export type LocaleKey =
   | 'editorMonthMode_every' | 'editorMonthMode_odd' | 'editorMonthMode_even'
   | 'editorDiscardTitle' | 'editorDiscardDesc' | 'editorDiscardStay' | 'editorDiscardLeave'
   | 'unitMinutes' | 'unitHours' | 'unitDays'
-  | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask' | 'editorDepPickWsFirst'
+  | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask'
   | 'editorDepTaskPh' | 'editorDepDisabledTag' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
-  // 2026-10-04：工作区候选改真源后，选到「没有任务的工作区」时的下一级空态（用户允许这种空态）
+  // 分组下拉里所有工作区都没有可选任务时的空态
   | 'editorDepTaskEmpty'
   // 执行记录总查询页（时间轴，2026-10-04 落码）：`localeTag` 供 `Intl` 按当前语言排版日期（天标签）。
   | 'localeTag' | 'recordsEmpty' | 'recordsEmptyFiltered' | 'recordsLoadMore' | 'recordsNoMore'
@@ -669,13 +669,12 @@ export const zh: Record<LocaleKey, string> = {
   editorDepsHint: '此任务必须等待『所有』前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。',
   editorDepAdd: '添加',
   editorDepTask: '任务',
-  editorDepPickWsFirst: '请先选择工作区',
   editorDepTaskPh: '选择任务',
   editorDepRemove: '移除',
   editorDepEmpty: '尚未配置前置任务',
-  editorDepEmptyHint: '在下方选择工作区与任务后点「添加」',
+  editorDepEmptyHint: '在下方选择任务后点「添加」',
   editorDepDisabledTag: '（已停用）',
-  editorDepTaskEmpty: '该工作区暂无可选任务',
+  editorDepTaskEmpty: '暂无可选的前置任务',
   // —— 执行记录总查询页（时间轴，2026-10-04）——
   localeTag: 'zh-CN',
   recordsEmpty: '该时间范围内没有执行记录',
@@ -1362,13 +1361,12 @@ export const en: Record<LocaleKey, string> = {
   editorDepsHint: 'This task waits for ALL of its prerequisites to finish before it can start. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.',
   editorDepAdd: 'Add',
   editorDepTask: 'Task',
-  editorDepPickWsFirst: 'Select a workspace first',
   editorDepTaskPh: 'Select a task',
   editorDepRemove: 'Remove',
   editorDepEmpty: 'No prerequisites configured yet',
-  editorDepEmptyHint: 'Pick a workspace and a task below, then add',
+  editorDepEmptyHint: 'Pick a task below, then add',
   editorDepDisabledTag: ' (disabled)',
-  editorDepTaskEmpty: 'No selectable task in this workspace',
+  editorDepTaskEmpty: 'No selectable prerequisites',
   // —— Execution records (timeline, 2026-10-04) ——
   localeTag: 'en-US',
   recordsEmpty: 'No executions in this time range',

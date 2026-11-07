@@ -27,7 +27,6 @@
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorView } from "@codemirror/view";
 import {
-	Button,
 	FileTypeIcon,
 	IconChevronDownOutlineRegular,
 	IconCloseOutlineRegular,
@@ -101,7 +100,7 @@ import {
 	Segmented,
 	SectionHead,
 	SelectField,
-	Button as TdtButton,
+	Button,
 	Chip,
 	Checkbox,
 	confirmModal,
@@ -119,7 +118,7 @@ import { workspaceLabelOf } from "./workspace-options";
  * 「?」说明钮 —— 核心 `FieldHint` 的薄包装（2026-11-06）。
  *
  * 图标、气泡、键盘焦点全部归核心；本仓只补 `insideClickable` 一种位置：挂在可点行
- * （如「高级设置」折叠头）里时，外面套一层 `span` 吞掉点击冒泡，免得点说明把行本身开关了。
+ * 里时，外面套一层 `span` 吞掉点击冒泡，免得点说明把行本身开关了。
  */
 /** 「?」说明钮 —— 全站唯一实现（设置页每项标题右侧的小问号也用它，2026-10-08 导出复用）。 */
 export function HelpButton(props: {
@@ -1678,7 +1677,7 @@ function PromptEditorModal(props: {
 																		"span",
 																		{ className: "dsh-tdt-ed-ver-actions" },
 																		h(
-																			TdtButton,
+																			Button,
 																			{
 																				variant: "link",
 																				size: "sm",
@@ -2032,7 +2031,7 @@ export function TaskEditorDrawer(props: {
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [uploading, setUploading] = useState(false);
 	// 选择器浮层锚点：「工作区文件」方按钮（核心面板贴着它弹）。
-	const pickerAnchorRef = useRef<HTMLButtonElement | null>(null);
+	const pickerAnchorRef = useRef<HTMLDivElement | null>(null);
 	// 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
 	// 呈现为核心 notify 提示（2026-11-06），不占卡内版面。
 	const [uploadError, setUploadError] = useState<string | null>(null);
@@ -2267,7 +2266,7 @@ export function TaskEditorDrawer(props: {
 			right: h(
 				// 全屏编辑 = **核心 Button**（2026-11-06 用户点名核实：这不是手搓，之前误用了宿主 primitives 的
 				// 同形按钮，圆角与全站基础层不一致；改用 `dsh-plugin-core/ui` 的 Button）。
-				TdtButton,
+				Button,
 				{
 					variant: "ghost",
 					size: "sm",
@@ -2571,7 +2570,7 @@ export function TaskEditorDrawer(props: {
 							"div",
 							{ key: att.id, className: "dsh-tdt-ed-attline" },
 							h(
-								TdtButton,
+								Button,
 								{
 									variant: "ghost",
 									size: "sm",
@@ -2673,31 +2672,23 @@ export function TaskEditorDrawer(props: {
 			),
 			h(
 				"div",
-				{ style: { flex: "none", display: "flex" } },
-				// 正方形虚线按钮（用户 2026-09-29：与投放区同语言——加号在上、文字在下）。
+				// 核心 Button 不透传外部 ref（内部 ref 会覆盖 rest.ref）⇒ 锚点挂外层 div。
+				{ ref: pickerAnchorRef, style: { flex: "none", display: "flex" } },
+				// 核心 Button：虚线沿用投放区的设计语言，不再手搓原生 button。
 				h(
-					"button",
+					Button,
 					{
-						type: "button",
-						ref: pickerAnchorRef,
+						variant: "outline",
 						"aria-haspopup": "dialog",
 						"aria-expanded": pickerOpen,
 						onClick: openPicker,
-						className: surfaceClass({
-							tone: "plain",
-							border: "dashed",
-							radius: "md",
-							padding: "sm",
-						}),
 						style: {
-							display: "flex",
 							flexDirection: "column",
-							alignItems: "center",
-							justifyContent: "center",
 							gap: "6px",
 							width: "92px",
-							cursor: "pointer",
-							color: "var(--dshpc-fg)",
+							height: "auto",
+							minHeight: "72px",
+							borderStyle: "dashed",
 						},
 					},
 					h(IconPlusOutlineRegular, { size: 20 }),
@@ -2963,48 +2954,45 @@ export function TaskEditorDrawer(props: {
 
 	// ③ 前置任务卡（用户 2026-09-29 多轮拍板，照「附加文件」卡同款灰框 + 同款外距）：
 	//  - 停用（锁住）的任务同样可选（快照本就全量下发，无启停过滤）；下拉里标「（已停用）」；
-	//  - 布局：上 = 已选前置任务列表（空则显示上传投放区同款虚线占位框）；下 = 工作区→任务→添加；
+	//  - 布局：上 = 已选前置任务列表（空则显示上传投放区同款虚线占位框）；下 = 分组下拉 + 添加；
 	//  - 标题「添加前置任务」+「?」Tooltip：含义（强调『所有』）/ 判定方式（所有前置任务上一次
 	//    执行必须成功，跳过不算失败）/ 执行时自动移交前置产出文件；
-	//  - 选择 = 先工作区后任务两级（2026-10-04 起工作区候选 = **真源** `/options`，与另两处「选工作区」
-	//    完全一致；允许选到「没有任务的工作区」⇒ 下一级给空态文案，不再把空工作区藏起来），点「添加」固定成一行，
+	//  - 选择 = 核心 Picker 分组下拉（用户 2026-11-07）：一组 = 一个工作区，组内是它的任务；
+	//    没有可选任务的工作区整组不进候选；下拉带搜索框，触发器吃掉整行剩余宽度；
 	//    行内「移除」可删；同一任务不能加两次（选项里直接排除已加的，按钮再拦一道）；
-	//  - 支持跨工作区（每个前置任务可来自不同工作区）；加完工作区保留、任务清空，连着加第二个；
-	//  - 三段式选择行（用户定稿）：左「工作区」定宽 112px（约 5~6 个字）居左，右「添加」
-	//    定宽 88px 居右，中间「任务」flex 吃掉剩余宽度（随抽拉分栏同步伸缩）；
+	//  - 支持跨工作区（每个前置任务可来自不同工作区）；加完清空选择，可连着加第二个；
 	//  - 语义下拉删除（用户：选「同一天的」没有意义）——判定方式就是「上一次执行必须成功」，
 	//    新增依赖固定写 `latest_success`；存量依赖的 semantics 原样保留（编辑无损往返）。
 	const addedDepIds = new Set(draft.deps.map((dep) => dep.task));
-	// 工作区候选 = **真源**（`GET /options` 的宿主真实工作区，与编辑器底部、任务列表顶部同一份）。
-	// ⚠️ 2026-10-04 前这里是「从任务表反推只列有可选任务的工作区」⇒ 空工作区凭空消失（用户拍板修掉）。
-	const depWsOptions: EditorOption[] = workspaces;
-	// 默认选中：真源里的第一个工作区；取不到（degraded ⇒ 空数组）就是未选，下拉显示「暂无可选」。
-	const [depWs, setDepWs] = useState(() => workspaces[0]?.value ?? "");
 	const [depTaskId, setDepTaskId] = useState("");
-	const depTaskOptions: EditorOption[] =
-		depWs === ""
-			? []
-			: tasks
-					.filter(
-						(task) =>
-							task.workspace === depWs &&
-							!addedDepIds.has(task.id) &&
-							task.id !== currentTaskId,
-					)
-					.map((task) => ({
-						value: task.id,
-						label:
-							task.enabled === false
-								? `${task.label}${t("editorDepDisabledTag")}`
-								: task.label,
-					}));
+	// 空组不显示：先按真源工作区收集可选任务，再把 options 为空的工作区整组滤掉。
+	const depGroups: PickerGroup[] = workspaces
+		.map((ws) => ({
+			value: ws.value,
+			label: ws.label,
+			options: tasks
+				.filter(
+					(task) =>
+						task.workspace === ws.value &&
+						!addedDepIds.has(task.id) &&
+						task.id !== currentTaskId,
+				)
+				.map((task) => ({
+					value: task.id,
+					label:
+						task.enabled === false
+							? `${task.label}${t("editorDepDisabledTag")}`
+							: task.label,
+				})),
+		}))
+		.filter((group) => group.options.length > 0);
 	const addDep = (): void => {
 		if (depTaskId === "" || addedDepIds.has(depTaskId)) return;
 		// semantics 固定 latest_success = 「上一次执行必须成功」（用户口述的判定方式）。
 		patch({
 			deps: [...draft.deps, { task: depTaskId, semantics: "latest_success" }],
 		});
-		setDepTaskId(""); // 工作区保留，方便连着加同工作区的第二个、第三个。
+		setDepTaskId("");
 	};
 		const depsBlock = h(
 			Surface,
@@ -3081,7 +3069,7 @@ export function TaskEditorDrawer(props: {
 												},
 											})
 										: h(
-												TdtButton,
+												Button,
 												{
 													variant: "link",
 													size: "sm",
@@ -3108,65 +3096,42 @@ export function TaskEditorDrawer(props: {
 													fontSize: "var(--dshpc-font-xs)",
 												},
 											}),
-									// 「移除」宽度固定（flex none），不被任务名挤动。
-									h(
-										Button,
-										{
-											variant: "ghost",
-											size: "sm",
-											style: { flex: "none" },
-											onClick: () => {
-												patch({
-													deps: draft.deps.filter((d) => d.task !== dep.task),
-												});
-											},
-											"aria-label": t("editorDepRemove"),
+									// 「移除」= 核心 IconButton（与附件行小叉同款），宽度固定不被任务名挤动。
+									h(IconButton, {
+										variant: "danger",
+										size: "sm",
+										icon: h(IconCloseOutlineRegular, { size: 14 }),
+										label: t("editorDepRemove"),
+										title: "",
+										style: { flex: "none" },
+										onClick: () => {
+											patch({
+												deps: draft.deps.filter((d) => d.task !== dep.task),
+											});
 										},
-										t("editorDepRemove"),
-									),
+									}),
 								);
 							}),
 					),
 		),
-		// 下：工作区 → 任务 → 添加（百分比定宽见 .dsh-tdt-ed-deppick-*）。
+		// 下：分组下拉吃掉整行剩余宽度 + 右侧定宽「添加」（间距由 .dsh-tdt-ed-deppick 定）。
 		h(
 			"div",
 			{ className: "dsh-tdt-ed-deppick" },
 			h(
 				"span",
-				{ className: "dsh-tdt-ed-deppick-ws" },
-				h(SelectField, {
-					value: depWs,
-					options: depWsOptions,
-					onChange: (value) => {
-						setDepWs(value);
-						setDepTaskId("");
-					},
-					placeholder: t("editorWorkspacePh"),
-					// 真源取不到（degraded ⇒ 空数组）⇒ 「暂无可选」，**不回退反推**（回退就是又造第二真源）。
-					emptyLabel: t("editorNoOptions"),
-					ariaLabel: t("editorWorkspace"),
-					icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
-					width: "100%",
-					// 工作区候选可能很多：下拉必须带搜索框（核心 Picker 自带，全站统一口径）。
-					searchable: true,
-				}),
-			),
-			h(
-				"span",
 				{ className: "dsh-tdt-ed-deppick-task" },
 				h(SelectField, {
 					value: depTaskId,
-					options: depTaskOptions,
+					groups: depGroups,
 					onChange: setDepTaskId,
-					placeholder:
-						depWs === "" ? t("editorDepPickWsFirst") : t("editorDepTaskPh"),
-					// 选到「真源里有、但当前没有可选任务」的工作区 ⇒ 明说，而不是显示成「暂无可选」让人以为出错了。
-					emptyLabel:
-						depWs === "" ? t("editorNoOptions") : t("editorDepTaskEmpty"),
+					placeholder: t("editorDepTaskPh"),
+					// 所有工作区都没有可选任务 ⇒ 明说，不塞假数据（核心 Picker 的空态）。
+					emptyLabel: t("editorDepTaskEmpty"),
 					ariaLabel: t("editorDepTask"),
-					disabled: depWs === "",
 					width: "100%",
+					// 候选可能很多：下拉带搜索框（核心 Picker 自带，全站统一口径）。
+					searchable: true,
 				}),
 			),
 			h(
@@ -3177,8 +3142,7 @@ export function TaskEditorDrawer(props: {
 					icon: h(IconPlusOutlineRegular, { size: 14 }),
 					disabled: depTaskId === "",
 					onClick: addDep,
-					// 三段式右段：定宽、居右（flex 布局里排最后即贴右），文字图标居中。
-					// 88 → 72px（用户 2026-09-29：窄一点，把宽度让给中间的任务名）。
+					// 右段定宽 72px、居右，文字图标居中；剩余宽度全给分组下拉。
 					style: {
 						flex: "0 0 72px",
 						height: "var(--dshpc-control-h-lg)",
@@ -3207,41 +3171,42 @@ export function TaskEditorDrawer(props: {
 			h(
 				Surface,
 				{ className: "dsh-tdt-ed-card", padding: "md" },
+			// 折叠头（用户 2026-11-07）：整行**不**是可点按钮、不高亮；只有右侧核心 IconButton
+			// 的箭头可点可 hover 提亮。整行点开展开的功能按用户要求不做。
 			h(
-					TdtButton,
-					{
-						variant: "ghost",
-						size: "sm",
-						block: true,
-						"aria-expanded": advancedOpen,
-						onClick: () => {
-							setAdvancedOpen(!advancedOpen);
-						},
-						iconRight: h(IconChevronDownOutlineRegular, {
-							size: 12,
-							className: advancedOpen
-								? "dsh-tdt-ed-advchevron-open"
-								: "dsh-tdt-ed-advchevron",
-						}),
-						style: { justifyContent: "space-between" },
+				"div",
+				{
+					style: {
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						gap: "8px",
 					},
-					h(
-						"span",
-						{
-							style: {
-								display: "inline-flex",
-								alignItems: "center",
-								gap: "4px",
-							},
-						},
-						t("editorAdvanced"),
-						// 「?」说明气泡：span 塞进按钮内（button 嵌 button 非法），点击拦截不触发展开。
-						h(HelpButton, {
-							hint: t("editorAdvancedHelp"),
-							insideClickable: true,
-						}),
-					),
-					),
+				},
+				h(
+					"span",
+					{ style: { display: "inline-flex", alignItems: "center", gap: "4px" } },
+					t("editorAdvanced"),
+					h(HelpButton, { hint: t("editorAdvancedHelp") }),
+				),
+				h(IconButton, {
+					variant: "plain",
+					size: "sm",
+					icon: h(IconChevronDownOutlineRegular, {
+						size: 12,
+						className: advancedOpen
+							? "dsh-tdt-ed-advchevron-open"
+							: "dsh-tdt-ed-advchevron",
+					}),
+					label: t("editorAdvanced"),
+					"aria-expanded": advancedOpen,
+					// 核心 IconButton 默认把 label 写成原生 title（全站已清退原生 title）。
+					title: "",
+					onClick: () => {
+						setAdvancedOpen(!advancedOpen);
+					},
+				}),
+			),
 			advancedOpen
 				? h(
 						"div",
@@ -3336,11 +3301,12 @@ export function TaskEditorDrawer(props: {
 							h(
 								"div",
 								{ className: "dsh-tdt-ed-row" },
-								h(
-									Button,
-									{ variant: "outline", size: "sm", onClick: openPreviewPanel },
-									t("editorPreview"),
-								),
+													// 核心 secondary = 灰底、无描边（用户 2026-11-07：不要描边，要带背景）。
+									h(
+										Button,
+										{ variant: "secondary", size: "sm", onClick: openPreviewPanel },
+										t("editorPreview"),
+									),
 							),
 							h("p", { className: "dsh-tdt-ed-hint" }, t("editorPreviewHint")),
 						),
@@ -3549,7 +3515,7 @@ export function TaskEditorDrawer(props: {
 										? // 底栏按钮统一**基础层**（用户 2026-10-05：圆角要与左边的档位切换同属一套——
 											// 官方 Button 的圆角由宿主 CSS 决定、与 .dsh-tdt-seg 的 radius-md 天生不一致）。
 											h(
-												TdtButton,
+												Button,
 												{
 													variant: "outline",
 													size: "sm",
@@ -3565,7 +3531,7 @@ export function TaskEditorDrawer(props: {
 									// （`dirty` = 当前草稿 ≠ 打开时快照）；重置后草稿回到初始 ⇒ dirty 变 false ⇒ 按钮自己消失。
 									dirty
 										? h(
-												TdtButton,
+												Button,
 												{
 													variant: "ghost",
 													size: "sm",
@@ -3578,12 +3544,12 @@ export function TaskEditorDrawer(props: {
 										: null,
 									h("span", { style: { flex: "1 1 auto" } }),
 									h(
-										TdtButton,
+										Button,
 										{ variant: "outline", size: "sm", onClick: requestClose },
 										t("editorCancel"),
 									),
 									h(
-										TdtButton,
+										Button,
 										{
 											variant: "primary",
 											size: "sm",

@@ -3570,14 +3570,36 @@ try {
 		clientJs.includes("onOpenFile") &&
 			!clientJs.includes("dsh-tdt-sv-chatpane"),
 	);
-	// 前置任务卡（2026-09-29 用户拍板的交互）：灰框卡 + ?说明 + 工作区→任务两级选择 + 添加/移除 + 判定说明。
+	// 前置任务卡（2026-11-07 改单个分组下拉）：一组 = 一个工作区，空组不显示，下拉带搜索框。
+	const depEdSrc = readFileSync(
+		join(process.cwd(), "src", "client", "task-editor.tsx"),
+		"utf8",
+	);
 	check(
-		"前置任务卡灰框与两级选择行已打进 bundle（dsh-tdt-ed-card + dsh-tdt-ed-deppick + 核心双层跑马灯 dshpc-mq/-in）",
-		clientJs.includes("dsh-tdt-ed-card") &&
+		"前置任务改单个核心分组下拉（空工作区整组不显示 + 搜索框 + 撑满整行），两级选择行已删",
+		/const depGroups: PickerGroup\[\] = workspaces/.test(depEdSrc) &&
+			/filter\(\(group\) => group\.options\.length > 0\)/.test(depEdSrc) &&
+			/groups: depGroups[\s\S]{0,300}searchable: true/.test(depEdSrc) &&
+			!depEdSrc.includes("dsh-tdt-ed-deppick-ws") &&
+			!depEdSrc.includes("depWsOptions") &&
 			clientJs.includes("dsh-tdt-ed-deppick") &&
-			clientJs.includes("dsh-tdt-ed-depitem") &&
-			clientJs.includes("dshpc-mq") &&
-			clientJs.includes("dshpc-mq-in"),
+			clientJs.includes("dsh-tdt-ed-depitem"),
+	);
+	check(
+		"编辑分栏按钮全站收口核心：无官方 primitives Button、无原生 button、无 TdtButton 别名",
+		(() => {
+			const prim = depEdSrc.match(
+				/import \{([\s\S]*?)\} from "@deepseek-ai\/dsh-client-ui-primitives";/,
+			);
+			return (
+				prim !== null &&
+				!/\bButton\b/.test(prim[1]) &&
+				!/\bh\(\s*["']button["']/.test(depEdSrc) &&
+				!depEdSrc.includes("TdtButton") &&
+				/variant: "secondary", size: "sm", onClick: openPreviewPanel/.test(depEdSrc) &&
+				!/variant: "ghost",[\s\S]{0,120}block: true/.test(depEdSrc)
+			);
+		})(),
 	);
 	check(
 		"停用（锁住）任务可选且显式标「（已停用）」——前置任务下拉不做启停过滤",
@@ -3594,13 +3616,15 @@ try {
 			!clientJs.includes("editorValidStatuses"),
 	);
 	check(
-		"高级区第二轮：灰条收折头（无内层黑框）+「?」说明 + 官方 chevron 展开图标 + 虚线分隔两拍排版",
+		"高级区收折头：整行不再是可点高亮按钮，只有右侧核心 IconButton 箭头可点（hover 才亮）",
 		clientJs.includes("dsh-tdt-ed-advbody") &&
 			clientJs.includes("editorAdvancedHelp") &&
 			!clientJs.includes("dsh-tdt-ed-advhead") &&
 			clientJs.includes("dsh-tdt-ed-advchevron-open") &&
 			clientJs.includes("dsh-tdt-ed-advitem") &&
-			!clientJs.includes("dsh-tdt-ed-summary"),
+			!clientJs.includes("dsh-tdt-ed-summary") &&
+			/variant: "plain",[\s\S]{0,400}label: t\("editorAdvanced"\)/.test(depEdSrc) &&
+			!/block: true/.test(depEdSrc),
 	);
 	check(
 		"全屏面板（提示词编辑 / 配置预览）滚动位置保持：打开前存 scrollTop、关闭重挂后恢复",
@@ -3673,10 +3697,13 @@ try {
 			clientJs.includes("移交给本次任务"),
 	);
 	check(
-		"先选工作区占位与空态虚线框文案已打进 bundle（行内「前置任务：」前缀已按用户要求删除）",
-		clientJs.includes("请先选择工作区") &&
+		"分组下拉空态与空列表文案已打进 bundle（「先选工作区」旧文案已删，行内「前置任务：」前缀不留）",
+		clientJs.includes("暂无可选的前置任务") &&
 			clientJs.includes("尚未配置前置任务") &&
-			clientJs.includes("在下方选择工作区与任务后点") &&
+			clientJs.includes("在下方选择任务后点") &&
+			!clientJs.includes("editorDepPickWsFirst") &&
+			!depEdSrc.includes("editorDepPickWsFirst") &&
+			!clientJs.includes("在下方选择工作区与任务后点") &&
 			!clientJs.includes("前置任务："),
 	);
 	check(

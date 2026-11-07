@@ -578,7 +578,7 @@ window.__ModuleLoader__.load({
 		* @param props 见 {@link ButtonProps}。
 		* @returns 按钮元素。
 		*/
-		function Button$2(props) {
+		function Button$1(props) {
 			ensureComponentStyles("button", BUTTON_CSS$1);
 			const { variant = "outline", size = "lg", icon, iconRight, color, loading: loadingProp = false, loadingText = true, block = false, width, minWidth, maxWidth, className, style, children, onClick, onBusyChange, ...rest } = props;
 			const btnRef = (0, react$1.useRef)(null);
@@ -1965,14 +1965,14 @@ window.__ModuleLoader__.load({
 					display: "flex",
 					gap: "8px",
 					justifyContent: "flex-end"
-				} }, (0, react$1.createElement)(Button$2, {
+				} }, (0, react$1.createElement)(Button$1, {
 					variant: "outline",
 					width: props.cancelWidth,
 					loadingText: props.loadingText,
 					loading: props.cancelLoading === true,
 					onBusyChange: setCancelBusy,
 					onClick: () => props.onCancel?.()
-				}, props.cancelText ?? tt("cancel")), (0, react$1.createElement)(Button$2, {
+				}, props.cancelText ?? tt("cancel")), (0, react$1.createElement)(Button$1, {
 					variant: confirmVariant,
 					width: props.confirmWidth,
 					loadingText: props.loadingText,
@@ -2149,13 +2149,13 @@ window.__ModuleLoader__.load({
 					display: "flex",
 					justifyContent: "flex-end",
 					gap: "8px"
-				} }, (0, react$1.createElement)(Button$2, {
+				} }, (0, react$1.createElement)(Button$1, {
 					variant: "outline",
 					onClick: () => {
 						close();
 						resolve(false);
 					}
-				}, opts.cancelText ?? t$1("cancel")), (0, react$1.createElement)(Button$2, {
+				}, opts.cancelText ?? t$1("cancel")), (0, react$1.createElement)(Button$1, {
 					variant: opts.danger === true ? "danger" : "primary",
 					onClick: () => {
 						close();
@@ -2177,7 +2177,7 @@ window.__ModuleLoader__.load({
 				footer: (0, react$1.createElement)("div", { style: {
 					display: "flex",
 					justifyContent: "flex-end"
-				} }, (0, react$1.createElement)(Button$2, {
+				} }, (0, react$1.createElement)(Button$1, {
 					variant: "primary",
 					onClick: () => {
 						close();
@@ -48847,7 +48847,7 @@ window.__ModuleLoader__.load({
 				path: props.path,
 				t: tt,
 				focusLine: props.focusLine
-			})), nextOffset !== null && props.maxBytes === void 0 ? (0, react$1.createElement)("div", { className: "dshpc-fb__more" }, (0, react$1.createElement)(Button$2, {
+			})), nextOffset !== null && props.maxBytes === void 0 ? (0, react$1.createElement)("div", { className: "dshpc-fb__more" }, (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				loading,
@@ -49165,7 +49165,7 @@ window.__ModuleLoader__.load({
 		*/
 		/** 一段面包屑（核心 ghost 钮：无底无边；度量条与可见态必须逐字同构）。 */
 		function crumbButton(label, onClick, current = false) {
-			return (0, react$1.createElement)(Button$2, {
+			return (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
 				className: `dshpc-fb__crumb${current ? " dshpc-fb__crumb--current" : ""}`,
@@ -49256,7 +49256,7 @@ window.__ModuleLoader__.load({
 				onKeyDown: (event) => {
 					if (event.key === "Enter" || event.key === " ") onOpen(target);
 				}
-			}, (0, react$1.createElement)("span", { className: "dshpc-fb__row-icon" }, (0, react$1.createElement)(official_exports.IconFolderCloseRegular, { size: 18 })), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, label), pickable ? (0, react$1.createElement)(Button$2, {
+			}, (0, react$1.createElement)("span", { className: "dshpc-fb__row-icon" }, (0, react$1.createElement)(official_exports.IconFolderCloseRegular, { size: 18 })), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, label), pickable ? (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				className: "dshpc-fb__row-act",
@@ -49797,7 +49797,7 @@ window.__ModuleLoader__.load({
 					}, (0, react$1.createElement)("span", { className: "dshpc-fb__row-icon" }, (0, react$1.createElement)(official_exports.FileTypeIcon, {
 						path: childPath,
 						size: 18
-					})), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, entry.name), picker && props.onPick !== void 0 ? (0, react$1.createElement)(Button$2, {
+					})), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, entry.name), picker && props.onPick !== void 0 ? (0, react$1.createElement)(Button$1, {
 						variant: "outline",
 						size: "sm",
 						className: "dshpc-fb__row-act",
@@ -49841,13 +49841,13 @@ window.__ModuleLoader__.load({
 						event.stopPropagation();
 						toggleDir(childPath);
 					}
-				}), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, entry.name), picker ? dirPickable ? (0, react$1.createElement)(Button$2, {
+				}), (0, react$1.createElement)("span", { className: "dshpc-fb__row-name" }, entry.name), picker ? dirPickable ? (0, react$1.createElement)(Button$1, {
 					variant: "outline",
 					size: "sm",
 					className: "dshpc-fb__row-act",
 					"aria-label": tt("explorerPickDirAria"),
 					onClick: actThisDir
-				}, tt("explorerPickDir")) : null : (0, react$1.createElement)(Button$2, {
+				}, tt("explorerPickDir")) : null : (0, react$1.createElement)(Button$1, {
 					variant: "outline",
 					size: "sm",
 					className: "dshpc-fb__row-act",
@@ -49896,7 +49896,7 @@ window.__ModuleLoader__.load({
 				onPickWorkspace: switchWorkspace,
 				onLoadDir: loadDir
 			});
-			const pickNow = picker && props.onPick !== void 0 && !landing && dirPickable && dir !== "" ? (0, react$1.createElement)(Button$2, {
+			const pickNow = picker && props.onPick !== void 0 && !landing && dirPickable && dir !== "" ? (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				className: "dshpc-fb__pick",
@@ -54244,7 +54244,7 @@ window.__ModuleLoader__.load({
 			const triggerRow = props.hint === void 0 ? trigger : (0, react$1.createElement)("span", { className: "dshpc-fieldwrap dshpc-fieldwrap--inline" }, trigger, (0, react$1.createElement)(FieldHint, { text: props.hint }));
 			const endBox = (side, label) => {
 				const p = partsOf(draft[side]);
-				return (0, react$1.createElement)(Button$2, {
+				return (0, react$1.createElement)(Button$1, {
 					key: side,
 					variant: "outline",
 					size: "md",
@@ -54398,7 +54398,7 @@ window.__ModuleLoader__.load({
 				onKeyDown: onPopKeyDown
 			}, (0, react$1.createElement)("div", { className: "dshpc-dt__layout" }, (0, react$1.createElement)("div", { className: "dshpc-dt__body" }, rangeMode ? (0, react$1.createElement)("div", { className: "dshpc-dt__ends" }, endBox("start", tt("dtStart")), endBox("end", tt("dtEnd"))) : null, (0, react$1.createElement)("div", { className: "dshpc-dt__panels" }, panel("start"), rangeMode ? panel("end") : null)), presetRows.length === 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-dt__side" }, (0, react$1.createElement)("div", { className: "dshpc-dt__side-scroll dshpc-scroll-thin" }, presetRows.map((p, i) => {
 				const active = !p.isClear && p.range !== null && draftRange !== null && p.range[0] === draftRange[0] && p.range[1] === draftRange[1];
-				return (0, react$1.createElement)(Button$2, {
+				return (0, react$1.createElement)(Button$1, {
 					key: `${i}-${p.label}`,
 					variant: active ? "outline" : "ghost",
 					size: "sm",
@@ -54407,19 +54407,19 @@ window.__ModuleLoader__.load({
 					"aria-pressed": active,
 					onClick: () => applyPreset(p.range)
 				}, p.label);
-			})))), (0, react$1.createElement)("div", { className: "dshpc-dt__foot" }, (0, react$1.createElement)("div", { className: "dshpc-dt__foot-side" }, (0, react$1.createElement)(Button$2, {
+			})))), (0, react$1.createElement)("div", { className: "dshpc-dt__foot" }, (0, react$1.createElement)("div", { className: "dshpc-dt__foot-side" }, (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
 				onClick: applyNow
-			}, precision === "day" ? tt("dtToday") : tt("dtNow")), (0, react$1.createElement)(Button$2, {
+			}, precision === "day" ? tt("dtToday") : tt("dtNow")), (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
 				onClick: clear
-			}, tt("dtClear"))), (0, react$1.createElement)("div", { className: "dshpc-dt__foot-side" }, invalidRange ? (0, react$1.createElement)("span", { className: "dshpc-dt__warn" }, tt("dtInvalidRange")) : null, (0, react$1.createElement)(Button$2, {
+			}, tt("dtClear"))), (0, react$1.createElement)("div", { className: "dshpc-dt__foot-side" }, invalidRange ? (0, react$1.createElement)("span", { className: "dshpc-dt__warn" }, tt("dtInvalidRange")) : null, (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => setOpen(false)
-			}, tt("cancel")), (0, react$1.createElement)(Button$2, {
+			}, tt("cancel")), (0, react$1.createElement)(Button$1, {
 				variant: "primary",
 				size: "sm",
 				disabled: !canCommit,
@@ -54820,7 +54820,7 @@ window.__ModuleLoader__.load({
 					total
 				});
 			})();
-			const pageButton = (n) => (0, react$1.createElement)(Button$2, {
+			const pageButton = (n) => (0, react$1.createElement)(Button$1, {
 				key: n,
 				variant: n === page ? "info" : "ghost",
 				size: "md",
@@ -54833,7 +54833,7 @@ window.__ModuleLoader__.load({
 			const navButton = (direction) => {
 				const isPrev = direction === "prev";
 				const label = isPrev ? tt("paginationPrev") : tt("paginationNext");
-				return (0, react$1.createElement)(Button$2, {
+				return (0, react$1.createElement)(Button$1, {
 					variant: "ghost",
 					size: "md",
 					className: "dshpc-pagination__nav",
@@ -56401,7 +56401,7 @@ window.__ModuleLoader__.load({
 					flexShrink: 0
 				} }, ...actions.slice(0, 2).map((a) => {
 					const successSurface = payload.variant === "success";
-					return (0, react$1.createElement)(Button$2, {
+					return (0, react$1.createElement)(Button$1, {
 						variant: successSurface ? "secondary" : a.variant ?? "info",
 						...successSurface ? { color: "var(--dshpc-surface-2)" } : {},
 						size: "md",
@@ -56721,7 +56721,7 @@ window.__ModuleLoader__.load({
 					label: action.ariaLabel ?? t$1("inputAction"),
 					disabled: off,
 					onClick: run
-				}) : (0, react$1.createElement)(Button$2, {
+				}) : (0, react$1.createElement)(Button$1, {
 					key: `action-${String(i)}`,
 					variant: action.variant ?? "info",
 					size,
@@ -58128,13 +58128,12 @@ window.__ModuleLoader__.load({
 			editorDepsHint: "此任务必须等待『所有』前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。",
 			editorDepAdd: "添加",
 			editorDepTask: "任务",
-			editorDepPickWsFirst: "请先选择工作区",
 			editorDepTaskPh: "选择任务",
 			editorDepRemove: "移除",
 			editorDepEmpty: "尚未配置前置任务",
-			editorDepEmptyHint: "在下方选择工作区与任务后点「添加」",
+			editorDepEmptyHint: "在下方选择任务后点「添加」",
 			editorDepDisabledTag: "（已停用）",
-			editorDepTaskEmpty: "该工作区暂无可选任务",
+			editorDepTaskEmpty: "暂无可选的前置任务",
 			localeTag: "zh-CN",
 			recordsEmpty: "该时间范围内没有执行记录",
 			recordsEmptyFiltered: "当前过滤条件下没有执行记录",
@@ -58796,13 +58795,12 @@ window.__ModuleLoader__.load({
 			editorDepsHint: "This task waits for ALL of its prerequisites to finish before it can start. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.",
 			editorDepAdd: "Add",
 			editorDepTask: "Task",
-			editorDepPickWsFirst: "Select a workspace first",
 			editorDepTaskPh: "Select a task",
 			editorDepRemove: "Remove",
 			editorDepEmpty: "No prerequisites configured yet",
-			editorDepEmptyHint: "Pick a workspace and a task below, then add",
+			editorDepEmptyHint: "Pick a task below, then add",
 			editorDepDisabledTag: " (disabled)",
-			editorDepTaskEmpty: "No selectable task in this workspace",
+			editorDepTaskEmpty: "No selectable prerequisites",
 			localeTag: "en-US",
 			recordsEmpty: "No executions in this time range",
 			recordsEmptyFiltered: "No executions match the current filters",
@@ -59181,12 +59179,13 @@ window.__ModuleLoader__.load({
 		function SelectField(props) {
 			ensureControlsStyle();
 			const size = props.size ?? "lg";
-			const empty = props.options.length === 0;
+			const groups = props.groups;
+			const empty = groups === void 0 ? (props.options ?? []).length === 0 : groups.every((group) => group.options.length === 0);
 			const usable = !empty && props.disabled !== true;
 			const width = props.width ?? (props.block === true ? "100%" : void 0);
 			const cls = [props.block === true ? "dsh-tdt-picker--block" : "", props.error === true ? "dsh-tdt-picker--error" : ""].filter(Boolean).join(" ");
 			return (0, react$1.createElement)(Picker, {
-				options: props.options,
+				...groups === void 0 ? { options: props.options ?? [] } : { groups },
 				value: props.value,
 				onChange: (next) => {
 					if (typeof next === "string") props.onChange(next);
@@ -59476,7 +59475,7 @@ window.__ModuleLoader__.load({
 			return (0, react$1.createElement)("div", {
 				className: className === void 0 ? "dsh-tdt-proc" : `dsh-tdt-proc ${className}`,
 				"data-process-files": true
-			}, (0, react$1.createElement)(Button$2, {
+			}, (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
 				block: true,
@@ -59490,7 +59489,7 @@ window.__ModuleLoader__.load({
 					fontSize: "var(--dshpc-font-sm)",
 					fontWeight: 400
 				}
-			}, t("procFilesTitle", { count: list.length })), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-proc-list" }, list.map((path) => (0, react$1.createElement)(Button$2, {
+			}, t("procFilesTitle", { count: list.length })), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-proc-list" }, list.map((path) => (0, react$1.createElement)(Button$1, {
 				key: path,
 				variant: "ghost",
 				size: "sm",
@@ -60065,7 +60064,7 @@ window.__ModuleLoader__.load({
 				flex: "0 1 auto",
 				minWidth: 0,
 				display: "flex"
-			} }, (0, react$1.createElement)(Button$2, {
+			} }, (0, react$1.createElement)(Button$1, {
 				variant: "link",
 				size: "sm",
 				style: {
@@ -60128,7 +60127,7 @@ window.__ModuleLoader__.load({
 			}, `+${outputs.length - 3}`)) : null), plannedTagNode, statusTag === null ? null : (0, react$1.createElement)(Chip, {
 				size: "xs",
 				tone: statusTag.tone === "bad" ? "danger" : statusTag.tone === "warn" ? "warning" : statusTag.tone === "busy" ? "business" : "neutral"
-			}, statusTag.text), canOpenSession ? (0, react$1.createElement)(Button$2, {
+			}, statusTag.text), canOpenSession ? (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: (event) => {
@@ -60148,7 +60147,7 @@ window.__ModuleLoader__.load({
 				},
 				"aria-expanded": open,
 				style: { transform: open ? "rotate(180deg)" : "none" }
-			})) : null)), open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)(Button$2, {
+			})) : null)), open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)(Button$1, {
 				key: path,
 				variant: "ghost",
 				size: "sm",
@@ -60195,7 +60194,7 @@ window.__ModuleLoader__.load({
 				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, depTitleOf(dep.task))) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					label: depTitleOf(dep.task),
 					side: "top"
-				}, (0, react$1.createElement)(Button$2, {
+				}, (0, react$1.createElement)(Button$1, {
 					variant: "link",
 					size: "sm",
 					style: {
@@ -60236,7 +60235,7 @@ window.__ModuleLoader__.load({
 						event.stopPropagation();
 						if (depHasSid) openSession(depSid);
 					}
-				}, "…") : null), depHasSid ? (0, react$1.createElement)(Button$2, {
+				}, "…") : null), depHasSid ? (0, react$1.createElement)(Button$1, {
 					size: "sm",
 					variant: "link",
 					onClick: (event) => {
@@ -60529,7 +60528,7 @@ window.__ModuleLoader__.load({
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 150
-			}))), loading ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$2, {
+			}))), loading ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
@@ -60559,13 +60558,13 @@ window.__ModuleLoader__.load({
 			}))))), (0, react$1.createElement)("div", {
 				ref: observeSentinel,
 				style: { height: "1px" }
-			}), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-foot" }, error !== null ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`) : null, error !== null ? (0, react$1.createElement)(Button$2, {
+			}), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-foot" }, error !== null ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`) : null, error !== null ? (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
 					load(cursor);
 				}
-			}, t("recordsRetry")) : footerHint !== null ? (0, react$1.createElement)("span", null, footerHint) : (0, react$1.createElement)(Button$2, {
+			}, t("recordsRetry")) : footerHint !== null ? (0, react$1.createElement)("span", null, footerHint) : (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: loadMore
@@ -66971,7 +66970,7 @@ window.__ModuleLoader__.load({
 				className: "dshpc-sv-archived",
 				title: tt("sessionArchived")
 			}, (0, react$1.createElement)(official_exports.IconArchiveOutlineRegular, { size: 12 }), tt("sessionArchived")) : void 0;
-			const continueAction = showContinue ? (0, react$1.createElement)(Button$2, {
+			const continueAction = showContinue ? (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				disabled: forking,
@@ -67010,7 +67009,7 @@ window.__ModuleLoader__.load({
 							onSend();
 						}
 					}
-				}), (0, react$1.createElement)(Button$2, {
+				}), (0, react$1.createElement)(Button$1, {
 					variant: "primary",
 					size: "sm",
 					disabled: sending || draft.trim() === "",
@@ -67029,7 +67028,7 @@ window.__ModuleLoader__.load({
 				},
 				title: tt("forkConfirmTitle"),
 				translate: tt,
-				footer: [(0, react$1.createElement)(Button$2, {
+				footer: [(0, react$1.createElement)(Button$1, {
 					key: "cancel",
 					variant: "outline",
 					className: modalActionClass,
@@ -67037,7 +67036,7 @@ window.__ModuleLoader__.load({
 					onClick: () => {
 						setForkTarget(null);
 					}
-				}, tt("cancel")), (0, react$1.createElement)(Button$2, {
+				}, tt("cancel")), (0, react$1.createElement)(Button$1, {
 					key: "accept",
 					variant: "primary",
 					className: modalActionClass,
@@ -67445,7 +67444,7 @@ window.__ModuleLoader__.load({
 		function FileChip(props) {
 			const { file } = props;
 			const clickable = file.onClick !== void 0;
-			return (0, react$1.createElement)(Button$2, {
+			return (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
 				icon: file.isDir ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
@@ -67478,7 +67477,7 @@ window.__ModuleLoader__.load({
 			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, shown.map((file, index) => (0, react$1.createElement)(FileChip, {
 				key: `${file.key}#${index}`,
 				file
-			})), collapsible ? (0, react$1.createElement)(Button$2, {
+			})), collapsible ? (0, react$1.createElement)(Button$1, {
 				variant: "link",
 				size: "sm",
 				"aria-expanded": expanded,
@@ -67534,7 +67533,7 @@ window.__ModuleLoader__.load({
 						key: `${file.key}#${index}`,
 						file
 					})), capped.length < all.length ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-none" }, t("tfcRestFiles", { count: all.length - capped.length })) : null));
-				}), collapsible ? (0, react$1.createElement)(Button$2, {
+				}), collapsible ? (0, react$1.createElement)(Button$1, {
 					variant: "link",
 					size: "sm",
 					"aria-expanded": expanded,
@@ -67651,7 +67650,7 @@ window.__ModuleLoader__.load({
 				}
 				return out;
 			}, [outputs, snapshotPaths]);
-			const title = (0, react$1.createElement)(react$1.Fragment, null, tt("sessionViewerTitle"), " · ", taskId !== void 0 && onOpenTask !== void 0 && headingTask !== void 0 ? (0, react$1.createElement)(Button$2, {
+			const title = (0, react$1.createElement)(react$1.Fragment, null, tt("sessionViewerTitle"), " · ", taskId !== void 0 && onOpenTask !== void 0 && headingTask !== void 0 ? (0, react$1.createElement)(Button$1, {
 				variant: "link",
 				size: "sm",
 				style: { fontSize: "inherit" },
@@ -77129,18 +77128,15 @@ window.__ModuleLoader__.load({
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
 /* 小问号已改接核心 FieldHint（2026-11-06）：图标 / 气泡 / 焦点全部归核心，本地皮肤已删。 */
-/* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
-   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居中
-   吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
+/* 前置任务卡选择行（用户 2026-11-07）：分组下拉吃掉整行剩余宽度，右侧「添加」定宽 72px。
    核心 Picker 的根是 inline-block flex 子项 ⇒ 必须给 min-width:0 才能收缩，否则整行被撑爆。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
 /* 附件行（2026-11-06 改接核心，与查看档附件同款）：只有排布，不画皮肤 ——
    文件名 / 来源标签 / 移除钮分别由核心 Chip、Chip(xs)、IconButton(danger) 承载。 */
 .dsh-tdt-ed-attline{display:flex;align-items:center;gap:6px;min-width:0;}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
-.dsh-tdt-ed-deppick-ws > *,.dsh-tdt-ed-deppick-task > *{flex:1 1 auto;min-width:0;width:100%;}
+.dsh-tdt-ed-deppick-task > *{flex:1 1 auto;min-width:0;width:100%;}
 /* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 /* ── 查看档（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）──────────────────
    纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
@@ -77488,7 +77484,7 @@ window.__ModuleLoader__.load({
 						}
 					});
 					const canOpen = absPath !== void 0 && absPath !== null && anchor !== void 0 && anchor !== null && onOpenFile !== void 0;
-					return (0, react$1.createElement)(Button$2, {
+					return (0, react$1.createElement)(Button$1, {
 						key,
 						variant: "ghost",
 						size: "sm",
@@ -77529,7 +77525,7 @@ window.__ModuleLoader__.load({
 							gap: "6px",
 							minWidth: 0
 						}
-					}, seq, nameText) : (0, react$1.createElement)(Button$2, {
+					}, seq, nameText) : (0, react$1.createElement)(Button$1, {
 						key: dep.id,
 						variant: "link",
 						size: "sm",
@@ -77602,7 +77598,7 @@ window.__ModuleLoader__.load({
 				minWidth: 0,
 				minHeight: "var(--dshpc-line-md)",
 				marginTop: "-3px"
-			} }, sessionButton, canOpenSession ? (0, react$1.createElement)(Button$2, {
+			} }, sessionButton, canOpenSession ? (0, react$1.createElement)(Button$1, {
 				variant: "link",
 				size: "sm",
 				style: sessionLinkStyle,
@@ -77659,7 +77655,7 @@ window.__ModuleLoader__.load({
 			} }, t("colOutputs")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column"
-			} }, outputs.map((output) => (0, react$1.createElement)(Button$2, {
+			} }, outputs.map((output) => (0, react$1.createElement)(Button$1, {
 				key: output,
 				variant: "ghost",
 				size: "sm",
@@ -77842,7 +77838,7 @@ window.__ModuleLoader__.load({
 						setPromptMode(next);
 					},
 					label: t("editorViewPrompt")
-				}), isShort ? null : (0, react$1.createElement)(Button$2, {
+				}), isShort ? null : (0, react$1.createElement)(Button$1, {
 					variant: "outline",
 					size: "sm",
 					onClick: () => {
@@ -77877,7 +77873,7 @@ window.__ModuleLoader__.load({
 		* 「?」说明钮 —— 核心 `FieldHint` 的薄包装（2026-11-06）。
 		*
 		* 图标、气泡、键盘焦点全部归核心；本仓只补 `insideClickable` 一种位置：挂在可点行
-		* （如「高级设置」折叠头）里时，外面套一层 `span` 吞掉点击冒泡，免得点说明把行本身开关了。
+		* 里时，外面套一层 `span` 吞掉点击冒泡，免得点说明把行本身开关了。
 		*/
 		/** 「?」说明钮 —— 全站唯一实现（设置页每项标题右侧的小问号也用它，2026-10-08 导出复用）。 */
 		function HelpButton(props) {
@@ -78549,11 +78545,11 @@ window.__ModuleLoader__.load({
 					display: "flex",
 					justifyContent: "flex-end",
 					gap: "8px"
-				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				} }, (0, react$1.createElement)(Button$1, {
 					variant: "outline",
 					size: "sm",
 					onClick: props.onCancel
-				}, props.cancelLabel ?? props.t("editorCancel")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				}, props.cancelLabel ?? props.t("editorCancel")), (0, react$1.createElement)(Button$1, {
 					variant: "primary",
 					size: "sm",
 					disabled: needAck && !acked,
@@ -78687,7 +78683,7 @@ window.__ModuleLoader__.load({
 					setShowVersions(next.includes("on"));
 				},
 				label: versionTitle
-			}), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}), (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
 				onClick: onClose
@@ -78769,7 +78765,7 @@ window.__ModuleLoader__.load({
 			}, (0, react$1.createElement)("span", {
 				className: "dsh-tdt-ed-ver-ic",
 				style: { transform: "rotate(-90deg)" }
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react$1.createElement)(MarqueeText, { text: formatVersionTime(v.ts) }), v.note !== "" ? (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-note" }, v.note) : null), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-right" }, hoveredId === v.file ? (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react$1.createElement)(Button$2, {
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react$1.createElement)(MarqueeText, { text: formatVersionTime(v.ts) }), v.note !== "" ? (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-note" }, v.note) : null), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-right" }, hoveredId === v.file ? (0, react$1.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react$1.createElement)(Button$1, {
 				variant: "link",
 				size: "sm",
 				onClick: () => {
@@ -78815,7 +78811,7 @@ window.__ModuleLoader__.load({
 			} }, (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--dshpc-font-lg)",
 				fontWeight: 600
-			} }, t("editorPreview")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			} }, t("editorPreview")), (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
 				onClick: onClose
@@ -79151,7 +79147,7 @@ window.__ModuleLoader__.load({
 				padding: "md"
 			}, (0, react$1.createElement)(SectionHead, {
 				title: t("editorPrompt"),
-				right: (0, react$1.createElement)(Button$2, {
+				right: (0, react$1.createElement)(Button$1, {
 					variant: "ghost",
 					size: "sm",
 					"aria-label": t("editorOpenEditor"),
@@ -79367,7 +79363,7 @@ window.__ModuleLoader__.load({
 				return (0, react$1.createElement)("div", {
 					key: att.id,
 					className: "dsh-tdt-ed-attline"
-				}, (0, react$1.createElement)(Button$2, {
+				}, (0, react$1.createElement)(Button$1, {
 					variant: "ghost",
 					size: "sm",
 					icon,
@@ -79429,30 +79425,24 @@ window.__ModuleLoader__.load({
 				fontSize: "var(--dshpc-font-xs)",
 				color: "var(--dshpc-fg-2)",
 				marginTop: "4px"
-			} }, t("editorDropZoneFormats"))), (0, react$1.createElement)("div", { style: {
-				flex: "none",
-				display: "flex"
-			} }, (0, react$1.createElement)("button", {
-				type: "button",
+			} }, t("editorDropZoneFormats"))), (0, react$1.createElement)("div", {
 				ref: pickerAnchorRef,
+				style: {
+					flex: "none",
+					display: "flex"
+				}
+			}, (0, react$1.createElement)(Button$1, {
+				variant: "outline",
 				"aria-haspopup": "dialog",
 				"aria-expanded": pickerOpen,
 				onClick: openPicker,
-				className: surfaceClass({
-					tone: "plain",
-					border: "dashed",
-					radius: "md",
-					padding: "sm"
-				}),
 				style: {
-					display: "flex",
 					flexDirection: "column",
-					alignItems: "center",
-					justifyContent: "center",
 					gap: "6px",
 					width: "92px",
-					cursor: "pointer",
-					color: "var(--dshpc-fg)"
+					height: "auto",
+					minHeight: "72px",
+					borderStyle: "dashed"
 				}
 			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 20 }), (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--dshpc-font-sm)",
@@ -79627,13 +79617,15 @@ window.__ModuleLoader__.load({
 				maxWidth: 320
 			}))));
 			const addedDepIds = new Set(draft.deps.map((dep) => dep.task));
-			const depWsOptions = workspaces;
-			const [depWs, setDepWs] = (0, react$1.useState)(() => workspaces[0]?.value ?? "");
 			const [depTaskId, setDepTaskId] = (0, react$1.useState)("");
-			const depTaskOptions = depWs === "" ? [] : tasks.filter((task) => task.workspace === depWs && !addedDepIds.has(task.id) && task.id !== currentTaskId).map((task) => ({
-				value: task.id,
-				label: task.enabled === false ? `${task.label}${t("editorDepDisabledTag")}` : task.label
-			}));
+			const depGroups = workspaces.map((ws) => ({
+				value: ws.value,
+				label: ws.label,
+				options: tasks.filter((task) => task.workspace === ws.value && !addedDepIds.has(task.id) && task.id !== currentTaskId).map((task) => ({
+					value: task.id,
+					label: task.enabled === false ? `${task.label}${t("editorDepDisabledTag")}` : task.label
+				}))
+			})).filter((group) => group.options.length > 0);
 			const addDep = () => {
 				if (depTaskId === "" || addedDepIds.has(depTaskId)) return;
 				patch({ deps: [...draft.deps, {
@@ -79685,7 +79677,7 @@ window.__ModuleLoader__.load({
 						minWidth: 0,
 						fontSize: "var(--dshpc-font-md)"
 					}
-				}) : (0, react$1.createElement)(Button$2, {
+				}) : (0, react$1.createElement)(Button$1, {
 					variant: "link",
 					size: "sm",
 					style: {
@@ -79704,38 +79696,27 @@ window.__ModuleLoader__.load({
 						color: "var(--dshpc-fg-2)",
 						fontSize: "var(--dshpc-font-xs)"
 					}
-				}), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-					variant: "ghost",
+				}), (0, react$1.createElement)(IconButton, {
+					variant: "danger",
 					size: "sm",
+					icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
+					label: t("editorDepRemove"),
+					title: "",
 					style: { flex: "none" },
 					onClick: () => {
 						patch({ deps: draft.deps.filter((d) => d.task !== dep.task) });
-					},
-					"aria-label": t("editorDepRemove")
-				}, t("editorDepRemove")));
-			}))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-deppick" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-deppick-ws" }, (0, react$1.createElement)(SelectField, {
-				value: depWs,
-				options: depWsOptions,
-				onChange: (value) => {
-					setDepWs(value);
-					setDepTaskId("");
-				},
-				placeholder: t("editorWorkspacePh"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorWorkspace"),
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
+					}
+				}));
+			}))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-deppick" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-deppick-task" }, (0, react$1.createElement)(SelectField, {
+				value: depTaskId,
+				groups: depGroups,
+				onChange: setDepTaskId,
+				placeholder: t("editorDepTaskPh"),
+				emptyLabel: t("editorDepTaskEmpty"),
+				ariaLabel: t("editorDepTask"),
 				width: "100%",
 				searchable: true
-			})), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-deppick-task" }, (0, react$1.createElement)(SelectField, {
-				value: depTaskId,
-				options: depTaskOptions,
-				onChange: setDepTaskId,
-				placeholder: depWs === "" ? t("editorDepPickWsFirst") : t("editorDepTaskPh"),
-				emptyLabel: depWs === "" ? t("editorNoOptions") : t("editorDepTaskEmpty"),
-				ariaLabel: t("editorDepTask"),
-				disabled: depWs === "",
-				width: "100%"
-			})), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			})), (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 14 }),
@@ -79768,27 +79749,29 @@ window.__ModuleLoader__.load({
 			const advancedBlock = (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react$1.createElement)(Surface, {
 				className: "dsh-tdt-ed-card",
 				padding: "md"
-			}, (0, react$1.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				block: true,
-				"aria-expanded": advancedOpen,
-				onClick: () => {
-					setAdvancedOpen(!advancedOpen);
-				},
-				iconRight: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
-					size: 12,
-					className: advancedOpen ? "dsh-tdt-ed-advchevron-open" : "dsh-tdt-ed-advchevron"
-				}),
-				style: { justifyContent: "space-between" }
-			}, (0, react$1.createElement)("span", { style: {
+			}, (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: "8px"
+			} }, (0, react$1.createElement)("span", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "4px"
-			} }, t("editorAdvanced"), (0, react$1.createElement)(HelpButton, {
-				hint: t("editorAdvancedHelp"),
-				insideClickable: true
-			}))), advancedOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advbody" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)("span", { style: FIELD_LABEL_STYLE }, t("editorRetry")), (0, react$1.createElement)(Segmented, {
+			} }, t("editorAdvanced"), (0, react$1.createElement)(HelpButton, { hint: t("editorAdvancedHelp") })), (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
+					size: 12,
+					className: advancedOpen ? "dsh-tdt-ed-advchevron-open" : "dsh-tdt-ed-advchevron"
+				}),
+				label: t("editorAdvanced"),
+				"aria-expanded": advancedOpen,
+				title: "",
+				onClick: () => {
+					setAdvancedOpen(!advancedOpen);
+				}
+			})), advancedOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advbody" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)("span", { style: FIELD_LABEL_STYLE }, t("editorRetry")), (0, react$1.createElement)(Segmented, {
 				id: "dsh-tdt-ed-retry",
 				value: draft.maxAttempts,
 				size: "md",
@@ -79817,8 +79800,8 @@ window.__ModuleLoader__.load({
 			}), (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--dshpc-font-md)",
 				fontWeight: 600
-			} }, t("editorAgentTeam"))), (0, react$1.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAgentTeamHint"))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
+			} }, t("editorAgentTeam"))), (0, react$1.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAgentTeamHint"))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)(Button$1, {
+				variant: "secondary",
 				size: "sm",
 				onClick: openPreviewPanel
 			}, t("editorPreview"))), (0, react$1.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorPreviewHint")))) : null));
@@ -79915,24 +79898,24 @@ window.__ModuleLoader__.load({
 					setViewTab(next);
 				},
 				label: t("editorTabEdit")
-			}), viewTab === "view" ? (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }) : (0, react$1.createElement)(react$1.Fragment, null, mode === "edit" && onDelete !== void 0 ? (0, react$1.createElement)(Button$2, {
+			}), viewTab === "view" ? (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }) : (0, react$1.createElement)(react$1.Fragment, null, mode === "edit" && onDelete !== void 0 ? (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				className: "dsh-tdt-ed-danger",
 				onClick: () => {
 					askDeleteTask();
 				}
-			}, t("editorDeleteTask")) : null, dirty ? (0, react$1.createElement)(Button$2, {
+			}, t("editorDeleteTask")) : null, dirty ? (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
 				onClick: () => {
 					askReset();
 				}
-			}, t("editorReset")) : null, (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
+			}, t("editorReset")) : null, (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: requestClose
-			}, t("editorCancel")), (0, react$1.createElement)(Button$2, {
+			}, t("editorCancel")), (0, react$1.createElement)(Button$1, {
 				variant: "primary",
 				size: "sm",
 				onClick: () => {
@@ -80398,7 +80381,7 @@ window.__ModuleLoader__.load({
 				}), custom ? (0, react$1.createElement)("span", { style: badgesStyle }, (0, react$1.createElement)(Chip, {
 					size: "xs",
 					tone: "business"
-				}, t("settingsCustom")), (0, react$1.createElement)(Button$2, {
+				}, t("settingsCustom")), (0, react$1.createElement)(Button$1, {
 					variant: "link",
 					size: "sm",
 					onClick: () => {
@@ -80425,7 +80408,7 @@ window.__ModuleLoader__.load({
 				alignItems: "center",
 				flexWrap: "wrap",
 				position: "relative"
-			} }, (0, react$1.createElement)(Button$2, {
+			} }, (0, react$1.createElement)(Button$1, {
 				variant: "primary",
 				size: "lg",
 				onClick: () => void save(),
@@ -80585,7 +80568,7 @@ window.__ModuleLoader__.load({
 					checked: auto,
 					onChange: (next) => setAuto(next),
 					label: t("settingsAutoRefresh")
-				}), (0, react$1.createElement)(Button$2, {
+				}), (0, react$1.createElement)(Button$1, {
 					variant: "outline",
 					size: "md",
 					onClick: () => void load(),
@@ -81299,7 +81282,7 @@ window.__ModuleLoader__.load({
 				onClick: () => {
 					stepYear(1);
 				}
-			})), (0, react$1.createElement)(Button$2, {
+			})), (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: goToday
@@ -81330,7 +81313,7 @@ window.__ModuleLoader__.load({
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 150
-			}))), loading ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, error !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, `${t("calLoadFail")}：${error}`, (0, react$1.createElement)(Button$2, {
+			}))), loading ? (0, react$1.createElement)(Loading, { anchorId: "dsh-tdt-main" }) : null, error !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, `${t("calLoadFail")}：${error}`, (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
@@ -82182,7 +82165,7 @@ window.__ModuleLoader__.load({
 									if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid);
 								}
 							}, "…")) : null),
-							session: canOpenSession && openSession !== void 0 && sid !== null ? (0, react$1.createElement)(Button$2, {
+							session: canOpenSession && openSession !== void 0 && sid !== null ? (0, react$1.createElement)(Button$1, {
 								variant: "outline",
 								size: "sm",
 								onClick: (event) => {
@@ -82303,16 +82286,16 @@ window.__ModuleLoader__.load({
 					}
 				],
 				onChange: setTab
-			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
+			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$1, {
 				variant: "danger-outline",
 				size: "md",
 				onClick: askDelete
-			}, t("cardDelete")), (0, react$1.createElement)(Button$2, {
+			}, t("cardDelete")), (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "md",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlayOutlineRegular, { size: 14 }),
 				onClick: askRunNow
-			}, t("cardRunNow")), (0, react$1.createElement)(Button$2, {
+			}, t("cardRunNow")), (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "md",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
@@ -82369,7 +82352,7 @@ window.__ModuleLoader__.load({
 				...titleStyle,
 				flex: "0 1 auto",
 				minWidth: 0
-			} }, (0, react$1.createElement)(MarqueeText, { text: row.title })) : (0, react$1.createElement)(Button$2, {
+			} }, (0, react$1.createElement)(MarqueeText, { text: row.title })) : (0, react$1.createElement)(Button$1, {
 				variant: "link",
 				size: "sm",
 				style: {
@@ -82584,7 +82567,7 @@ window.__ModuleLoader__.load({
 				fontSize: "var(--dshpc-font-sm)",
 				color: "var(--dshpc-fg-2)",
 				lineHeight: "var(--dshpc-line-sm)"
-			} }, t("listEmptyHint")), (0, react$1.createElement)(Button$2, {
+			} }, t("listEmptyHint")), (0, react$1.createElement)(Button$1, {
 				variant: "primary",
 				size: "md",
 				style: { marginTop: "16px" },
@@ -83506,7 +83489,7 @@ window.__ModuleLoader__.load({
 				alignItems: "center",
 				gap: "10px",
 				minWidth: 0
-			} }, (0, react$1.createElement)(Button$2, {
+			} }, (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "md",
 				onClick: onBack
@@ -83534,7 +83517,7 @@ window.__ModuleLoader__.load({
 					}
 				],
 				onChange: setTab
-			}), (0, react$1.createElement)(Button$2, {
+			}), (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "md",
 				onClick: () => {
@@ -83923,7 +83906,7 @@ window.__ModuleLoader__.load({
 		function TaskPageHost(props) {
 			const { t, viewRef, forkRef, openRef, officeRef, onBack } = props;
 			const scope = (0, react$1.useSyncExternalStore)(subscribeScope, getScopeValue);
-			if (scope === null) return (0, react$1.createElement)("div", { style: pageStyle }, (0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)(Button$2, {
+			if (scope === null) return (0, react$1.createElement)("div", { style: pageStyle }, (0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)(Button$1, {
 				variant: "outline",
 				size: "sm",
 				onClick: onBack

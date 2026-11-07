@@ -80,18 +80,15 @@ export const TASK_EDITOR_CSS = `
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dshpc-border,rgba(128,128,128,.35));}
 /* 小问号已改接核心 FieldHint（2026-11-06）：图标 / 气泡 / 焦点全部归核心，本地皮肤已删。 */
-/* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
-   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居中
-   吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
+/* 前置任务卡选择行（用户 2026-11-07）：分组下拉吃掉整行剩余宽度，右侧「添加」定宽 72px。
    核心 Picker 的根是 inline-block flex 子项 ⇒ 必须给 min-width:0 才能收缩，否则整行被撑爆。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
 /* 附件行（2026-11-06 改接核心，与查看档附件同款）：只有排布，不画皮肤 ——
    文件名 / 来源标签 / 移除钮分别由核心 Chip、Chip(xs)、IconButton(danger) 承载。 */
 .dsh-tdt-ed-attline{display:flex;align-items:center;gap:6px;min-width:0;}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
-.dsh-tdt-ed-deppick-ws > *,.dsh-tdt-ed-deppick-task > *{flex:1 1 auto;min-width:0;width:100%;}
+.dsh-tdt-ed-deppick-task > *{flex:1 1 auto;min-width:0;width:100%;}
 /* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 /* ── 查看档（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）──────────────────
    纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
