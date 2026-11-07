@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-06 17:14:06 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-07 14:49:16 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -59,10 +59,14 @@
 
 2026-11-07 用户回来继续，按「一个一个来改」推进；本轮先做「新建 / 编辑任务」分栏（见 Process「续做（2026-11-07）」）。
 
-**下一个具体动作**：等用户把核心的「行条目」控件补上（`dsh-plugin-core/ui`，API 建议见 Process 续做节），再在
-`src/client/task-editor.tsx` 的 `.dsh-tdt-ed-attline`（附件行）与 `.dsh-tdt-ed-depitem`（前置任务条目）两处
-一次性换成同一控件：整行常态底色 + hover 提亮 + 整行 onClick（附件行 = 看文件），右侧 actions 槽放核心
-`IconButton` / `Chip`；同步删 `task-editor-css.ts` 里这两类条目残留的皮肤规则，并补冒烟反断言。
+2026-11-07 第二轮已把核心 0.35.4 的新能力全部接完（见 Process「续做第二轮」）；用户说「暂时就这些」，
+**等下一轮指示**，不自行推进。
+
+若继续，剩余可选项（用户未点名，先不动）：
+- 全仓还剩 5 处原生 button：`task-calendar.tsx:656`（日历格子）、`records-timeline.tsx` 两处行内标记、
+  `mirror/Deliverables.tsx` 两处官方 UI 镜像（改核心会破坏镜像类名）。
+- `pnpm-lock.yaml` / `pnpm-workspace.yaml` 仍未跟踪，`package-lock.json`（npm 时代遗留）仍被跟踪，双 lockfile 并存。
+- smoke 长期 11 项既有失败，与改接核心无关。
 
 ⚠️ `To Do` 的历史勾选项与 `Process` 实际落地记录不同步（P1 / P3 / P5 / P6 多数已做但仍标 `[ ]`），
 **别照单重做**；逐项以 `Process` 各节为准。本任务**仍未结案**（用户未说「结束 / 取消」）。
@@ -653,6 +657,27 @@ h(ChatViewFrame, {
 **核心不必改**：`Picker` 的空组隐藏（调用方过滤即可）、分组下拉宽度（`width:'100%'` 已有）、
 搜索框（`searchable:true` 已有）、`secondary` 灰底无描边（已有）。
 
+## 续做第二轮（2026-11-07）：核心 0.35.4 落地
+
+核心已发 `0.35.4`（`v0.35.4` = `f11945d`）：`5e09dfc` 新增 `ListRow`（`git tag --contains` 含 v0.35.4）、
+`aab2842` 新增 `dense`、`f11945d` 给 Card / StripCard 加 `hoverable` / `filled`。本仓
+`pnpm add dsh-plugin-core@^0.35.4` 升版（已装 0.35.4）。上一节「交核心的改动清单」随之**结案**，
+源码级事实与更正见 `docs/design/external/plugin-core-controls.md` §十三。
+
+| 项 | 落地 |
+|---|---|
+| 卡片 hover | 任务配置 `Card` / 执行记录 `StripCard` 加 `hoverable:true`；删 `task-list.tsx` 的 `.dsh-tdt-card-row:hover` 与 `records-timeline.tsx` 的 `.dsh-tdt-rec-head:hover` |
+| ListRow | 附件行 / 前置任务条目改 `ui/index.ts` 再导出的核心 `ListRow`：常态底 + hover 提亮 + 整行可点 + `actions` 槽（来源 Chip / 工作区小字 / 移除叉）；删 `.dsh-tdt-ed-attline` / `.dsh-tdt-ed-depitem` 两条自绘皮肤 |
+| 折叠头 | 高级设置 /「其他产出」整行可点展开（只给手形、不变底色，`role=button + tabIndex + Enter/Space`），右侧核心 `IconButton` 三角 hover 才亮；三角不另绑 onClick，靠冒泡避免切换两回；`HelpButton` 恢复 `insideClickable` |
+| 字号 | 「高级设置」裸 span 继承宿主默认 16px ⇒ 显式 `--dshpc-font-lg` / 600 与核心 `SectionHead` 标题对齐 |
+| dense | 所有由核心 Button / IconButton 承载的文件 / 文件夹图标加 `dense:true`（task-info / task-file-context / process-files / records-timeline / task-list）；ListRow 内是裸 `FileTypeIcon`，无按钮可挂 dense ⇒ `size:18`、行高由 md 档保证不变 |
+
+**验证**：`build` ✅ · `typecheck` ✅ · `smoke` **745 过 / 11 既有失败**（无新增，新增 3 条断言全过）·
+`koc-codelint` 8 条全为既有 B 类 biome 告警，落点不在本轮改动行内。
+
+**没做**：`mirror/Deliverables.tsx` 的 40×40 文件图标底板（官方 UI 镜像，非核心 Button）、核心
+`adv/explorer` 的 FileBrowser 图标（核心内部固定 `size:18`、无 dense 参数）⇒ 这两类不是本仓能加 dense 的入口。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -678,3 +703,4 @@ h(ChatViewFrame, {
 - 2026-11-06 16:16:39 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 文件行全站收口为核心 Button ghost（task-info/process-files/records-timeline/编辑页附件/会话文件行），新增 3px 控件回正；全屏编辑改用核心 Button；core 0.35.3 smoke 741/11 回基线，typecheck/build 过
 - 2026-11-06 16:20:46 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 用户 2026-11-07 叫停（非完成）：worklog 记「中止」、未完成项保留、台账保持 doing 不结案；按 worklog 签入本轮最后一批改动
 - 2026-11-06 17:14:06 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 编辑分栏第一轮：前置任务两级选择合并为核心分组 Picker（空组过滤+搜索+撑满行），清退官方 primitives Button 与原生 button，高级设置箭头/前置任务移除改核心 IconButton，配置预览改 secondary 灰底；typecheck/build 过、smoke 742 过/11 既有；核心缺行条目控件，建议 API 见 worklog 续做节与 external/plugin-core-controls.md §十二，附件行等核心补完再换
+- 2026-11-07 14:49:16 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 核心 0.35.4 第二轮：任务配置/执行记录卡 hover 改核心 hoverable，附件行与前置任务条目改 ListRow，高级设置与其他产出整行可点展开（三角走核心 IconButton）、高级设置标题字号对齐 SectionHead，全站文件图标加 dense；依赖升 ^0.35.4；build/typecheck 过、smoke 745 过/11 既有、codelint 8 条既有 B 类；结论回写 external/plugin-core-controls.md §十三 与 ui-style-guide
