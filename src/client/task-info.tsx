@@ -206,8 +206,9 @@ export function taskInfoBaseFields(props: {
             // 不许再用 pill / 自绘灰框）。服务端给出绝对路径 + 预览锚点会话才可点（同一 openFile 入口），
             // 缺任一个（老版本 / 拿不到锚点）⇒ `disabled`，不给假入口。
             const canOpen = absPath !== undefined && absPath !== null && anchor !== undefined && anchor !== null && onOpenFile !== undefined
+            // dense = 核心 0.35.4 紧凑图标档：图标放大一档、按钮高度不变（用户 2026-11-07 点名）。
             return h(Button, {
-              key, variant: 'ghost', size: 'sm', icon,
+              key, variant: 'ghost', size: 'sm', dense: true, icon,
               disabled: !canOpen,
               onClick: canOpen ? (): void => { onOpenFile(anchor, absPath) } : undefined,
               style: { maxWidth: '100%', minWidth: 0 },
@@ -359,7 +360,7 @@ export function lastRunFields(props: {
             key: output,
             // 文件行 = **核心 Button 的 ghost 档**（图标 + 文字，与「其他产出」标题同一套皮肤）：2026-11-06 用户点名
             // 「红框那个是哪来的样式？核心哪有这种样式？……要不然你就用 button 的样式」。
-            variant: 'ghost', size: 'sm', block: true,
+            variant: 'ghost', size: 'sm', block: true, dense: true,
             icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: output, size: 14 }),
             disabled: !canOpenFile,
             onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },

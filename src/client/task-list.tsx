@@ -77,10 +77,7 @@ const TASK_LIST_CSS = [
   // 但迁移时这条规则丢了、表头实际不吸顶；这里补回，底色随卡片面（--dshpc-surface-1）免得滚动时透内容。
   '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--dshpc-head-bg); }',
   // 任务卡片外框已改接核心 `Card`（surface-1 底 + 边框 + 圆角，2026-11-06）⇒ 本仓不再写底色。
-  // hover 只作用在**主行**（`dsh-tdt-card-row`：标题 / 状态 / 开关 / 箭头那一溜基本信息）。
-  // 展开区是兄弟节点、不在这个 div 里 ⇒ 即便展开了，下面的设置 / 记录 / 日志也**不会**跟着变蓝
-  // （否则展开后整页发蓝，反而晃眼，用户 2026-10-03）。
-  '.dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }',
+  // 2026-11-07：整卡 hover 变色改走核心 `hoverable`（Card 吃 --dshpc-card-hover），本仓不再自写 :hover。
   // 行 hover 高亮（用户 2026-10-02：斑马纹之上再给一层鼠标反馈）。
   // 特异性 (0,2,0) > `.dsh-tdt-rec-alt` (0,1,0) ⇒ 能盖住斑马纹底色。
   '.dsh-tdt-rec-row:hover { background: var(--dshpc-plate-hover); }',
@@ -864,7 +861,7 @@ function TaskExpandPanel(props: {
                         outputs.slice(0, 3).map(output => h(Tooltip, {
                           key: output, label: baseNameOf(output), side: 'top',
                         }, h(IconButton, {
-                          variant: 'plain', size: 'md',
+                          variant: 'plain', size: 'md', dense: true,
                           icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: output, size: 16 }),
                           label: baseNameOf(output),
                           // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
@@ -1089,6 +1086,8 @@ function TaskCard(props: {
       accent: 'neutral',
       bar: { size: 0, inset: 0, gap: 0 },
       style: { padding: 0 },
+      // 整卡 hover 变色归核心 0.35.4 的 hoverable（本仓不再自写 :hover）。
+      hoverable: true,
     },
       // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
       // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。

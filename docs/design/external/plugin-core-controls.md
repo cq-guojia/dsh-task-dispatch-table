@@ -215,5 +215,26 @@ grep -n "bordered\|tone" -A 3 node_modules/dsh-plugin-core/dist/ui/inputs/Segmen
 | `Chip` | 只做胶囊标签，无右侧操作槽（`docs/help/ui.md:401,403`） |
 | `Card` / `StripCard` | 根节点没有 `onClick`，只有 `action?: ReactNode` 右上操作区 |
 
-⇒ 本仓「附加文件行 / 前置任务条目」暂不改接（不手写 CSS 顶替），等核心补该控件；
-需补的 API 建议见台账本任务过程文档的「续做（2026-11-07）」节。
+⇒ **此结论在 `0.35.4` 已被推翻**：核心新增 `ListRow`，本仓已改接（见 §十三）。
+
+## 十三、核心 0.35.4 的新能力（适用版本 `dsh-plugin-core@0.35.4`）
+
+2026-11-07 读 `dist/ui/display/Card.d.ts` / `Card.js`、`dist/ui/display/ListRow.d.ts` / `ListRow.js`、
+`dist/ui/actions/Button.d.ts` / `Button.js`、`src/ui/display/{card,list-row}.css`、
+`src/ui/actions/button.css`、`docs/help/ui.md` 核实。导出面相对 0.35.3 **只新增一行**：
+`export { ListRow, type ListRowProps } from './display/ListRow.js'`（`dist/ui/index.d.ts:18`）。
+
+| 结论 | 证据 |
+|---|---|
+| `Card` / `StripCard` 加 `hoverable?: boolean`（默认 false）与 `filled?: boolean`（默认 true），共用 `CardSharedProps`；实现用严格 `=== true` / `=== false` | `dist/ui/display/Card.d.ts:19-41,55,68`、`Card.js:43-44` |
+| `hoverable:true` → 类 `dshpc-card--hoverable`，`cursor:pointer` + `:hover` 把 `--surface-bg` 换成 `--dshpc-card-hover`（亮 `rgba(37,99,235,.07)` / 暗 `rgba(96,165,250,.13)`）；`filled:false` → `--no-fill` 透明底 | `src/ui/display/card.css:87-90`、`src/design/tokens.css:57,321` |
+| `ListRow` props：`children` / `actions` / `onClick` / `selected` / `bordered` / `hoverable` / `className` / `style`；**无 `size`、无 `dense`**，只做 md 一档（`min-height:var(--dshpc-control-h-md)` = 28px） | `dist/ui/display/ListRow.d.ts:2-18`、`src/ui/display/list-row.css:15` |
+| 常态底 `--dshpc-surface-sunken`、hover 提亮 `--dshpc-active`；`hoverable` 默认 = 有 `onClick`，可显式覆盖 | `ListRow.js:28-30,39`、`src/ui/display/list-row.css:33-40` |
+| `actions` 槽外层 `stopPropagation()`；行本身是 `div[role=button] + tabIndex:0 + Enter/Space`（**不是 `<button>`**，为了内嵌按钮合法） | `ListRow.js:43-67` |
+| `dense?: boolean`（`ButtonProps` / `IconButtonProps`，默认 false）= 紧凑图标档：`--btn-pad:6px`、图标 `font-size:1.25em`（sm 15px / md·lg 16.25px），**按钮高度不变**；为描边细的文件类型 / 语言图标而加 | `dist/ui/actions/Button.d.ts:43-44,69-70`、`src/ui/actions/button.css:48-51,113-115`、`docs/help/ui.md:46,48` |
+| `dense` **不是** `FileTypeIcon` 的参数，`adv/explorer` 全目录零命中；核心 FileTypeIcon 只是官方 adapter 转发（`ui/official`），props 为 `path/kind/size/className`；FileBrowser 内固定 `size:18` | `dist/ui/official.d.ts:1-30`、`dist/adv/explorer/FileBrowser.js:426` |
+| 核心 `Button` 仍不透传外部 ref（见 §十二） | `dist/ui/actions/Button.js:170` |
+
+**本仓落地**：任务配置卡 / 执行记录卡改 `hoverable:true`（删自写 `:hover`）；附件行 / 前置任务条目改
+`ListRow`；所有由核心 Button / IconButton 承载的文件图标传 `dense:true`；`ListRow` 内的图标是 children
+里的裸 `FileTypeIcon`（无按钮可挂 dense）⇒ 直接给 `size:18`，行高由 ListRow 的 md 档保证不变。

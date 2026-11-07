@@ -93,6 +93,7 @@ import {
 	FieldHint,
 	FIELD_LABEL_STYLE,
 	IconButton,
+	ListRow,
 	MarqueeText,
 	ModelPicker,
 	notify as coreNotify,
@@ -2555,65 +2556,66 @@ export function TaskEditorDrawer(props: {
 					draft.attachments.map((att) => {
 						const target = previewTargetOf(att);
 						const canView = target !== null && onOpenFile !== undefined;
-						// 附件件与查看档 / 产出物清单**同一实现**（用户 2026-11-06：「所有用到这种文件的，
-						// 全是用这种样式」）：文件名 = 核心 Button（ghost，图标 + 文字）、来源 = 核心 Chip(xs)、
-						// 移除 = 核心 IconButton(danger)。行内只留排布（.dsh-tdt-ed-attline），底色 / 圆角 / hover 全归核心。
+						// 附件行 = 核心 ListRow（0.35.4）：常态带底、hover 提亮、整行可点（看文件）、
+						// 右侧 actions 槽放来源标签与移除叉（核心自己挡冒泡）。图标加大到 18 而行高不变。
 						const icon =
 							att.isDir === true
-								? h(IconFolderCloseRegular, { size: 14 })
-								: h(FileTypeIcon, { path: att.name, size: 14 });
+								? h(IconFolderCloseRegular, { size: 18 })
+								: h(FileTypeIcon, { path: att.name, size: 18 });
 						const name = h(MarqueeText, {
 							text: att.name,
-							style: { maxWidth: "40ch", minWidth: 0 },
+							style: { minWidth: 0 },
 						});
 						return h(
-							"div",
-							{ key: att.id, className: "dsh-tdt-ed-attline" },
+							ListRow,
+							{
+								key: att.id,
+								hoverable: true,
+								onClick: canView
+									? () => {
+											onOpenFile?.(target!.anchorSessionId, target!.path);
+										}
+									: undefined,
+								actions: h(
+									"span",
+									{ style: { display: "inline-flex", alignItems: "center", gap: "4px" } },
+									h(
+										Chip,
+										{ size: "xs" },
+										att.kind === "link"
+											? t("editorAttachmentLink")
+											: t("editorAttachmentUpload"),
+									),
+									h(IconButton, {
+										variant: "danger",
+										size: "sm",
+										icon: h(IconCloseOutlineRegular, { size: 14 }),
+										label: t("editorAttachmentRemove"),
+										// 气泡不是必要信息（叉号自明）⇒ 连同默认原生 title 一起压掉。
+										title: "",
+										onClick: (event: { stopPropagation: () => void }) => {
+											event.stopPropagation();
+											patch({
+												attachments: draft.attachments.filter(
+													(a) => a.id !== att.id,
+												),
+											});
+											setUploadPaths((prev) => {
+												const next = { ...prev };
+												delete next[att.id];
+												return next;
+											});
+										},
+										style: { flex: "none" },
+									}),
+								),
+							},
 							h(
-								Button,
-								{
-									variant: "ghost",
-									size: "sm",
-									icon,
-									disabled: !canView,
-									onClick: canView
-										? () => {
-												onOpenFile?.(target!.anchorSessionId, target!.path);
-											}
-										: undefined,
-									style: { minWidth: 0, maxWidth: "100%" },
-								},
+								"span",
+								{ style: { display: "inline-flex", alignItems: "center", gap: "6px", minWidth: 0 } },
+								icon,
 								name,
 							),
-							h(
-								Chip,
-								{ size: "xs" },
-								att.kind === "link"
-									? t("editorAttachmentLink")
-									: t("editorAttachmentUpload"),
-							),
-							h(IconButton, {
-								variant: "danger",
-								size: "sm",
-								icon: h(IconCloseOutlineRegular, { size: 14 }),
-								label: t("editorAttachmentRemove"),
-								// 气泡不是必要信息（叉号自明）⇒ 连同默认原生 title 一起压掉。
-								title: "",
-								onClick: (event: { stopPropagation: () => void }) => {
-									event.stopPropagation();
-									patch({
-										attachments: draft.attachments.filter(
-											(a) => a.id !== att.id,
-										),
-									});
-									setUploadPaths((prev) => {
-										const next = { ...prev };
-										delete next[att.id];
-										return next;
-									});
-								},
-								style: { flex: "none" },
-							}),
 						);
 					}),
 				),
@@ -3042,74 +3044,61 @@ export function TaskEditorDrawer(props: {
 							.map((dep, index) => {
 								const known = tasks.find((task) => task.id === dep.task);
 								const ws = known?.workspace ?? "";
+								// 前置任务条目 = 核心 ListRow（0.35.4）：整行可点（看那个任务的查看档）、
+								// 右侧 actions 槽放工作区小字与移除叉；图标 + 名字走 children。
 								return h(
-									"div",
-									{ key: index, className: "dsh-tdt-ed-depitem" },
-									// 行首只留「有点任务」icon（官方 IconPlanOutlineRegular）——「前置任务：」文字按用户要求删除（太占地方）。
-									h(
-										"span",
-										{
-											style: {
-												display: "inline-flex",
-												flex: "none",
-												color: "var(--dshpc-fg-3)",
-											},
-										},
-										h(IconPlanOutlineRegular, { size: 14 }),
-									),
-									// 任务名可点（r12：全站任务名都连查看档）⇒ 打开那个前置任务的查看档
-									//（内部走「未保存冲突」确认流）。未接回调时保持纯文本。
-									onViewTask === undefined
-										? h(MarqueeText, {
-												text: known?.label ?? dep.task,
-												style: {
-													flex: "1 1 auto",
-													minWidth: 0,
-													fontSize: "var(--dshpc-font-md)",
-												},
-											})
-										: h(
-												Button,
-												{
-													variant: "link",
-													size: "sm",
-													style: {
-														flex: "1 1 auto",
-														minWidth: 0,
-														fontSize: "var(--dshpc-font-md)",
-														textAlign: "left",
-													},
-													onClick: () => {
+									ListRow,
+									{
+										key: index,
+										hoverable: true,
+										onClick:
+											onViewTask === undefined
+												? undefined
+												: () => {
 														onViewTask(dep.task);
 													},
-												},
-												h(MarqueeText, { text: known?.label ?? dep.task }),
-											),
-									// 工作区固定宽（72px）+ 省略号 + 跑马灯（跨工作区时分得清是哪个区的任务）。
-									ws === ""
-										? null
-										: h(MarqueeText, {
-												text: ws,
-												style: {
-													flex: "0 0 72px",
-													color: "var(--dshpc-fg-2)",
-													fontSize: "var(--dshpc-font-xs)",
+										actions: h(
+											"span",
+											{ style: { display: "inline-flex", alignItems: "center", gap: "4px" } },
+											// 工作区定宽 + 跑马灯（跨工作区时分得清是哪个区的任务）。
+											ws === ""
+												? null
+												: h(MarqueeText, {
+														text: ws,
+														style: {
+															width: "72px",
+															color: "var(--dshpc-fg-2)",
+															fontSize: "var(--dshpc-font-xs)",
+														},
+													}),
+											// 「移除」= 核心 IconButton（与附件行小叉同款）。
+											h(IconButton, {
+												variant: "danger",
+												size: "sm",
+												icon: h(IconCloseOutlineRegular, { size: 14 }),
+												label: t("editorDepRemove"),
+												title: "",
+												onClick: () => {
+													patch({
+														deps: draft.deps.filter((d) => d.task !== dep.task),
+													});
 												},
 											}),
-									// 「移除」= 核心 IconButton（与附件行小叉同款），宽度固定不被任务名挤动。
-									h(IconButton, {
-										variant: "danger",
-										size: "sm",
-										icon: h(IconCloseOutlineRegular, { size: 14 }),
-										label: t("editorDepRemove"),
-										title: "",
-										style: { flex: "none" },
-										onClick: () => {
-											patch({
-												deps: draft.deps.filter((d) => d.task !== dep.task),
-											});
-										},
-									}),
+										),
+									},
+									h(
+										"span",
+										{ style: { display: "inline-flex", alignItems: "center", gap: "6px", minWidth: 0 } },
+										h(
+											"span",
+											{ style: { display: "inline-flex", flex: "none", color: "var(--dshpc-fg-3)" } },
+											h(IconPlanOutlineRegular, { size: 14 }),
+										),
+										h(MarqueeText, {
+											text: known?.label ?? dep.task,
+											style: { minWidth: 0, fontSize: "var(--dshpc-font-md)" },
+										}),
+									),
 								);
 							}),
 					),
@@ -3171,24 +3160,48 @@ export function TaskEditorDrawer(props: {
 			h(
 				Surface,
 				{ className: "dsh-tdt-ed-card", padding: "md" },
-			// 折叠头（用户 2026-11-07）：整行**不**是可点按钮、不高亮；只有右侧核心 IconButton
-			// 的箭头可点可 hover 提亮。整行点开展开的功能按用户要求不做。
+			// 折叠头（用户 2026-11-07 二次拍板）：整行可点展开、只给手形、不变底色；
+			// 只有右侧核心 IconButton 箭头 hover 才提亮。标题字号跟其它 SectionHead 标题一致。
 			h(
 				"div",
 				{
+					role: "button",
+					tabIndex: 0,
+					"aria-expanded": advancedOpen,
 					style: {
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "space-between",
 						gap: "8px",
+						cursor: "pointer",
+					},
+					onClick: () => {
+						setAdvancedOpen(!advancedOpen);
+					},
+					onKeyDown: (event: { key: string; preventDefault: () => void }) => {
+						if (event.key === "Enter" || event.key === " ") {
+							event.preventDefault();
+							setAdvancedOpen(!advancedOpen);
+						}
 					},
 				},
 				h(
 					"span",
-					{ style: { display: "inline-flex", alignItems: "center", gap: "4px" } },
+					{
+						style: {
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "4px",
+							fontSize: "var(--dshpc-font-lg)",
+							lineHeight: "var(--dshpc-line-lg)",
+							fontWeight: 600,
+						},
+					},
 					t("editorAdvanced"),
-					h(HelpButton, { hint: t("editorAdvancedHelp") }),
+					// 说明气泡点一下不该顺带展开（可点行内的吞冒泡包装）。
+					h(HelpButton, { hint: t("editorAdvancedHelp"), insideClickable: true }),
 				),
+				// 箭头不另绑 onClick：点击冒泡到整行，避免同一次点击切换两回。
 				h(IconButton, {
 					variant: "plain",
 					size: "sm",
@@ -3202,9 +3215,6 @@ export function TaskEditorDrawer(props: {
 					"aria-expanded": advancedOpen,
 					// 核心 IconButton 默认把 label 写成原生 title（全站已清退原生 title）。
 					title: "",
-					onClick: () => {
-						setAdvancedOpen(!advancedOpen);
-					},
 				}),
 			),
 			advancedOpen

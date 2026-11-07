@@ -89,9 +89,10 @@ export { InputGroup, type InputGroupProps, type InputGroupAction } from 'dsh-plu
 export { notify } from 'dsh-plugin-core/ui'
 // 选模型（分组 / 联动两态）与卡片框（框式 / 条带式）：核心唯一的模型选择与卡片外观实现。
 export {
-  ModelPicker, Card, StripCard,
+  ModelPicker, Card, StripCard, ListRow,
   type ModelPickerProps, type ModelPickerVariant,
   type CardAccent, type CardBarOptions, type CardSharedProps,
+  type ListRowProps,
   type PickerGroup, type PickerOption,
 } from 'dsh-plugin-core/ui'
 export { SelectField, type SelectFieldProps } from './Field'

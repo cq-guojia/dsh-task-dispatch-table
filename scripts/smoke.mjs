@@ -2721,12 +2721,15 @@ try {
 			),
 		);
 		check(
-			"过程文件块进产物（dsh-tdt-proc 样式入库 + data-process-files 锚点 + 文案键）",
+			"过程文件块进产物（dsh-tdt-proc 样式入库 + data-process-files 锚点 + 文案键）；折叠头整行可点、右侧三角为核心 IconButton",
 			clientJs.includes("dsh-tdt-proc-list") &&
 				clientJs.includes("data-process-files") &&
 				clientJs.includes("procFilesTitle") &&
-				// 折叠头已改核心 Button（ghost + iconRight），不再有自写 .dsh-tdt-proc-head。
-				!clientJs.includes("dsh-tdt-proc-head"),
+				!clientJs.includes("dsh-tdt-proc-head") &&
+				// 折叠头不再是整行 Button（会整行高亮）：普通行接 onClick，只有三角是核心 IconButton。
+				/h\(IconButton, \{[\s\S]{0,300}IconChevronDownOutlineRegular/.test(srcOf("process-files.tsx")) &&
+				srcOf("process-files.tsx").includes("cursor: 'pointer'") &&
+				!srcOf("process-files.tsx").includes("iconRight:"),
 		);
 		check(
 			"过程文件块默认是否展开由 defaultOpen 控制（useState(defaultOpen ?? false)）",
@@ -3041,10 +3044,9 @@ try {
 				idxSrc.includes("onOpenFile: canPreview ? openFile : undefined"),
 		);
 		check(
-			"三层交互（照任务卡片）：容器不可点、**头部可点**（只有 hover 变色）、展开区不可点（第七轮反向：展开常亮与 --open 类已删）",
-			/\.dsh-tdt-rec-head:hover\{background-image:linear-gradient\(var\(--dshpc-hover\),var\(--dshpc-hover\)\)/.test(
-				tlSrc,
-			) &&
+			"三层交互（照任务卡片）：容器不可点、头部可点、展开区不可点；整卡 hover 变色归核心 StripCard 的 hoverable（本仓不再自写 :hover）",
+			/h\(StripCard, \{[\s\S]{0,800}hoverable: true/.test(tlSrc) &&
+				!/\.dsh-tdt-rec-head:hover/.test(tlSrc) &&
 				!/dsh-tdt-rec-item--open/.test(tlSrc) &&
 				!/\.dsh-tdt-rec-item\{[^}]*border-bottom:1px solid/.test(tlSrc),
 		);
@@ -3582,8 +3584,33 @@ try {
 			/groups: depGroups[\s\S]{0,300}searchable: true/.test(depEdSrc) &&
 			!depEdSrc.includes("dsh-tdt-ed-deppick-ws") &&
 			!depEdSrc.includes("depWsOptions") &&
-			clientJs.includes("dsh-tdt-ed-deppick") &&
-			clientJs.includes("dsh-tdt-ed-depitem"),
+			clientJs.includes("dsh-tdt-ed-deppick"),
+	);
+	check(
+		"附加文件行 / 前置任务条目改核心 ListRow（整行底 + hover 提亮 + 整行可点 + 右侧操作槽），自绘条目皮肤已删",
+		(depEdSrc.match(/h\(\s*ListRow,/g) ?? []).length >= 2 &&
+			/hoverable: true/.test(depEdSrc) &&
+			/actions: h\(/.test(depEdSrc) &&
+			!depEdSrc.includes("dsh-tdt-ed-depitem") &&
+			!depEdSrc.includes("dsh-tdt-ed-attline") &&
+			clientJs.includes("dshpc-listrow"),
+	);
+	check(
+		"任务卡片 / 执行记录卡 hover 全归核心 hoverable，本仓不再自写 :hover 变色",
+		(() => {
+			const listSrc = readFileSync(join(process.cwd(), "src", "client", "task-list.tsx"), "utf8");
+			const recSrc = readFileSync(join(process.cwd(), "src", "client", "records-timeline.tsx"), "utf8");
+			return /h\(Card, \{[\s\S]{0,300}hoverable: true/.test(listSrc) &&
+				/h\(StripCard, \{[\s\S]{0,800}hoverable: true/.test(recSrc) &&
+				!listSrc.includes(".dsh-tdt-card-row:hover") &&
+				!recSrc.includes(".dsh-tdt-rec-head:hover");
+		})(),
+	);
+	check(
+		"文件 / 文件夹预览图标全站走核心 dense（图标放大一档、按钮高度不变）",
+		["task-info.tsx", "records-timeline.tsx", "process-files.tsx", "task-file-context.tsx", "task-list.tsx"].every(
+			(file) => readFileSync(join(process.cwd(), "src", "client", file), "utf8").includes("dense: true"),
+		),
 	);
 	check(
 		"编辑分栏按钮全站收口核心：无官方 primitives Button、无原生 button、无 TdtButton 别名",
@@ -3616,7 +3643,7 @@ try {
 			!clientJs.includes("editorValidStatuses"),
 	);
 	check(
-		"高级区收折头：整行不再是可点高亮按钮，只有右侧核心 IconButton 箭头可点（hover 才亮）",
+		"高级区收折头：整行可点展开（只给手形、不变底色）、箭头为核心 IconButton（hover 才亮）、标题字号与其它标题一致",
 		clientJs.includes("dsh-tdt-ed-advbody") &&
 			clientJs.includes("editorAdvancedHelp") &&
 			!clientJs.includes("dsh-tdt-ed-advhead") &&
@@ -3624,7 +3651,11 @@ try {
 			clientJs.includes("dsh-tdt-ed-advitem") &&
 			!clientJs.includes("dsh-tdt-ed-summary") &&
 			/variant: "plain",[\s\S]{0,400}label: t\("editorAdvanced"\)/.test(depEdSrc) &&
-			!/block: true/.test(depEdSrc),
+			!/block: true/.test(depEdSrc) &&
+			depEdSrc.includes('cursor: "pointer"') &&
+			depEdSrc.includes('fontSize: "var(--dshpc-font-lg)"') &&
+			depEdSrc.includes("insideClickable: true") &&
+			/role: "button",[\s\S]{0,200}tabIndex: 0/.test(depEdSrc),
 	);
 	check(
 		"全屏面板（提示词编辑 / 配置预览）滚动位置保持：打开前存 scrollTop、关闭重挂后恢复",
@@ -6164,16 +6195,13 @@ console.log("\n[14] runtime-index");
 			tl.includes("BUSY_DELAY_MS = 400") && tl.includes("BUSY_HOLD_MS = 0"),
 		);
 		check(
-			"任务卡片 hover 只作用主行（dsh-tdt-card-row），展开区不会跟着变蓝",
-			tl.includes(
-				".dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }",
-			) &&
+			"任务卡片 hover 改走核心 Card 的 hoverable（整卡变色），本仓不再自写 :hover；主行仍可点展开",
+			/h\(Card, \{[\s\S]{0,300}hoverable: true/.test(tl) &&
 				tl.includes("className: 'dsh-tdt-card-row'") &&
-				// 整卡 hover 已废除：否则展开后整页发蓝（用户 2026-10-03）。
+				!tl.includes(".dsh-tdt-card-row:hover") &&
 				!tl.includes(".dsh-tdt-card:hover") &&
 				// 只查 cardStyle 这个对象：inline 背景优先级高于 CSS class，会盖掉 :hover；
-				// 且卡片本身不再统一 padding（padding 移到主行 / 展开区各自带，hover 才能边到边高亮）。
-				// （别的控件比如控制按钮确实有 `background: var(--dshpc-surface-1), color: var(--dshpc-fg)`，那条正经，故收口到 cardStyle 块内。）
+				// 且卡片本身不再统一 padding（padding 移到主行 / 展开区各自带）。
 				(() => {
 					const m = tl.match(/const cardStyle[\s\S]*?\n\}/);
 					const block = m ? m[0] : "";

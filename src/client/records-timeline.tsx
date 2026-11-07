@@ -128,8 +128,8 @@ const RECORDS_CSS = `
    还是没展开时的颜色呀。只是鼠标移到这一块，它才换一个颜色」；展开与否**不再影响**头部底色。 */
 /* 内距由核心 StripCard 统一给（12 / 12 / 12 / 20，色条已含在内）⇒ 头部不再自己加 padding。 */
 .dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;padding:0;}
+/* 2026-11-07：整卡 hover 变色改走核心 StripCard 的 hoverable，本仓不再自写 :hover。 */
 .dsh-tdt-rec-head{cursor:pointer;}
-.dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--dshpc-hover),var(--dshpc-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--dshpc-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;}
 /* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
@@ -496,6 +496,8 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
     // 色条 + 浅底 = 核心 `StripCard`（成败色调走 accent，运行中由下方类名给核心色条挂统一脉动）。
     accent: toneAccentOf(tone),
     className: `dsh-tdt-rec-item${running ? ' dsh-tdt-rec-item--running' : ''}${tone === 'planned' ? ' dsh-tdt-rec-item--planned' : ''}`,
+    // 整卡 hover 变色归核心 0.35.4 的 hoverable（本仓不再自写 :hover）。
+    hoverable: true,
   },
     // ── 头部（**唯一可点区域**）：标题 + 信息 + 备注 + 右列控件（左缘竖条已由核心 StripCard 提供）──
     h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick },
@@ -590,6 +592,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
             }, h(IconButton, {
               variant: 'plain',
               size: 'md',
+              dense: true,
               icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
               label: baseNameOf(path),
               // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
@@ -657,7 +660,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
             outputs.map(path => h(Button, {
               key: path,
               // 文件行 = 核心 Button 的 ghost 档（图标 + 文字；2026-11-06 全站收口，不再用行式文件按钮类）。
-              variant: 'ghost', size: 'sm',
+              variant: 'ghost', size: 'sm', dense: true,
               icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
               disabled: !canOpenFile,
               onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
@@ -736,6 +739,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                         }, h(IconButton, {
                           variant: 'plain',
                           size: 'md',
+                          dense: true,
                           icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
                           label: baseNameOf(path),
                           // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。

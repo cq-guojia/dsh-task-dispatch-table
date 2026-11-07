@@ -4,14 +4,14 @@ window.__ModuleLoader__.load({
 		var module = { exports: {} };
 		var exports = module.exports;
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-		//#region \0rolldown/runtime.js
+		// \0rolldown/runtime.js
 		var __create = Object.create;
 		var __defProp = Object.defineProperty;
 		var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 		var __getOwnPropNames = Object.getOwnPropertyNames;
 		var __getProtoOf = Object.getPrototypeOf;
 		var __hasOwnProp = Object.prototype.hasOwnProperty;
-		var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+		var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
 		var __exportAll = (all, no_symbols) => {
 			let target = {};
 			for (var name in all) __defProp(target, name, {
@@ -36,7 +36,6 @@ window.__ModuleLoader__.load({
 			value: mod,
 			enumerable: true
 		}) : target, mod));
-		//#endregion
 		let react = require("react");
 		let react$1 = __toESM(react, 1);
 		react = __toESM(react);
@@ -46,10 +45,9 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		let react_dom = require("react-dom");
 		react_dom = __toESM(react_dom, 1);
-		//#region node_modules/dsh-plugin-core/dist/design/tokens-css.generated.js
-		const TOKENS_CSS_TEMPLATE = "\n/* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */\nbody{\n  --dshpc-fg:var(--dsw-alias-label-primary,#1f2328);\n  --dshpc-fg-2:var(--dsw-alias-label-secondary,#5c6370);\n  --dshpc-fg-3:var(--dsw-alias-label-tertiary,#767d87);\n  --dshpc-fg-4:var(--dsw-alias-label-caption,#9aa1ab);\n  --dshpc-fg-dim:var(--dsw-alias-label-dimmed,#b9bfc7);\n  /* 反色面上的字（实心钮 / 角标）：暗色下是 bluish-1000，故用 -foreground 而非 -inverted */\n  --dshpc-fg-inverse:var(--dsw-alias-label-primary-foreground,#fff);\n\n  /* ── 面（宿主 bg-layer 三档 + 下沉轨道底）──────────────────────────── */\n  --dshpc-surface-1:var(--dsw-alias-bg-layer-1,#fff);\n  --dshpc-surface-2:var(--dsw-alias-bg-layer-2,#fff);\n  --dshpc-surface-3:var(--dsw-alias-bg-layer-3,#fff);\n  /* 「选中亮片」的底盘色（配 --dshpc-shadow-raised 用） */\n  --dshpc-surface-raised:var(--dsw-alias-bg-layer-1,#fff);\n  /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */\n  --dshpc-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));\n  /* 整页 / 编辑器底（bg-base） */\n  --dshpc-surface-base:var(--dsw-alias-bg-base,#fff);\n  /* 自绘浮层 / 菜单卡的不透明底（= base；不要用半透明的 specific-menu） */\n  --dshpc-surface-menu:var(--dshpc-surface-base);\n  /* markdown 代码块面 / 字体（会话镜像里用到） */\n  --dshpc-code-surface:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));\n  --dshpc-code-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,monospace));\n  /* 警告文字色（宿主 state-warn-label） */\n  --dshpc-warning-label:var(--dsw-alias-state-warn-label,#f5a623);\n  /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */\n  --dshpc-solid:var(--dsw-static-neutral-00,#fff);\n  --dshpc-on-solid:var(--dsw-alias-label-primary,#1f2328);\n  /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */\n  --dshpc-plate:var(--dsw-static-neutral-50,#fafafa);\n  --dshpc-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);\n  /* ⚠️ 这些**固定中性面一律用 rgba 字面量**（2026-10-19 真机教训）：不要写成\n     「rgba 回退行 + 嵌 --dsw-static-* 的 color-mix 行」两条同名声明——自定义属性**后者恒胜**，\n     哪怕它的值在宿主里算不出来（static 变量 invalid）⇒ 整条 token 作废、rgba 兜底一起被废，\n     0.2.6 里 Segmented 轨道全透明就是这么来的。要跟宿主主题联动的面用 alias token（那些实测有效）。 */\n  --dshpc-icon-plate:rgba(255,255,255,.5);\n  /* 表头底：浅色主题**偏深**，且必须**比斑马纹（--dshpc-plate）再深一档**——\n     两者不能撞色（用户 2026-10-02：表头跟斑马纹一模一样）。 */\n  --dshpc-head-bg:var(--dsw-static-neutral-100,#f5f5f5);\n  /* 表格底 / 行 hover（2026-10-30 用户二次定案：表头与通栏**互换**底色）：\n     表头默认底 = 通栏原来那层灰（--dshpc-surface-sunken，跟着宿主交互面走）；\n     通栏默认底 = 表头原来那色（亮 #f6f8fa / 暗 #151b23，参考图实测，与深色段同源）；\n     行 hover 是「一层极淡的黑」≈1.5%（用户：再浅一半，要特别淡）。 */\n  --dshpc-table-head-bg:var(--dshpc-surface-sunken);\n  --dshpc-table-banner-bg:#f6f8fa;\n  --dshpc-table-row-hover:rgba(15,15,15,.015);\n  /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */\n  --dshpc-chip-bg:rgba(15,15,15,.07);\n  --dshpc-chip-bg-hover:rgba(15,15,15,.14);\n  /* 展开行：**带透明度的蓝**——不是灰、也不是纯色，透出卡片底色，一眼看出「这是展开的」\n     （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */\n  --dshpc-open-bg:rgba(37,99,235,.10);\n  --dshpc-open-bg-soft:rgba(37,99,235,.05);\n  --dshpc-card-hover:rgba(37,99,235,.07);\n\n  /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */\n  --dshpc-border-faint:var(--dsw-alias-border-l1,#0000000a);\n  --dshpc-border:var(--dsw-alias-border-l2,#0000001a);\n  --dshpc-border-strong:var(--dsw-alias-border-l3,#0000001f);\n  --dshpc-border-heavy:var(--dsw-alias-border-l4,#00000029);\n\n  /* ── 品牌 / 语义色 ────────────────────────────────────────────────── */\n  /* 品牌「面」色：明色近黑、暗色近白（官方 Switch 选中态即此），**不是蓝色** */\n  --dshpc-accent:var(--dsw-alias-brand-primary,#0f1115);\n  /* 蓝色：强调 / 选中 / 焦点，一律走这条 */\n  --dshpc-business:var(--dsw-alias-state-business-primary,#3b5bdb);\n  --dshpc-success:var(--dsw-alias-state-success-primary,#22c55e);\n  /* ⚠️ 是 state-warn（不是 state-warning，后者宿主无此定义） */\n  --dshpc-warning:var(--dsw-alias-state-warn-primary,#f59e0b);\n  --dshpc-danger:var(--dsw-alias-state-error-primary,#ec1313);\n  --dshpc-link:var(--dsw-alias-link,#3b5bdb);\n  /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，\n     故这是一条与主题无关的常量；不要拿 --dshpc-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */\n  --dshpc-on-signal:#fff;\n  /* 黄底上的字：黄色是中高明度，白字看不清 ⇒ 固定深色（与主题无关）。 */\n  --dshpc-on-warning:#1f2328;\n  /* 告警严重度的圆点底色（2026-11-03 从 feedback.css 收到这里）。\n     与主题无关的一组常量：这几个色要在任意底色上都认得出来，所以**不跟宿主 state 色走**\n     （宿主 state-warn-primary 偏亮，压白 ✕ 看不清）。语义色改动请只改这里。 */\n  --dshpc-sev-info:#2563eb;\n  --dshpc-sev-success:#16a34a;\n  --dshpc-sev-warning:#d97706;\n  --dshpc-sev-error:#dc2626;\n\n  /* ── 实心按钮的 hover / active 派生态（2026-10-19 用户点名）─────────────────\n     原实现是 :hover 直接压 opacity .9：黑底压 10% 几乎看不出来，用户原话「完全感觉不到颜色变了」。\n     ⇒ 改成对底色做**明确的混色**（压 22% / 34%），不用 opacity：\n       · 亮色主题：黑底（--dshpc-accent）掺白提亮；红 / 绿 / 黄 / 蓝底掺黑压深；\n       · 暗色主题：反过来（暗底掺白、亮底掺黑）。\n     混色对象是**固定中性色字面量**（#fff / #000），不依赖宿主 static-neutral 是否存在；\n     旧内核不认 color-mix 时整条声明作废 ⇒ 回落各档原色（可接受：仍可点，只是没有 hover 反馈）。 */\n  --dshpc-accent-hover:color-mix(in srgb,var(--dshpc-accent) 78%,#ffffff);\n  --dshpc-accent-active:color-mix(in srgb,var(--dshpc-accent) 64%,#ffffff);\n  --dshpc-danger-hover:color-mix(in srgb,var(--dshpc-danger) 78%,#000000);\n  --dshpc-danger-active:color-mix(in srgb,var(--dshpc-danger) 64%,#000000);\n  --dshpc-success-hover:color-mix(in srgb,var(--dshpc-success) 78%,#000000);\n  --dshpc-success-active:color-mix(in srgb,var(--dshpc-success) 64%,#000000);\n  --dshpc-warning-hover:color-mix(in srgb,var(--dshpc-warning) 78%,#000000);\n  --dshpc-warning-active:color-mix(in srgb,var(--dshpc-warning) 64%,#000000);\n  --dshpc-business-hover:color-mix(in srgb,var(--dshpc-business) 78%,#000000);\n  --dshpc-business-active:color-mix(in srgb,var(--dshpc-business) 64%,#000000);\n  /* 语义色**浅底**：状态色系的「一块底色」——执行记录页每条流水账的块底就是它\n     （用户 2026-10-04：正常态给同色系很浅的透明底、失败用红底透出来）。\n     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，主题一换自动成立。\n     ⚠️ **深色下要更淡**：用户 2026-10-04「深色风格的绿色和红色好像都有点深」⇒ dark 段\n     把这四条压到 5%（更贴近面板底、存在感更弱）；浅色段维持 8%。两端各自给值，不共用一条曲线。\n     命名收在 tokens.ts 单点（本仓硬规矩：业务文件不许自造 --dshpc-*）。 */\n  --dshpc-success-soft:color-mix(in srgb,var(--dshpc-success) 8%,transparent);\n  --dshpc-warning-soft:color-mix(in srgb,var(--dshpc-warning) 8%,transparent);\n  --dshpc-danger-soft:color-mix(in srgb,var(--dshpc-danger) 8%,transparent);\n  --dshpc-business-soft:color-mix(in srgb,var(--dshpc-business) 8%,transparent);\n\n  /* ── 扩展语义色（2026-10-29 用户拍板：分类 / 图表常用色八支）──────────────\n     宿主无对应 alias ⇒ 写死 hex（不跟随宿主换肤）；实心面字色统一走 --dshpc-on-signal（白），\n     因八支明度都低于黄 / 青柠，白字两主题均 ≥4.5:1 可读。每条自带 hover/active/soft 派生；\n     暗色段只覆盖派生（base 写死、两主题同值）。 */\n  --dshpc-purple:#9333ea;\n  --dshpc-purple-hover:color-mix(in srgb,var(--dshpc-purple) 78%,#000000);\n  --dshpc-purple-active:color-mix(in srgb,var(--dshpc-purple) 64%,#000000);\n  --dshpc-purple-soft:color-mix(in srgb,var(--dshpc-purple) 8%,transparent);\n  --dshpc-pink:#db2777;\n  --dshpc-pink-hover:color-mix(in srgb,var(--dshpc-pink) 78%,#000000);\n  --dshpc-pink-active:color-mix(in srgb,var(--dshpc-pink) 64%,#000000);\n  --dshpc-pink-soft:color-mix(in srgb,var(--dshpc-pink) 8%,transparent);\n  --dshpc-cyan:#0e7490;\n  --dshpc-cyan-hover:color-mix(in srgb,var(--dshpc-cyan) 78%,#000000);\n  --dshpc-cyan-active:color-mix(in srgb,var(--dshpc-cyan) 64%,#000000);\n  --dshpc-cyan-soft:color-mix(in srgb,var(--dshpc-cyan) 8%,transparent);\n  --dshpc-teal:#0f766e;\n  --dshpc-teal-hover:color-mix(in srgb,var(--dshpc-teal) 78%,#000000);\n  --dshpc-teal-active:color-mix(in srgb,var(--dshpc-teal) 64%,#000000);\n  --dshpc-teal-soft:color-mix(in srgb,var(--dshpc-teal) 8%,transparent);\n  --dshpc-orange:#c2410c;\n  --dshpc-orange-hover:color-mix(in srgb,var(--dshpc-orange) 78%,#000000);\n  --dshpc-orange-active:color-mix(in srgb,var(--dshpc-orange) 64%,#000000);\n  --dshpc-orange-soft:color-mix(in srgb,var(--dshpc-orange) 8%,transparent);\n  --dshpc-indigo:#4f46e5;\n  --dshpc-indigo-hover:color-mix(in srgb,var(--dshpc-indigo) 78%,#000000);\n  --dshpc-indigo-active:color-mix(in srgb,var(--dshpc-indigo) 64%,#000000);\n  --dshpc-indigo-soft:color-mix(in srgb,var(--dshpc-indigo) 8%,transparent);\n  --dshpc-rose:#e11d48;\n  --dshpc-rose-hover:color-mix(in srgb,var(--dshpc-rose) 78%,#000000);\n  --dshpc-rose-active:color-mix(in srgb,var(--dshpc-rose) 64%,#000000);\n  --dshpc-rose-soft:color-mix(in srgb,var(--dshpc-rose) 8%,transparent);\n  --dshpc-slate:#475569;\n  --dshpc-slate-hover:color-mix(in srgb,var(--dshpc-slate) 78%,#000000);\n  --dshpc-slate-active:color-mix(in srgb,var(--dshpc-slate) 64%,#000000);\n  --dshpc-slate-soft:color-mix(in srgb,var(--dshpc-slate) 8%,transparent);\n\n  /* ⚠️ 2026-10-18 用户拍板：宿主 alias 的 hover（暗色白 8% / 亮色 6%）**太弱**，\n     「移上去要仔细看才看得出来」⇒ 不再委托宿主 hover 别名，改为自掺中性色并加重：\n     亮色掺黑 10%、暗色掺白 14%（active 再加一档）。按钮 / 分段轨道 / 各类 hover 底同时受益。\n     ⚠️ 必须保留 rgba 兜底行在前（本文件惯例，见 icon-plate 注释）：掺的是**固定中性色**\n     （neutral-900=#0f0f0f / neutral-00=#fff），预计算无损；旧内核不认 color-mix 时走兜底，\n     否则整条 background:var(--seg-track) 作废 ⇒ 分段轨道透明（真踩过：预览站轨道消失）。 */\n  --dshpc-hover:rgba(15,15,15,.10);\n  --dshpc-active:rgba(15,15,15,.18);\n  /* 分段控件轨道底：专用 token（rgba 字面量、不借 --dshpc-hover 中转）——\n     2026-10-19 教训：变量链中间任何一环 invalid ⇒ background 整条作废、轨道全透明。\n     亮色：黑 7%（比 hover 的 10% 淡一档，选中白片才跳得出）。 */\n  --dshpc-seg-track:rgba(15,15,15,.07);\n  --dshpc-mask:var(--dsw-alias-bg-mask-1,#0000003d);\n  /* 弹窗锁定态给**自绘控件**的降透明度档（2026-11-05）。放在 token 里是为了让消费方\n     在自己元素上写 --dshpc-lock-dim: 1 就能退出这条效果，不用 !important 打架。 */\n  --dshpc-lock-dim:.5;\n  /* 「选中面」（2026-10-06，任务日程页首创）= 当前底色**朝更深掺 12% 文字色**：\n     浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。\n     语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */\n  --dshpc-selected-bg:color-mix(in srgb,var(--dshpc-surface-1) 88%,var(--dshpc-fg));\n  /* 任务日程页本月格默认底（2026-10-06 → 续2）：浅色下给**淡蓝**（business 8% 透白底）——\n     参照用户参考稿里未选中日程块 / Tuesday 列的那种蓝、再浅一点点；\n     相邻月补位格仍走 --dshpc-surface-2（更灰），不受影响。\n     深色段维持 #23262e（用户：深色 UI 已差不多，不动）。 */\n  --dshpc-cal-cell-bg:color-mix(in srgb,var(--dshpc-business) 8%,var(--dshpc-surface-1));\n  /* 任务日程页「点开某天」展开的面板底（2026-10-06 续）：浅色下**无限接近白、只带一丁点灰**\n     （neutral-50 = #fafafa）——面板里装半透明执行记录列表，底再深整片就发糊发灰；\n     深色段沿用原 selected-bg 暗值，保持不动。 */\n  --dshpc-cal-panel-bg:var(--dsw-static-neutral-50,#fafafa);\n  /* 任务日程页本月格 hover 底（浅色段，2026-10-06 续3）：不再走灰色通用交互底——\n     鼠标移上去应是「更亮一点点的蓝」（与深色段同语义：hover = 提亮的蓝，不是灰下去）。\n     浓度**介于**表头蓝（14%）与未选中格蓝（8%）之间、略偏表头一侧：business 12% 透白底\n     （比表头浅一点、比未选中格深一点）。 */\n  --dshpc-cal-cell-hover:color-mix(in srgb,var(--dshpc-business) 12%,var(--dshpc-surface-1));\n\n  /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */\n  --dshpc-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);\n  /* 亮片自带的浮起感（选中态用；与 --dshpc-surface-raised 配对） */\n  --dshpc-shadow-raised:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);\n  --dshpc-shadow-2:var(--dsw-shadow-lv3,0 12px 32px 0 #00000014);\n  /* 键盘焦点环。⚠️ 不用宿主 --dsw-focus-ring-color：它默认值是 transparent（兜底不生效、会隐身） */\n  --dshpc-focus:var(--dsw-alias-state-business-primary,#3b5bdb);\n\n  /* ── 圆角（宿主真值 4 / 8 / 12 / 16 / 20 / 28）─────────────────────── */\n  --dshpc-radius-xs:var(--dsw-radius-xs,4px);\n  --dshpc-radius-sm:var(--dsw-radius-sm,8px);\n  --dshpc-radius-md:var(--dsw-radius-md,12px);\n  --dshpc-radius-lg:var(--dsw-radius-lg,16px);\n  --dshpc-radius-xl:var(--dsw-radius-xl,20px);\n  --dshpc-radius-panel:var(--dsw-radius-panel,28px);\n  /* 全圆（胶囊标签）：宿主的 radius 档最大只有 28px，撑不满 24px 高的 chip */\n  --dshpc-radius-pill:999px;\n\n  /* ── 间距四拍（只许用这四档，不许出现 5 / 7 / 9px）────────────────── */\n  --dshpc-space-1:4px;\n  --dshpc-space-2:8px;\n  --dshpc-space-3:12px;\n  --dshpc-space-4:16px;\n\n  /* ── 控件高度：离散三档（控件用 size=\"sm|md|lg\" 选；调用点不许自定义高度，\n       真不够用才允许在调用点本地覆盖 --dshpc-control-h-*，属例外而非常态）── */\n  --dshpc-control-h-sm:24px;\n  --dshpc-control-h-md:28px;\n  --dshpc-control-h-lg:32px;\n\n  /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */\n  --dshpc-font-xs:var(--dsw-font-xxxs-11-font-size,11px);\n  --dshpc-font-sm:var(--dsw-font-xxs-12-font-size,12px);\n  --dshpc-font-md:var(--dsw-font-xs-13-font-size,13px);\n  --dshpc-font-lg:var(--dsw-font-s-14-font-size,14px);\n  --dshpc-font-xl:var(--dsw-font-base-16-font-size,16px);\n  --dshpc-line-xs:var(--dsw-font-xxxs-11-line-height,14px);\n  --dshpc-line-sm:var(--dsw-font-xxs-12-line-height,18px);\n  --dshpc-line-md:var(--dsw-font-xs-13-line-height,20px);\n  --dshpc-line-lg:var(--dsw-font-s-14-line-height,22px);\n  --dshpc-line-xl:var(--dsw-font-base-16-line-height,24px);\n  --dshpc-font-mono:var(--ds-font-family-code,monospace);\n\n  /* ── 细滚动条的让位值（线宽不能放 token，见文件末尾的注释）──────────\n     1px→2px 只改这一行；它用在普通元素上，var() 能正常解析。 */\n  --dshpc-scroll-inset:1px;\n\n  /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */\n  /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */\n  /* **整条阶梯都必须低于官方浮点 1000 档**（2026-11-06 用户拍板）：官方原语\n     Modal / ImageLightbox 是 z-index 1000（body portal），Menu / Toast 是 1100。\n     我们只是宿主里的一个页面 ⇒ 宿主浮点恒在我们之上；以后弹窗里再开官方模态/预览，\n     不必逐个场景「临时让位」（此前 1070 压住官方原图预览就是这么踩出来的）。 */\n  /* 内容层吸顶（天标签 / 表头这类「跟着滚但压住同层内容」的元素）：只压同层兄弟，\n     必须低于下面所有浮层档 —— 所以它不是「开新浮层档」，而是内容层内部的排序位。 */\n  --dshpc-z-sticky:10;\n  --dshpc-z-dock:900;\n  --dshpc-z-drawer:920;\n  --dshpc-z-modal:940;\n  /* 收起后的耳朵：必须高于弹窗遮罩，否则弹窗一开就点不到它（2026-11-04 用户真机）。\n     只给耳朵用，页面级分栏本体仍是布局成员，不跟着抬高。 */\n  --dshpc-z-ear:950;\n  --dshpc-z-menu:960;\n  --dshpc-z-tip:970;\n  /* 语义别名（2026-11-03 面板皮肤统一）：业务文件只许用这两个说「我要一层浮层」，\n     不再各自写浮层字面量。\n       panel   = 浮层面板本体（picker 弹窗、锚定面板）；\n       popmenu = 叠在面板之上的菜单（▾ 选层、Picker 下拉）与其透明遮罩。 */\n  --dshpc-z-panel:var(--dshpc-z-menu);\n  --dshpc-z-popmenu:var(--dshpc-z-tip);\n\n  /* ── 动效 ─────────────────────────────────────────────────────────── */\n  --dshpc-dur:var(--ds-transition-duration,.2s);\n  --dshpc-dur-fast:var(--ds-transition-duration-fast,.12s);\n  --dshpc-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));\n  /* 运行中状态的脉动时长（2026-10-06 统一前后两端：任务配置里的绿呼吸 → 蓝、放慢；\n     执行记录里的蓝闪 → 放慢一点。两者用同一个值，动画形状本就一致）。 */\n  --dshpc-dur-run:500ms;\n}\n\n/* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────\n   判据 = body[data-ds-dark-theme]（宿主 0.2.0-rc.2 源码核实：启动脚本 toggleAttribute 写入，\n   唯一明暗判据；插件禁止用 prefers-color-scheme —— 它跟的是系统、不是用户在宿主里的选择）。\n   下面只放 alias 表达不了的「固定中性面」；颜色若能靠 alias 自动跟随，一律不要写在这里。 */\nbody[data-ds-dark-theme]{\n  /* 深色段的蓝**刻意不跟随宿主 alias**（唯一例外）：宿主暗色 alias 给的是 #60a5fa 一档的高亮蓝，\n     实心面（Chip / Button info / 日期选中格）压白字会发糊 —— 用户 2026-10-29 实测反馈。\n     ⇒ 深色下改定向浅色状态的蓝（#3b5bdb）靠，只在明度上抬一点点，保证它在暗底上仍看得见：\n     #4c6bd8 对白字 ≈4.8:1（原亮蓝只有 ~2.3:1），对日历格底 ≈3.2:1 仍过 UI 件的 3:1 线。\n     代价：宿主换品牌色时深色不再自动跟着变，需要这里手动同步。 */\n  --dshpc-business:#4c6bd8;\n  --dshpc-solid:var(--dsw-static-neutral-900,#0f0f0f);\n  --dshpc-on-solid:var(--dsw-static-neutral-00,#fff);\n  /* 实心按钮 hover / active（暗色版）：黑底（浅色主题的近黑 → 暗色下的近白）掺黑压深；\n     红 / 绿 / 黄 / 蓝掺白提亮。与亮色段方向相反，保证两种主题下「一眼看出变了」。 */\n  --dshpc-accent-hover:color-mix(in srgb,var(--dshpc-accent) 80%,#000000);\n  --dshpc-accent-active:color-mix(in srgb,var(--dshpc-accent) 66%,#000000);\n  --dshpc-danger-hover:color-mix(in srgb,var(--dshpc-danger) 78%,#ffffff);\n  --dshpc-danger-active:color-mix(in srgb,var(--dshpc-danger) 64%,#ffffff);\n  --dshpc-success-hover:color-mix(in srgb,var(--dshpc-success) 78%,#ffffff);\n  --dshpc-success-active:color-mix(in srgb,var(--dshpc-success) 64%,#ffffff);\n  --dshpc-warning-hover:color-mix(in srgb,var(--dshpc-warning) 78%,#ffffff);\n  --dshpc-warning-active:color-mix(in srgb,var(--dshpc-warning) 64%,#ffffff);\n  /* 同上：掺白比例从 22% / 36% 收到 12% / 22% —— 底色已变深，照旧比例提亮会在 hover 瞬间\n     把白字对比打回 ~3:1（正是用户嫌糊的那一档）；收窄后 hover 仍可感知、字仍清晰。 */\n  --dshpc-business-hover:color-mix(in srgb,var(--dshpc-business) 88%,#ffffff);\n  --dshpc-business-active:color-mix(in srgb,var(--dshpc-business) 78%,#ffffff);\n  /* 暗色 hover 掺白 14% / active 24%（对齐上面 2026-10-18 的加重拍板）。rgba 兜底行同上。 */\n  --dshpc-hover:rgba(255,255,255,.14);\n  --dshpc-active:rgba(255,255,255,.24);\n  /* 分段轨道（暗色版）：白 10%——比 hover 淡一档，选中亮片才跳得出。 */\n  --dshpc-seg-track:rgba(255,255,255,.10);\n  --dshpc-plate:var(--dsw-static-neutral-850,#212123);\n  --dshpc-plate-hover:var(--dsw-static-neutral-800,#292929);\n  --dshpc-icon-plate:rgba(255,255,255,.05);\n  /* 暗色主题**反过来**：表头要比卡片面**亮**、比斑马纹再**浅一档**（用户：纯黑背景没法看）。 */\n  --dshpc-head-bg:var(--dshpc-surface-2);\n  /* 表格（2026-10-30 用户二次定案：与通栏互换底色）：通栏底取表头原来那色 #151b23\n     （亮色段对应 #f6f8fa）；表头默认底沿用亮色段定义的 --dshpc-surface-sunken，不在暗色段重写；\n     行 hover 是「一层极淡的白」≈3% —— 暗底上用黑会越悬越暗，看不出「浅灰」反馈。 */\n  --dshpc-table-banner-bg:#151b23;\n  --dshpc-table-row-hover:rgba(255,255,255,.03);\n  /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */\n  --dshpc-chip-bg:rgba(255,255,255,.08);\n  --dshpc-chip-bg-hover:rgba(255,255,255,.16);\n  /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */\n  --dshpc-open-bg:rgba(96,165,250,.18);\n  --dshpc-open-bg-soft:rgba(96,165,250,.08);\n  --dshpc-card-hover:rgba(96,165,250,.13);\n  /* 语义色**浅底**（深色版）：用户嫌深色的绿 / 红「有点深」⇒ 压到 **5%**（浅色段是 8%），\n     更贴近面板底色、存在感更弱；块底与状态色竖条仍同源（竖条是实色，不受这条影响）。 */\n  --dshpc-success-soft:color-mix(in srgb,var(--dshpc-success) 5%,transparent);\n  --dshpc-warning-soft:color-mix(in srgb,var(--dshpc-warning) 5%,transparent);\n  --dshpc-danger-soft:color-mix(in srgb,var(--dshpc-danger) 5%,transparent);\n  --dshpc-business-soft:color-mix(in srgb,var(--dshpc-business) 5%,transparent);\n  /* 扩展色深色派生：底色写死、hover 掺白 12%/22%（同 business，防白字发糊），soft 5%。 */\n  --dshpc-purple-hover:color-mix(in srgb,var(--dshpc-purple) 88%,#ffffff);\n  --dshpc-purple-active:color-mix(in srgb,var(--dshpc-purple) 78%,#ffffff);\n  --dshpc-purple-soft:color-mix(in srgb,var(--dshpc-purple) 5%,transparent);\n  --dshpc-pink-hover:color-mix(in srgb,var(--dshpc-pink) 88%,#ffffff);\n  --dshpc-pink-active:color-mix(in srgb,var(--dshpc-pink) 78%,#ffffff);\n  --dshpc-pink-soft:color-mix(in srgb,var(--dshpc-pink) 5%,transparent);\n  --dshpc-cyan-hover:color-mix(in srgb,var(--dshpc-cyan) 88%,#ffffff);\n  --dshpc-cyan-active:color-mix(in srgb,var(--dshpc-cyan) 78%,#ffffff);\n  --dshpc-cyan-soft:color-mix(in srgb,var(--dshpc-cyan) 5%,transparent);\n  --dshpc-teal-hover:color-mix(in srgb,var(--dshpc-teal) 88%,#ffffff);\n  --dshpc-teal-active:color-mix(in srgb,var(--dshpc-teal) 78%,#ffffff);\n  --dshpc-teal-soft:color-mix(in srgb,var(--dshpc-teal) 5%,transparent);\n  --dshpc-orange-hover:color-mix(in srgb,var(--dshpc-orange) 88%,#ffffff);\n  --dshpc-orange-active:color-mix(in srgb,var(--dshpc-orange) 78%,#ffffff);\n  --dshpc-orange-soft:color-mix(in srgb,var(--dshpc-orange) 5%,transparent);\n  --dshpc-indigo-hover:color-mix(in srgb,var(--dshpc-indigo) 88%,#ffffff);\n  --dshpc-indigo-active:color-mix(in srgb,var(--dshpc-indigo) 78%,#ffffff);\n  --dshpc-indigo-soft:color-mix(in srgb,var(--dshpc-indigo) 5%,transparent);\n  --dshpc-rose-hover:color-mix(in srgb,var(--dshpc-rose) 88%,#ffffff);\n  --dshpc-rose-active:color-mix(in srgb,var(--dshpc-rose) 78%,#ffffff);\n  --dshpc-rose-soft:color-mix(in srgb,var(--dshpc-rose) 5%,transparent);\n  --dshpc-slate-hover:color-mix(in srgb,var(--dshpc-slate) 88%,#ffffff);\n  --dshpc-slate-active:color-mix(in srgb,var(--dshpc-slate) 78%,#ffffff);\n  --dshpc-slate-soft:color-mix(in srgb,var(--dshpc-slate) 5%,transparent);\n  /* 「选中面」（深色版，2026-10-06）：掺 **~40% 背景色**（--dshpc-surface-base）⇒ 无限接近页面背景的黑、\n     只比背景略深一点点（用户：深色下展开区压着任务透明绿会发灰，底色要尽量贴近背景才不显灰）。\n     ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅。 */\n  --dshpc-selected-bg:color-mix(in srgb,var(--dshpc-surface-1) 60%,var(--dshpc-surface-base));\n  /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），\n     比原来的卡片面更沉、更偏蓝灰；选中格仍走 --dshpc-selected-bg（更暗一档），层级不变。 */\n  --dshpc-cal-cell-bg:#23262e;\n  /* 任务日程页本月格 hover 底（深色段，2026-10-06）：原先走 --dshpc-hover（宿主浅色叠加）在深底上显得\n     「灰发亮」，不好看 ⇒ 换成更贴底的蓝调微亮（与 open-bg-soft 同族），hover 时不刺眼、又有反馈。 */\n  --dshpc-cal-cell-hover:rgba(96,165,250,.12);\n  /* 任务日程页展开面板底（深色段，2026-10-06 续）：与原 selected-bg 暗值一致，深色 UI 不动 */\n  --dshpc-cal-panel-bg:color-mix(in srgb,var(--dshpc-surface-1) 60%,var(--dshpc-surface-base));\n}\n\n/* ── 细滚动条 + 离边 1px：全库唯一真源 ─────────────────────────────────\n   放在 tokens 域（ensureComponentStyles 每次必注册、且排在所有控件域之前）：\n   任何组件只要给滚动容器挂 .dshpc-scroll-thin 就生效，不必另行注入 panel 域。\n   改线宽 / 让位 / 圆角 / 颜色只改这一处；别在别的 CSS 里再抄一份。\n\n   只用 ::-webkit-scrollbar：一旦写 scrollbar-width，Chrome 会切到规范化滚动条、\n   忽略这里的宽度（2026-11-06 实测：留着 scrollbar-width:thin 时宽度回到 ~10px）。\n   2026-11-06 用户口径：1px 太细 ⇒ 线宽起步 2px、thumb 上下端圆角；现行值见下面三行。\n\n   让位（滚动条与容器可见边缘隔 1px）也由这个类负责：原生滚动条画在 padding box 之外、\n   border 之内，只有 border 能把它推离边缘（加 padding 无效）。挂类即自动让位，\n   容器不必自己再写透明边框。方向档（CSS 没有 :scrollable，推不出滚动方向，须显式声明）：\n     .dshpc-scroll-thin          竖滚（默认）：右让位\n     .dshpc-scroll-thin--x       横滚：底让位，且不叠右\n     .dshpc-scroll-thin--both    双向：右 + 底都让位\n   --x / --both 必须与基类同挂（线宽规则只认基类）。\n\n   挂 .dshpc-panel 的容器本身已有实色边框 ⇒ :not(.dshpc-panel) 跳过让位：滚动条贴那条\n   实色线即算让位，无条件叠透明边框会把实色右边框覆盖成透明。\n   CodeMirror 的 .cm-scroller 由官方生成、挂不上类 ⇒ 后代选择器一并命中线宽与让位；\n   它只让右不让底：给底会改 scroller 高度，CodeMirror 的测量循环会多算一条横滚条。\n   外层若自己不滚（如 CodeViewer），把 --dshpc-scroll-inset-right 设 0px 关掉自身让位，\n   免得外层与 .cm-scroller 两层各 1px 叠成 2px。 */\n/* ⚠️ 下面三行的线宽 / 圆角**必须是字面量**：WebKit 的 ::-webkit-scrollbar 系列伪元素\n   不解析 var()，带变量的声明会被静默丢弃 ⇒ 宽度整条作废、退回默认值。2026-11-06 把\n   width:2px 改成 var(--dshpc-scroll-w) 后真机当场打回（用户发现），故线宽不放 token。\n   改线宽只改这一块的三处数字（三处必须同值）；让位仍走 --dshpc-scroll-inset。 */\n.dshpc-scroll-thin::-webkit-scrollbar,\n.dshpc-scroll-thin .cm-scroller::-webkit-scrollbar{width:3px;height:3px}\n.dshpc-scroll-thin::-webkit-scrollbar-thumb,\n.dshpc-scroll-thin .cm-scroller::-webkit-scrollbar-thumb{background:var(--dshpc-border-heavy);border-radius:3px}\n.dshpc-scroll-thin::-webkit-scrollbar-track,\n.dshpc-scroll-thin .cm-scroller::-webkit-scrollbar-track{background:transparent}\n.dshpc-scroll-thin:not(.dshpc-panel){border-right:var(--dshpc-scroll-inset-right,var(--dshpc-scroll-inset)) solid transparent}\n.dshpc-scroll-thin--x:not(.dshpc-panel){border-right:0;border-bottom:var(--dshpc-scroll-inset) solid transparent}\n.dshpc-scroll-thin--both:not(.dshpc-panel){border-bottom:var(--dshpc-scroll-inset) solid transparent}\n.dshpc-scroll-thin .cm-scroller{border-right:var(--dshpc-scroll-inset) solid transparent}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/design/style-kit.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/design/tokens-css.generated.js
+		const TOKENS_CSS_TEMPLATE = "\n/* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */\nbody{\n  --dshpc-fg:var(--dsw-alias-label-primary,#1f2328);\n  --dshpc-fg-2:var(--dsw-alias-label-secondary,#5c6370);\n  --dshpc-fg-3:var(--dsw-alias-label-tertiary,#767d87);\n  --dshpc-fg-4:var(--dsw-alias-label-caption,#9aa1ab);\n  --dshpc-fg-dim:var(--dsw-alias-label-dimmed,#b9bfc7);\n  /* 反色面上的字（实心钮 / 角标）：暗色下是 bluish-1000，故用 -foreground 而非 -inverted */\n  --dshpc-fg-inverse:var(--dsw-alias-label-primary-foreground,#fff);\n\n  /* ── 面（宿主 bg-layer 三档 + 下沉轨道底）──────────────────────────── */\n  --dshpc-surface-1:var(--dsw-alias-bg-layer-1,#fff);\n  --dshpc-surface-2:var(--dsw-alias-bg-layer-2,#fff);\n  --dshpc-surface-3:var(--dsw-alias-bg-layer-3,#fff);\n  /* 「选中亮片」的底盘色（配 --dshpc-shadow-raised 用） */\n  --dshpc-surface-raised:var(--dsw-alias-bg-layer-1,#fff);\n  /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */\n  --dshpc-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));\n  /* 整页 / 编辑器底（bg-base） */\n  --dshpc-surface-base:var(--dsw-alias-bg-base,#fff);\n  /* 自绘浮层 / 菜单卡的不透明底（= base；不要用半透明的 specific-menu） */\n  --dshpc-surface-menu:var(--dshpc-surface-base);\n  /* markdown 代码块面 / 字体（会话镜像里用到） */\n  --dshpc-code-surface:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));\n  --dshpc-code-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,monospace));\n  /* 警告文字色（宿主 state-warn-label） */\n  --dshpc-warning-label:var(--dsw-alias-state-warn-label,#f5a623);\n  /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */\n  --dshpc-solid:var(--dsw-static-neutral-00,#fff);\n  --dshpc-on-solid:var(--dsw-alias-label-primary,#1f2328);\n  /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */\n  --dshpc-plate:var(--dsw-static-neutral-50,#fafafa);\n  --dshpc-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);\n  /* ⚠️ 这些**固定中性面一律用 rgba 字面量**（2026-10-19 真机教训）：不要写成\n     「rgba 回退行 + 嵌 --dsw-static-* 的 color-mix 行」两条同名声明——自定义属性**后者恒胜**，\n     哪怕它的值在宿主里算不出来（static 变量 invalid）⇒ 整条 token 作废、rgba 兜底一起被废，\n     0.2.6 里 Segmented 轨道全透明就是这么来的。要跟宿主主题联动的面用 alias token（那些实测有效）。 */\n  --dshpc-icon-plate:rgba(255,255,255,.5);\n  /* 表头底：浅色主题**偏深**，且必须**比斑马纹（--dshpc-plate）再深一档**——\n     两者不能撞色（用户 2026-10-02：表头跟斑马纹一模一样）。 */\n  --dshpc-head-bg:var(--dsw-static-neutral-100,#f5f5f5);\n  /* 表格底 / 行 hover（2026-10-30 用户二次定案：表头与通栏**互换**底色）：\n     表头默认底 = 通栏原来那层灰（--dshpc-surface-sunken，跟着宿主交互面走）；\n     通栏默认底 = 表头原来那色（亮 #f6f8fa / 暗 #151b23，参考图实测，与深色段同源）；\n     行 hover 是「一层极淡的黑」≈1.5%（用户：再浅一半，要特别淡）。 */\n  --dshpc-table-head-bg:var(--dshpc-surface-sunken);\n  --dshpc-table-banner-bg:#f6f8fa;\n  --dshpc-table-row-hover:rgba(15,15,15,.015);\n  /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */\n  --dshpc-chip-bg:rgba(15,15,15,.07);\n  --dshpc-chip-bg-hover:rgba(15,15,15,.14);\n  /* 展开行：**带透明度的蓝**——不是灰、也不是纯色，透出卡片底色，一眼看出「这是展开的」\n     （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */\n  --dshpc-open-bg:rgba(37,99,235,.10);\n  --dshpc-open-bg-soft:rgba(37,99,235,.05);\n  --dshpc-card-hover:rgba(37,99,235,.07);\n\n  /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */\n  --dshpc-border-faint:var(--dsw-alias-border-l1,#0000000a);\n  --dshpc-border:var(--dsw-alias-border-l2,#0000001a);\n  --dshpc-border-strong:var(--dsw-alias-border-l3,#0000001f);\n  --dshpc-border-heavy:var(--dsw-alias-border-l4,#00000029);\n\n  /* ── 品牌 / 语义色 ────────────────────────────────────────────────── */\n  /* 品牌「面」色：明色近黑、暗色近白（官方 Switch 选中态即此），**不是蓝色** */\n  --dshpc-accent:var(--dsw-alias-brand-primary,#0f1115);\n  /* 蓝色：强调 / 选中 / 焦点，一律走这条 */\n  --dshpc-business:var(--dsw-alias-state-business-primary,#3b5bdb);\n  --dshpc-success:var(--dsw-alias-state-success-primary,#22c55e);\n  /* ⚠️ 是 state-warn（不是 state-warning，后者宿主无此定义） */\n  --dshpc-warning:var(--dsw-alias-state-warn-primary,#f59e0b);\n  --dshpc-danger:var(--dsw-alias-state-error-primary,#ec1313);\n  --dshpc-link:var(--dsw-alias-link,#3b5bdb);\n  /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，\n     故这是一条与主题无关的常量；不要拿 --dshpc-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */\n  --dshpc-on-signal:#fff;\n  /* 黄底上的字：黄色是中高明度，白字看不清 ⇒ 固定深色（与主题无关）。 */\n  --dshpc-on-warning:#1f2328;\n  /* 告警严重度的圆点底色（2026-11-03 从 feedback.css 收到这里）。\n     与主题无关的一组常量：这几个色要在任意底色上都认得出来，所以**不跟宿主 state 色走**\n     （宿主 state-warn-primary 偏亮，压白 ✕ 看不清）。语义色改动请只改这里。 */\n  --dshpc-sev-info:#2563eb;\n  --dshpc-sev-success:#16a34a;\n  --dshpc-sev-warning:#d97706;\n  --dshpc-sev-error:#dc2626;\n\n  /* ── 实心按钮的 hover / active 派生态（2026-10-19 用户点名）─────────────────\n     原实现是 :hover 直接压 opacity .9：黑底压 10% 几乎看不出来，用户原话「完全感觉不到颜色变了」。\n     ⇒ 改成对底色做**明确的混色**（压 22% / 34%），不用 opacity：\n       · 亮色主题：黑底（--dshpc-accent）掺白提亮；红 / 绿 / 黄 / 蓝底掺黑压深；\n       · 暗色主题：反过来（暗底掺白、亮底掺黑）。\n     混色对象是**固定中性色字面量**（#fff / #000），不依赖宿主 static-neutral 是否存在；\n     旧内核不认 color-mix 时整条声明作废 ⇒ 回落各档原色（可接受：仍可点，只是没有 hover 反馈）。 */\n  --dshpc-accent-hover:color-mix(in srgb,var(--dshpc-accent) 78%,#ffffff);\n  --dshpc-accent-active:color-mix(in srgb,var(--dshpc-accent) 64%,#ffffff);\n  --dshpc-danger-hover:color-mix(in srgb,var(--dshpc-danger) 78%,#000000);\n  --dshpc-danger-active:color-mix(in srgb,var(--dshpc-danger) 64%,#000000);\n  --dshpc-success-hover:color-mix(in srgb,var(--dshpc-success) 78%,#000000);\n  --dshpc-success-active:color-mix(in srgb,var(--dshpc-success) 64%,#000000);\n  --dshpc-warning-hover:color-mix(in srgb,var(--dshpc-warning) 78%,#000000);\n  --dshpc-warning-active:color-mix(in srgb,var(--dshpc-warning) 64%,#000000);\n  --dshpc-business-hover:color-mix(in srgb,var(--dshpc-business) 78%,#000000);\n  --dshpc-business-active:color-mix(in srgb,var(--dshpc-business) 64%,#000000);\n  /* 语义色**浅底**：状态色系的「一块底色」——执行记录页每条流水账的块底就是它\n     （用户 2026-10-04：正常态给同色系很浅的透明底、失败用红底透出来）。\n     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，主题一换自动成立。\n     ⚠️ **深色下要更淡**：用户 2026-10-04「深色风格的绿色和红色好像都有点深」⇒ dark 段\n     把这四条压到 5%（更贴近面板底、存在感更弱）；浅色段维持 8%。两端各自给值，不共用一条曲线。\n     命名收在 tokens.ts 单点（本仓硬规矩：业务文件不许自造 --dshpc-*）。 */\n  --dshpc-success-soft:color-mix(in srgb,var(--dshpc-success) 8%,transparent);\n  --dshpc-warning-soft:color-mix(in srgb,var(--dshpc-warning) 8%,transparent);\n  --dshpc-danger-soft:color-mix(in srgb,var(--dshpc-danger) 8%,transparent);\n  --dshpc-business-soft:color-mix(in srgb,var(--dshpc-business) 8%,transparent);\n\n  /* ── 扩展语义色（2026-10-29 用户拍板：分类 / 图表常用色八支）──────────────\n     宿主无对应 alias ⇒ 写死 hex（不跟随宿主换肤）；实心面字色统一走 --dshpc-on-signal（白），\n     因八支明度都低于黄 / 青柠，白字两主题均 ≥4.5:1 可读。每条自带 hover/active/soft 派生；\n     暗色段只覆盖派生（base 写死、两主题同值）。 */\n  --dshpc-purple:#9333ea;\n  --dshpc-purple-hover:color-mix(in srgb,var(--dshpc-purple) 78%,#000000);\n  --dshpc-purple-active:color-mix(in srgb,var(--dshpc-purple) 64%,#000000);\n  --dshpc-purple-soft:color-mix(in srgb,var(--dshpc-purple) 8%,transparent);\n  --dshpc-pink:#db2777;\n  --dshpc-pink-hover:color-mix(in srgb,var(--dshpc-pink) 78%,#000000);\n  --dshpc-pink-active:color-mix(in srgb,var(--dshpc-pink) 64%,#000000);\n  --dshpc-pink-soft:color-mix(in srgb,var(--dshpc-pink) 8%,transparent);\n  --dshpc-cyan:#0e7490;\n  --dshpc-cyan-hover:color-mix(in srgb,var(--dshpc-cyan) 78%,#000000);\n  --dshpc-cyan-active:color-mix(in srgb,var(--dshpc-cyan) 64%,#000000);\n  --dshpc-cyan-soft:color-mix(in srgb,var(--dshpc-cyan) 8%,transparent);\n  --dshpc-teal:#0f766e;\n  --dshpc-teal-hover:color-mix(in srgb,var(--dshpc-teal) 78%,#000000);\n  --dshpc-teal-active:color-mix(in srgb,var(--dshpc-teal) 64%,#000000);\n  --dshpc-teal-soft:color-mix(in srgb,var(--dshpc-teal) 8%,transparent);\n  --dshpc-orange:#c2410c;\n  --dshpc-orange-hover:color-mix(in srgb,var(--dshpc-orange) 78%,#000000);\n  --dshpc-orange-active:color-mix(in srgb,var(--dshpc-orange) 64%,#000000);\n  --dshpc-orange-soft:color-mix(in srgb,var(--dshpc-orange) 8%,transparent);\n  --dshpc-indigo:#4f46e5;\n  --dshpc-indigo-hover:color-mix(in srgb,var(--dshpc-indigo) 78%,#000000);\n  --dshpc-indigo-active:color-mix(in srgb,var(--dshpc-indigo) 64%,#000000);\n  --dshpc-indigo-soft:color-mix(in srgb,var(--dshpc-indigo) 8%,transparent);\n  --dshpc-rose:#e11d48;\n  --dshpc-rose-hover:color-mix(in srgb,var(--dshpc-rose) 78%,#000000);\n  --dshpc-rose-active:color-mix(in srgb,var(--dshpc-rose) 64%,#000000);\n  --dshpc-rose-soft:color-mix(in srgb,var(--dshpc-rose) 8%,transparent);\n  --dshpc-slate:#475569;\n  --dshpc-slate-hover:color-mix(in srgb,var(--dshpc-slate) 78%,#000000);\n  --dshpc-slate-active:color-mix(in srgb,var(--dshpc-slate) 64%,#000000);\n  --dshpc-slate-soft:color-mix(in srgb,var(--dshpc-slate) 8%,transparent);\n\n  /* ⚠️ 2026-10-18 用户拍板：宿主 alias 的 hover（暗色白 8% / 亮色 6%）**太弱**，\n     「移上去要仔细看才看得出来」⇒ 不再委托宿主 hover 别名，改为自掺中性色并加重：\n     亮色掺黑 10%、暗色掺白 14%（active 再加一档）。按钮 / 分段轨道 / 各类 hover 底同时受益。\n     ⚠️ 必须保留 rgba 兜底行在前（本文件惯例，见 icon-plate 注释）：掺的是**固定中性色**\n     （neutral-900=#0f0f0f / neutral-00=#fff），预计算无损；旧内核不认 color-mix 时走兜底，\n     否则整条 background:var(--seg-track) 作废 ⇒ 分段轨道透明（真踩过：预览站轨道消失）。 */\n  --dshpc-hover:rgba(15,15,15,.10);\n  --dshpc-active:rgba(15,15,15,.18);\n  /* 分段控件轨道底：专用 token（rgba 字面量、不借 --dshpc-hover 中转）——\n     2026-10-19 教训：变量链中间任何一环 invalid ⇒ background 整条作废、轨道全透明。\n     亮色：黑 7%（比 hover 的 10% 淡一档，选中白片才跳得出）。 */\n  --dshpc-seg-track:rgba(15,15,15,.07);\n  --dshpc-mask:var(--dsw-alias-bg-mask-1,#0000003d);\n  /* 弹窗锁定态给**自绘控件**的降透明度档（2026-11-05）。放在 token 里是为了让消费方\n     在自己元素上写 --dshpc-lock-dim: 1 就能退出这条效果，不用 !important 打架。 */\n  --dshpc-lock-dim:.5;\n  /* 「选中面」（2026-10-06，任务日程页首创）= 当前底色**朝更深掺 12% 文字色**：\n     浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。\n     语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */\n  --dshpc-selected-bg:color-mix(in srgb,var(--dshpc-surface-1) 88%,var(--dshpc-fg));\n  /* ListRow 选中面（2026-11-07 用户定）：slate 的**极浅蓝灰**，不用上面那条通用「选中面」。\n     通用值亮色是掺文字色的中性灰、暗色是两个深色面互掺 ⇒ 深色下选中行发黑（用户实测）。\n     这里从 --dshpc-slate 派生半透明浅色：亮色 14% 叠白 ≈ #e5e7ea，比常态 tone-sunken\n     深一档才看得出「选中」；暗色浓度见 body[data-ds-dark-theme] 段。 */\n  --dshpc-listrow-selected-bg:color-mix(in srgb,var(--dshpc-slate) 14%,transparent);\n  /* 任务日程页本月格默认底（2026-10-06 → 续2）：浅色下给**淡蓝**（business 8% 透白底）——\n     参照用户参考稿里未选中日程块 / Tuesday 列的那种蓝、再浅一点点；\n     相邻月补位格仍走 --dshpc-surface-2（更灰），不受影响。\n     深色段维持 #23262e（用户：深色 UI 已差不多，不动）。 */\n  --dshpc-cal-cell-bg:color-mix(in srgb,var(--dshpc-business) 8%,var(--dshpc-surface-1));\n  /* 任务日程页「点开某天」展开的面板底（2026-10-06 续）：浅色下**无限接近白、只带一丁点灰**\n     （neutral-50 = #fafafa）——面板里装半透明执行记录列表，底再深整片就发糊发灰；\n     深色段沿用原 selected-bg 暗值，保持不动。 */\n  --dshpc-cal-panel-bg:var(--dsw-static-neutral-50,#fafafa);\n  /* 任务日程页本月格 hover 底（浅色段，2026-10-06 续3）：不再走灰色通用交互底——\n     鼠标移上去应是「更亮一点点的蓝」（与深色段同语义：hover = 提亮的蓝，不是灰下去）。\n     浓度**介于**表头蓝（14%）与未选中格蓝（8%）之间、略偏表头一侧：business 12% 透白底\n     （比表头浅一点、比未选中格深一点）。 */\n  --dshpc-cal-cell-hover:color-mix(in srgb,var(--dshpc-business) 12%,var(--dshpc-surface-1));\n\n  /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */\n  --dshpc-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);\n  /* 亮片自带的浮起感（选中态用；与 --dshpc-surface-raised 配对） */\n  --dshpc-shadow-raised:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);\n  --dshpc-shadow-2:var(--dsw-shadow-lv3,0 12px 32px 0 #00000014);\n  /* 键盘焦点环。⚠️ 不用宿主 --dsw-focus-ring-color：它默认值是 transparent（兜底不生效、会隐身） */\n  --dshpc-focus:var(--dsw-alias-state-business-primary,#3b5bdb);\n\n  /* ── 圆角（宿主真值 4 / 8 / 12 / 16 / 20 / 28）─────────────────────── */\n  --dshpc-radius-xs:var(--dsw-radius-xs,4px);\n  --dshpc-radius-sm:var(--dsw-radius-sm,8px);\n  --dshpc-radius-md:var(--dsw-radius-md,12px);\n  --dshpc-radius-lg:var(--dsw-radius-lg,16px);\n  --dshpc-radius-xl:var(--dsw-radius-xl,20px);\n  --dshpc-radius-panel:var(--dsw-radius-panel,28px);\n  /* 全圆（胶囊标签）：宿主的 radius 档最大只有 28px，撑不满 24px 高的 chip */\n  --dshpc-radius-pill:999px;\n\n  /* ── 间距四拍（只许用这四档，不许出现 5 / 7 / 9px）────────────────── */\n  --dshpc-space-1:4px;\n  --dshpc-space-2:8px;\n  --dshpc-space-3:12px;\n  --dshpc-space-4:16px;\n\n  /* ── 控件高度：离散三档（控件用 size=\"sm|md|lg\" 选；调用点不许自定义高度，\n       真不够用才允许在调用点本地覆盖 --dshpc-control-h-*，属例外而非常态）── */\n  --dshpc-control-h-sm:24px;\n  --dshpc-control-h-md:28px;\n  --dshpc-control-h-lg:32px;\n\n  /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */\n  --dshpc-font-xs:var(--dsw-font-xxxs-11-font-size,11px);\n  --dshpc-font-sm:var(--dsw-font-xxs-12-font-size,12px);\n  --dshpc-font-md:var(--dsw-font-xs-13-font-size,13px);\n  --dshpc-font-lg:var(--dsw-font-s-14-font-size,14px);\n  --dshpc-font-xl:var(--dsw-font-base-16-font-size,16px);\n  --dshpc-line-xs:var(--dsw-font-xxxs-11-line-height,14px);\n  --dshpc-line-sm:var(--dsw-font-xxs-12-line-height,18px);\n  --dshpc-line-md:var(--dsw-font-xs-13-line-height,20px);\n  --dshpc-line-lg:var(--dsw-font-s-14-line-height,22px);\n  --dshpc-line-xl:var(--dsw-font-base-16-line-height,24px);\n  --dshpc-font-mono:var(--ds-font-family-code,monospace);\n\n  /* ── 细滚动条的让位值（线宽不能放 token，见文件末尾的注释）──────────\n     1px→2px 只改这一行；它用在普通元素上，var() 能正常解析。 */\n  --dshpc-scroll-inset:1px;\n\n  /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */\n  /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */\n  /* **整条阶梯都必须低于官方浮点 1000 档**（2026-11-06 用户拍板）：官方原语\n     Modal / ImageLightbox 是 z-index 1000（body portal），Menu / Toast 是 1100。\n     我们只是宿主里的一个页面 ⇒ 宿主浮点恒在我们之上；以后弹窗里再开官方模态/预览，\n     不必逐个场景「临时让位」（此前 1070 压住官方原图预览就是这么踩出来的）。 */\n  /* 内容层吸顶（天标签 / 表头这类「跟着滚但压住同层内容」的元素）：只压同层兄弟，\n     必须低于下面所有浮层档 —— 所以它不是「开新浮层档」，而是内容层内部的排序位。 */\n  --dshpc-z-sticky:10;\n  --dshpc-z-dock:900;\n  --dshpc-z-drawer:920;\n  --dshpc-z-modal:940;\n  /* 收起后的耳朵：必须高于弹窗遮罩，否则弹窗一开就点不到它（2026-11-04 用户真机）。\n     只给耳朵用，页面级分栏本体仍是布局成员，不跟着抬高。 */\n  --dshpc-z-ear:950;\n  --dshpc-z-menu:960;\n  --dshpc-z-tip:970;\n  /* 语义别名（2026-11-03 面板皮肤统一）：业务文件只许用这两个说「我要一层浮层」，\n     不再各自写浮层字面量。\n       panel   = 浮层面板本体（picker 弹窗、锚定面板）；\n       popmenu = 叠在面板之上的菜单（▾ 选层、Picker 下拉）与其透明遮罩。 */\n  --dshpc-z-panel:var(--dshpc-z-menu);\n  --dshpc-z-popmenu:var(--dshpc-z-tip);\n\n  /* ── 动效 ─────────────────────────────────────────────────────────── */\n  --dshpc-dur:var(--ds-transition-duration,.2s);\n  --dshpc-dur-fast:var(--ds-transition-duration-fast,.12s);\n  --dshpc-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));\n  /* 运行中状态的脉动时长（2026-10-06 统一前后两端：任务配置里的绿呼吸 → 蓝、放慢；\n     执行记录里的蓝闪 → 放慢一点。两者用同一个值，动画形状本就一致）。 */\n  --dshpc-dur-run:500ms;\n}\n\n/* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────\n   判据 = body[data-ds-dark-theme]（宿主 0.2.0-rc.2 源码核实：启动脚本 toggleAttribute 写入，\n   唯一明暗判据；插件禁止用 prefers-color-scheme —— 它跟的是系统、不是用户在宿主里的选择）。\n   下面只放 alias 表达不了的「固定中性面」；颜色若能靠 alias 自动跟随，一律不要写在这里。 */\nbody[data-ds-dark-theme]{\n  /* 深色段的蓝**刻意不跟随宿主 alias**（唯一例外）：宿主暗色 alias 给的是 #60a5fa 一档的高亮蓝，\n     实心面（Chip / Button info / 日期选中格）压白字会发糊 —— 用户 2026-10-29 实测反馈。\n     ⇒ 深色下改定向浅色状态的蓝（#3b5bdb）靠，只在明度上抬一点点，保证它在暗底上仍看得见：\n     #4c6bd8 对白字 ≈4.8:1（原亮蓝只有 ~2.3:1），对日历格底 ≈3.2:1 仍过 UI 件的 3:1 线。\n     代价：宿主换品牌色时深色不再自动跟着变，需要这里手动同步。 */\n  --dshpc-business:#4c6bd8;\n  --dshpc-solid:var(--dsw-static-neutral-900,#0f0f0f);\n  --dshpc-on-solid:var(--dsw-static-neutral-00,#fff);\n  /* 实心按钮 hover / active（暗色版）：黑底（浅色主题的近黑 → 暗色下的近白）掺黑压深；\n     红 / 绿 / 黄 / 蓝掺白提亮。与亮色段方向相反，保证两种主题下「一眼看出变了」。 */\n  --dshpc-accent-hover:color-mix(in srgb,var(--dshpc-accent) 80%,#000000);\n  --dshpc-accent-active:color-mix(in srgb,var(--dshpc-accent) 66%,#000000);\n  --dshpc-danger-hover:color-mix(in srgb,var(--dshpc-danger) 78%,#ffffff);\n  --dshpc-danger-active:color-mix(in srgb,var(--dshpc-danger) 64%,#ffffff);\n  --dshpc-success-hover:color-mix(in srgb,var(--dshpc-success) 78%,#ffffff);\n  --dshpc-success-active:color-mix(in srgb,var(--dshpc-success) 64%,#ffffff);\n  --dshpc-warning-hover:color-mix(in srgb,var(--dshpc-warning) 78%,#ffffff);\n  --dshpc-warning-active:color-mix(in srgb,var(--dshpc-warning) 64%,#ffffff);\n  /* 同上：掺白比例从 22% / 36% 收到 12% / 22% —— 底色已变深，照旧比例提亮会在 hover 瞬间\n     把白字对比打回 ~3:1（正是用户嫌糊的那一档）；收窄后 hover 仍可感知、字仍清晰。 */\n  --dshpc-business-hover:color-mix(in srgb,var(--dshpc-business) 88%,#ffffff);\n  --dshpc-business-active:color-mix(in srgb,var(--dshpc-business) 78%,#ffffff);\n  /* 暗色 hover 掺白 14% / active 24%（对齐上面 2026-10-18 的加重拍板）。rgba 兜底行同上。 */\n  --dshpc-hover:rgba(255,255,255,.14);\n  --dshpc-active:rgba(255,255,255,.24);\n  /* 分段轨道（暗色版）：白 10%——比 hover 淡一档，选中亮片才跳得出。 */\n  --dshpc-seg-track:rgba(255,255,255,.10);\n  --dshpc-plate:var(--dsw-static-neutral-850,#212123);\n  --dshpc-plate-hover:var(--dsw-static-neutral-800,#292929);\n  --dshpc-icon-plate:rgba(255,255,255,.05);\n  /* 暗色主题**反过来**：表头要比卡片面**亮**、比斑马纹再**浅一档**（用户：纯黑背景没法看）。 */\n  --dshpc-head-bg:var(--dshpc-surface-2);\n  /* 表格（2026-10-30 用户二次定案：与通栏互换底色）：通栏底取表头原来那色 #151b23\n     （亮色段对应 #f6f8fa）；表头默认底沿用亮色段定义的 --dshpc-surface-sunken，不在暗色段重写；\n     行 hover 是「一层极淡的白」≈3% —— 暗底上用黑会越悬越暗，看不出「浅灰」反馈。 */\n  --dshpc-table-banner-bg:#151b23;\n  --dshpc-table-row-hover:rgba(255,255,255,.03);\n  /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */\n  --dshpc-chip-bg:rgba(255,255,255,.08);\n  --dshpc-chip-bg-hover:rgba(255,255,255,.16);\n  /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */\n  --dshpc-open-bg:rgba(96,165,250,.18);\n  --dshpc-open-bg-soft:rgba(96,165,250,.08);\n  --dshpc-card-hover:rgba(96,165,250,.13);\n  /* 语义色**浅底**（深色版）：用户嫌深色的绿 / 红「有点深」⇒ 压到 **5%**（浅色段是 8%），\n     更贴近面板底色、存在感更弱；块底与状态色竖条仍同源（竖条是实色，不受这条影响）。 */\n  --dshpc-success-soft:color-mix(in srgb,var(--dshpc-success) 5%,transparent);\n  --dshpc-warning-soft:color-mix(in srgb,var(--dshpc-warning) 5%,transparent);\n  --dshpc-danger-soft:color-mix(in srgb,var(--dshpc-danger) 5%,transparent);\n  --dshpc-business-soft:color-mix(in srgb,var(--dshpc-business) 5%,transparent);\n  /* 扩展色深色派生：底色写死、hover 掺白 12%/22%（同 business，防白字发糊），soft 5%。 */\n  --dshpc-purple-hover:color-mix(in srgb,var(--dshpc-purple) 88%,#ffffff);\n  --dshpc-purple-active:color-mix(in srgb,var(--dshpc-purple) 78%,#ffffff);\n  --dshpc-purple-soft:color-mix(in srgb,var(--dshpc-purple) 5%,transparent);\n  --dshpc-pink-hover:color-mix(in srgb,var(--dshpc-pink) 88%,#ffffff);\n  --dshpc-pink-active:color-mix(in srgb,var(--dshpc-pink) 78%,#ffffff);\n  --dshpc-pink-soft:color-mix(in srgb,var(--dshpc-pink) 5%,transparent);\n  --dshpc-cyan-hover:color-mix(in srgb,var(--dshpc-cyan) 88%,#ffffff);\n  --dshpc-cyan-active:color-mix(in srgb,var(--dshpc-cyan) 78%,#ffffff);\n  --dshpc-cyan-soft:color-mix(in srgb,var(--dshpc-cyan) 5%,transparent);\n  --dshpc-teal-hover:color-mix(in srgb,var(--dshpc-teal) 88%,#ffffff);\n  --dshpc-teal-active:color-mix(in srgb,var(--dshpc-teal) 78%,#ffffff);\n  --dshpc-teal-soft:color-mix(in srgb,var(--dshpc-teal) 5%,transparent);\n  --dshpc-orange-hover:color-mix(in srgb,var(--dshpc-orange) 88%,#ffffff);\n  --dshpc-orange-active:color-mix(in srgb,var(--dshpc-orange) 78%,#ffffff);\n  --dshpc-orange-soft:color-mix(in srgb,var(--dshpc-orange) 5%,transparent);\n  --dshpc-indigo-hover:color-mix(in srgb,var(--dshpc-indigo) 88%,#ffffff);\n  --dshpc-indigo-active:color-mix(in srgb,var(--dshpc-indigo) 78%,#ffffff);\n  --dshpc-indigo-soft:color-mix(in srgb,var(--dshpc-indigo) 5%,transparent);\n  --dshpc-rose-hover:color-mix(in srgb,var(--dshpc-rose) 88%,#ffffff);\n  --dshpc-rose-active:color-mix(in srgb,var(--dshpc-rose) 78%,#ffffff);\n  --dshpc-rose-soft:color-mix(in srgb,var(--dshpc-rose) 5%,transparent);\n  --dshpc-slate-hover:color-mix(in srgb,var(--dshpc-slate) 88%,#ffffff);\n  --dshpc-slate-active:color-mix(in srgb,var(--dshpc-slate) 78%,#ffffff);\n  --dshpc-slate-soft:color-mix(in srgb,var(--dshpc-slate) 5%,transparent);\n  /* 「选中面」（深色版，2026-10-06）：掺 **~40% 背景色**（--dshpc-surface-base）⇒ 无限接近页面背景的黑、\n     只比背景略深一点点（用户：深色下展开区压着任务透明绿会发灰，底色要尽量贴近背景才不显灰）。\n     ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅。 */\n  --dshpc-selected-bg:color-mix(in srgb,var(--dshpc-surface-1) 60%,var(--dshpc-surface-base));\n  /* ListRow 选中面（暗色版）：slate 掺到 26% —— 深底上泛蓝灰，绝不退回接近背景的黑。\n     slate 是中明度蓝灰，暗底上要比亮色掺得更浓才看得出（亮色 14% / 暗色 26%）。 */\n  --dshpc-listrow-selected-bg:color-mix(in srgb,var(--dshpc-slate) 26%,transparent);\n  /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），\n     比原来的卡片面更沉、更偏蓝灰；选中格仍走 --dshpc-selected-bg（更暗一档），层级不变。 */\n  --dshpc-cal-cell-bg:#23262e;\n  /* 任务日程页本月格 hover 底（深色段，2026-10-06）：原先走 --dshpc-hover（宿主浅色叠加）在深底上显得\n     「灰发亮」，不好看 ⇒ 换成更贴底的蓝调微亮（与 open-bg-soft 同族），hover 时不刺眼、又有反馈。 */\n  --dshpc-cal-cell-hover:rgba(96,165,250,.12);\n  /* 任务日程页展开面板底（深色段，2026-10-06 续）：与原 selected-bg 暗值一致，深色 UI 不动 */\n  --dshpc-cal-panel-bg:color-mix(in srgb,var(--dshpc-surface-1) 60%,var(--dshpc-surface-base));\n}\n\n/* ── 细滚动条 + 离边 1px：全库唯一真源 ─────────────────────────────────\n   放在 tokens 域（ensureComponentStyles 每次必注册、且排在所有控件域之前）：\n   任何组件只要给滚动容器挂 .dshpc-scroll-thin 就生效，不必另行注入 panel 域。\n   改线宽 / 让位 / 圆角 / 颜色只改这一处；别在别的 CSS 里再抄一份。\n\n   只用 ::-webkit-scrollbar：一旦写 scrollbar-width，Chrome 会切到规范化滚动条、\n   忽略这里的宽度（2026-11-06 实测：留着 scrollbar-width:thin 时宽度回到 ~10px）。\n   2026-11-06 用户口径：1px 太细 ⇒ 线宽起步 2px、thumb 上下端圆角；现行值见下面三行。\n\n   让位（滚动条与容器可见边缘隔 1px）也由这个类负责：原生滚动条画在 padding box 之外、\n   border 之内，只有 border 能把它推离边缘（加 padding 无效）。挂类即自动让位，\n   容器不必自己再写透明边框。方向档（CSS 没有 :scrollable，推不出滚动方向，须显式声明）：\n     .dshpc-scroll-thin          竖滚（默认）：右让位\n     .dshpc-scroll-thin--x       横滚：底让位，且不叠右\n     .dshpc-scroll-thin--both    双向：右 + 底都让位\n   --x / --both 必须与基类同挂（线宽规则只认基类）。\n\n   挂 .dshpc-panel 的容器本身已有实色边框 ⇒ :not(.dshpc-panel) 跳过让位：滚动条贴那条\n   实色线即算让位，无条件叠透明边框会把实色右边框覆盖成透明。\n   CodeMirror 的 .cm-scroller 由官方生成、挂不上类 ⇒ 后代选择器一并命中线宽与让位；\n   它只让右不让底：给底会改 scroller 高度，CodeMirror 的测量循环会多算一条横滚条。\n   外层若自己不滚（如 CodeViewer），把 --dshpc-scroll-inset-right 设 0px 关掉自身让位，\n   免得外层与 .cm-scroller 两层各 1px 叠成 2px。 */\n/* ⚠️ 下面三行的线宽 / 圆角**必须是字面量**：WebKit 的 ::-webkit-scrollbar 系列伪元素\n   不解析 var()，带变量的声明会被静默丢弃 ⇒ 宽度整条作废、退回默认值。2026-11-06 把\n   width:2px 改成 var(--dshpc-scroll-w) 后真机当场打回（用户发现），故线宽不放 token。\n   改线宽只改这一块的三处数字（三处必须同值）；让位仍走 --dshpc-scroll-inset。 */\n.dshpc-scroll-thin::-webkit-scrollbar,\n.dshpc-scroll-thin .cm-scroller::-webkit-scrollbar{width:3px;height:3px}\n.dshpc-scroll-thin::-webkit-scrollbar-thumb,\n.dshpc-scroll-thin .cm-scroller::-webkit-scrollbar-thumb{background:var(--dshpc-border-heavy);border-radius:3px}\n.dshpc-scroll-thin::-webkit-scrollbar-track,\n.dshpc-scroll-thin .cm-scroller::-webkit-scrollbar-track{background:transparent}\n.dshpc-scroll-thin:not(.dshpc-panel){border-right:var(--dshpc-scroll-inset-right,var(--dshpc-scroll-inset)) solid transparent}\n.dshpc-scroll-thin--x:not(.dshpc-panel){border-right:0;border-bottom:var(--dshpc-scroll-inset) solid transparent}\n.dshpc-scroll-thin--both:not(.dshpc-panel){border-bottom:var(--dshpc-scroll-inset) solid transparent}\n.dshpc-scroll-thin .cm-scroller{border-right:var(--dshpc-scroll-inset) solid transparent}\n";
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/design/style-kit.js
 		/** 全生态统一的 CSS 变量前缀。 */
 		const CSS_PREFIX = "dshpc";
 		/** token 域固定名：变量定义必须先于消费它的规则出现。 */
@@ -119,8 +117,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/css.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/css.js
 		/**
 		* 当前插件的样式设施。
 		*
@@ -160,11 +157,9 @@ window.__ModuleLoader__.load({
 			kit.registerStyle("tokens", kit.tokensCss);
 			kit.applyStyle(domain, css);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/marquee-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/marquee-css.generated.js
 		const MARQUEE_CSS = "/* 跑马灯（MarqueeText）：双层——外层只裁剪，内层才 transform 滚动；非 hover 内层自带省略号。\n   2026-10-20：本文件原是杂烩「select.css」（下拉 / 日历 / 时分的皮肤都装过），随着那些控件\n   一个个删完，最后只剩跑马灯，故按本包「一个 css 服务一个对象」的格局改名归档。\n   同批清掉的还有零引用的省略号类 .dshpc-ellipsis —— 本包三个用到截断的地方都没采纳它。 */\n.dshpc-mq{display:block;overflow:hidden;white-space:nowrap;}\n.dshpc-mq .dshpc-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}\n/* ⚠️ 跑法（用户 2026-10-03 拍板）：**跑一遍、停在尾字**（播放 1 次 + forwards），不来回弹、不无限跑。\n   滚距 = 精确溢出量 ⇒ 停下时最后一个字正好贴右缘，**不会跑进黑块**（黑块是旧手写版把\n   内层盒子裁了、按「半截文本」平移导致的）。鼠标移开 ⇒ :hover 失效 ⇒ 自动复位回省略号态。 */\n.dshpc-mq-run:hover .dshpc-mq-in{max-width:none;overflow:visible;animation:dshpc-mq-scroll var(--dshpc-mq-dur,6s) linear .4s 1 forwards;}\n@keyframes dshpc-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dshpc-mq-dist,-40px))}}\n/* 溢出渐影（用户 2026-10-24 拍板「左右稍微有点渐影」；官方口径 = dsh-client-ui-primitives@0.2.1-rc.2\n   PathLabel.module.css:13-15：mask-image 线性渐隐 + 28px 随官方）。⚠️ 只在 **hover 滚动态** 加：\n   静态态（三个点）不要渐影（用户 2026-10-24 二次拍板），hover 滚动时两端渐影——左缘柔化被裁的文字头。 */\n/* token-ok：遮罩模板色（纯黑 = 完全不透明），不是主题色；换主题也不该变。 */\n.dshpc-mq-run:hover{mask-image:linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/MarqueeText.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/MarqueeText.js
 		/**
 		* 跑马灯文本 —— **全站唯一实现**（L2，P6 从 editor-fields 迁入 ui）
 		*
@@ -216,47 +211,33 @@ window.__ModuleLoader__.load({
 				} : null }
 			}, props.text));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/segmented-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/segmented-css.generated.js
 		const SEGMENTED_CSS = "\n/* ── 分段控件 P2 ─────────────────────────────────────────────────────\n   结构照兄弟项目 dsh-task-dispatch-table 的 Segmented 皮肤（item 无边框、hover 只提亮文字），\n   前缀 / 变量名换成本仓口径。用户额外要的两处（兄弟没有）：weekday 方块间隔（现为 2px）；段内中性计数 __count。\n   ⚠️ 2026-10-19 两次误判均已澄清：① 「宿主只认单行 CSS」——假，多行一直正常；\n   ② 「宿主吃掉 token 块之后第一条规则」——也假，真因是 tokens 模板字符串结尾多了一个反斜杠，\n   注入文本里留下字面反引号，把紧随其后的那条规则的选择器污染掉了（见 dsh-host.md §9）。\n   样式照常多行书写，不必压行；也不需要任何「牺牲规则」。 */\n/* 外观只有一套（2026-10-26）：原 variant 的 default / inset 两档在 CSS 里只差 1px 内距，\n   且 default 比文档承诺矮 2px，却让下游以为「有得选」而反复对图 ⇒ 整轴删除。\n   padding 3px 是尺寸契约的一部分：item 高度 = 控制高 − 6px，加起来正好 24 / 28 / 32。 */\n/* 选中片配色收在两条局部变量里（--seg-thumb 底 / --seg-on 字）：默认走主题亮片，\n   tone 档与自定义 {bg, fg} 都只改这两条（后者由组件内联写根节点，内联恒胜）。 */\n.dshpc-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:var(--dshpc-radius-md);--seg-thumb:var(--dshpc-surface-raised);--seg-on:var(--dshpc-fg);background:var(--dshpc-seg-track);}\n.dshpc-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;height:calc(var(--dshpc-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--dshpc-radius-sm);background:transparent;color:var(--dshpc-fg-2);font-family:inherit;font-size:var(--dshpc-font-xs);font-weight:500;white-space:nowrap;cursor:pointer;flex:none;transition:color var(--dshpc-dur-fast) var(--dshpc-ease),background-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-seg--md .dshpc-seg__item{height:calc(var(--dshpc-control-h-md) - 6px);}\n.dshpc-seg--lg .dshpc-seg__item{height:calc(var(--dshpc-control-h-lg) - 6px);}\n/* 段内图标（前置）：与 Button 同口径 —— inline-flex 吃掉行高基线，svg 按块级。 */\n.dshpc-seg__icon{display:inline-flex;align-items:center;justify-content:center;flex:none;line-height:0;}\n.dshpc-seg__icon svg{display:block;margin:0;}\n/* 只有图标（无文字 / 计数 / 角标）：段必须是正方形 ⇒ 宽 = 段高、左右内距归零、内容居中；\n   否则基础规则的 0 12px 会把它拉成长方形。放在三档之后：同名特异性下后写者胜。 */\n.dshpc-seg__item--icon-only{width:calc(var(--dshpc-control-h-sm) - 6px);padding:0;justify-content:center;}\n.dshpc-seg--md .dshpc-seg__item--icon-only{width:calc(var(--dshpc-control-h-md) - 6px);}\n.dshpc-seg--lg .dshpc-seg__item--icon-only{width:calc(var(--dshpc-control-h-lg) - 6px);}\n.dshpc-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--dshpc-fg);}\n.dshpc-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--dshpc-shadow-raised);color:var(--seg-on);font-weight:600;}\n.dshpc-seg__item:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px;}\n.dshpc-seg__item:disabled{cursor:default;opacity:.4;}\n/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染。必须是正圆（用户 2026-10-03）。 */\n.dshpc-seg__badge{display:inline-flex;align-items:center;justify-content:center;flex:none;width:16px;height:16px;padding:0;overflow:hidden;border-radius:50%;background:var(--dshpc-danger);color:var(--dshpc-on-signal);font-size:10px;line-height:16px;font-weight:500;font-variant-numeric:tabular-nums;}\n/* 段内中性计数（如筛选条「全部 11」）：纯文字、无底无边（对齐 task-ledger .dtl-seg__num 拍板口径）；0 由组件侧不渲染。 */\n.dshpc-seg__count{display:inline;flex:none;margin-left:3px;padding:0;border:0;border-radius:0;background:none;color:var(--dshpc-fg-3);font-size:10px;line-height:1;font-weight:400;font-variant-numeric:tabular-nums;}\n/* 选中段（彩色实面）里的计数：必须跟着 --seg-on 走再压暗一档（72% 白 ≈ 「比正文稍灰」）。\n   不许用 --dshpc-fg-3：它跟主题走，暗色下是深灰 ⇒ 蓝底上几乎看不见（2026-10-29 用户截图「My todos 4」）。 */\n.dshpc-seg__item[aria-pressed='true'] .dshpc-seg__count{color:color-mix(in srgb,var(--seg-on) 72%,transparent);}\n/* block：撑满父宽（表单行用），各段等分 */\n.dshpc-seg--block{display:flex;width:100%;}\n.dshpc-seg--block .dshpc-seg__item{flex:1 1 auto;justify-content:center;}\n/* weekday：星期多选方块。基础插件的特殊化定制（用户 2026-10-01：原 WeekdayPicker 即「蓝底 + 近似方形」）：\n   每格正方形（宽 = 段高）、选中品牌蓝反白字、**无外描边**（2026-10-18 重申）、\n   方块之间间距 gap:2px（2026-10-20 用户定稿：方块改小后 6px 显得太宽。10-18 曾从 2px 放宽到 6px，\n   两次都是用户拍板 —— 别自作主张改回去）。 */\n.dshpc-seg--weekday{--seg-track:var(--dshpc-seg-track);gap:2px;border:0;padding:3px;background:var(--seg-track);}\n.dshpc-seg--weekday .dshpc-seg__item{width:calc(var(--dshpc-control-h-lg) - 8px);padding:0;justify-content:center;}\n/* 蓝底反白：字色必须是常量白（--dshpc-on-signal）。2026-10-29 用户实测：暗色主题下这里曾用\n   --dshpc-fg-inverse，而它跟随宿主 label-primary-foreground，暗色下是近黑 ⇒ 蓝底黑字看不清。 */\n.dshpc-seg--weekday{--seg-thumb:var(--dshpc-business);--seg-on:var(--dshpc-on-signal);}\n\n/* ── tone（2026-10-29 用户）：选中片传内置基础色名，底 / 字由核心给，深浅两主题各自成立。\n   放在 weekday 之后：同名变量后写者胜，tone 与 className=\"dshpc-seg--weekday\" 同给时以 tone 为准。\n   黄底按 Chip / Button 同源口径用 on-warning（中高明度，白字看不清）。 */\n.dshpc-seg--tone-business{--seg-thumb:var(--dshpc-business);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-success{--seg-thumb:var(--dshpc-success);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-warning{--seg-thumb:var(--dshpc-warning);--seg-on:var(--dshpc-on-warning);}\n.dshpc-seg--tone-danger{--seg-thumb:var(--dshpc-danger);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-purple{--seg-thumb:var(--dshpc-purple);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-pink{--seg-thumb:var(--dshpc-pink);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-cyan{--seg-thumb:var(--dshpc-cyan);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-teal{--seg-thumb:var(--dshpc-teal);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-orange{--seg-thumb:var(--dshpc-orange);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-indigo{--seg-thumb:var(--dshpc-indigo);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-rose{--seg-thumb:var(--dshpc-rose);--seg-on:var(--dshpc-on-signal);}\n.dshpc-seg--tone-slate{--seg-thumb:var(--dshpc-slate);--seg-on:var(--dshpc-on-signal);}\n\n/* ── 单选滑动块（2026-10-26 用户：点选后选中底应「滑过去」，不是旧段消失、新段直接亮）。\n   结构 = 一块绝对定位的共用底 + 各段透明；位置/尺寸由组件量出后内联，这里只管外观与过渡。\n   --slide 只在单选挂上：多选（如星期）每段各自着色，没有唯一滑块可滑，保持原样。 */\n.dshpc-seg--slide{position:relative;}\n.dshpc-seg--slide .dshpc-seg__item{position:relative;z-index:1;}\n.dshpc-seg--slide .dshpc-seg__item[aria-pressed='true']{background:transparent;box-shadow:none;}\n.dshpc-seg__thumb{position:absolute;z-index:0;border-radius:var(--dshpc-radius-sm);background:var(--seg-thumb);box-shadow:var(--dshpc-shadow-raised);pointer-events:none;transition:left var(--dshpc-dur) var(--dshpc-ease),top var(--dshpc-dur) var(--dshpc-ease),width var(--dshpc-dur) var(--dshpc-ease),height var(--dshpc-dur) var(--dshpc-ease);}\n\n/* ── bordered 外框（2026-10-20 用户要的第二种模式）：**只在最外面套一圈 1px 描边**，\n   里面一概不动 —— 选中片的填充色 / 阴影 / 文字色全部保持原样（weekday 的蓝面照旧），\n   这里不写任何针对 __item 的规则。\n   总高必须与无框版逐像素一致：border 1px×2 由 padding 各让 1px 抵消（3 → 2）；\n   weekday 自己声明的 3px 在文件更后面，靠双类选择器压回 2px。 */\n.dshpc-seg--bordered{border:1px solid var(--dshpc-border);padding:2px;}\n.dshpc-seg--bordered.dshpc-seg--weekday{padding:2px;}\n\n@media (prefers-reduced-motion: reduce){.dshpc-seg__item{transition:none;}.dshpc-seg__thumb{transition:none;}}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/actions/button-css.generated.js
-		const BUTTON_CSS$1 = "\n/* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────\n   与 Segmented 同一条高度纪律：--dshpc-control-h-sm(24) / -md(28) / -lg(32)，\n   有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。\n\n   三条受控轴（2026-10-19 重写，对齐主流 UI 框架的分类口径）：\n     · variant —— 外观档 = 形态 + 语义色，共 10 档：\n         primary / secondary / outline / ghost / danger / success / warning / info /\n         danger-outline（红字描边）/ link（行内链接）\n     · size —— sm / md / lg\n     · block —— 撑满父宽\n   每一档**只填 5 个局部变量**（--btn-bg / -fg / -border / -bg-hover / -bg-active），\n   结构与交互只有上面这一份；任何档位都不许再写一遍 display/height/padding。\n   自定义颜色（Button 的 color 参数）同样只覆盖这 5 个变量（token 覆盖，不是新皮肤）。\n\n   ⚠️ hover 不再用 opacity 压一层（用户 2026-10-19：「黑色和红色的按钮移上去变化太小，\n   完全感觉不到颜色变了」）⇒ 走 --dshpc-*-hover / -active 的明确混色，见 tokens-css.ts。 */\n.dshpc-btn{--btn-bg:transparent;--btn-fg:var(--dshpc-fg);--btn-border:transparent;--btn-pad:12px;\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);--btn-fg-hover:var(--btn-fg);\n  appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;\n  box-sizing:border-box;border:1px solid var(--btn-border);border-radius:var(--dshpc-radius-md);\n  background-color:var(--btn-bg);color:var(--btn-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease),transform var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-btn--sm{--btn-pad:10px;height:var(--dshpc-control-h-sm);padding:0 var(--btn-pad);font-size:var(--dshpc-font-sm);line-height:1;}\n.dshpc-btn--md{--btn-pad:12px;height:var(--dshpc-control-h-md);padding:0 var(--btn-pad);font-size:var(--dshpc-font-md);line-height:1;}\n.dshpc-btn--lg{--btn-pad:14px;height:var(--dshpc-control-h-lg);padding:0 var(--btn-pad);font-size:var(--dshpc-font-md);line-height:1;}\n/* block：撑满父宽（表单底栏 / 抽屉底部的主操作） */\n.dshpc-btn--block{display:flex;width:100%;}\n/* block + 前置图标 ⇒ 文字视觉居中（2026-10-19 用户点名）：\n   内容组 [图标 + 间距 + 文字] 整体在盒内居中时，**文字**的中心会被图标推右半格。\n   把右内边距补上「图标宽 + 间距」，可用盒随之左移同量 ⇒ 文字落回视觉中心，图标贴左侧。\n   图标宽按 1.2em 估（官方图标 14/16px vs 字号 12/13px），em 随字号档自动缩放。 */\n.dshpc-btn--block.dshpc-btn--icon-start{padding-right:calc(var(--btn-pad) + 1.2em + 6px);}\n/* 图标比同档文字小一号（用户 2026-11-02）：容器吃掉 0.875em，内联 SVG 一律跟随 1em，\n   不再由调用方的 size={16} 说了算 —— 全站按钮图标尺寸只由这一处决定。 */\n.dshpc-btn__icon,.dshpc-btn__icon-end{display:inline-flex;align-items:center;justify-content:center;flex:none;line-height:0;font-size:.875em;}\n.dshpc-btn__icon svg,.dshpc-btn__icon-end svg{display:block;margin:0;width:1em;height:1em;}\n/* maxWidth 包 MarqueeText 时：标签作为 flex 子项必须能收缩到内容以下，否则省略号 / 跑马灯测不准 */\n.dshpc-btn .dshpc-btn__label{min-width:0;}\n/* loading：不换 DOM 结构，只在文案前插一枚 Loader（size=xs，12px）。\n   环的画法与动画统一在 controls/loader.css（本文件不再维护第二份 SVG 弧 / keyframes）。 */\n\n/* 交互态：颜色变化写在变量上 ⇒ 所有档位一次生效，且变化幅度由 token 决定（够明显） */\n.dshpc-btn:hover:not(:disabled){background-color:var(--btn-bg-hover);color:var(--btn-fg-hover);}\n.dshpc-btn:active:not(:disabled){background-color:var(--btn-bg-active);transform:translateY(1px);}\n.dshpc-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}\n.dshpc-btn:disabled{cursor:default;opacity:.5;}\n\n.dshpc-btn--primary{--btn-bg:var(--dshpc-accent);--btn-fg:var(--dshpc-fg-inverse);\n  --btn-bg-hover:var(--dshpc-accent-hover);--btn-bg-active:var(--dshpc-accent-active);}\n/* secondary：中性实心（灰面），用于「取消 / 次要」这类与主操作并排的按钮 */\n.dshpc-btn--secondary{--btn-bg:var(--dshpc-hover);--btn-fg:var(--dshpc-fg);\n  --btn-bg-hover:var(--dshpc-active);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--outline{--btn-bg:var(--dshpc-surface-1);--btn-border:var(--dshpc-border-strong);\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--ghost{--btn-fg:var(--dshpc-fg-2);--btn-fg-hover:var(--dshpc-fg);\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--danger{--btn-bg:var(--dshpc-danger);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-danger-hover);--btn-bg-active:var(--dshpc-danger-active);}\n.dshpc-btn--success{--btn-bg:var(--dshpc-success);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-success-hover);--btn-bg-active:var(--dshpc-success-active);}\n.dshpc-btn--warning{--btn-bg:var(--dshpc-warning);--btn-fg:var(--dshpc-on-warning);\n  --btn-bg-hover:var(--dshpc-warning-hover);--btn-bg-active:var(--dshpc-warning-active);}\n.dshpc-btn--info{--btn-bg:var(--dshpc-business);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-business-hover);--btn-bg-active:var(--dshpc-business-active);}\n/* 扩展八色实心（2026-10-29）：白字两主题均 ≥4.5:1；hover/active 走各自 token 派生。 */\n.dshpc-btn--purple{--btn-bg:var(--dshpc-purple);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-purple-hover);--btn-bg-active:var(--dshpc-purple-active);}\n.dshpc-btn--pink{--btn-bg:var(--dshpc-pink);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-pink-hover);--btn-bg-active:var(--dshpc-pink-active);}\n.dshpc-btn--cyan{--btn-bg:var(--dshpc-cyan);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-cyan-hover);--btn-bg-active:var(--dshpc-cyan-active);}\n.dshpc-btn--teal{--btn-bg:var(--dshpc-teal);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-teal-hover);--btn-bg-active:var(--dshpc-teal-active);}\n.dshpc-btn--orange{--btn-bg:var(--dshpc-orange);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-orange-hover);--btn-bg-active:var(--dshpc-orange-active);}\n.dshpc-btn--indigo{--btn-bg:var(--dshpc-indigo);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-indigo-hover);--btn-bg-active:var(--dshpc-indigo-active);}\n.dshpc-btn--rose{--btn-bg:var(--dshpc-rose);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-rose-hover);--btn-bg-active:var(--dshpc-rose-active);}\n.dshpc-btn--slate{--btn-bg:var(--dshpc-slate);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-slate-hover);--btn-bg-active:var(--dshpc-slate-active);}\n/* danger-outline：红字描边（破坏性次要操作，如卡片上的「删除」）。\n   ⚠️ 旧修饰类 danger-ink 保留为别名（消费方可能还在挂），两者同一套皮肤。 */\n.dshpc-btn--danger-outline,.dshpc-btn--danger-ink{--btn-border:var(--dshpc-danger);--btn-fg:var(--dshpc-danger);\n  --btn-fg-hover:var(--dshpc-danger);--btn-bg-hover:var(--dshpc-danger-soft);--btn-bg-active:var(--dshpc-danger-soft);}\n/* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */\n.dshpc-btn--link{--btn-fg:var(--dshpc-link);--btn-fg-hover:var(--dshpc-link);\n  --btn-bg-hover:transparent;--btn-bg-active:transparent;\n  height:auto;padding:0;border:0;background:none;font-weight:400;text-align:left;}\n.dshpc-btn--link:hover:not(:disabled){text-decoration:underline;}\n\n/* 图标钮：纯图标，方形；尺寸档的宽高与同档文字按钮等高、圆角统一吃 md（与 .dshpc-btn 同款，2026-10-28 拍板）\n   底色 / 图标色全走局部变量：默认**无底色**，消费方可传 color（图标色）/ background（底色）覆盖（用户 2026-11-02）。 */\n.dshpc-iconbtn{--icb-bg:transparent;--icb-bg-hover:var(--dshpc-hover);--icb-fg:var(--dshpc-fg-2);--icb-fg-hover:var(--dshpc-fg);\n  appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;\n  border:1px solid var(--icb-border,transparent);border-radius:var(--dshpc-radius-md);\n  background:var(--icb-bg);color:var(--icb-fg);\n  font-family:inherit;cursor:pointer;flex:none;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),opacity var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-iconbtn--sm{width:var(--dshpc-control-h-sm);height:var(--dshpc-control-h-sm);font-size:var(--dshpc-font-sm);}\n.dshpc-iconbtn--md{width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);font-size:var(--dshpc-font-md);}\n.dshpc-iconbtn--lg{width:var(--dshpc-control-h-lg);height:var(--dshpc-control-h-lg);font-size:var(--dshpc-font-md);}\n/* 图标与文字按钮同口径：内联 SVG 一律跟随 1em（比 16px 档小一号） */\n.dshpc-iconbtn > svg{display:block;width:1em;height:1em;}\n.dshpc-iconbtn--outline{--icb-bg:var(--dshpc-surface-1);--icb-border:var(--dshpc-border);}\n.dshpc-iconbtn--danger{--icb-fg:var(--dshpc-danger);--icb-bg-hover:var(--dshpc-danger-soft);--icb-fg-hover:var(--dshpc-danger);}\n.dshpc-iconbtn:hover:not(:disabled){background:var(--icb-bg-hover);color:var(--icb-fg-hover);}\n.dshpc-iconbtn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}\n.dshpc-iconbtn:disabled{cursor:default;opacity:.4;}\n\n/* ── 行式文件按钮（图标 + 文件名）P2：**全站唯一实现**（2026-10-04 收编）──────────\n   用途：「产出物 / 附件」那种**一行一个文件**的清单项（基础信息右栏产出物清单、附件区、\n   执行记录页的展开区）。平时透明、**鼠标移上去才出浅底**（沿用用户 2026-10-03 定的观感）。\n   两个形态修饰类：\n     --block   撑满父宽（清单里一项一行）\n     --inline  内容宽（跟在文字后头，如附件行）\n   收编原因：这份皮肤此前只写在 task-list.tsx 的 TASK_LIST_CSS 里（旧名 .dshpc-info-out），\n   执行记录页展开区要用同一种观感 ⇒ 上提基础层，避免再出现「各写一份外观」（同名不同皮的坑刚踩过）。 */\n.dshpc-filechip{appearance:none;-webkit-appearance:none;border:0;border-radius:var(--dshpc-radius-xs);\n  background:transparent;color:var(--dshpc-fg);font:inherit;text-align:left;cursor:pointer;min-width:0;\n  transition:background-color var(--dshpc-dur) var(--dshpc-ease);}\n.dshpc-filechip:hover:not(:disabled){background:var(--dshpc-chip-bg);}\n.dshpc-filechip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}\n.dshpc-filechip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}\n.dshpc-filechip--block{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;\n  padding:4px 6px;font-size:var(--dshpc-font-xs);}\n.dshpc-filechip--inline{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;font-size:var(--dshpc-font-sm);}\n\n@media (prefers-reduced-motion: reduce){.dshpc-btn,.dshpc-iconbtn,.dshpc-filechip{transition:none;}}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/field-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/actions/button-css.generated.js
+		const BUTTON_CSS$1 = "\n/* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────\n   与 Segmented 同一条高度纪律：--dshpc-control-h-sm(24) / -md(28) / -lg(32)，\n   有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。\n\n   三条受控轴（2026-10-19 重写，对齐主流 UI 框架的分类口径）：\n     · variant —— 外观档 = 形态 + 语义色，共 10 档：\n         primary / secondary / outline / ghost / danger / success / warning / info /\n         danger-outline（红字描边）/ link（行内链接）\n     · size —— sm / md / lg\n     · block —— 撑满父宽\n   每一档**只填 5 个局部变量**（--btn-bg / -fg / -border / -bg-hover / -bg-active），\n   结构与交互只有上面这一份；任何档位都不许再写一遍 display/height/padding。\n   自定义颜色（Button 的 color 参数）同样只覆盖这 5 个变量（token 覆盖，不是新皮肤）。\n\n   ⚠️ hover 不再用 opacity 压一层（用户 2026-10-19：「黑色和红色的按钮移上去变化太小，\n   完全感觉不到颜色变了」）⇒ 走 --dshpc-*-hover / -active 的明确混色，见 tokens-css.ts。 */\n.dshpc-btn{--btn-bg:transparent;--btn-fg:var(--dshpc-fg);--btn-border:transparent;--btn-pad:12px;\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);--btn-fg-hover:var(--btn-fg);\n  appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;\n  box-sizing:border-box;border:1px solid var(--btn-border);border-radius:var(--dshpc-radius-md);\n  background-color:var(--btn-bg);color:var(--btn-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease),transform var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-btn--sm{--btn-pad:10px;height:var(--dshpc-control-h-sm);padding:0 var(--btn-pad);font-size:var(--dshpc-font-sm);line-height:1;}\n.dshpc-btn--md{--btn-pad:12px;height:var(--dshpc-control-h-md);padding:0 var(--btn-pad);font-size:var(--dshpc-font-md);line-height:1;}\n.dshpc-btn--lg{--btn-pad:14px;height:var(--dshpc-control-h-lg);padding:0 var(--btn-pad);font-size:var(--dshpc-font-md);line-height:1;}\n/* block：撑满父宽（表单底栏 / 抽屉底部的主操作） */\n.dshpc-btn--block{display:flex;width:100%;}\n/* block + 前置图标 ⇒ 文字视觉居中（2026-10-19 用户点名）：\n   内容组 [图标 + 间距 + 文字] 整体在盒内居中时，**文字**的中心会被图标推右半格。\n   把右内边距补上「图标宽 + 间距」，可用盒随之左移同量 ⇒ 文字落回视觉中心，图标贴左侧。\n   图标宽按 1.2em 估（官方图标 14/16px vs 字号 12/13px），em 随字号档自动缩放。 */\n.dshpc-btn--block.dshpc-btn--icon-start{padding-right:calc(var(--btn-pad) + 1.2em + 6px);}\n/* 图标比同档文字小一号（用户 2026-11-02）：容器吃掉 0.875em，内联 SVG 一律跟随 1em，\n   不再由调用方的 size={16} 说了算 —— 全站按钮图标尺寸只由这一处决定。 */\n.dshpc-btn__icon,.dshpc-btn__icon-end{display:inline-flex;align-items:center;justify-content:center;flex:none;line-height:0;font-size:.875em;}\n.dshpc-btn__icon svg,.dshpc-btn__icon-end svg{display:block;margin:0;width:1em;height:1em;}\n/* maxWidth 包 MarqueeText 时：标签作为 flex 子项必须能收缩到内容以下，否则省略号 / 跑马灯测不准 */\n.dshpc-btn .dshpc-btn__label{min-width:0;}\n/* loading：不换 DOM 结构，只在文案前插一枚 Loader（size=xs，12px）。\n   环的画法与动画统一在 controls/loader.css（本文件不再维护第二份 SVG 弧 / keyframes）。 */\n\n/* 交互态：颜色变化写在变量上 ⇒ 所有档位一次生效，且变化幅度由 token 决定（够明显） */\n.dshpc-btn:hover:not(:disabled){background-color:var(--btn-bg-hover);color:var(--btn-fg-hover);}\n.dshpc-btn:active:not(:disabled){background-color:var(--btn-bg-active);transform:translateY(1px);}\n.dshpc-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}\n.dshpc-btn:disabled{cursor:default;opacity:.5;}\n/* dense：尺寸档 / 高度一律不变，只把图标放大一档、内距收紧（描边细的文件类型图标用）。\n   只覆盖局部变量与图标字号，不另写一套皮肤；必须写在尺寸档与图标规则之后才压得过默认值。 */\n.dshpc-btn--dense{--btn-pad:6px;}\n.dshpc-btn--dense .dshpc-btn__icon,.dshpc-btn--dense .dshpc-btn__icon-end{font-size:1.25em;}\n\n.dshpc-btn--primary{--btn-bg:var(--dshpc-accent);--btn-fg:var(--dshpc-fg-inverse);\n  --btn-bg-hover:var(--dshpc-accent-hover);--btn-bg-active:var(--dshpc-accent-active);}\n/* secondary：中性实心（灰面），用于「取消 / 次要」这类与主操作并排的按钮 */\n.dshpc-btn--secondary{--btn-bg:var(--dshpc-hover);--btn-fg:var(--dshpc-fg);\n  --btn-bg-hover:var(--dshpc-active);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--outline{--btn-bg:var(--dshpc-surface-1);--btn-border:var(--dshpc-border-strong);\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--ghost{--btn-fg:var(--dshpc-fg-2);--btn-fg-hover:var(--dshpc-fg);\n  --btn-bg-hover:var(--dshpc-hover);--btn-bg-active:var(--dshpc-active);}\n.dshpc-btn--danger{--btn-bg:var(--dshpc-danger);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-danger-hover);--btn-bg-active:var(--dshpc-danger-active);}\n.dshpc-btn--success{--btn-bg:var(--dshpc-success);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-success-hover);--btn-bg-active:var(--dshpc-success-active);}\n.dshpc-btn--warning{--btn-bg:var(--dshpc-warning);--btn-fg:var(--dshpc-on-warning);\n  --btn-bg-hover:var(--dshpc-warning-hover);--btn-bg-active:var(--dshpc-warning-active);}\n.dshpc-btn--info{--btn-bg:var(--dshpc-business);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-business-hover);--btn-bg-active:var(--dshpc-business-active);}\n/* 扩展八色实心（2026-10-29）：白字两主题均 ≥4.5:1；hover/active 走各自 token 派生。 */\n.dshpc-btn--purple{--btn-bg:var(--dshpc-purple);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-purple-hover);--btn-bg-active:var(--dshpc-purple-active);}\n.dshpc-btn--pink{--btn-bg:var(--dshpc-pink);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-pink-hover);--btn-bg-active:var(--dshpc-pink-active);}\n.dshpc-btn--cyan{--btn-bg:var(--dshpc-cyan);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-cyan-hover);--btn-bg-active:var(--dshpc-cyan-active);}\n.dshpc-btn--teal{--btn-bg:var(--dshpc-teal);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-teal-hover);--btn-bg-active:var(--dshpc-teal-active);}\n.dshpc-btn--orange{--btn-bg:var(--dshpc-orange);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-orange-hover);--btn-bg-active:var(--dshpc-orange-active);}\n.dshpc-btn--indigo{--btn-bg:var(--dshpc-indigo);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-indigo-hover);--btn-bg-active:var(--dshpc-indigo-active);}\n.dshpc-btn--rose{--btn-bg:var(--dshpc-rose);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-rose-hover);--btn-bg-active:var(--dshpc-rose-active);}\n.dshpc-btn--slate{--btn-bg:var(--dshpc-slate);--btn-fg:var(--dshpc-on-signal);\n  --btn-bg-hover:var(--dshpc-slate-hover);--btn-bg-active:var(--dshpc-slate-active);}\n/* danger-outline：红字描边（破坏性次要操作，如卡片上的「删除」）。\n   ⚠️ 旧修饰类 danger-ink 保留为别名（消费方可能还在挂），两者同一套皮肤。 */\n.dshpc-btn--danger-outline,.dshpc-btn--danger-ink{--btn-border:var(--dshpc-danger);--btn-fg:var(--dshpc-danger);\n  --btn-fg-hover:var(--dshpc-danger);--btn-bg-hover:var(--dshpc-danger-soft);--btn-bg-active:var(--dshpc-danger-soft);}\n/* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */\n.dshpc-btn--link{--btn-fg:var(--dshpc-link);--btn-fg-hover:var(--dshpc-link);\n  --btn-bg-hover:transparent;--btn-bg-active:transparent;\n  height:auto;padding:0;border:0;background:none;font-weight:400;text-align:left;}\n.dshpc-btn--link:hover:not(:disabled){text-decoration:underline;}\n\n/* 图标钮：纯图标，方形；尺寸档的宽高与同档文字按钮等高、圆角统一吃 md（与 .dshpc-btn 同款，2026-10-28 拍板）\n   底色 / 图标色全走局部变量：默认**无底色**，消费方可传 color（图标色）/ background（底色）覆盖（用户 2026-11-02）。 */\n.dshpc-iconbtn{--icb-bg:transparent;--icb-bg-hover:var(--dshpc-hover);--icb-fg:var(--dshpc-fg-2);--icb-fg-hover:var(--dshpc-fg);\n  appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0;\n  border:1px solid var(--icb-border,transparent);border-radius:var(--dshpc-radius-md);\n  background:var(--icb-bg);color:var(--icb-fg);\n  font-family:inherit;cursor:pointer;flex:none;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),border-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease),opacity var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-iconbtn--sm{width:var(--dshpc-control-h-sm);height:var(--dshpc-control-h-sm);font-size:var(--dshpc-font-sm);}\n.dshpc-iconbtn--md{width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);font-size:var(--dshpc-font-md);}\n.dshpc-iconbtn--lg{width:var(--dshpc-control-h-lg);height:var(--dshpc-control-h-lg);font-size:var(--dshpc-font-md);}\n/* 图标与文字按钮同口径：SVG 一律跟随 1em（比 16px 档小一号）。\n   ⚠️ flex:none 是硬约束：svg 是按钮的直接 flex item，默认 flex-shrink:1 会被按钮内距\n   挤成 10px 窄条；那是布局收缩，不是层叠优先级 —— 改 width、加 !important 都救不回来，\n   而 height 在交叉轴不受影响，于是图标被压扁变形。后代选择器兼容官方图标外的 wrapper。 */\n.dshpc-iconbtn svg{display:block;width:1em;height:1em;flex:none;}\n/* dense：只放大图标的 em 值，正方形宽高与高度档都不动；\n   1.25em 相对按钮字号 12/13 ⇒ 15/16.25px，与 .dshpc-btn--dense 一致。 */\n.dshpc-iconbtn.dshpc-iconbtn--dense svg{width:1.25em;height:1.25em;}\n.dshpc-iconbtn--outline{--icb-bg:var(--dshpc-surface-1);--icb-border:var(--dshpc-border);}\n.dshpc-iconbtn--danger{--icb-fg:var(--dshpc-danger);--icb-bg-hover:var(--dshpc-danger-soft);--icb-fg-hover:var(--dshpc-danger);}\n.dshpc-iconbtn:hover:not(:disabled){background:var(--icb-bg-hover);color:var(--icb-fg-hover);}\n.dshpc-iconbtn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}\n.dshpc-iconbtn:disabled{cursor:default;opacity:.4;}\n\n/* ── 行式文件按钮（图标 + 文件名）P2：**全站唯一实现**（2026-10-04 收编）──────────\n   用途：「产出物 / 附件」那种**一行一个文件**的清单项（基础信息右栏产出物清单、附件区、\n   执行记录页的展开区）。平时透明、**鼠标移上去才出浅底**（沿用用户 2026-10-03 定的观感）。\n   两个形态修饰类：\n     --block   撑满父宽（清单里一项一行）\n     --inline  内容宽（跟在文字后头，如附件行）\n   收编原因：这份皮肤此前只写在 task-list.tsx 的 TASK_LIST_CSS 里（旧名 .dshpc-info-out），\n   执行记录页展开区要用同一种观感 ⇒ 上提基础层，避免再出现「各写一份外观」（同名不同皮的坑刚踩过）。 */\n.dshpc-filechip{appearance:none;-webkit-appearance:none;border:0;border-radius:var(--dshpc-radius-xs);\n  background:transparent;color:var(--dshpc-fg);font:inherit;text-align:left;cursor:pointer;min-width:0;\n  transition:background-color var(--dshpc-dur) var(--dshpc-ease);}\n.dshpc-filechip:hover:not(:disabled){background:var(--dshpc-chip-bg);}\n.dshpc-filechip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}\n.dshpc-filechip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}\n.dshpc-filechip--block{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;\n  padding:4px 6px;font-size:var(--dshpc-font-xs);}\n.dshpc-filechip--inline{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;font-size:var(--dshpc-font-sm);}\n\n@media (prefers-reduced-motion: reduce){.dshpc-btn,.dshpc-iconbtn,.dshpc-filechip{transition:none;}}\n";
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/field-css.generated.js
 		const FIELD_CSS$1 = "\n/* ── 字段 + 问号提示（hint 参数内置） ──────────────────────────────────── */\n/* 控件 + FieldHint 同一行；hint 版由组件自己包，调用方只传 hint 字符串。\n   铺满型控件（input/textarea）进包后改吃 flex 弹性，让位给问号。 */\n.dshpc-fieldwrap{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;}\n.dshpc-fieldwrap--inline{display:inline-flex;}\n.dshpc-fieldwrap > .dshpc-input,.dshpc-fieldwrap > .dshpc-textarea,.dshpc-fieldwrap > .dshpc-iwrap{flex:1 1 auto;width:auto;min-width:0;}\n/* 多行输入：问号钉在**右下角**（2026-10-20 用户：不要垂直居中），文本区底部留出它的位置。\n   ⚠️ 这一档必须把 textarea 的宽度还回去（上面那条 flex 让位规则会把它缩窄）。 */\n.dshpc-fieldwrap--block{position:relative;display:block;}\n.dshpc-fieldwrap--block > .dshpc-textarea{width:100%;padding-bottom:24px;}\n.dshpc-fieldwrap--block > .dshpc-hint{position:absolute;right:8px;bottom:6px;}\n\n/* ── 输入类 P3 ────────────────────────────────────────────────────────── */\n/* 默认铺满容器（width:100%，与 .dshpc-textarea 同口径）：input 原生按 size 属性取内在宽，\n   不铺满 ⇒ 调用方套定宽壳时会「右边空一截、看着没贴右」（2026-10-20 用户抓的 bug）。\n   要定宽由调用方在外面套壳控制（如 192px 搜索槽）。 */\n.dshpc-input{display:block;width:100%;box-sizing:border-box;border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);\n  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font-family:inherit;outline:none;\n  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-input--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}\n.dshpc-input--md{height:var(--dshpc-control-h-md);padding:0 10px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-input--lg{height:var(--dshpc-control-h-lg);padding:0 12px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-input::placeholder{color:var(--dshpc-fg-3);}\n/* type=\"search\"：原生清除钮（::-webkit-search-cancel-button）整个隐掉，换组件自己挂的 plain IconButton\n   —— 原生那个各子系统长相不一、还不吃 token（2026-10-28 用户：不好看，要数字框加减号那种）。 */\n.dshpc-iwrap .dshpc-input::-webkit-search-cancel-button{display:none;}\n.dshpc-input:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n.dshpc-input--error{border-color:var(--dshpc-danger);}\n.dshpc-input:disabled{cursor:default;opacity:.5;}\n\n/* 左侧图标槽（Input 的 icon 参数）：图标绝对定位压在输入框的左内边距上，\n   输入框自己的边框 / 焦点圈 / 描红一律不动。图标不吃点击（pointer-events:none）⇒ 点在图标上照样聚焦。\n   左内边距 = 左偏 8 + 图标宽（sm 14 / md·lg 16，见 fieldMetricsOf）+ 间距 4。 */\n.dshpc-iwrap{position:relative;display:block;width:100%;min-width:0;}\n.dshpc-iwrap__icon{position:absolute;left:8px;top:50%;transform:translateY(-50%);display:inline-flex;pointer-events:none;color:var(--dshpc-fg-2);}\n.dshpc-iwrap--sm > .dshpc-input{padding-left:26px;}\n.dshpc-iwrap--md > .dshpc-input,.dshpc-iwrap--lg > .dshpc-input{padding-left:28px;}\n/* 禁用时图标跟输入框一起变淡（输入框自己已有 opacity:.5，图标不在它里面，得单独跟一下）。 */\n.dshpc-iwrap:has(> .dshpc-input:disabled) > .dshpc-iwrap__icon{opacity:.5;}\n\n/* 搜索框的清空钮（Field.ts 在「有焦点 + 有内容」时才挂出来）：**并进框里**，与数字框的 − / +\n   同形态 —— 整段同高、左直右圆、hover 底色铺满这一格（2026-10-28 用户：不要一颗悬在右边的小按钮）。\n   向内让 1px，免得底色压住输入框自己的边框。 */\n.dshpc-iwrap__clear.dshpc-iconbtn{position:absolute;right:1px;top:1px;bottom:1px;height:auto;width:auto;aspect-ratio:1;\n  border-radius:0 var(--dshpc-radius-md) var(--dshpc-radius-md) 0;font-size:var(--dshpc-font-md);}\n/* height:auto 必须：iconbtn--md/lg 的固定 height 会让 absolute 的 bottom 被忽略\n   （top:1 + 固定高 ⇒ 整钮错位 1px，× 显得没居中，2026-10-28 用户截图抓的）。 */\n/* 文字让开这一段（宽度 = 控件高 - 2，故按档位补）。 */\n.dshpc-iwrap--clear > .dshpc-input{padding-right:calc(var(--dshpc-control-h-md) + 3px);}\n.dshpc-iwrap--clear.dshpc-iwrap--sm > .dshpc-input{padding-right:calc(var(--dshpc-control-h-sm) + 3px);}\n.dshpc-iwrap--clear.dshpc-iwrap--lg > .dshpc-input{padding-right:calc(var(--dshpc-control-h-lg) + 3px);}\n\n.dshpc-pfx{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg);}\n.dshpc-pfx--sm{height:var(--dshpc-control-h-sm);}\n.dshpc-pfx--md{height:var(--dshpc-control-h-md);}\n.dshpc-pfx--lg{height:var(--dshpc-control-h-lg);}\n/* md / lg 档字号跟档走（与同档下拉同字号）：此前写死 sm(12px)，同排下拉是 13px ⇒ 显得「input 字小」。 */\n.dshpc-pfx--md .dshpc-pfx__label,.dshpc-pfx--lg .dshpc-pfx__label{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-pfx--md .dshpc-pfx__input,.dshpc-pfx--lg .dshpc-pfx__input{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-pfx--error{border-color:var(--dshpc-danger);}\n.dshpc-pfx:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n.dshpc-pfx__label{padding:0 8px;color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);white-space:nowrap;border-right:1px solid var(--dshpc-border);}\n.dshpc-pfx__input{flex:1 1 auto;min-width:0;height:100%;padding:0 8px;border:0;background:transparent;color:var(--dshpc-fg);\n  font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);outline:none;}\n.dshpc-pfx__input::placeholder{color:var(--dshpc-fg-3);}\n\n.dshpc-num{display:inline-flex;align-items:center;justify-content:space-between;box-sizing:border-box;overflow:hidden;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);color:var(--dshpc-fg);}\n/* 中段：数字 + 后缀成组居中；容器被消费端拉宽时吃掉全部余量，两端 − / + 因此钉死在左右边缘。 */\n.dshpc-num__mid{display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0;}\n.dshpc-num--sm{height:var(--dshpc-control-h-sm);}\n.dshpc-num--md{height:var(--dshpc-control-h-md);}\n.dshpc-num--lg{height:var(--dshpc-control-h-lg);}\n.dshpc-num--md .dshpc-num__input,.dshpc-num--lg .dshpc-num__input{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n.dshpc-num--md .dshpc-num__suffix,.dshpc-num--lg .dshpc-num__suffix{font-size:var(--dshpc-font-md);}\n.dshpc-num--disabled{opacity:.5;}\n/* 焦点态与 Input 同款（2026-10-20 用户：数字框里点进去没有蓝框）：内层 input 无边框，\n   焦点状态画在整个步进控件外框上。 */\n.dshpc-num:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n.dshpc-num__input{width:36px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--dshpc-fg);\n  font-family:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);text-align:center;outline:none;}\n.dshpc-num__suffix{padding:0 6px;color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm);white-space:nowrap;}\n.dshpc-num .dshpc-iconbtn{border-radius:0;color:var(--dshpc-fg-2);flex:none;}\n\n/* 官方 Switch 包装统一：选中 = success 绿。\n   （合并原先 task-editor-css / task-list 两处就地覆盖；选择器带包装类 + role，特异性高于官方。） */\n.dshpc-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}\n\n/* 多行文本输入（提示词等，P3）：**边框 / 圆角 / 底 / 焦点态与 Input 同一套口径**（用户 2026-10-20：\n   「多行输入应该和 input 的边儿是一个道理，包括圆角在内，都是一个东西」）。\n   ⚠️ 旧意图「卡内无边框、视觉重心在整张卡上」已作废 —— 现在它就是一只带框的多行输入框。\n   （从 task-editor-css 的 .dshpc-ed-prompt 上提而来；业务文件不再自写 textarea 皮肤。） */\n.dshpc-textarea{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:8px 12px;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);outline:none;\n  background:var(--dshpc-surface-1);color:var(--dshpc-fg);font-family:inherit;font-size:var(--dshpc-font-lg);line-height:1.6;resize:vertical;\n  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease),box-shadow var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-textarea::placeholder{color:var(--dshpc-fg-3);}\n.dshpc-textarea:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n/* 校验不通过：与 Input 一致，走边框描红（旧版是 box-shadow 描红盒，与 Input 不同口径） */\n.dshpc-textarea--error{border-color:var(--dshpc-danger);}\n.dshpc-textarea:disabled{cursor:default;opacity:.5;}\n@media (prefers-reduced-motion: reduce){.dshpc-textarea{transition:none;}}\n\n/* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。\n   具体 z-index 由 .dshpc-ed-resizer / .dshpc-sv-resizer 各自补。 */\n.dshpc-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}\n.dshpc-resizer:hover,.dshpc-resizer:active{background:var(--dshpc-hover);}\n\n@media (prefers-reduced-motion: reduce){.dshpc-input,.dshpc-pfx{transition:none;}}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/loading-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/loading-css.generated.js
 		const LOADING_CSS = "\n/* 运行中 / loading 的活动指示：三个小方块依次脉动。 */\n@keyframes dshpc-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }\n.dshpc-run-blocks { display: inline-flex; align-items: center; gap: 3px; }\n.dshpc-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dshpc-run-block 1.2s ease-in-out infinite; }\n.dshpc-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }\n.dshpc-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }\n@media (prefers-reduced-motion: reduce) { .dshpc-run-blocks > i { animation: none; opacity: 1; } }\n\n/* ── 加载提示（LoadingToast / LoadingBlock / showLoading）───────────────────\n   两种样式的表面统一走 token（2026-11-03：原来写死 #f4f4f5/#18181b 再补一段暗色覆盖，\n   等于自己造第二套主题；现在底色/字色/阴影全从 var(--dshpc-*) 来，暗色自动跟随）。\n   卡里的转圈图标不自绘：复用 Loader（size sm / md），环的画法与动画只有 controls/loader.css 一份。 */\n\n/* 样式一：横排 toast 卡（图标在左、文字在右），与 notify 的 info 卡同尺寸同色。 */\n.dshpc-loading-toast {\n  display: inline-flex; align-items: center; gap: 10px;\n  /* 不学 notify 固定 320 宽：这张卡也常被塞进表格 / 窄栏里，宽度随内容走。\n     shortcut: 下限 250px，要更宽 / 更窄就改这一处。 */\n  min-width: 250px; min-height: 48px; padding: 12px 16px; box-sizing: border-box;\n  border-radius: var(--dshpc-radius-lg); box-shadow: var(--dshpc-shadow-2);\n  background: var(--dshpc-surface-1); color: var(--dshpc-fg);\n  font-size: var(--dshpc-font-lg); line-height: var(--dshpc-line-lg);\n}\n\n/* 样式二：方块卡（转圈在上、文字在下），内距更大。 */\n.dshpc-loading-block {\n  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;\n  min-width: 132px; min-height: 132px; padding: 24px; box-sizing: border-box;\n  border-radius: var(--dshpc-radius-md); box-shadow: var(--dshpc-shadow-2);\n  background: var(--dshpc-surface-1); color: var(--dshpc-fg);\n  font-size: var(--dshpc-font-md); line-height: var(--dshpc-line-md);\n}\n\n/* 全局浮层：居中、不挡点击（遮罩层单独一个 div 才挡）。\n   与 Modal 遮罩同一套让位口径：右边界读 --dshpc-page-inset-right。 */\n.dshpc-loading-overlay {\n  position: fixed; inset: 0 var(--dshpc-page-inset-right, 0px) 0 0; z-index: var(--dshpc-z-modal);\n  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;\n  padding: 24px; box-sizing: border-box; pointer-events: none;\n}\n/* 七向定位（与 Toast 的六向同名 + 正中）：默认 bottom-center，与 Sonner 提示同屏位。 */\n.dshpc-loading-overlay--top-left { align-items: flex-start; justify-content: flex-start; }\n.dshpc-loading-overlay--top-center { justify-content: flex-start; }\n.dshpc-loading-overlay--top-right { align-items: flex-end; justify-content: flex-start; }\n.dshpc-loading-overlay--bottom-left { align-items: flex-start; justify-content: flex-end; }\n.dshpc-loading-overlay--bottom-center { justify-content: flex-end; }\n.dshpc-loading-overlay--bottom-right { align-items: flex-end; justify-content: flex-end; }\n.dshpc-loading-overlay__mask { position: absolute; inset: 0; pointer-events: auto; }\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/loader-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/loader-css.generated.js
 		const LOADER_CSS = "/* ── Loader：统一的加载动画图标（无背景 / 无定位 / 颜色跟随 currentColor）────────\n   形态 × 尺寸两轴正交：形态管几何与动画；尺寸档只改 width / height，几何按\n   viewBox=\"0 0 24 24\" 等比缩放 —— 一套几何吃五档，12px 时描边即 1.5px、48px 时 6px，\n   视觉重量一致，不用逐个尺寸换算 calc。\n\n   边界：本控件**只管图标本身**。背景 / 圆角 / 内距 / 阴影 / 定位（fixed、居中、漂浮）\n   一律归调用方 —— 套 Chip、套 Card，或自己包一个 div。 */\n\n.dshpc-loader { display: inline-block; flex: none; vertical-align: middle; line-height: 0; color: inherit; }\n\n.dshpc-loader--xs { width: 12px; height: 12px; }\n.dshpc-loader--sm { width: 16px; height: 16px; }\n.dshpc-loader--md { width: 24px; height: 24px; }\n.dshpc-loader--lg { width: 32px; height: 32px; }\n.dshpc-loader--xl { width: 48px; height: 48px; }\n\n/* 形态一 ring：开口弧整体旋转。必须走 SVG 矢量弧 —— 次像素边框画圆在 12px 下会被\n   抗锯齿拉毛、看着像圆角方（2026-10-20 真机实测，曾被误判成 border-radius 被覆盖）。 */\n.dshpc-loader--ring { animation: dshpc-loader-rotate .8s linear infinite; }\n@keyframes dshpc-loader-rotate { to { transform: rotate(360deg) } }\n\n/* 形态二 blocks：三个方块依次脉动放大。\n   transform-box: fill-box 是 SVG 子元素做 CSS transform 的必要条件 —— 否则 origin\n   落在 viewBox 原点，节点会绕着左上角飞出去。 */\n.dshpc-loader__node { transform-box: fill-box; transform-origin: center; }\n.dshpc-loader--blocks .dshpc-loader__node { animation: dshpc-loader-blink 1.2s ease-in-out infinite; }\n.dshpc-loader__node:nth-child(2) { animation-delay: .15s; }\n.dshpc-loader__node:nth-child(3) { animation-delay: .3s; }\n@keyframes dshpc-loader-blink {\n  0%, 80%, 100% { opacity: .25; transform: scale(.8) }\n  40% { opacity: 1; transform: scale(1) }\n}\n\n/* 降低动效：停在「全部可见、实体大小」，而不是停在动画中途的半透明小点。 */\n@media (prefers-reduced-motion: reduce) {\n  .dshpc-loader--ring { animation: none; }\n  .dshpc-loader__node { animation: none; opacity: 1; transform: none; }\n}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/layout/quick-toolbar-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/layout/quick-toolbar-css.generated.js
 		const QUICK_TOOLBAR_CSS = "/* 快捷工具栏：右侧悬浮的一列独立圆钮。\n   横向 left / right 与 bottom、按钮直径、纵向间距由组件按 props 实时写入 style；\n   这里只放与位置无关的皮肤。 */\n.dshpc-quick-toolbar{\n  position:fixed;\n  z-index:var(--dshpc-z-dock);\n  display:flex;\n  flex-direction:column;\n  align-items:center;\n}\n/* 出现 / 消失：挂载即淡入，退场先播 fade-out（组件延迟卸载，见 QuickToolbar.ts）。 */\n@keyframes dshpc-quick-toolbar-in{\n  from{opacity:0;transform:translateY(6px) scale(.9);}\n  to{opacity:1;transform:none;}\n}\n@keyframes dshpc-quick-toolbar-out{\n  from{opacity:1;transform:none;}\n  to{opacity:0;transform:translateY(6px) scale(.9);}\n}\n.dshpc-quick-toolbar__item{\n  display:inline-flex;\n  align-items:center;\n  justify-content:center;\n  padding:0;\n  margin:0;\n  box-sizing:border-box;\n  border:1px solid var(--dshpc-border);\n  border-radius:50%;\n  /* 自定义底色 / 字色只写这两个变量（见 QuickToolbar.ts），hover/active 才能跟着混色。 */\n  background:var(--dshpc-quick-toolbar-bg, var(--dshpc-solid));\n  color:var(--dshpc-quick-toolbar-fg, var(--dshpc-on-solid));\n  box-shadow:var(--dshpc-shadow-2);\n  cursor:pointer;\n  animation:dshpc-quick-toolbar-in var(--dshpc-dur) var(--dshpc-ease);\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),\n             color var(--dshpc-dur-fast) var(--dshpc-ease),\n             transform var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n/* 退场期保留占位，避免同列其他按钮瞬时跳位。 */\n.dshpc-quick-toolbar__item.is-leaving{\n  animation:dshpc-quick-toolbar-out var(--dshpc-dur) var(--dshpc-ease) forwards;\n  pointer-events:none;\n}\n/* 变色与核心 Button 实心档同一套：按 --dshpc-fg 混出 hover / active 底色（自定义 color 也跟随）。 */\n.dshpc-quick-toolbar__item:hover{\n  background:color-mix(in srgb, var(--dshpc-quick-toolbar-bg, var(--dshpc-solid)) 82%, var(--dshpc-fg));\n}\n.dshpc-quick-toolbar__item:active{\n  background:color-mix(in srgb, var(--dshpc-quick-toolbar-bg, var(--dshpc-solid)) 70%, var(--dshpc-fg));\n  transform:scale(.94);\n}\n.dshpc-quick-toolbar__item:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:2px;}\n@media (prefers-reduced-motion: reduce){\n  .dshpc-quick-toolbar__item{transition:none;transform:none;animation:none;}\n  .dshpc-quick-toolbar__item.is-leaving{animation:none;opacity:0;}\n}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/hint-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/hint-css.generated.js
 		const HINT_CSS = "\n/* ── 问号提示 P4（用户 2026-10-18：对齐真实插件 HelpButton——**带圈的问号图标**）──\n   本体 14px 细圈 + 圈内 ?，颜色 fg-3、hover 只提亮不加底（与 dshpc-ed-help 同规矩）。\n   气泡不在本文件：2026-10-19 用户拍板「问号必须用官方 Tooltip 那一个」⇒ 气泡由注入的\n   官方组件渲染（src/ui/tooltip.ts），这里只管问号图标本身。 */\n.dshpc-hint{display:inline-flex;align-items:center;justify-content:center;flex:none;\n  box-sizing:border-box;width:14px;height:14px;padding:0;border:1px solid currentColor;border-radius:50%;background:transparent;\n  color:var(--dshpc-fg-3);font-family:inherit;font-size:8px;font-weight:600;line-height:12px;cursor:help;vertical-align:middle;\n  transition:color var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-hint:hover,.dshpc-hint:focus-visible{color:var(--dshpc-fg);background:0 0;}\n.dshpc-hint:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/datetime-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/datetime-css.generated.js
 		const DATETIME_CSS = "/* 日期时间选择器（DateTimePicker）。类名 dshpc-dt-*；配色只吃 token，明暗随 token 切换。\n   结构：触发器（range = 一个整条：两个日期区 + 样式画的灰隔条；single = 单日期）→ 浮层\n   （两个独立端框 + 两块独立日历 + 底部动作）。\n   浮层行为与 Picker 一致：portal 到 body、贴边翻转、点外关闭、无遮罩。 */\n.dshpc-dt{position:relative;display:inline-block;font-size:13px;line-height:20px}\n.dshpc-dt__trigger{\n  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;\n  max-width:100%;height:var(--dshpc-control-h-md);padding:0 10px;\n  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);\n  color:var(--dshpc-fg);background:var(--dshpc-surface-1);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);cursor:pointer;\n}\n/* 三档与 .dshpc-input 逐项对齐：高度同 control-h、内距 8/10/12、字号 sm 降到 font-sm（2026-11-06）。 */\n.dshpc-dt__trigger--sm{height:var(--dshpc-control-h-sm);padding:0 8px;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm)}\n.dshpc-dt__trigger--lg{height:var(--dshpc-control-h-lg);padding:0 12px}\n.dshpc-dt__trigger:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed;opacity:.7}\n/* 焦点与基础 Input 完全同款（点击即蓝描边 + 1px 光环）。 */\n.dshpc-dt__trigger:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__trigger-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-variant-numeric:tabular-nums}\n.dshpc-dt__trigger-label--empty{color:var(--dshpc-fg-3)}\n.dshpc-dt__cal{flex:none;color:var(--dshpc-fg-3)}\n/* range 触发器：一个整条里两个日期区 + 样式画出来的灰隔条（左右两条竖边），点整条都展开。 */\n/* 组撑满触发器内容高度，隔条才能上下顶到 border。 */\n.dshpc-dt__pair-group{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:8px}\n/* 两个日期区平分（flex:1 1 0）：开始 / 结束永远一样宽，不随内容偏袒。 */\n.dshpc-dt__pair-date{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__pair-date--empty{color:var(--dshpc-fg-3)}\n/* 隔条：上下顶到触发器 border（与边框连起来），中间隔出一块；块里放「到」的符号（-，用户 2026-10-24 拍板）。 */\n.dshpc-dt__pair-sep{\n  flex:none;align-self:stretch;width:22px;margin:0;\n  display:inline-flex;align-items:center;justify-content:center;\n  background:var(--dshpc-surface-sunken);\n  border-left:1px solid var(--dshpc-border);border-right:1px solid var(--dshpc-border);\n  color:var(--dshpc-fg-3);font-size:12px;line-height:1;\n}\n/* 默认宽：**固定**（选中前后不变），数值对照参考图实测（2x 屏，换算 CSS px）后\n   统一 -6px（用户 2026-10-24：实测值留得偏多）：\n   单值 day 128 / 时·分 153.2 / 秒 174.8；区间 day 269 / 分 341.4 / 秒 377.6。\n   ch = 字体里 \"0\" 的宽（日期 tabular-nums 等宽）⇒ 写成 Nch + 常数；常数同时兜住\n   默认占位「请选择日期时间」（7 汉字）不省略。调用方要另给宽：className 传 width。 */\n.dshpc-dt__trigger--w-day{width:calc(10ch + 56px)}\n.dshpc-dt__trigger--w-minute{width:calc(16ch + 38px)}\n.dshpc-dt__trigger--w-second{width:calc(19ch + 38px)}\n.dshpc-dt__trigger--wr-day{width:calc(20ch + 125px)}\n.dshpc-dt__trigger--wr-minute{width:calc(32ch + 111px)}\n.dshpc-dt__trigger--wr-second{width:calc(38ch + 104px)}\n\n/* 弹层表面积归 panel.css 的 popover 档（与选文件弹窗同档）：这里只留层序与内距。 */\n.dshpc-dt__pop{\n  z-index:var(--dshpc-z-popmenu);padding:10px;user-select:none;\n  font-size:13px;line-height:20px;\n}\n/* 两个独立端框（range）：按钮皮肤全走核心 Button，这里只管两根框的排布与内部文字。 */\n.dshpc-dt__ends{display:flex;gap:6px;margin-bottom:8px}\n.dshpc-dt__ends > .dshpc-btn{flex:1 1 0;min-width:0}\n.dshpc-dt__end-label{flex:none;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3);white-space:nowrap}\n.dshpc-dt__end-value{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}\n.dshpc-dt__end-value--empty{color:var(--dshpc-fg-3)}\n\n.dshpc-dt__nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}\n.dshpc-dt__nav-group{display:flex;gap:2px}\n.dshpc-dt__nav-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__nav-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__nav-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__caption{font-size:13px;font-weight:600;color:var(--dshpc-fg);white-space:nowrap}\n\n/* 列宽弹性：弹层常被底部动作钮（英文 Today/Clear/Cancel/Confirm）撑得比日历宽，\n   固定 30px 会在右边留一大块空白。minmax(30px,1fr) ⇒ 中文时按钮短、格子仍 30px；\n   英文时按钮长、格子自动拉开填满，不留白（2026-11-06）。 */\n.dshpc-dt__grid{display:grid;grid-template-columns:repeat(7,minmax(30px,1fr));gap:2px}\n.dshpc-dt__wd{height:20px;font-size:11px;line-height:20px;color:var(--dshpc-fg-3);text-align:center}\n.dshpc-dt__cell{\n  height:26px;padding:0;font-size:12px;font-variant-numeric:tabular-nums;\n  color:var(--dshpc-fg);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__cell:hover{background:var(--dshpc-surface-sunken)}\n.dshpc-dt__cell:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__cell--out{color:var(--dshpc-fg-dim)}\n.dshpc-dt__cell--today{color:var(--dshpc-business);font-weight:600}\n/* 起 / 止端：品牌蓝实面反白（与 Segmented weekday 选中同口径）。\n   ⚠️ 字色用常量白 --dshpc-on-signal，不用 --dshpc-fg-inverse：后者跟宿主 label-primary-foreground，\n   暗色主题下是近黑 ⇒ 蓝底黑字（与 Segmented 2026-10-29 同一事故）。 */\n.dshpc-dt__cell--sel{background:var(--dshpc-business);color:var(--dshpc-on-signal);font-weight:600}\n.dshpc-dt__cell--sel:hover{background:var(--dshpc-business-hover)}\n\n/* 两块日历面板（range：左开始、右结束，各选各的）。 */\n.dshpc-dt__panels{display:flex;gap:14px;align-items:flex-start}\n/* 面板跟着 body 一起吃掉弹层多出来的宽，grid 的 1fr 才有东西可分；\n   range 两块日历各自 basis = 内容宽，多余空间才平分，不会互相挤窄。 */\n.dshpc-dt__panel{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}\n\n/* 左列（两个端框 + 两块日历）与右列（快捷档）并排；不传 presets 时只剩左列，布局与旧版一致。 */\n.dshpc-dt__layout{display:flex;align-items:stretch;gap:10px}\n.dshpc-dt__body{flex:1 1 auto;min-width:0}\n/* 右列高度由 layout 的 stretch 跟左边日历区拉齐，自己不撑高弹层；档位多了只在列内滚。\n   76px 容得下英文缩写最长那档 + 滚动条，中文两字居中，不随文案变宽（2026-11-06）。 */\n.dshpc-dt__side{\n  position:relative;flex:none;width:76px;\n  padding-left:9px;border-left:1px solid var(--dshpc-border-faint);\n}\n/* 右溢 10px 抵消面板 padding，滚动条才贴到面板自身 1px 边框内侧；内容用 padding-right 补回边距。 */\n.dshpc-dt__side-scroll{\n  position:absolute;inset:0 -10px 0 9px;padding-right:9px;\n  display:flex;flex-direction:column;gap:2px;overflow-y:auto;\n}\n.dshpc-dt__side-scroll > .dshpc-btn{flex:none}\n\n.dshpc-dt__time{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:2px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__unit{display:flex;flex-direction:column;align-items:center;gap:2px}\n.dshpc-dt__unit-label{font-size:10px;line-height:14px;color:var(--dshpc-fg-3)}\n.dshpc-dt__step-btn{\n  display:inline-flex;align-items:center;justify-content:center;width:34px;height:14px;padding:0;\n  color:var(--dshpc-fg-2);background:none;border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n}\n.dshpc-dt__step-btn:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n.dshpc-dt__step-btn:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px}\n.dshpc-dt__step-val{\n  width:34px;height:24px;padding:0;box-sizing:border-box;text-align:center;\n  font-size:13px;font-variant-numeric:tabular-nums;color:var(--dshpc-fg);\n  background:var(--dshpc-surface-sunken);border:1px solid var(--dshpc-border-heavy);\n  border-radius:var(--dshpc-radius-sm);outline:none;\n}\n.dshpc-dt__step-val:focus{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus)}\n.dshpc-dt__step-val:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed}\n.dshpc-dt__sep{padding-bottom:5px;color:var(--dshpc-fg-3);font-size:12px}\n\n.dshpc-dt__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n.dshpc-dt__foot-side{display:flex;align-items:center;gap:6px}\n.dshpc-dt__warn{font-size:11px;color:var(--dshpc-warning-label);white-space:nowrap}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/input-group-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/input-group-css.generated.js
 		const INPUT_GROUP_CSS = "\n/* ── 组合输入框 InputGroup ─────────────────────────────────────────────\n   输入框 + 后置按钮（一枚或多枚）+ 可选前置标题，焊成一体。\n   与 SplitGroup 同一套外观口径：外框 / 圆角 / 相邻 1px 分隔 / 整体聚焦圈都由外壳画，\n   内件（.dshpc-input / .dshpc-btn / .dshpc-iconbtn）把自己的边框、圆角、外圈交出来。\n\n   高度默认吃 --dshpc-control-h-*（sm 24 / md 28 / lg 32）；调用方要自定义就在根节点\n   内联 height，这里让内件 height:100% 跟上 —— 内件档位高度只有 0,1,0，被本文件的\n   0,2,0 压掉，不会出现「外壳变高了、里面的框还是 32」。\n   （⚠️ 别改成不写 height:100% 只靠 stretch：input 有确定高度时 flex 不会拉伸它。） */\n/* min-width：输入格是 flex:1，没有它时 inline-flex 按占位文字宽收得很窄（搜索框 + 按钮的典型用法会难看）。\n   要更宽 / 更窄由调用方在外面套壳或给 className，不许在这里写死 max-width。 */\n.dshpc-igroup{display:inline-flex;align-items:stretch;min-width:200px;max-width:100%;box-sizing:border-box;overflow:hidden;\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);background:var(--dshpc-surface-1);}\n.dshpc-igroup--sm{height:var(--dshpc-control-h-sm);}\n.dshpc-igroup--md{height:var(--dshpc-control-h-md);}\n.dshpc-igroup--lg{height:var(--dshpc-control-h-lg);}\n.dshpc-igroup--error{border-color:var(--dshpc-danger);}\n/* 整体聚焦：内件自己的焦点圈交出来，由外壳画一整圈（各画各的会变成格内半圈） */\n.dshpc-igroup:focus-within{border-color:var(--dshpc-focus);box-shadow:0 0 0 1px var(--dshpc-focus);}\n\n/* 前置标题：与输入框同格，灰底区分（与 SplitGroup 左格同一口径） */\n.dshpc-igroup__label{display:inline-flex;align-items:center;flex:none;padding:0 8px;white-space:nowrap;\n  background:var(--dshpc-surface-sunken);color:var(--dshpc-fg-2);\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);}\n.dshpc-igroup--md .dshpc-igroup__label,.dshpc-igroup--lg .dshpc-igroup__label{font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n\n/* 输入格：交出边框 / 圆角 / 底色 / 焦点圈；宽度交给 flex（原生 width:100% 会和 flex-basis 打架） */\n.dshpc-igroup > .dshpc-input{flex:1 1 auto;width:auto;min-width:0;height:100%;border:0;border-radius:0;background:transparent;}\n.dshpc-igroup > .dshpc-input:focus{box-shadow:none;}\n\n/* 按钮格：交出边框与圆角；实心底色保留（右侧「确定」该有重量）。\n   纯图标钮本身是固定宽的方块，这里改成按高度撑出的正方形，自定义高度时才不会变成竖长条。 */\n.dshpc-igroup > .dshpc-btn,.dshpc-igroup > .dshpc-iconbtn{flex:none;height:100%;border-radius:0;}\n.dshpc-igroup > .dshpc-iconbtn{width:auto;aspect-ratio:1;}\n.dshpc-igroup > .dshpc-btn{border:0;}\n\n/* 分隔线：相邻兄弟的左描边，不额外插 DOM。后两条是给「清过边框」的格子补回来的，\n   必须写成 0,2,0 且写在上面的 border:0 之后 —— 否则被 border:0 压掉，格子之间没分隔。 */\n.dshpc-igroup > * + *{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n.dshpc-igroup > * + .dshpc-input{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n.dshpc-igroup > * + .dshpc-btn{box-sizing:border-box;border-left:1px solid var(--dshpc-border);}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/table-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/table-css.generated.js
 		const TABLE_BASE_CSS = "/* ── 表格基础层（结构 + 交互 + 空态）─────────────────────────────────────\n   外观分档 = 分组件 + 分文件：本文件只放所有外观共用的部分；\n   表头底色、分隔线、悬浮 / 选中色由皮肤文件负责（table-plain.css 是第一档）。\n   皮肤选择器一律挂在 .dshpc-table--<skin> 下，与基础层不同名 —— 注入顺序不影响胜负\n   （test/css-contract.test.mjs 禁止跨常量同名选择器）。\n   圆角裁剪 / 横向滚动归调用方容器，本层不设 overflow；也不做表头吸顶：\n   分组表头是多行，统一 top:0 会在滚动时互相盖住（要吸顶请在外层容器处理）。 */\n\n.dshpc-table{--dshpc-table-pad-x:var(--dshpc-space-3);--dshpc-table-head-h:44px;--dshpc-table-row-h:48px;\n  width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;box-sizing:border-box;\n  color:var(--dshpc-fg);font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}\n\n/* 密度三档：只改行高与水平内距，配色与分隔线归皮肤。compact / comfortable 各一行，\n   新增档位在此追加；列级 padding 走内联 style 覆盖（不在这里再开一套变量）。\n   默认水平内距 12px（space-3）—— 参考稿的色块间距，16px 偏松。 */\n.dshpc-table--density-compact{--dshpc-table-pad-x:var(--dshpc-space-2);--dshpc-table-head-h:36px;--dshpc-table-row-h:36px;}\n.dshpc-table--density-comfortable{--dshpc-table-pad-x:var(--dshpc-space-4);--dshpc-table-head-h:52px;--dshpc-table-row-h:60px;}\n\n.dshpc-table__head-cell,.dshpc-table__cell{box-sizing:border-box;padding:var(--dshpc-space-1) var(--dshpc-table-pad-x);\n  text-align:left;vertical-align:middle;font-weight:400;}\n\n/* 表头 44 / 数据行 48 是 default 档（参考稿密度）；height 在 table-cell 上是最小高，\n   多行内容会自动把行撑高，不会被截断。 */\n.dshpc-table__head-cell{height:var(--dshpc-table-head-h);font-size:var(--dshpc-font-sm);font-weight:600;color:var(--dshpc-fg-2);}\n.dshpc-table__head-cell--group{text-align:center;}\n.dshpc-table__cell{height:var(--dshpc-table-row-h);}\n\n.dshpc-table__head-cell--center,.dshpc-table__cell--center{text-align:center;}\n.dshpc-table__head-cell--right,.dshpc-table__cell--right{text-align:right;}\n\n.dshpc-table__row{transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease);}\n/* 只有传了 onRowClick 的行才是可点的（数据属性由组件按此打）。 */\n.dshpc-table__row[data-interactive='true']{cursor:pointer;}\n.dshpc-table__row:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px;}\n\n/* 斑马纹是通用能力（表级 striped 开关），放在基础层：底色取 token，各档皮肤不必各自实现。\n   选择器刻意只到 3 个类级别（表级 + 行 + :nth-child）；皮肤层的行态规则带 __body 上下文\n   + 属性选择器，必然是 4 级 ⇒ 与注入顺序无关地压过它。\n   2026-10-30 真机事故：这里曾写满 4 级（多了一个 __body），与选中的 4 级相同 ⇒ 基础层\n   比皮肤后注入，偶数行永远被斑马纹盖住（「单数行能选中、双数行点了没反应」）。 */\n.dshpc-table--striped .dshpc-table__row:nth-child(even){background:var(--dshpc-plate);}\n\n/* 分组通栏：一个表格里放多个板块（工作区 A / 工作区 B）时，每组先来一行横跨全部列的大标题，\n   然后才是这一组自己的表头与数据行。结构 + 底色归基础层（只用 token，各档皮肤共同成立）；\n   通栏底走 --dshpc-table-banner-bg（与表头互换的那一档，2026-10-30 用户定）；\n   通栏与组表头之间画一条线（用户 2026-10-30：那之间也要有 border）；\n   组与组之间用通栏顶线隔开，第一组顶部不画（外框已经在那儿，画了就成双线）。 */\n.dshpc-table__group-cell{height:var(--dshpc-table-head-h);padding:var(--dshpc-space-1) var(--dshpc-table-pad-x);\n  box-sizing:border-box;background:var(--dshpc-table-banner-bg);border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  text-align:left;vertical-align:middle;font-size:var(--dshpc-font-sm);font-weight:600;color:var(--dshpc-fg);}\n.dshpc-table__group-body:first-of-type .dshpc-table__group-cell{border-top:0;}\n\n/* 通栏标题的固定标签（短竖线）与排版由 SectionHead 自带（4px 圆头），本层不再画。 */\n\n.dshpc-table__empty{height:80px;padding:0 var(--dshpc-space-4);text-align:center;\n  color:var(--dshpc-fg-3);font-size:var(--dshpc-font-sm);}\n\n/* 加载态行（加载更多 / 没有更多 / 整表加载）：单元格自身不画边框（底部状态行的顶线由皮肤补），内容居中；\n   整表加载默认占位 160px（可由 loadingHeight 覆盖），底部那行只占一行高。 */\n.dshpc-table__state-cell{padding:0;border:0;text-align:center;vertical-align:middle;}\n.dshpc-table__state{display:flex;align-items:center;justify-content:center;\n  gap:var(--dshpc-space-2);min-height:40px;padding:var(--dshpc-space-1) var(--dshpc-table-pad-x);\n  box-sizing:border-box;color:var(--dshpc-fg-3);font-size:var(--dshpc-font-sm);}\n.dshpc-table__state--full{flex-direction:column;min-height:160px;gap:var(--dshpc-space-3);font-size:var(--dshpc-font-sm);}\n.dshpc-table__state-text{line-height:1;}\n/* 底部哨兵：零高、无边框、无内容，只给 IntersectionObserver 一个落点。 */\n.dshpc-table__sentinel>td{height:0;padding:0;border:0;line-height:0;}\n\n/* 内建分页的外壳：表格在上、分页条在下，间距走 space-3（分页条自己管左右对齐）。 */\n.dshpc-table-frame{display:flex;flex-direction:column;gap:var(--dshpc-space-3);}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/table-plain-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/table-plain-css.generated.js
 		const TABLE_PLAIN_CSS = "/* ── 外观一 · Plain（第一个样式：白卡片上的轻量表格）─────────────────────\n   特征：外框 + 灰底表头（含下边线，双行分组表头也清楚）、竖向分隔线、\n   数据行只保留极淡底线（不画重横线）、行悬浮淡蓝、选中行淡蓝底 + 左侧 3px 蓝竖条。\n   选择器全部挂在 .dshpc-table--plain 下，和基础层不同名（注入顺序无关）。\n   竖分隔线按列声明（格子上的 data-divider），不用相邻兄弟选择器 —— 后者会让每行首格\n   永远没有左线（用户 2026-10-30 真机看到的 Name 左侧缺线），且单元格跨列后会画错位置。\n   后续外观照此另建：table-grid.css / table-zebra.css，各自一个组件、各自 import 自己那份。 */\n\n/* 外框四态：all 四边 / x 只有左右 / y 只有上下 / none 全不要。\n   组件总会按 borders 属性和上对应 class，故这里不存在「无 class 的裸表」。\n   「不要左右两条边」就是 borders='y'。 */\n.dshpc-table--plain.dshpc-table--borders-all{border:1px solid var(--dshpc-border);}\n.dshpc-table--plain.dshpc-table--borders-x{border-left:1px solid var(--dshpc-border);\n  border-right:1px solid var(--dshpc-border);}\n.dshpc-table--plain.dshpc-table--borders-y{border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);}\n.dshpc-table--plain.dshpc-table--borders-none{border:0;}\n\n/* 表头：中性灰底 + 下边线。底色走 --dshpc-table-head-bg（= --dshpc-surface-sunken，\n   与通栏那层灰同源；2026-10-30 用户二次定案：表头 / 通栏互换底色）；下边线兜住分组表头的第二层。 */\n.dshpc-table--plain .dshpc-table__head-cell{\n  background:var(--dshpc-table-head-bg);\n  border-bottom:1px solid var(--dshpc-border);\n}\n.dshpc-table--plain .dshpc-table__head-cell--group{color:var(--dshpc-fg-3);}\n\n/* 表头多色：列级 headerTone 打到 data-header-tone，浅底 + 同色文字。\n   色值全部来自 token（soft 底 / 实色字），暗色主题自动跟随，不写死任何 hex。\n   这组规则比上方灰底规则多一个属性选择器，必然覆盖默认灰底。 */\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='business']{background:var(--dshpc-business-soft);color:var(--dshpc-business);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='success']{background:var(--dshpc-success-soft);color:var(--dshpc-success);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='warning']{background:var(--dshpc-warning-soft);color:var(--dshpc-warning);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='danger']{background:var(--dshpc-danger-soft);color:var(--dshpc-danger);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='purple']{background:var(--dshpc-purple-soft);color:var(--dshpc-purple);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='pink']{background:var(--dshpc-pink-soft);color:var(--dshpc-pink);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='cyan']{background:var(--dshpc-cyan-soft);color:var(--dshpc-cyan);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='teal']{background:var(--dshpc-teal-soft);color:var(--dshpc-teal);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='orange']{background:var(--dshpc-orange-soft);color:var(--dshpc-orange);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='indigo']{background:var(--dshpc-indigo-soft);color:var(--dshpc-indigo);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='rose']{background:var(--dshpc-rose-soft);color:var(--dshpc-rose);}\n.dshpc-table--plain .dshpc-table__head-cell[data-header-tone='slate']{background:var(--dshpc-slate-soft);color:var(--dshpc-slate);}\n\n/* 竖分隔线：按列声明，**默认不画**。组件只给 divider: true 的列打 data-divider='left'，\n   首列恒不画（那是外框的位置）。默认表格 = 只有横线、没有一条竖线；\n   要「列间有线」就给对应列 divider:true。 */\n.dshpc-table--plain .dshpc-table__head-cell[data-divider='left'],\n.dshpc-table--plain .dshpc-table__cell[data-divider='left']{border-left:1px solid var(--dshpc-border);}\n\n/* 数据行之间的极淡底线：只帮眼睛「分行」，不回到粗横线表格的老样子。 */\n.dshpc-table--plain .dshpc-table__row + .dshpc-table__row .dshpc-table__cell{\n  border-top:1px solid var(--dshpc-border-faint);\n}\n\n/* 底部状态行（加载更多 / 到底）：整行通栏，与上方数据行之间补一条实线。\n   只补顶线：左右两条不由这一格重复画 —— borders=all / x 时表级外框已经兜住；\n   borders=y / none 本来就没有左右边。整表加载占位行不加（表头已有下边线，再加就成双线）。 */\n.dshpc-table--plain .dshpc-table__state-row--footer .dshpc-table__state-cell{\n  border-top:1px solid var(--dshpc-border);\n}\n\n/* 没有左右外框时（borders=y）底部状态行下面那条表底线也去掉：\n   状态行只留上方一条实线，否则图标 / 文案下方还多一条孤线（2026-10-31 用户定）。\n   borders=none 本来就没有底边，无需在此重复。 */\n.dshpc-table--plain.dshpc-table--borders-y.dshpc-table--foot-no-bottom{border-bottom:0;}\n\n/* 行悬浮：只在可点行上给反馈，静态表格不误导用户以为能点。\n   底色是极淡中性灰（--dshpc-table-row-hover：亮色一层淡黑 ≈1.5%，暗色一层淡白 ≈3%）——\n   2026-10-30 用户：hover 要特别淡的灰、不要淡蓝（第二次又要求再浅一半）。带 __body 上下文是为了压过基础层的斑马纹（见 table.css）。 */\n.dshpc-table--plain .dshpc-table__body .dshpc-table__row[data-interactive='true']:hover{background:var(--dshpc-table-row-hover);}\n\n/* 选中行：淡蓝底 + 左侧蓝竖条。用背景渐变画条，避免 tr 上伪元素 / 定位的兼容问题；\n   两条选择器同一份声明：悬浮态（多一个属性 + 伪类）不会盖掉选中态。\n   底色用 business-soft（比悬浮再明确一档但仍是浅色），条本身才是「选中」的信号。\n   特异性 4 级，高于基础层的斑马纹（3 级）⇒ 偶数行也能正常选中。 */\n.dshpc-table--plain .dshpc-table__body .dshpc-table__row[data-selected='true'],\n.dshpc-table--plain .dshpc-table__body .dshpc-table__row[data-selected='true'][data-interactive='true']:hover{\n  background:linear-gradient(to right,var(--dshpc-business) 3px,var(--dshpc-business-soft) 3px);\n}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/navigation/pagination-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/navigation/pagination-css.generated.js
 		const PAGINATION_CSS = "/* ── 分页（‹ Previous 1 2 3 … 36 Next ›）────────────────────────────────────\n   当前页 = 蓝色圆角方块 + 白字（实心面的字必须走 --dshpc-on-signal，不许用主题反色）；\n   其余页码是纯文字按钮，悬浮只给极淡中性底。对齐由 --left / --center / --right 三个修饰决定，\n   组件默认 right。颜色全部走 token，明暗自动跟随宿主。 */\n\n.dshpc-pagination{display:flex;align-items:center;gap:var(--dshpc-space-2);flex-wrap:wrap;\n  font-size:var(--dshpc-font-sm);line-height:1;color:var(--dshpc-fg-2);}\n\n.dshpc-pagination--left{justify-content:flex-start;}\n.dshpc-pagination--center{justify-content:center;}\n.dshpc-pagination--right{justify-content:flex-end;}\n\n.dshpc-pagination__total{color:var(--dshpc-fg-3);margin-inline-end:var(--dshpc-space-1);}\n\n.dshpc-pagination__pages{display:flex;align-items:center;gap:2px;}\n\n/* 页码 / 上下页 = 核心 Button（当前页 info 实心蓝、其余 ghost），箭头 = 全站唯一 Chevron。\n   这里只补尺寸与间距，不重画按钮皮肤；两级选择器压过 .dshpc-btn--md 的内距。 */\n.dshpc-pagination .dshpc-pagination__page{padding:0 6px;min-width:28px;}\n.dshpc-pagination .dshpc-pagination__nav{padding:0 var(--dshpc-space-2);}\n\n.dshpc-pagination__ellipsis{display:inline-flex;align-items:center;justify-content:center;\n  min-width:28px;height:28px;color:var(--dshpc-fg-3);}\n\n.dshpc-pagination__simple{min-width:64px;text-align:center;font-variant-numeric:tabular-nums;\n  color:var(--dshpc-fg);}\n\n/* 简洁模式只留箭头：文字标签隐藏，箭头仍然可见（无障碍名还在 aria-label 上）。 */\n.dshpc-pagination--simple .dshpc-pagination__text{display:none;}\n\n/* 每页条数下拉 = 核心 Picker（箭头是全站唯一的 Chevron）：只收窄不参与伸缩。 */\n.dshpc-pagination__size{flex:none;}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/section-head-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/section-head-css.generated.js
 		const SECTION_HEAD_CSS = "/* 分区标题行：标签（可选，画出来的短竖线）/ icon + 标题 + 右侧控件。 */\n.dshpc-section-head{display:flex;align-items:center;gap:var(--dshpc-space-2);\n  margin-bottom:var(--dshpc-space-3);}\n.dshpc-section-head--flush{margin-bottom:0;}\n\n.dshpc-section-head__bar{flex:none;width:4px;height:1em;border-radius:999px;\n  font-size:var(--dshpc-font-lg);background:var(--dshpc-fg-2);}\n\n.dshpc-section-head__icon{display:inline-flex;align-items:center;flex:none;\n  line-height:var(--dshpc-line-lg);color:var(--dshpc-fg-3);}\n\n.dshpc-section-head__title{font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);\n  font-weight:600;color:var(--dshpc-fg);flex:none;}\n\n.dshpc-section-head__right{flex:1;display:flex;align-items:center;\n  justify-content:flex-end;gap:var(--dshpc-space-2);min-width:0;}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/Loader.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/Loader.js
 		/**
 		* Loader —— 统一的加载动画图标（UI 基础层 · 反馈族）。
 		*
@@ -338,14 +319,11 @@ window.__ModuleLoader__.load({
 				focusable: "false"
 			}, variant === "ring" ? ringNode() : blockNodes());
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/overlay-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/overlay-css.generated.js
 		const OVERLAY_CSS = "/* 浮层公共骨架：遮罩 + 头部。Modal（居中）/ SideSheet（侧边）/ 选文件弹窗（锚定）共用这一份，\n   各家各自 registerStyle 同一份（幂等），谁也不许再抄一份遮罩。\n   关闭钮的皮肤在 panel.css（.dshpc-panel__close，旧类名作别名），不在这里再写一份。 */\n\n/* 遮罩 = 宿主遮罩变量 --dsw-alias-bg-mask-1（与官方 Modal / 兄弟项目 --tdt-mask 同一条真值，用户 2026-10-20）。 */\n/* 右边界让位页面级分栏（PanelDock 发布的 --dshpc-page-inset-right，用户 2026-10-22）：\n   分栏不被压暗、照常可点；浮层在这块**剩下**的区域里排版，就像整页被推出去一样。 */\n.dshpc-overlay{\n  position:fixed;inset:0 var(--dshpc-page-inset-right,0px) 0 0;\n  background:var(--dshpc-mask);\n}\n/* 锁定态：禁用手势挂在遮罩上（面板外那一圈也要一致）。 */\n.dshpc-overlay[data-dshpc-locked]{cursor:not-allowed}\n/* 锁定时的透明点击层：吃指针、不改任何外观（变灰由各控件自己的 :disabled 负责）。\n   全透明是刻意的 —— 盖一层灰会让人以为界面坏了。 */\n.dshpc-lock-catcher{position:absolute;inset:0;z-index:1;cursor:not-allowed}\n/* 锁定态：消费方自绘的原生表单元素也「看起来禁用」。\n   整条选择器包在 :where() 里 = 特异性 0 —— 消费方任意一条自己的规则都能盖回来，我们只当默认值。\n   只写 opacity / cursor 两个属性；不想被灰就在自己元素上写 --dshpc-lock-dim: 1。\n   解锁 = 规则不再匹配，不存在「还原」，也就不会冲掉别人写的样式。 */\n:where(.dshpc-locked button:not(:disabled),.dshpc-locked input:not(:disabled),.dshpc-locked select:not(:disabled),.dshpc-locked textarea:not(:disabled)){\n  opacity:var(--dshpc-lock-dim);cursor:not-allowed;\n}\n/* 居中档（Modal）：z 走 modal 档。 */\n.dshpc-overlay--center{\n  display:flex;align-items:center;justify-content:center;\n  z-index:var(--dshpc-z-modal);\n}\n/* 侧边档（SideSheet）：面板 absolute 贴边，不需要 flex 居中；z 走 drawer 档（低于 modal）。 */\n.dshpc-overlay--side{z-index:var(--dshpc-z-drawer)}\n/* 锚定档（选文件弹窗）：遮罩照旧压暗 + 点外部关闭，面板自己 fixed 贴锚点，这里不做布局。 */\n.dshpc-overlay--plain{z-index:var(--dshpc-z-panel)}\n\n/* 头部四槽：左图标 / 标题组 / 弹性间隔 / 右侧动作区 + 关闭钮。\n   上下内距必须相等（18/12 会让标题离面板顶远、离分隔线近，用户 2026-11-02）。 */\n.dshpc-overlay-head{\n  display:flex;align-items:center;gap:8px;padding:18px;\n  border-bottom:1px solid var(--dshpc-border);flex-wrap:wrap;\n}\n.dshpc-overlay-head__heading{display:flex;align-items:center;gap:8px;min-width:0;flex:0 1 auto}\n/* 调用方整块自定义的标题区：占满左侧可用宽度、可换行（不是标题文字，别套标题字号）。 */\n.dshpc-overlay-head__heading--custom{flex:1 1 auto;flex-wrap:wrap}\n.dshpc-overlay-head__lead{flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:16px;line-height:1}\n/* 标题组：第一行 = 标题 + 右侧小块（徽标紧跟标题），第二行 = 副标题。 */\n.dshpc-overlay-head__titlegroup{display:flex;flex-direction:column;gap:2px;min-width:0;flex:0 1 auto}\n.dshpc-overlay-head__titlerow{display:flex;align-items:center;gap:8px;min-width:0}\n.dshpc-overlay-head__title{font-size:var(--dshpc-font-lg);font-weight:600;line-height:1.4;min-width:0}\n/* 标题下副标题行（兄弟项目 .dsh-tdt-sv-sid：等宽字体、caption 色、可换行）。 */\n.dshpc-overlay-head__sid{font-family:var(--ds-font-family-code,monospace);font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);word-break:break-all}\n.dshpc-overlay-head__extra{flex:none;display:inline-flex;align-items:center}\n.dshpc-overlay-head__spacer{flex:1 1 auto;min-width:8px}\n.dshpc-overlay-head__actions{flex:none;display:flex;align-items:center;gap:8px}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/panel-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/panel-css.generated.js
 		const PANEL_CSS = "/* 浮层面板皮肤（2026-11-03 用户定：皮肤统一，只改样式不动交互）。\n *\n * 这份文件是**所有「浮起来的框」的皮肤真源**。定位（fixed / absolute、贴谁、怎么翻转、多大的\n * 层序）留在各自控件里，这里只管表面四件：底色 / 描边宽 / 圆角 / 阴影。\n * ⚠️ 组件 CSS 里不许再写这四个字面值 —— 想改外观就改这里，别在消费方另起一套。\n *\n * 三档（差异只在这三段定义，别处分叉）：\n *   --modal    居中模态（Modal / ConfirmModal / AlertModal 家族）\n *   --popover  贴锚点的浮层面板（pickWorkspaceFile 选文件弹窗、DateTimePicker 弹层）\n *   --menu     下拉菜单（文件浏览器 ▾ 选层、Picker 下拉）\n *\n * 不并入三档的：PanelDock 与 SideSheet 是**贴边家族**（side-panel.css 的\n * .dshpc-side-surface，surface-base、无外描边）—— 2026-11-02 拍板「两者皮肤一模一样」，\n * 一个是布局成员、一个是贴边抽屉，都不是浮层。\n */\n.dshpc-panel{\n  background:var(--dshpc-panel-bg);color:var(--dshpc-fg);\n  border:var(--dshpc-panel-bw) solid var(--dshpc-border);\n  border-radius:var(--dshpc-panel-radius);box-shadow:var(--dshpc-panel-shadow);\n}\n.dshpc-panel--modal{\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:3px;\n  --dshpc-panel-radius:var(--dshpc-radius-xl);\n  --dshpc-panel-shadow:var(--dshpc-shadow-2);\n  overflow:hidden;\n}\n.dshpc-panel--popover{\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:1px;\n  --dshpc-panel-radius:var(--dshpc-radius-lg);\n  --dshpc-panel-shadow:var(--dshpc-shadow-2);\n  overflow:hidden;\n  /* 与 menu 同口径的加重描边；日期弹层与选文件弹窗共用这一档（2026-11-06）。 */\n  border-color:var(--dshpc-border-heavy);\n}\n.dshpc-panel--menu{\n  /* 菜单底与模态同一层（用户 2026-11-03：别用页面底色，暗色下看着全黑）。 */\n  --dshpc-panel-bg:var(--dshpc-surface-1);\n  --dshpc-panel-bw:1px;\n  /* 圆角与 popover 档统一成 lg（2026-11-06 用户：下拉框也改成 16）。 */\n  --dshpc-panel-radius:var(--dshpc-radius-lg);\n  --dshpc-panel-shadow:var(--dshpc-shadow-1);\n  /* 下拉菜单同样加重描边；modal 的 3px 边框不动。 */\n  border-color:var(--dshpc-border-heavy);\n}\n\n/* 浮层唯一的关闭钮（20×20 方角图标位）。\n   旧类名 .dshpc-overlay-head__close 保留为别名：消费方写在旧类名上的覆盖仍生效。 */\n.dshpc-panel__close,.dshpc-overlay-head__close{\n  display:inline-flex;align-items:center;justify-content:center;flex:none;\n  width:20px;height:20px;padding:0;border:none;border-radius:var(--dshpc-radius-sm);\n  background:transparent;color:var(--dshpc-fg-3);font-family:inherit;font-size:13px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-panel__close:hover,.dshpc-overlay-head__close:hover{background:var(--dshpc-hover);color:var(--dshpc-fg)}\n.dshpc-panel__close:focus-visible,.dshpc-overlay-head__close:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n\n/* .dshpc-scroll-thin（细滚动条）的唯一定义已移到 design/tokens.css 的 tokens 域：\n   那里全局必在、挂类即生效。这里不再写第二份。 */\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/panel.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/panel.js
 		/**
 		* 浮层面板公共件（2026-11-03）：`PanelSurface` = 皮肤载体，`PanelClose` = 唯一那枚关闭钮。
 		*
@@ -379,8 +357,7 @@ window.__ModuleLoader__.load({
 				onClick: () => props.onClick()
 			}, props.icon ?? "✕");
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/overlay.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/overlay.js
 		/**
 		* 浮层公共件 —— Modal 与 SideSheet 共用，**别各写一份**。
 		*
@@ -463,8 +440,7 @@ window.__ModuleLoader__.load({
 				className: "dshpc-overlay-head__close"
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/thenable.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/thenable.js
 		/** 返回值是不是 thenable。Button 的自动 loading 与命令式弹窗的收尾共用这一份判定。 */
 		function isThenable(value) {
 			if (value === null || value === void 0) return false;
@@ -478,8 +454,7 @@ window.__ModuleLoader__.load({
 		function isSuccess(value) {
 			return value !== false;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/actions/Button.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/actions/Button.js
 		/**
 		* 按钮 / 图标钮 —— **全站唯一实现**（L2 组件皮肤，P2）
 		*
@@ -492,6 +467,7 @@ window.__ModuleLoader__.load({
 		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— 高度一律吃 `--dshpc-control-h-*`，
 		*    **有边 / 无边同高**（边框在内部补回）
 		*  - `block`：撑满父宽
+		*  - `dense`：图标放大一档、内距收紧（高度不变），Button / IconButton 同名同义
 		*
 		* 内容轴：`icon`（前置）/ `iconRight`（后置）/ `loading`（前置小圈并自动禁用）。
 		* 颜色轴：任一档都可以再用 `color` 传任意 CSS 色值 —— 只覆盖 `--btn-*` 几个变量，
@@ -541,8 +517,8 @@ window.__ModuleLoader__.load({
 			};
 		}
 		/** 组装按钮 class（结构一套 + 轴类）。 */
-		function buttonClass(variant, size, block, hasIcon, extra) {
-			return `dshpc-btn dshpc-btn--${variant} dshpc-btn--${size}${block ? " dshpc-btn--block" : ""}${hasIcon ? " dshpc-btn--icon-start" : ""}${extra !== void 0 && extra !== "" ? ` ${extra}` : ""}`;
+		function buttonClass(variant, size, block, hasIcon, dense, extra) {
+			return `dshpc-btn dshpc-btn--${variant} dshpc-btn--${size}${dense ? " dshpc-btn--dense" : ""}${block ? " dshpc-btn--block" : ""}${hasIcon ? " dshpc-btn--icon-start" : ""}${extra !== void 0 && extra !== "" ? ` ${extra}` : ""}`;
 		}
 		/**
 		* 异步点击：`onClick` 返回 thenable 就自己转圈（并禁用），settle 后恢复。
@@ -580,7 +556,7 @@ window.__ModuleLoader__.load({
 		*/
 		function Button$1(props) {
 			ensureComponentStyles("button", BUTTON_CSS$1);
-			const { variant = "outline", size = "lg", icon, iconRight, color, loading: loadingProp = false, loadingText = true, block = false, width, minWidth, maxWidth, className, style, children, onClick, onBusyChange, ...rest } = props;
+			const { variant = "outline", size = "lg", icon, iconRight, color, loading: loadingProp = false, loadingText = true, block = false, dense = false, width, minWidth, maxWidth, className, style, children, onClick, onBusyChange, ...rest } = props;
 			const btnRef = (0, react$1.useRef)(null);
 			const idleWidth = (0, react$1.useRef)(null);
 			const [lockWidth, setLockWidth] = (0, react$1.useState)(null);
@@ -633,7 +609,7 @@ window.__ModuleLoader__.load({
 				"aria-busy": loading || void 0,
 				...autoLabel !== void 0 && rest["aria-label"] === void 0 ? { "aria-label": autoLabel } : {},
 				onClick: asyncClick.click,
-				className: buttonClass(variant, size, block, icon !== void 0 && icon !== null && !loading, className),
+				className: buttonClass(variant, size, block, icon !== void 0 && icon !== null && !loading, dense, className),
 				style: {
 					...colorVars(variant, color),
 					...widthStyle,
@@ -653,7 +629,7 @@ window.__ModuleLoader__.load({
 		*/
 		function IconButton(props) {
 			ensureComponentStyles("button", BUTTON_CSS$1);
-			const { variant = "plain", size = "lg", icon, label, color, background, loading: loadingProp = false, className, style, onClick, onBusyChange, ...rest } = props;
+			const { variant = "plain", size = "lg", icon, label, color, background, loading: loadingProp = false, dense = false, className, style, onClick, onBusyChange, ...rest } = props;
 			const asyncClick = useAsyncClick(onClick, onBusyChange);
 			const loading = loadingProp || asyncClick.busy;
 			const locked = useOverlayLocked();
@@ -675,7 +651,7 @@ window.__ModuleLoader__.load({
 				"aria-busy": loading || void 0,
 				disabled: rest.disabled === true || loading || locked,
 				onClick: asyncClick.click,
-				className: `dshpc-iconbtn dshpc-iconbtn--${variant} dshpc-iconbtn--${size}${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
+				className: `dshpc-iconbtn dshpc-iconbtn--${variant} dshpc-iconbtn--${size}${dense ? " dshpc-iconbtn--dense" : ""}${className !== void 0 && className !== "" ? ` ${className}` : ""}`,
 				style: {
 					...accent,
 					...style
@@ -683,8 +659,7 @@ window.__ModuleLoader__.load({
 			};
 			return (0, react$1.createElement)("button", attrs, loading ? (0, react$1.createElement)(Loader$1, { size: "xs" }) : icon);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/utils/i18n.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/utils/i18n.js
 		/**
 		* utils 自带的最小多语言。
 		*
@@ -1803,14 +1778,11 @@ window.__ModuleLoader__.load({
 				return value === void 0 ? whole : String(value);
 			});
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/feedback-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/feedback-css.generated.js
 		const FEEDBACK_CSS = "/* 遮罩与头部在 overlay.css，表面（底色/描边/圆角/阴影）在 panel.css 的 --modal 档，\n   这里只剩**家族布局与尺寸**。三者各管一段，别再把皮肤抄回来。 */\n.dshpc-modal{\n  display:flex;flex-direction:column;box-sizing:border-box;\n}\n/* body = 唯一滚动容器：内距与滚动都归它（滚动条贴面板右缘，不被内距挤进来）；\n   内容按流排，不设 height:100%、不自己开滚动条。\n   细滚动条与 1px 让位由 .dshpc-scroll-thin 统一给（口径见 style.md §滚动条让位）。 */\n.dshpc-modal__body{flex:1 1 auto;min-height:0;overflow:auto;padding:17px 18px}\n\n/* 底栏与头部同一口径（2026-11-02 用户）：上下内距相等、内容垂直居中、默认带一条分隔线。\n   线可由消费方关掉（Modal 的 footerDivider=false）—— 确认框家族本来就没有线（与头部一致）。 */\n.dshpc-modal .dshpc-modal__foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:18px;border-top:1px solid var(--dshpc-border)}\n.dshpc-modal .dshpc-modal__foot--bare{border-top:none}\n/* 底栏左侧的过程提示：吃掉按钮之外的剩余宽，超长交给 FlipText 省略 / hover 跑马灯。 */\n.dshpc-modal .dshpc-modal__notice{flex:1 1 auto;min-width:0;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-3)}\n/* 自绘 toast 的样式在 2026-11-03 删除：Toast 早已改走宿主 toast()（Toast.ts 的 showNative），\n   .dshpc-toast* 这几个类没有任何消费者，留着只是死样式（还带着裸 z-index 与裸阴影）。 */\n.dshpc-error__retry{\n  margin-top:8px;color:var(--dshpc-link);cursor:pointer;background:none;border:none;padding:0;\n}\n/* 原生弹窗演示：经宿主 Modal 的 contentClassName 注入，证明宿主内容区尺寸可经类名自定义。 */\n.dshpc-native-demo-content{max-width:520px}\n/* 头部信号图标（AlertModal 按 severity 注入）：自含配色，色值在 tokens.css 的 --dshpc-sev-*。 */\n.dshpc-alert-sev{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:12px;color:var(--dshpc-on-signal);flex:none}\n.dshpc-alert-sev--info{background:var(--dshpc-sev-info)}\n.dshpc-alert-sev--success{background:var(--dshpc-sev-success)}\n.dshpc-alert-sev--warning{background:var(--dshpc-sev-warning)}\n.dshpc-alert-sev--error{background:var(--dshpc-sev-error)}\n/* 小确认框家族（sm）：严格抄兄弟项目 renderConfirm 的 dialogStyle（task-list.tsx:456）——\n   360px 宽 / 18px 内距 / 头部无分隔线 / 说明文字 fg-2 / 底部按钮右对齐。 */\n.dshpc-modal--sm{padding:18px}\n.dshpc-modal--sm .dshpc-overlay-head{padding:0 0 8px;border-bottom:none}\n.dshpc-modal--sm .dshpc-modal__body{padding:0 0 14px;overflow:visible;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-2);line-height:var(--dshpc-line-sm)}\n.dshpc-modal--sm .dshpc-modal__foot{padding:0;border-top:none}\n/* 锁定态（locked）：只给透明点击层做定位锚点，**不压任何遮罩** —— 盖灰会让人以为界面坏了；\n   变灰是各控件自己 :disabled 的事（Button / Input / Picker … 本来就有那套样式）。 */\n.dshpc-modal--locked{position:relative}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/flip-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/flip-css.generated.js
 		const FLIP_CSS = "/* 翻牌文本（FlipText）：一个单行窗口 + 两层同格叠放，换字时旧的上移出、新的从下进。\n   溢出（三点省略 + hover 跑马灯）不在这里做 —— 交给 MarqueeText，本文件只管裁剪与切换动效。\n   叠放用 grid 同格而不是绝对定位：容器高度天然等于一行，不用测量、也不依赖 lh 单位。 */\n.dshpc-flip{--dshpc-flip-dur:260ms;--dshpc-flip-ease:cubic-bezier(.22,.61,.36,1);display:grid;min-width:0;overflow:hidden}\n.dshpc-flip__item{grid-area:1/1;min-width:0}\n.dshpc-flip__in{animation:dshpc-flip-in var(--dshpc-flip-dur) var(--dshpc-flip-ease) both}\n.dshpc-flip__out{animation:dshpc-flip-out var(--dshpc-flip-dur) var(--dshpc-flip-ease) both}\n@keyframes dshpc-flip-in{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}\n@keyframes dshpc-flip-out{from{transform:translateY(0);opacity:1}to{transform:translateY(-100%);opacity:0}}\n/* 前庭敏感 / 低性能设备关掉位移动画：换字仍在，只是不再翻。\n   旧帧没有动画可播，必须自己隐形 —— 两层同格叠放，留着就重影。 */\n@media (prefers-reduced-motion:reduce){\n  .dshpc-flip__in,.dshpc-flip__out{animation:none}\n  .dshpc-flip__out{opacity:0}\n}\n/* 扫光（sweep）：常驻循环，停在原地的提示也看得出在动。开关默认关，弹窗 / 抽屉底栏默认开。\n   光必须只落在字上：盖一层半透明光带的话，notice 是 flex:1 撑开的宽容器，右侧大片空白\n   里会出现一条白光在扫。故把光做成文字自己的 background + background-clip:text 裁到字形；\n   基色取 currentColor ⇒ 调用方换字色也跟着走，不需要知道文字宽度。 */\n.dshpc-flip--sweep .dshpc-mq-in{\n  background-image:linear-gradient(105deg,currentColor 0,currentColor 47%,color-mix(in srgb,var(--dshpc-on-signal) 70%,currentColor) 50%,currentColor 53%,currentColor 100%);\n  background-size:300% 100%;background-repeat:no-repeat;\n  background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;\n  animation:dshpc-flip-sweep 1.5s linear infinite;\n}\n/* 1.5s 一轮：前 40% 扫完，其余停在视野外休息 —— 一直扫会晃眼，间歇才像「还在干活」。 */\n@keyframes dshpc-flip-sweep{0%{background-position:100% 0}40%,100%{background-position:0 0}}\n@media (prefers-reduced-motion:reduce){\n  .dshpc-flip--sweep .dshpc-mq-in{animation:none;background-image:none;-webkit-text-fill-color:currentColor}\n}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/FlipText.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/FlipText.js
 		/**
 		* 翻牌文本 —— 一行文字，换字时旧的上移出、新的从下进（机场翻牌那种）。
 		*
@@ -1872,8 +1844,7 @@ window.__ModuleLoader__.load({
 				className: slot.prev === null ? item : `${item} dshpc-flip__in`
 			}, (0, react$1.createElement)(MarqueeText, { text: slot.curr })));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/Modal.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/Modal.js
 		/**
 		* 模态弹窗（自绘 overlay，**不用 react-dom 的 portal**，避免多一个必需依赖）。
 		*
@@ -1935,8 +1906,7 @@ window.__ModuleLoader__.load({
 				sweep: true
 			}), props.footer), locked ? (0, react$1.createElement)(OverlayLockCatcher) : null)));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/ConfirmModal.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/ConfirmModal.js
 		/**
 		* 确认框（语义层，基于 Modal）：双按钮（取消 outline + 确认语义档）、无 ✕；无标题时整条头部消失。
 		* 样式封闭：按钮只暴露语义档（tone → variant），不透传任意 className/style。
@@ -1982,8 +1952,7 @@ window.__ModuleLoader__.load({
 				}, props.confirmText ?? tt("confirm")))
 			}, props.message ?? null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/modal-host.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/modal-host.js
 		let hostRoot = null;
 		let hostContainer = null;
 		let entries = [];
@@ -2079,8 +2048,7 @@ window.__ModuleLoader__.load({
 				flush();
 			});
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/official.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/official.js
 		/**
 		* L1 adapter —— 全仓**唯一** import 官方 primitives 平台模块的文件。
 		*
@@ -2190,8 +2158,7 @@ window.__ModuleLoader__.load({
 			confirm: hostConfirm,
 			alert: hostAlert
 		});
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/host-data.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/host-data.js
 		/** 模型目录的 observable store（useSyncExternalStore 直接消费）。 */
 		var ModelCatalogStore = class {
 			constructor() {
@@ -2292,8 +2259,7 @@ window.__ModuleLoader__.load({
 				modelCatalog.setUnavailable(String(error));
 			});
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/locale.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/locale.js
 		/** 返回当前语言，并在宿主语言切换（`<html lang>` 变化）时触发重渲。 */
 		function useLocale() {
 			const [locale, setLocaleState] = (0, react$1.useState)(getLocale);
@@ -2311,8 +2277,7 @@ window.__ModuleLoader__.load({
 			}, []);
 			return locale;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/utils/path.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/utils/path.js
 		/**
 		* 纯路径方法 —— 只做字符串切分 / 拼接，不碰宿主、不依赖 React / DOM。
 		*
@@ -2350,8 +2315,7 @@ window.__ModuleLoader__.load({
 		function joinPath(dir, name) {
 			return dir === "" ? name : `${dir}/${name}`;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/types.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/types.js
 		/** HTML 静态预览的扩展名（与官方 htmlBodyDefinition 同款）。 */
 		const HTML_KINDS = ["html", "htm"];
 		/**
@@ -2652,11 +2616,9 @@ window.__ModuleLoader__.load({
 			}
 			return best;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/explorer-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/explorer-css.generated.js
 		const EXPLORER_CSS = "/* 工作区文件浏览器（dshpc-fb-*）。\n *\n * 度量真源 = 兄弟项目 dsh-task-dispatch-table 的 src/client/archive-session-css.ts\n * （.dsh-tdt-sv-* 全族）。**逐条照抄，不许自己估**：padding / gap / 圆角 / 字号 / 行高 /\n * 边框色 / 悬停色 / 透明度动画 / 溢出策略，一一对应，改这里之前先去那边对原文。\n * 前缀与变量名换成本仓口径（--tdt-* → --dshpc-*），数值不换。\n * **例外**：容器级内距（__bar / __title / __tree / __body）2026-11-03 起改成四周一致\n * 的 token 档（space-2 / space-3）——用户反馈兄弟那套「左右比上下宽」在这两处窗口里不对称。\n * 行级内距（__row / __row-note / __banner）仍是兄弟数值，未动。\n *\n * 控件：能核心就核心（面包屑 = Button ghost、行尾 = Button outline、展开 / 图标 = IconButton、\n * 分段 = Segmented、文字 = MarqueeText）。核心控件自带的 padding / 高度 / 皮肤在本文件里\n * **按兄弟数值覆盖**（选择器带 .dshpc-fb 前缀提高特异性，确保盖得住控件默认值）。\n */\n/* 背景不在这里画：dock 由 .dshpc-side-surface、选文件弹窗由 .dshpc-panel 提供。\n   自己再刷一层 surface-base 会把面板档位（modal 同色的 surface-1）盖掉 —— 弹窗就显得发黑。 */\n.dshpc-fb{\n  position:relative;display:flex;flex-direction:column;height:100%;min-height:0;\n  background:transparent;color:var(--dshpc-fg);\n}\n\n/* 第一排：▾ 选层 + 面包屑 + 动作（兄弟 .dsh-tdt-sv-crumbbar）\n   ⚠️ 不能 overflow:hidden —— 下拉浮层挂在它下面，裁了就看不见。 */\n.dshpc-fb__bar{\n  position:relative;flex:none;display:flex;align-items:center;gap:2px;\n  /* 四周内距一致（用户 2026-11-03：原来 4/10，左右比上下宽，看着不对称）——下文 __title / __tree / __body 同口径。 */\n  padding:var(--dshpc-space-2);border-bottom:1px solid var(--dshpc-border);white-space:nowrap;\n}\n.dshpc-fb__menu-wrap{position:relative;flex:none;display:inline-flex}\n.dshpc-fb__crumbs{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden}\n.dshpc-fb__crumbs-measure{\n  position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;\n  visibility:hidden;pointer-events:none;white-space:nowrap;\n}\n\n/* 面包屑：核心 ghost 钮，但皮肤与尺寸取兄弟 .dsh-tdt-sv-crumb（高由内容决定，不锁控制高）。 */\n.dshpc-fb .dshpc-fb__crumb{\n  appearance:none;background:0 0;border:none;height:auto;\n  padding:2px 4px;border-radius:var(--dshpc-radius-sm);\n  font:inherit;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);\n  color:var(--dshpc-fg-2);cursor:pointer;\n  display:inline-flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;\n}\n.dshpc-fb .dshpc-fb__crumb:hover{background:var(--dshpc-hover);color:var(--dshpc-fg)}\n.dshpc-fb .dshpc-fb__crumb:disabled{color:var(--dshpc-fg-2);cursor:default}\n.dshpc-fb .dshpc-fb__crumb--current{cursor:default;color:var(--dshpc-fg);font-weight:600;min-width:0}\n.dshpc-fb .dshpc-fb__crumb--current:hover{background:0 0}\n.dshpc-fb__crumb-mq{flex:1 1 auto;min-width:0}\n.dshpc-fb__crumb-sep{flex:none;color:var(--dshpc-fg-3)}\n\n/* 越界（outside-workspace）第一排：只读完整路径（兄弟 .dsh-tdt-sv-crumbbar-plain-inner）。 */\n.dshpc-fb__bar-plain{\n  font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-2);\n  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;\n}\n.dshpc-fb__actions{flex:none;display:flex;align-items:center;gap:4px}\n/* 选择器头部「选当前文件 / 当前文件夹」钮：与 ✕ 并排，不被面包屑挤扁。\n   「选当前目录」= 核心 Button outline（sm 档）：尺寸与皮肤全归核心，这里只留布局。\n   ⚠️ 别再往这里写 height / padding 覆盖 —— 域按登记顺序拼接，核心 .dshpc-btn--sm 谁先谁后\n   取决于渲染次序，覆盖会时灵时不灵（2026-11-03 前就是这么写的）。 */\n.dshpc-fb__pick{flex:none}\n\n/* ▾ 选层浮层。\n   层序：遮罩必须高于 picker 面板（--dshpc-z-panel），否则菜单开着点面板不算「点外部」；\n   菜单再压在遮罩之上，所以是 popmenu 一档 +1。表皮来自 panel.css 的 menu 档。 */\n.dshpc-fb__crumbs-backdrop{position:fixed;inset:0;z-index:var(--dshpc-z-popmenu);background:transparent}\n.dshpc-fb__crumbs-menu{\n  position:absolute;top:calc(100% + 4px);left:0;z-index:calc(var(--dshpc-z-popmenu) + 1);\n  min-width:160px;max-height:240px;overflow:auto;padding:4px;display:flex;flex-direction:column;\n}\n.dshpc-fb__menu-item{\n  appearance:none;background:0 0;border:none;text-align:left;font:inherit;\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-md);\n  padding:4px 8px;border-radius:var(--dshpc-radius-sm);color:var(--dshpc-fg);cursor:pointer;\n  max-width:280px;display:flex;align-items:center;gap:2px;\n  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\n}\n.dshpc-fb__menu-item:hover{background:var(--dshpc-hover)}\n.dshpc-fb__menu-empty{\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-md);padding:4px 8px;color:var(--dshpc-fg-3);\n}\n.dshpc-fb__menu-icon{flex:none;display:inline-flex}\n.dshpc-fb__menu-chev{flex:none;color:var(--dshpc-fg-3);margin-right:1px}\n.dshpc-fb__menu-chev-slot{flex:none;width:11px;height:11px;margin-right:1px}\n.dshpc-fb__menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n\n/* 第二排（仅预览态）：文件名 + 工具（兄弟 .dsh-tdt-sv-titlebar / -preview-title-inner）。 */\n.dshpc-fb__title{\n  flex:none;display:flex;align-items:center;gap:8px;\n  padding:var(--dshpc-space-2);border-bottom:1px solid var(--dshpc-border);\n}\n.dshpc-fb__title-inner{\n  font-family:var(--dshpc-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);\n  font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg);\n  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;\n}\n\n/* 主体（兄弟 .dsh-tdt-sv-preview-body / -hint / -preview-err）\n   下面三个滚动容器只挂 .dshpc-scroll-thin：细滚动条与 1px 让位都由那个类统一给，\n   这里不再写透明边框（口径见 style.md §滚动条让位）。 */\n.dshpc-fb__body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:var(--dshpc-space-3)}\n.dshpc-fb__note{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-2);text-align:center;padding:12px 0}\n.dshpc-fb__err{\n  display:flex;flex-direction:column;align-items:flex-start;gap:10px;\n  font-size:var(--dshpc-font-sm);line-height:1.6;color:var(--dshpc-fg-2);padding:8px 0;\n}\n\n/* 目录树（兄弟 .dsh-tdt-sv-tree*） */\n.dshpc-fb__tree{flex:1;min-height:0;overflow:auto;padding:var(--dshpc-space-2)}\n.dshpc-fb__row{\n  display:flex;align-items:center;gap:8px;padding:6px 8px;\n  border-radius:var(--dshpc-radius-sm);cursor:pointer;user-select:none;\n}\n.dshpc-fb__row:hover{background:var(--dshpc-hover)}\n.dshpc-fb__row:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-2px}\n.dshpc-fb__row-icon{flex:none;display:inline-flex;color:var(--dshpc-fg-2)}\n.dshpc-fb__row-name{\n  flex:1;min-width:0;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);color:var(--dshpc-fg);\n  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\n}\n\n/* 展开开关：核心 IconButton，命中位 20×20 + 展开时转 90°（兄弟 .dsh-tdt-sv-tree-toggle{,-open}）。 */\n.dshpc-fb .dshpc-fb__row-toggle{\n  appearance:none;background:0 0;border:none;flex:none;\n  width:20px;height:20px;padding:0;margin:0;border-radius:var(--dshpc-radius-sm);\n  color:var(--dshpc-fg-2);cursor:pointer;\n  display:inline-flex;align-items:center;justify-content:center;\n  transition:transform var(--dshpc-dur-fast) var(--dshpc-ease),background var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-fb .dshpc-fb__row-toggle--open{transform:rotate(90deg)}\n\n/* 行尾「进入 / 选择」：按钮**皮肤完全交给核心 Button**（2026-11-03：原来这里又写了一遍描边/内距/\n   字号，等于自己手搓了一颗，跟别处的按钮长得不一样）。本仓只保留布局与「悬停才现身」：\n   平时隐身但占位（opacity 而非 display）⇒ 出现时不顶动行内布局。 */\n.dshpc-fb .dshpc-fb__row-act{\n  flex:none;margin-left:auto;\n  opacity:0;pointer-events:none;\n  transition:opacity var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-fb__row:hover .dshpc-fb__row-act,.dshpc-fb .dshpc-fb__row-act:focus-visible{opacity:1;pointer-events:auto}\n\n.dshpc-fb__row-children{\n  margin-left:9px;padding-left:7px;border-left:1px solid var(--dshpc-border);\n  display:flex;flex-direction:column;\n}\n.dshpc-fb__row-note{flex:none;padding:8px 10px;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3)}\n.dshpc-fb__row-err{padding:4px 8px 4px 36px;font-size:var(--dshpc-font-sm);color:var(--dshpc-danger)}\n\n/* 预览体内部容器（仅本仓预览组件用；兄弟对应 preview-fill / preview-body-code 一类）。\n   必须 border-box：渲染态 inline 加了 padding:12px 14px，content-box 下 width:100%+padding\n   会溢出父层 28px（父 .dshpc-fb 无 overflow 裁切）→ 恒多一条横滚条；border-box 把 padding\n   算进 100%，从根消除该溢出。 */\n.dshpc-fb__text{flex:1;min-height:0;overflow:auto;width:100%;box-sizing:border-box}\n.dshpc-fb__banner{padding:6px 10px;background:var(--dshpc-open-bg);color:var(--dshpc-fg-2);font-size:var(--dshpc-font-sm)}\n.dshpc-fb__more{display:flex;justify-content:center;padding:10px}\n.dshpc-fb__image{max-width:100%;border-radius:var(--dshpc-radius-sm);border:1px solid var(--dshpc-border)}\n/* iframe 的外壳（兄弟 .dsh-tdt-sv-preview-fill）：iframe 必须包在这一层里才拿得到高度——\n   裸挂 iframe 时替换元素的自动最小尺寸会让高度算不出来（表现为预览区整片空白、像没反应）。 */\n.dshpc-fb__fill{flex:1;min-height:0;display:flex;overflow:hidden;padding:0}\n.dshpc-fb__frame{flex:1;min-height:0;width:100%;height:100%;border:none;background:var(--dshpc-surface-1)}\n\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/BytesPreview.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/preview/BytesPreview.js
 		function BytesPreview(props) {
 			ensureComponentStyles("explorer", EXPLORER_CSS);
 			const tt = props.translate ?? t$1;
@@ -2708,8 +2670,7 @@ window.__ModuleLoader__.load({
 				title: props.path
 			}));
 		}
-		//#endregion
-		//#region node_modules/@babel/runtime/helpers/extends.js
+		// node_modules/.pnpm/@babel+runtime@8.1.0/node_modules/@babel/runtime/helpers/extends.js
 		var require_extends = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			function _extends() {
 				return module.exports = _extends = Object.assign ? Object.assign.bind() : function(n) {
@@ -2722,8 +2683,7 @@ window.__ModuleLoader__.load({
 			}
 			module.exports = _extends, module.exports.__esModule = true, module.exports["default"] = module.exports;
 		}));
-		//#endregion
-		//#region node_modules/@babel/runtime/helpers/objectWithoutPropertiesLoose.js
+		// node_modules/.pnpm/@babel+runtime@8.1.0/node_modules/@babel/runtime/helpers/objectWithoutPropertiesLoose.js
 		var require_objectWithoutPropertiesLoose = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			function _objectWithoutPropertiesLoose(r, e) {
 				if (null == r) return {};
@@ -2736,8 +2696,7 @@ window.__ModuleLoader__.load({
 			}
 			module.exports = _objectWithoutPropertiesLoose, module.exports.__esModule = true, module.exports["default"] = module.exports;
 		}));
-		//#endregion
-		//#region node_modules/@marijn/find-cluster-break/src/index.js
+		// node_modules/.pnpm/@marijn+find-cluster-break@1.0.4/node_modules/@marijn/find-cluster-break/src/index.js
 		var import_extends = /* @__PURE__ */ __toESM(require_extends());
 		var import_objectWithoutPropertiesLoose = /* @__PURE__ */ __toESM(require_objectWithoutPropertiesLoose());
 		let rangeFrom = [];
@@ -2809,8 +2768,7 @@ window.__ModuleLoader__.load({
 		function codePointSize$1(code) {
 			return code < 65536 ? 1 : 2;
 		}
-		//#endregion
-		//#region node_modules/@codemirror/state/dist/index.js
+		// node_modules/.pnpm/@codemirror+state@6.7.6/node_modules/@codemirror/state/dist/index.js
 		/**
 		The data structure for documents. @nonabstract
 		*/
@@ -6223,8 +6181,7 @@ window.__ModuleLoader__.load({
 			}
 			return strict === true ? -1 : string.length;
 		}
-		//#endregion
-		//#region node_modules/style-mod/src/style-mod.js
+		// node_modules/.pnpm/style-mod@4.1.4/node_modules/style-mod/src/style-mod.js
 		const C$3 = "ͼ";
 		const COUNT = typeof Symbol == "undefined" ? "__ͼ" : Symbol.for(C$3);
 		const SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : Symbol("styleSet");
@@ -6320,8 +6277,7 @@ window.__ModuleLoader__.load({
 				if (this.styleTag && this.styleTag.getAttribute("nonce") != nonce) this.styleTag.setAttribute("nonce", nonce);
 			}
 		};
-		//#endregion
-		//#region node_modules/w3c-keyname/index.js
+		// node_modules/.pnpm/w3c-keyname@2.2.8/node_modules/w3c-keyname/index.js
 		var base$1 = {
 			8: "Backspace",
 			9: "Tab",
@@ -6421,8 +6377,7 @@ window.__ModuleLoader__.load({
 			if (name == "Down") name = "ArrowDown";
 			return name;
 		}
-		//#endregion
-		//#region node_modules/crelt/index.js
+		// node_modules/.pnpm/crelt@1.0.7/node_modules/crelt/index.js
 		function crelt() {
 			var elt = arguments[0];
 			if (typeof elt == "string") elt = document.createElement(elt);
@@ -6444,8 +6399,7 @@ window.__ModuleLoader__.load({
 			else if (Array.isArray(child)) for (var i = 0; i < child.length; i++) add(elt, child[i]);
 			else throw new RangeError("Unsupported child node: " + child);
 		}
-		//#endregion
-		//#region node_modules/@codemirror/view/dist/index.js
+		// node_modules/.pnpm/@codemirror+view@6.43.15/node_modules/@codemirror/view/dist/index.js
 		let nav = typeof navigator != "undefined" ? navigator : {
 			userAgent: "",
 			vendor: "",
@@ -16398,8 +16352,7 @@ window.__ModuleLoader__.load({
 		function highlightActiveLineGutter() {
 			return activeLineGutterHighlighter;
 		}
-		//#endregion
-		//#region node_modules/@lezer/common/dist/index.js
+		// node_modules/.pnpm/@lezer+common@1.5.5/node_modules/@lezer/common/dist/index.js
 		/**
 		The default maximum length of a `TreeBuffer` node.
 		*/
@@ -17599,17 +17552,26 @@ window.__ModuleLoader__.load({
 					cursor.next();
 					let localChildren = [], localPositions = [];
 					let localInRepeat = id >= minRepeatType ? id : -1;
-					let lastGroup = 0, lastEnd = end;
+					let lastGroup = 0, lastEnd = end, groupLookAhead = lookAheadAtStart;
 					while (cursor.pos > endPos) if (localInRepeat >= 0 && cursor.id == localInRepeat && cursor.size >= 0) {
 						if (cursor.end <= lastEnd - maxBufferLength) {
-							makeRepeatLeaf(localChildren, localPositions, start, lastGroup, cursor.end, lastEnd, localInRepeat, lookAheadAtStart, contextAtStart);
+							makeRepeatLeaf(localChildren, localPositions, start, lastGroup, cursor.end, lastEnd, localInRepeat, groupLookAhead, contextAtStart);
 							lastGroup = localChildren.length;
 							lastEnd = cursor.end;
+							groupLookAhead = lookAhead;
 						}
 						cursor.next();
 					} else if (depth > 2500) takeFlatNode(start, endPos, localChildren, localPositions);
-					else takeNode(start, endPos, localChildren, localPositions, localInRepeat, depth + 1);
-					if (localInRepeat >= 0 && lastGroup > 0 && lastGroup < localChildren.length) makeRepeatLeaf(localChildren, localPositions, start, lastGroup, start, lastEnd, localInRepeat, lookAheadAtStart, contextAtStart);
+					else {
+						if (localInRepeat >= 0 && cursor.size == -1 && reused[cursor.id].type == nodeSet.types[localInRepeat]) {
+							if (lastGroup < localChildren.length) makeRepeatLeaf(localChildren, localPositions, start, lastGroup, cursor.end, lastEnd, localInRepeat, groupLookAhead, contextAtStart);
+							lastGroup = localChildren.length + 1;
+							lastEnd = cursor.start;
+							groupLookAhead = lookAhead;
+						}
+						takeNode(start, endPos, localChildren, localPositions, localInRepeat, depth + 1);
+					}
+					if (localInRepeat >= 0 && lastGroup > 0 && lastGroup < localChildren.length) makeRepeatLeaf(localChildren, localPositions, start, lastGroup, start, lastEnd, localInRepeat, groupLookAhead, contextAtStart);
 					localChildren.reverse();
 					localPositions.reverse();
 					if (localInRepeat > -1 && lastGroup > 0) {
@@ -17652,7 +17614,7 @@ window.__ModuleLoader__.load({
 					let lookAhead = 0, lastI = children.length - 1, last, lookAheadProp;
 					if (lastI >= 0 && (last = children[lastI]) instanceof Tree) {
 						if (!lastI && last.type == type && last.length == length) return last;
-						if (lookAheadProp = last.prop(NodeProp.lookAhead)) lookAhead = positions[lastI] + last.length + lookAheadProp;
+						if (lookAheadProp = last.prop(NodeProp.lookAhead)) lookAhead = positions[lastI] + last.length + lookAheadProp - length;
 					}
 					return makeTree(type, children, positions, length, lookAhead, contextHash);
 				};
@@ -18166,7 +18128,7 @@ window.__ModuleLoader__.load({
 			}
 			moveTo(pos) {
 				let { cursor } = this, p = pos - this.offset;
-				while (!this.done && cursor.from < p) if (cursor.to >= p && cursor.enter(p, 1, IterMode.IncludeAnonymous | IterMode.IgnoreOverlays | IterMode.ExcludeBuffers));
+				while (!this.done && cursor.from < p) if (cursor.to >= p && cursor.enter(p, 1, IterMode.IncludeAnonymous | IterMode.IgnoreMounts | IterMode.IgnoreOverlays | IterMode.ExcludeBuffers));
 				else if (cursor.to <= p) {
 					if (!cursor.next(false)) this.done = true;
 				} else break;
@@ -18181,15 +18143,18 @@ window.__ModuleLoader__.load({
 				return false;
 			}
 		};
+		function fragEnd(frag) {
+			let stopped = frag.tree.prop(stoppedInner);
+			return stopped == null ? frag.to : Math.min(frag.to, stopped - frag.offset);
+		}
 		var FragmentCursor$2 = class {
 			constructor(fragments) {
-				var _a;
 				this.fragments = fragments;
 				this.curTo = 0;
 				this.fragI = 0;
 				if (fragments.length) {
 					let first = this.curFrag = fragments[0];
-					this.curTo = (_a = first.tree.prop(stoppedInner)) !== null && _a !== void 0 ? _a : first.to;
+					this.curTo = fragEnd(first);
 					this.inner = new StructureCursor(first.tree, -first.offset);
 				} else this.curFrag = this.inner = null;
 			}
@@ -18198,12 +18163,11 @@ window.__ModuleLoader__.load({
 				return this.curFrag && this.curFrag.from <= node.from && this.curTo >= node.to && this.inner.hasNode(node);
 			}
 			nextFrag() {
-				var _a;
 				this.fragI++;
 				if (this.fragI == this.fragments.length) this.curFrag = this.inner = null;
 				else {
 					let frag = this.curFrag = this.fragments[this.fragI];
-					this.curTo = (_a = frag.tree.prop(stoppedInner)) !== null && _a !== void 0 ? _a : frag.to;
+					this.curTo = fragEnd(frag);
 					this.inner = new StructureCursor(frag.tree, -frag.offset);
 				}
 			}
@@ -18292,8 +18256,7 @@ window.__ModuleLoader__.load({
 			}
 			return result;
 		}
-		//#endregion
-		//#region node_modules/@lezer/highlight/dist/index.js
+		// node_modules/.pnpm/@lezer+highlight@1.2.5/node_modules/@lezer/highlight/dist/index.js
 		let nextTagID = 0;
 		/**
 		Highlighting tags are markers that denote a highlighting category.
@@ -19165,8 +19128,7 @@ window.__ModuleLoader__.load({
 				class: "tok-punctuation"
 			}
 		]);
-		//#endregion
-		//#region node_modules/@codemirror/streamparser/dist/index.js
+		// node_modules/.pnpm/@codemirror+streamparser@6.0.0/node_modules/@codemirror/streamparser/dist/index.js
 		function countCol(string, end, tabSize, startIndex = 0, startValue = 0) {
 			if (end == null) {
 				end = string.search(/[^\s\u00a0]/);
@@ -19331,8 +19293,7 @@ window.__ModuleLoader__.load({
 				return this.string.slice(this.start, this.pos);
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/language/dist/index.js
+		// node_modules/.pnpm/@codemirror+language@6.13.1/node_modules/@codemirror/language/dist/index.js
 		var _a;
 		/**
 		Node prop stored in a parser's top syntax node to provide the
@@ -21453,8 +21414,7 @@ window.__ModuleLoader__.load({
 			return type;
 		}
 		Direction.RTL, Direction.LTR;
-		//#endregion
-		//#region node_modules/@codemirror/commands/dist/index.js
+		// node_modules/.pnpm/@codemirror+commands@6.11.1/node_modules/@codemirror/commands/dist/index.js
 		/**
 		Comment or uncomment the current selection. Will use line comments
 		if available, otherwise falling back to block comments.
@@ -23177,8 +23137,7 @@ window.__ModuleLoader__.load({
 			run: indentMore,
 			shift: indentLess
 		};
-		//#endregion
-		//#region node_modules/@codemirror/search/dist/index.js
+		// node_modules/.pnpm/@codemirror+search@6.7.2/node_modules/@codemirror/search/dist/index.js
 		const basicNormalize = typeof String.prototype.normalize == "function" ? (x) => x.normalize("NFKD") : (x) => x;
 		/**
 		A search cursor provides an iterator over text matches in a
@@ -24325,8 +24284,7 @@ window.__ModuleLoader__.load({
 			/*@__PURE__*/ Prec.low(searchHighlighter),
 			baseTheme$2
 		];
-		//#endregion
-		//#region node_modules/@codemirror/autocomplete/dist/index.js
+		// node_modules/.pnpm/@codemirror+autocomplete@6.20.4/node_modules/@codemirror/autocomplete/dist/index.js
 		/**
 		An instance of this is passed to completion source functions.
 		*/
@@ -25380,7 +25338,7 @@ window.__ModuleLoader__.load({
 		const windows = typeof navigator == "object" && /*@__PURE__*/ /Win/.test(navigator.platform);
 		const commitCharacters = /*@__PURE__*/ Prec.highest(/*@__PURE__*/ EditorView.domEventHandlers({ keydown(event, view) {
 			let field = view.state.field(completionState, false);
-			if (!field || !field.open || field.open.disabled || field.open.selected < 0 || event.key.length > 1 || event.ctrlKey && !(windows && event.altKey) || event.metaKey) return false;
+			if (!field || !field.open || field.open.disabled || field.open.selected < 0 || !event.key || event.key.length > 1 || event.ctrlKey && !(windows && event.altKey) || event.metaKey) return false;
 			let option = field.open.options[field.open.selected];
 			let result = field.active.find((a) => a.source == option.source);
 			let commitChars = option.completion.commitCharacters || result.result.commitCharacters;
@@ -26076,8 +26034,7 @@ window.__ModuleLoader__.load({
 			}
 		];
 		const completionKeymapExt = /*@__PURE__*/ Prec.highest(/*@__PURE__*/ keymap.computeN([completionConfig], (state) => state.facet(completionConfig).defaultKeymap ? [completionKeymap] : []));
-		//#endregion
-		//#region node_modules/@codemirror/lint/dist/index.js
+		// node_modules/.pnpm/@codemirror+lint@6.9.7/node_modules/@codemirror/lint/dist/index.js
 		var SelectedDiagnostic = class {
 			constructor(from, to, diagnostic) {
 				this.from = from;
@@ -26639,8 +26596,7 @@ window.__ModuleLoader__.load({
 			lintHover,
 			baseTheme
 		];
-		//#endregion
-		//#region node_modules/@uiw/codemirror-extensions-basic-setup/esm/index.js
+		// node_modules/.pnpm/@uiw+codemirror-extensions-basic-setup@4.25.12_@codemirror+autocomplete@6.20.4_@codemir_87bb5e015281b1cf771e20cb4f8e1153/node_modules/@uiw/codemirror-extensions-basic-setup/esm/index.js
 		/**
 		This is an extension value that just pulls together a number of
 		extensions that you might want in a basic editor. It is meant as a
@@ -26710,8 +26666,7 @@ window.__ModuleLoader__.load({
 			if (options.tabSize && typeof options.tabSize === "number") extensions.push(indentUnit.of(" ".repeat(options.tabSize)));
 			return extensions.concat([keymap.of(keymaps.flat())]).filter(Boolean);
 		};
-		//#endregion
-		//#region node_modules/@codemirror/theme-one-dark/dist/index.js
+		// node_modules/.pnpm/@codemirror+theme-one-dark@6.1.3/node_modules/@codemirror/theme-one-dark/dist/index.js
 		const chalky = "#e5c07b";
 		const coral = "#e06c75";
 		const cyan = "#56b6c2";
@@ -26884,11 +26839,9 @@ window.__ModuleLoader__.load({
 				color: invalid
 			}
 		]))];
-		//#endregion
-		//#region node_modules/@uiw/react-codemirror/esm/theme/light.js
+		// node_modules/.pnpm/@uiw+react-codemirror@4.25.12_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@cod_e101146645ded396020aaca524365ff9/node_modules/@uiw/react-codemirror/esm/theme/light.js
 		var defaultLightThemeOption = EditorView.theme({ "&": { backgroundColor: "#fff" } }, { dark: false });
-		//#endregion
-		//#region node_modules/@uiw/react-codemirror/esm/getDefaultExtensions.js
+		// node_modules/.pnpm/@uiw+react-codemirror@4.25.12_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@cod_e101146645ded396020aaca524365ff9/node_modules/@uiw/react-codemirror/esm/getDefaultExtensions.js
 		var getDefaultExtensions = function getDefaultExtensions(optios) {
 			if (optios === void 0) optios = {};
 			var _optios = optios, _optios$indentWithTab = _optios.indentWithTab, defaultIndentWithTab = _optios$indentWithTab === void 0 ? true : _optios$indentWithTab, _optios$editable = _optios.editable, editable = _optios$editable === void 0 ? true : _optios$editable, _optios$readOnly = _optios.readOnly, readOnly = _optios$readOnly === void 0 ? false : _optios$readOnly, _optios$theme = _optios.theme, theme = _optios$theme === void 0 ? "light" : _optios$theme, _optios$placeholder = _optios.placeholder, placeholderStr = _optios$placeholder === void 0 ? "" : _optios$placeholder, _optios$basicSetup = _optios.basicSetup, defaultBasicSetup = _optios$basicSetup === void 0 ? true : _optios$basicSetup;
@@ -26913,8 +26866,7 @@ window.__ModuleLoader__.load({
 			if (readOnly) getExtensions.push(EditorState.readOnly.of(true));
 			return [...getExtensions];
 		};
-		//#endregion
-		//#region node_modules/@uiw/react-codemirror/esm/utils.js
+		// node_modules/.pnpm/@uiw+react-codemirror@4.25.12_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@cod_e101146645ded396020aaca524365ff9/node_modules/@uiw/react-codemirror/esm/utils.js
 		var getStatistics = (view) => {
 			return {
 				line: view.state.doc.lineAt(view.state.selection.main.from),
@@ -26931,8 +26883,7 @@ window.__ModuleLoader__.load({
 				selectedText: view.state.selection.ranges.some((r) => !r.empty)
 			};
 		};
-		//#endregion
-		//#region node_modules/@uiw/react-codemirror/esm/timeoutLatch.js
+		// node_modules/.pnpm/@uiw+react-codemirror@4.25.12_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@cod_e101146645ded396020aaca524365ff9/node_modules/@uiw/react-codemirror/esm/timeoutLatch.js
 		var TimeoutLatch = class {
 			constructor(callback, timeoutMS) {
 				this.timeLeftMS = void 0;
@@ -27008,8 +26959,7 @@ window.__ModuleLoader__.load({
 			if (!globalScheduler) globalScheduler = new Scheduler();
 			return globalScheduler;
 		};
-		//#endregion
-		//#region node_modules/@uiw/react-codemirror/esm/theme/dimensionTheme.js
+		// node_modules/.pnpm/@uiw+react-codemirror@4.25.12_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@cod_e101146645ded396020aaca524365ff9/node_modules/@uiw/react-codemirror/esm/theme/dimensionTheme.js
 		var scrollerTheme = EditorView.theme({ "& .cm-scroller": { height: "100% !important" } });
 		var lastDimensionKey = null;
 		var lastDimensionTheme = null;
@@ -27035,8 +26985,7 @@ window.__ModuleLoader__.load({
 			} });
 			return lastDimensionTheme;
 		}
-		//#endregion
-		//#region node_modules/@uiw/react-codemirror/esm/useCodeMirror.js
+		// node_modules/.pnpm/@uiw+react-codemirror@4.25.12_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@cod_e101146645ded396020aaca524365ff9/node_modules/@uiw/react-codemirror/esm/useCodeMirror.js
 		var ExternalChange = Annotation.define();
 		var TYPING_TIMOUT = 200;
 		var emptyExtensions = [];
@@ -27171,8 +27120,7 @@ window.__ModuleLoader__.load({
 				setContainer
 			};
 		}
-		//#endregion
-		//#region node_modules/@uiw/react-codemirror/esm/index.js
+		// node_modules/.pnpm/@uiw+react-codemirror@4.25.12_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@cod_e101146645ded396020aaca524365ff9/node_modules/@uiw/react-codemirror/esm/index.js
 		var _excluded = [
 			"className",
 			"value",
@@ -27247,8 +27195,7 @@ window.__ModuleLoader__.load({
 			}, other));
 		});
 		ReactCodeMirror.displayName = "CodeMirror";
-		//#endregion
-		//#region node_modules/@lezer/lr/dist/index.js
+		// node_modules/.pnpm/@lezer+lr@1.4.12/node_modules/@lezer/lr/dist/index.js
 		/**
 		A parse stack. These are used internally by the parser to track
 		parsing progress. They also provide some properties and methods
@@ -27412,16 +27359,15 @@ window.__ModuleLoader__.load({
 			/**
 			@internal
 			*/
-			useNode(value, next) {
+			useNode(value, next, start) {
 				let index = this.p.reused.length - 1;
 				if (index < 0 || this.p.reused[index] != value) {
 					this.p.reused.push(value);
 					index++;
 				}
-				let start = this.pos;
-				this.reducePos = this.pos = start + value.length;
+				let end = this.reducePos = this.pos = start + value.length;
 				this.pushState(next, start);
-				this.buffer.push(index, start, this.reducePos, -1);
+				this.buffer.push(index, start, end, -1);
 				if (this.curContext) this.updateContext(this.curContext.tracker.reuse(this.curContext.context, value, this, this.p.stream.reset(this.pos - value.length)));
 			}
 			/**
@@ -27599,7 +27545,7 @@ window.__ModuleLoader__.load({
 			*/
 			emitContext() {
 				let last = this.buffer.length - 1;
-				if (last < 0 || this.buffer[last] != -3) this.buffer.push(this.curContext.hash, this.pos, this.pos, -3);
+				if (last < 0 || this.buffer[last] != -3) this.storeNode(this.curContext.hash, this.reducePos, this.reducePos, -3, true);
 			}
 			/**
 			@internal
@@ -28056,9 +28002,9 @@ window.__ModuleLoader__.load({
 			}
 		}
 		var FragmentCursor$1 = class {
-			constructor(fragments, nodeSet) {
+			constructor(fragments, minRepeat) {
 				this.fragments = fragments;
-				this.nodeSet = nodeSet;
+				this.minRepeat = minRepeat;
 				this.i = 0;
 				this.fragment = null;
 				this.safeFrom = -1;
@@ -28066,6 +28012,8 @@ window.__ModuleLoader__.load({
 				this.trees = [];
 				this.start = [];
 				this.index = [];
+				this.lastRepeat = null;
+				this.lastRepeatPos = -1;
 				this.nextFragment();
 			}
 			nextFragment() {
@@ -28094,6 +28042,7 @@ window.__ModuleLoader__.load({
 						this.nextFragment();
 						return null;
 					}
+					if (pos < this.safeFrom) return null;
 					let top = this.trees[last], index = this.index[last];
 					if (index == top.children.length) {
 						this.trees.pop();
@@ -28108,12 +28057,15 @@ window.__ModuleLoader__.load({
 						return null;
 					}
 					if (next instanceof Tree) {
-						if (start == pos) {
-							if (start < this.safeFrom) return null;
-							let end = start + next.length;
-							if (end <= this.safeTo) {
-								let lookAhead = next.prop(NodeProp.lookAhead);
-								if (!lookAhead || end + lookAhead < this.fragment.to) return next;
+						let storeRepeat = start > this.lastRepeatPos && next.type.id >= this.minRepeat;
+						if (start == pos || storeRepeat) {
+							let end = start + next.length, lookahead;
+							if (start >= this.safeFrom && end <= this.safeTo && (!(lookahead = next.prop(NodeProp.lookAhead)) || end + lookahead < this.fragment.to)) {
+								if (storeRepeat) {
+									this.lastRepeat = next;
+									this.lastRepeatPos = start;
+								}
+								if (start == pos) return next;
 							}
 						}
 						this.index[last]++;
@@ -28241,7 +28193,7 @@ window.__ModuleLoader__.load({
 				this.topTerm = parser.top[1];
 				let { from } = ranges[0];
 				this.stacks = [Stack.start(this, parser.top[0], from)];
-				this.fragments = fragments.length && this.stream.end - from > parser.bufferLength * 4 ? new FragmentCursor$1(fragments, parser.nodeSet) : null;
+				this.fragments = fragments.length && this.stream.end - from > parser.bufferLength * 4 ? new FragmentCursor$1(fragments, parser.minRepeatTerm) : null;
 			}
 			get parsedPos() {
 				return this.minStackPos;
@@ -28326,23 +28278,31 @@ window.__ModuleLoader__.load({
 				if (this.stoppedAt != null && this.stoppedAt < pos) throw new RangeError("Can't move stoppedAt forward");
 				this.stoppedAt = pos;
 			}
+			tryReuse(stack, start, tree, repeatOnly) {
+				if (!tree) return null;
+				let strictCx = stack.curContext && stack.curContext.tracker.strict, cxHash = strictCx ? stack.curContext.hash : 0;
+				for (; tree;) {
+					let match = this.parser.nodeSet.types[tree.type.id] != tree.type ? -1 : this.parser.getGoto(stack.state, tree.type.id);
+					if (match > -1 && tree.length && (!strictCx || (tree.prop(NodeProp.contextHash) || 0) == cxHash)) {
+						stack.useNode(tree, match, start);
+						return tree;
+					}
+					if (tree.children.length == 0 || tree.positions[0] > 0) break;
+					let inner = tree.children[0];
+					if (inner instanceof Tree && (!repeatOnly || inner.type.id >= this.parser.minRepeatTerm)) tree = inner;
+					else break;
+				}
+				return null;
+			}
 			advanceStack(stack, stacks, split) {
 				let start = stack.pos, { parser } = this;
 				let base = verbose ? this.stackID(stack) + " -> " : "";
 				if (this.stoppedAt != null && start > this.stoppedAt) return stack.forceReduce() ? stack : null;
 				if (this.fragments) {
-					let strictCx = stack.curContext && stack.curContext.tracker.strict, cxHash = strictCx ? stack.curContext.hash : 0;
-					for (let cached = this.fragments.nodeAt(start); cached;) {
-						let match = this.parser.nodeSet.types[cached.type.id] == cached.type ? parser.getGoto(stack.state, cached.type.id) : -1;
-						if (match > -1 && cached.length && (!strictCx || (cached.prop(NodeProp.contextHash) || 0) == cxHash)) {
-							stack.useNode(cached, match);
-							if (verbose) console.log(base + this.stackID(stack) + ` (via reuse of ${parser.getName(cached.type.id)})`);
-							return true;
-						}
-						if (!(cached instanceof Tree) || cached.children.length == 0 || cached.positions[0] > 0) break;
-						let inner = cached.children[0];
-						if (inner instanceof Tree && cached.positions[0] == 0) cached = inner;
-						else break;
+					let reused = stack.reducePos < start && stack.buffer.length && stack.buffer[stack.buffer.length - 2] <= stack.reducePos && this.fragments.lastRepeatPos == stack.reducePos && this.tryReuse(stack, stack.reducePos, this.fragments.lastRepeat, true) || this.tryReuse(stack, start, this.fragments.nodeAt(start), false);
+					if (reused) {
+						if (verbose) console.log(base + this.stackID(stack) + ` (via reuse of ${parser.getName(reused.type.id)})`);
+						return true;
 					}
 				}
 				let defaultReduce = parser.stateSlot(stack.state, 4);
@@ -28738,8 +28698,7 @@ window.__ModuleLoader__.load({
 			}
 			return spec.get;
 		}
-		//#endregion
-		//#region node_modules/@lezer/javascript/dist/index.js
+		// node_modules/.pnpm/@lezer+javascript@1.5.6/node_modules/@lezer/javascript/dist/index.js
 		const noSemi = 317;
 		const noSemiType = 318;
 		const incdec = 1;
@@ -29011,9 +28970,9 @@ window.__ModuleLoader__.load({
 		};
 		const parser$7 = LRParser.deserialize({
 			version: 14,
-			states: "$FvQ%TQlOOO%[QlOOO'_QpOOP(lO`OOO*zQ!0MxO'#CiO+RO#tO'#CjO+aO&jO'#CjO+oO#@ItO'#DaO.QQlO'#DgO.bQlO'#DrO%[QlO'#DzO0fQlO'#ESOOQ!0Lf'#E['#E[O1PQ`O'#EXOOQO'#Ep'#EpOOQO'#Im'#ImO1XQ`O'#GtO1dQ`O'#EoO1iQ`O'#EoO3hQ!0MxO'#JsO6[Q!0MxO'#JtO6uQ`O'#F^O6zQ,UO'#FuOOQ!0Lf'#Fg'#FgO7VO7dO'#FgO9XQMhO'#F}O9`Q`O'#F|OOQ!0Lf'#Jt'#JtOOQ!0Lb'#Js'#JsO9eQ`O'#GxOOQ['#K`'#K`O9pQ`O'#IZO9uQ!0LrO'#I[OOQ['#Ja'#JaOOQ['#I`'#I`Q`QlOOQ`QlOOO9}Q!L^O'#DvO:UQlO'#EOO:]QlO'#EQO9kQ`O'#GtO:dQMhO'#CoO:rQ`O'#EnO:}Q`O'#EzO;hQMhO'#FfO;xQ`O'#GtOOQO'#Ka'#KaO;}Q`O'#KaO<]Q`O'#G|O<]Q`O'#G}O<]Q`O'#HPO9kQ`O'#HSO=SQ`O'#HVO>kQ`O'#CeO>{Q`O'#HdO?TQ`O'#HjO?TQ`O'#HlO`QlO'#HnO?TQ`O'#HpO?TQ`O'#HsO?YQ`O'#HyO?_Q!0LsO'#IPO%[QlO'#IRO?jQ!0LsO'#ITO?uQ!0LsO'#IVO9uQ!0LrO'#IXO@QQ!0MxO'#CiOASQpO'#DlQOQ`OOO%[QlO'#EQOAjQ`O'#ETO:dQMhO'#EnOAuQ`O'#EnOBQQ!bO'#FfOOQ['#Cg'#CgOOQ!0Lb'#Dq'#DqOOQ!0Lb'#Jw'#JwO%[QlO'#JwOOQO'#Jz'#JzOOQO'#Ii'#IiOCQQpO'#EgOOQ!0Lb'#Ef'#EfOOQ!0Lb'#KO'#KOOC|Q!0MSO'#EgODWQpO'#EWOOQO'#Jy'#JyODlQpO'#JzOEyQpO'#EWODWQpO'#EgPFWO&2DjO'#CbPOOO)CEO)CEOOOOO'#Ia'#IaOFcO#tO,59UOOQ!0Lh,59U,59UOOOO'#Ib'#IbOFqO&jO,59UOGPQ!L^O'#DcOOOO'#Id'#IdOGWO#@ItO,59{OOQ!0Lf,59{,59{OGfQlO'#IeOGyQ`O'#JuOIxQ!fO'#JuO+}QlO'#JuOJPQ`O,5:ROJgQ`O'#EpOJtQ`O'#KUOKPQ`O'#KTOKPQ`O'#KTOKXQ`O,5;^OK^Q`O'#KSOOQ!0Ln,5:^,5:^OKeQlO,5:^OMcQ!0MxO,5:fONSQ`O,5:nONmQ!0LrO'#KRONtQ`O'#KQO9eQ`O'#KQO! YQ`O'#KQO! bQ`O,5;]O! gQ`O'#KQO!#lQ!fO'#JtOOQ!0Lh'#Ci'#CiO%[QlO'#ESO!$[Q!fO,5:sOOQS'#J{'#J{OOQO-E<k-E<kO9kQ`O,5=`O!$rQ`O,5=`O!$wQlO,5;ZO!&zQMhO'#EkO!(eQ`O,5;ZO!(jQlO'#DyO!(tQpO,5;eO!(|QpO,5;eO%[QlO,5;eOOQ['#FU'#FUOOQ['#FW'#FWO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fOOQ['#F['#F[O!)[QlO,5;uOOQ!0Lf,5;z,5;zOOQ!0Lf,5;{,5;{OOQ!0Lf,5;},5;}O%[QlO'#IqO!+_Q!0LrO,5<jO%[QlO,5;fO!&zQMhO,5;fO!+|QMhO,5;fO!-nQMhO'#E^O%[QlO,5;xOOQ!0Lf,5;|,5;|O!-uQ,UO'#FkO!.rQ,UO'#KYO!.^Q,UO'#KYO!.yQ,UO'#KYOOQO'#KY'#KYO!/_Q,UO,5<TOOOW,5<a,5<aO!/pQlO'#FwOOOW'#Ip'#IpO7VO7dO,5<RO!/wQ,UO'#FyOOQ!0Lf,5<R,5<RO!0hQ$IUO'#CyOOQ!0Lh'#C}'#C}O!0{O#@ItO'#DRO!1iQMjO,5<fO!1pQ`O,5<iO!3YQ(CWO'#GYO!3jQ`O'#GZO!3oQ`O'#GZO!5_Q(CWO'#G_O!6dQpO'#GcOOQO'#Go'#GoO!,TQMhO'#GnOOQO'#Gq'#GqO!,TQMhO'#GpO!7VQ$IUO'#JmOOQ!0Lh'#Jm'#JmO!7aQ`O'#JlO!7oQ`O'#JkO!7wQ`O'#CuOOQ!0Lh'#C{'#C{O!8YQ`O'#C}OOQ!0Lh'#DV'#DVOOQ!0Lh'#DX'#DXO!8_Q`O,5<fO1SQ`O'#DZO!,TQMhO'#GQO!,TQMhO'#GSO!8gQ`O'#GUO!8lQ`O'#GVO!3oQ`O'#G]O!,TQMhO'#GbO<]Q`O'#JlO!8qQ`O'#EqO!9`Q`O,5<hOOQ!0Lb'#Cr'#CrO!9hQ`O'#ErO!:bQpO'#EsOOQ!0Lb'#KS'#KSO!:iQ!0LrO'#KbO9uQ!0LrO,5=dO`QlO,5>uOOQ['#Ji'#JiOOQ[,5>v,5>vOOQ[-E<^-E<^O!<hQ!0MxO,5:bO!=[QpO,5:`O!?WQ!0MxO,5:jO%[QlO,5:jO!AnQ!0MxO,5:lOOQO,5@{,5@{O!B_QMhO,5=`O!BmQ!0LrO'#JjO9`Q`O'#JjO!COQ!0LrO,59ZO!CZQpO,59ZO!CcQMhO,59ZO:dQMhO,59ZO!CnQ`O,5;ZO!CvQ`O'#HcO!D[Q`O'#KeO%[QlO,5<OO!=[QpO,5<QO!DdQ`O,5={O!DiQ`O,5={O!DnQ`O,5={O!D|Q`O,5={O9uQ!0LrO,5={O<]Q`O,5=kOOQO'#Cy'#CyO!ETQpO,5=hO!E]QMhO,5=iO!EhQ`O,5=kO!EmQ!bO,5=nO!EuQ`O'#KaO?YQ`O'#HXO9kQ`O'#HZO!EzQ`O'#HZO:dQMhO'#H]O!FPQ`O'#H]OOQ[,5=q,5=qO!FUQ`O'#H^O!FgQ`O'#CoO!FlQ`O,59PO!FvQ`O,59PO!H{QlO,59POOQ[,59P,59PO!I]Q!0LrO,59PO%[QlO,59PO!KhQlO'#HfOOQ['#Hg'#HgOOQ['#Hh'#HhO`QlO,5>OO!LOQ`O,5>OO`QlO,5>UO`QlO,5>WO!LTQ`O,5>YO`QlO,5>[O!LYQ`O,5>_O!L_QlO,5>eOOQ[,5>k,5>kO%[QlO,5>kO9uQ!0LrO,5>mOOQ[,5>o,5>oO#!iQ`O,5>oOOQ[,5>q,5>qO#!iQ`O,5>qOOQ[,5>s,5>sO##SQpO'#D_O%[QlO'#JwO##^QpO'#JwO##xQpO'#DmO#$ZQpO'#DmO#&lQlO'#DmO#&sQ`O'#JvO#&{Q`O,5:WOOQO'#Et'#EtO#'QQ`O'#EtO#'VQ`O'#KVO#'_Q`O,5;_O#'dQpO'#DmO#'qQpO'#EVOOQ!0Lf,5:o,5:oO%[QlO,5:oO#'xQ`O,5:oO?YQ`O,5;YO!CZQpO,5;YO!CcQMhO,5;YO:dQMhO,5;YO#(QQ`O,5@cO#(VQ07dO,5:sOOQO-E<g-E<gO#)]Q!0MSO,5;RODWQpO,5:rO#)gQpO,5:rODWQpO,5;RO!COQ!0LrO,5:rOOQ!0Lb'#Ej'#EjOOQO,5;R,5;RO%[QlO,5;RO#)tQ!0LrO,5;RO#*PQ!0LrO,5;RO!CZQpO,5:rOOQO,5;X,5;XO#*_Q!0LrO,5;RPOOO'#I_'#I_P#*sO&2DjO,58|POOO,58|,58|OOOO-E<_-E<_OOQ!0Lh1G.p1G.pOOOO-E<`-E<`OOOO,59},59}O#+OQ!bO,59}OOOO-E<b-E<bOOQ!0Lf1G/g1G/gO#+TQ!fO,5?PO+}QlO,5?POOQO,5?V,5?VO#+_QlO'#IeOOQO-E<c-E<cO#+lQ`O,5@aO#+tQ!fO,5@aO#+{Q`O,5@oOOQ!0Lf1G/m1G/mO%[QlO,5@pO#,TQ`O'#IkOOQO-E<i-E<iO#+{Q`O,5@oOOQ!0Lb1G0x1G0xOOQ!0Ln1G/x1G/xOOQ!0Ln1G0Y1G0YO%[QlO,5@mO#,iQ!0LrO,5@mO#,zQ!0LrO,5@mO#-RQ`O,5@lO9eQ`O,5@lO#-ZQ`O,5@lO#-iQ`O'#InO#-RQ`O,5@lOOQ!0Lb1G0w1G0wO!(tQpO,5:uO!)PQpO,5:uOOQS,5:w,5:wO#.ZQdO,5:wO#.cQMhO1G2zO9kQ`O1G2zOOQ!0Lf1G0u1G0uO#.qQ!0MxO1G0uO#/vQ!0MvO,5;VOOQ!0Lh'#GX'#GXO#0dQ!0MzO'#JmO!$wQlO1G0uO#2oQ!fO'#JxO%[QlO'#JxO#2yQ`O,5:eOOQ!0Lh'#D_'#D_OOQ!0Lf1G1P1G1PO%[QlO1G1POOQ!0Lf1G1g1G1gO#3OQ`O1G1PO#5dQ!0MxO1G1QO#5kQ!0MxO1G1QO#8RQ!0MxO1G1QO#8YQ!0MxO1G1QO#:pQ!0MxO1G1QO#=WQ!0MxO1G1QO#=_Q!0MxO1G1QO#=fQ!0MxO1G1QO#?|Q!0MxO1G1QO#@TQ!0MxO1G1QO#BbQ?MtO'#CiO#D]Q?MtO1G1aO#DdQ?MtO'#JtO#DwQ!0MxO,5?]OOQ!0Lb-E<o-E<oO#GUQ!0MxO1G1QO#HRQ!0MzO1G1QOOQ!0Lf1G1Q1G1QO#IUQMjO'#J}O#I`Q`O,5:xO#IeQ!0MxO1G1dO#JXQ,UO,5<XO#JaQ,UO,5<YO#JiQ,UO'#FpO#KQQ`O'#FoOOQO'#KZ'#KZOOQO'#Io'#IoO#KVQ,UO1G1oOOQ!0Lf1G1o1G1oOOOW1G1z1G1zO#KhQ?MtO'#JsO#KrQ`O,5<cO!)[QlO,5<cOOOW-E<n-E<nOOQ!0Lf1G1m1G1mO#KwQpO'#KYOOQ!0Lf,5<e,5<eO#LPQpO,5<eO#LUQMhO'#DTOOOO'#Ic'#IcO#L]O#@ItO,59mOOQ!0Lh,59m,59mO%[QlO1G2QO!8lQ`O'#IsO#LhQ`O,5<{OOQ!0Lh,5<x,5<xO!,TQMhO'#IvO#MUQMjO,5=YO!,TQMhO'#IxO#MwQMjO,5=[O!&zQMhO,5=^OOQO1G2T1G2TO#NRQ!dO'#CrO#NfQ(CWO'#ErO$ nQpO'#GcO$!UQ!dO,5<tO$!]Q`O'#K]O9eQ`O'#K]O$!kQ`O,5<vO$#RQ!dO'#C{O!,TQMhO,5<uO$#]Q`O'#G[O$#qQ`O,5<uO$#vQ!dO'#GXO$$TQ!dO'#K^O$$_Q`O'#K^O!&zQMhO'#K^O$$dQ`O,5<yO$$iQlO'#JwO$$sQpO'#GdO#$ZQpO'#GdO$%UQ`O'#GhO!3oQ`O'#GlO$%ZQ!0LrO'#IuO$%fQpO,5<}OOQ!0Lp,5<},5<}O$%mQpO'#GdO$%zQpO'#GeO$&]QpO'#GeO$&bQMjO,5=YO$&rQMjO,5=[OOQ!0Lh,5=_,5=_O!,TQMhO,5@WO!,TQMhO,5@WO$'SQ`O'#IzO$'hQ`O,5@VO$'pQ`O,59aOOQ!0Lh,59i,59iO$'uQ`O,5@WO$(uQ$IYO,59uOOQ!0Lh'#Jq'#JqO$)hQMjO,5<lO$*ZQMjO,5<nO@zQ`O,5<pOOQ!0Lh,5<q,5<qO$*eQ`O,5<wO$*jQMjO,5<|O$*zQ`O'#KQO!$wQlO1G2SO$+PQ`O1G2SO9eQ`O'#KTO$+UQ`O'#D_O9eQ`O'#EtO%[QlO'#EtO9eQ`O'#I|O$+aQ!0LrO,5@|OOQ[1G3O1G3OOOQ[1G4a1G4aOOQ!0Lf1G/|1G/|OOQ!0Lf1G/z1G/zO$-cQ!0MxO1G0UOOQ[1G2z1G2zO!&zQMhO1G2zO%[QlO1G2zO#.fQ`O1G2zO$/gQMhO'#EkOOQ!0Lb,5@U,5@UO$/tQ!0LrO,5@UOOQ[1G.u1G.uO!COQ!0LrO1G.uO!CZQpO1G.uO!CcQMhO1G.uO$0VQ`O1G0uO$0[Q`O'#CiO$0gQ`O'#KfO$0oQ`O,5=}O$0tQ`O'#KfO$0yQ`O'#KfO$1XQ`O'#JSO$1gQ`O,5APO$1oQ!fO1G1jOOQ!0Lf1G1l1G1lO9kQ`O1G3gO@zQ`O1G3gO$1vQ`O1G3gO$1{Q`O1G3gO!DnQ`O1G3gO9uQ!0LrO1G3gOOQ[1G3g1G3gO!EhQ`O1G3VO!&zQMhO1G3SO$2QQ`O1G3SOOQ[1G3T1G3TO!&zQMhO1G3TO$2VQ`O1G3TO$2_QpO'#HROOQ[1G3V1G3VO!6_QpO'#JOO!EmQ!bO1G3YOOQ[1G3Y1G3YOOQ[,5=s,5=sO$2gQMhO,5=uO9kQ`O,5=uO$%UQ`O,5=wO9`Q`O,5=wO!CZQpO,5=wO!CcQMhO,5=wO:dQMhO,5=wO$2uQ`O'#KdO$3QQ`O,5=xOOQ[1G.k1G.kO$3VQ!0LrO1G.kO@zQ`O1G.kO$3bQ`O1G.kO9uQ!0LrO1G.kO$5jQ!fO,5ARO$5wQ`O,5ARO9eQ`O,5ARO$6SQlO,5>QO$6ZQ`O,5>QOOQ[1G3j1G3jO`QlO1G3jOOQ[1G3p1G3pOOQ[1G3r1G3rO?TQ`O1G3tO$6`QlO1G3vO$:dQlO'#HuOOQ[1G3y1G3yO$:qQ`O'#H{O?YQ`O'#H}OOQ[1G4P1G4PO$:yQlO1G4PO9uQ!0LrO1G4VOOQ[1G4X1G4XOOQ!0Lb'#G`'#G`O9uQ!0LrO1G4ZO9uQ!0LrO1G4]O$?QQ`O,5@cO9eQ`O,5;`O?YQ`O,5:XO!)[QlO,5:XO!CZQpO,5:XO$?VQ?MtO,5:XOOQO,5;`,5;`O$?aQpO'#IfO$?wQ`O,5@bOOQ!0Lf1G/r1G/rO$@PQpO'#IlO$@ZQ`O,5@qOOQ!0Lb1G0y1G0yO#$ZQpO,5:XOOQO'#Ih'#IhO$@cQpO,5:qOOQ!0Ln,5:q,5:qO#'{Q`O1G0ZOOQ!0Lf1G0Z1G0ZO%[QlO1G0ZOOQ!0Lf1G0t1G0tO?YQ`O1G0tO!CZQpO1G0tO!CcQMhO1G0tOOQ!0Lb1G5}1G5}O!COQ!0LrO1G0^OOQO1G0m1G0mO%[QlO1G0mO$@jQ!0LrO1G0mO$@uQ!0LrO1G0mO!CZQpO1G0^ODWQpO1G0^O$ATQ!0LrO1G0mOOQO1G0^1G0^O$AiQ!0MxO1G0mPOOO-E<]-E<]POOO1G.h1G.hOOOO1G/i1G/iO$AsQ!bO,5<jO$A{Q!fO1G4kOOQO1G4q1G4qO%[QlO,5?PO$BVQ`O1G5{O$B_Q`O1G6ZO$BgQ!fO1G6[O9eQ`O,5?VO$BqQ!0MxO1G6XO%[QlO1G6XO$CRQ!0LrO1G6XO$CdQ`O1G6WO$CdQ`O1G6WO9eQ`O1G6WO$ClQ`O,5?YO9eQ`O,5?YOOQO,5?Y,5?YO$DQQ`O,5?YO$*zQ`O,5?YOOQO-E<l-E<lOOQS1G0a1G0aOOQS1G0c1G0cO#.^Q`O1G0cOOQ[7+(f7+(fO!&zQMhO7+(fO%[QlO7+(fO$D`Q`O7+(fO$DkQMhO7+(fO$DyQ!0MzO,5=YO$GUQ!0MzO,5=[O$IaQ!0MzO,5=YO$KrQ!0MzO,5=[O$NTQ!0MzO,59uO%!YQ!0MzO,5<lO%$eQ!0MzO,5<nO%&pQ!0MzO,5<|OOQ!0Lf7+&a7+&aO%)RQ!0MxO7+&aO%)uQlO'#IgO%*SQ`O,5@dO%*[Q!fO,5@dOOQ!0Lf1G0P1G0PO%*fQ`O7+&kOOQ!0Lf7+&k7+&kO%*kQ?MtO,5:fO%[QlO7+&{O%*uQ?MtO,5:bO%+SQ?MtO,5:jO%+^Q?MtO,5:lO%+hQMhO'#IjO%+rQ`O,5@iOOQ!0Lh1G0d1G0dOOQO1G1s1G1sOOQO1G1t1G1tO%+zQ!jO,5<[O!)[QlO,5<ZOOQO-E<m-E<mOOQ!0Lf7+'Z7+'ZOOOW7+'f7+'fOOOW1G1}1G1}O%,VQ`O1G1}OOQ!0Lf1G2P1G2POOOO,59o,59oO%,[Q!dO,59oOOOO-E<a-E<aOOQ!0Lh1G/X1G/XO%,cQ!0MxO7+'lOOQ!0Lh,5?_,5?_O%-VQMhO1G2gP%-^Q`O'#IsPOQ!0Lh-E<q-E<qO%-zQMjO,5?bOOQ!0Lh-E<t-E<tO%.mQMjO,5?dOOQ!0Lh-E<v-E<vO%.wQ!dO1G2xO%/OQ!dO'#CrO%/fQMhO'#KTO$$iQlO'#JwOOQ!0Lh1G2`1G2`O%/pQ`O'#IrO%0XQ`O,5@wO%0XQ`O,5@wO%0aQ`O,5@wO%0lQ`O,5@wOOQO1G2b1G2bO%0zQMjO1G2aO$*zQ`O'#K]O!,TQMhO1G2aO%1[Q(CWO'#ItO%1iQ`O,5@xO!&zQMhO,5@xO%1qQ!dO,5@xOOQ!0Lh1G2e1G2eO%4RQ!fO'#CiO%4]Q`O,5=QOOQ!0Lb,5=O,5=OO%4eQpO,5=OOOQ!0Lb,5=P,5=POCwQ`O,5=OO%4pQpO,5=OOOQ!0Lb,5=S,5=SO$*zQ`O,5=WOOQO,5?a,5?aOOQO-E<s-E<sOOQ!0Lp1G2i1G2iO#$ZQpO,5=OO$$iQlO,5=QO%5OQ`O,5=PO%5ZQpO,5=PO!,TQMhO'#IvO%6TQMjO1G2tO!,TQMhO'#IxO%6vQMjO1G2vO%7QQMjO1G5rO%7[QMjO1G5rOOQO,5?f,5?fOOQO-E<x-E<xOOQO1G.{1G.{O!,TQMhO1G5rO!,TQMhO1G5rO!=[QpO,59wO%[QlO,59wOOQ!0Lh,5<k,5<kO%7iQ`O1G2[O!,TQMhO1G2cO%7nQ!0MxO7+'nOOQ!0Lf7+'n7+'nO!$wQlO7+'nO%8bQ`O,5;`OOQ!0Lb,5?h,5?hOOQ!0Lb-E<z-E<zO%8gQ!dO'#K_O#'{Q`O7+(fO4UQ!fO7+(fO$DcQ`O7+(fO%8qQ!0MvO'#CiO%9UQ!0MvO,5=TO%9iQ`O,5=TO%9qQ`O,5=TOOQ!0Lb1G5p1G5pOOQ[7+$a7+$aO!COQ!0LrO7+$aO!CZQpO7+$aO!$wQlO7+&aO%9vQ`O'#JRO%:_Q`O,5AQOOQO1G3i1G3iO9kQ`O,5AQO%:_Q`O,5AQO%:gQ`O,5AQOOQO,5?n,5?nOOQO-E=Q-E=QOOQ!0Lf7+'U7+'UO%:lQ`O7+)RO9uQ!0LrO7+)RO9kQ`O7+)RO@zQ`O7+)RO%:qQ`O7+)ROOQ[7+)R7+)ROOQ[7+(q7+(qO%:vQ!0MvO7+(nO!&zQMhO7+(nO!EcQ`O7+(oOOQ[7+(o7+(oO!&zQMhO7+(oO%;QQ`O'#KcO%;]Q`O,5=mOOQO,5?j,5?jOOQO-E<|-E<|OOQ[7+(t7+(tO%<oQpO'#H[OOQ[1G3a1G3aO!&zQMhO1G3aO%[QlO1G3aO%<vQ`O1G3aO%=RQMhO1G3aO9uQ!0LrO1G3cO$%UQ`O1G3cO9`Q`O1G3cO!CZQpO1G3cO!CcQMhO1G3cO%=aQ`O'#JQO%=uQ`O,5AOO%=}QpO,5AOOOQ!0Lb1G3d1G3dOOQ[7+$V7+$VO@zQ`O7+$VO9uQ!0LrO7+$VO%>YQ`O7+$VO%[QlO1G6mO%[QlO1G6nO%>_Q!0LrO1G6mO%>iQlO1G3lO%>pQ`O1G3lO%>uQlO1G3lOOQ[7+)U7+)UO9uQ!0LrO7+)`O`QlO7+)bOOQ['#Ki'#KiOOQ['#JT'#JTO%>|QlO,5>aOOQ[,5>a,5>aO%[QlO'#HvO%?ZQ`O'#HxOOQ[,5>g,5>gO9eQ`O,5>gOOQ[,5>i,5>iOOQ[7+)k7+)kOOQ[7+)q7+)qOOQ[7+)u7+)uOOQ[7+)w7+)wO%?`QpO1G5}O%?zQ`O1G0zOOQO1G/s1G/sO%@VQ?MtO1G/sO?YQ`O1G/sO!)[QlO'#DmOOQO,5?Q,5?QOOQO-E<d-E<dOOQO,5?W,5?WOOQO-E<j-E<jO!CZQpO1G/sOOQO-E<f-E<fOOQ!0Ln1G0]1G0]OOQ!0Lf7+%u7+%uO#'{Q`O7+%uOOQ!0Lf7+&`7+&`O?YQ`O7+&`O!CZQpO7+&`OOQO7+%x7+%xO$AiQ!0MxO7+&XOOQO7+&X7+&XO%[QlO7+&XO%@aQ!0LrO7+&XO!COQ!0LrO7+%xO!CZQpO7+%xO%@lQ!0LrO7+&XO%@zQ!0MxO7++sO%[QlO7++sO%A[Q`O7++rO%A[Q`O7++rOOQO1G4t1G4tO9eQ`O1G4tO%AdQ`O1G4tOOQS7+%}7+%}O#'{Q`O<<LQO4UQ!fO<<LQO%ArQ`O<<LQOOQ[<<LQ<<LQO!&zQMhO<<LQO%[QlO<<LQO%AzQ`O<<LQO%BVQ!0MzO,5?bO%DbQ!0MzO,5?dO%FmQ!0MzO1G2aO%IOQ!0MzO1G2tO%KZQ!0MzO1G2vO%MfQ!fO,5?RO%[QlO,5?ROOQO-E<e-E<eO%MpQ`O1G6OOOQ!0Lf<<JV<<JVO%MxQ?MtO1G0uO&!PQ?MtO1G1QO&!WQ?MtO1G1QO&$XQ?MtO1G1QO&$`Q?MtO1G1QO&&aQ?MtO1G1QO&(bQ?MtO1G1QO&(iQ?MtO1G1QO&(pQ?MtO1G1QO&*qQ?MtO1G1QO&*xQ?MtO1G1QO&+PQ!0MxO<<JgO&,wQ?MtO1G1QO&-tQ?MvO1G1QO&.wQ?MvO'#JmO&0}Q?MtO1G1dO&1[Q?MtO1G0UO&1fQMjO,5?UOOQO-E<h-E<hO!)[QlO'#FrOOQO'#K['#K[OOQO1G1v1G1vO&1pQ`O1G1uO&1uQ?MtO,5?]OOOW7+'i7+'iOOOO1G/Z1G/ZO&2PQ!dO1G4yOOQ!0Lh7+(R7+(RP!&zQMhO,5?_O!,TQMhO7+(dO&2WQ`O,5?^O9eQ`O,5?^O$*zQ`O,5?^OOQO-E<p-E<pO&2fQ`O1G6cO&2fQ`O1G6cO&2nQ`O1G6cO&2yQMjO7+'{O&3ZQ!dO,5?`O&3eQ`O,5?`O!&zQMhO,5?`OOQO-E<r-E<rO&3jQ!dO1G6dO&3tQ`O1G6dO&3|Q`O1G2lO!&zQMhO1G2lOOQ!0Lb1G2j1G2jOOQ!0Lb1G2k1G2kO%4eQpO1G2jO!CZQpO1G2jOCwQ`O1G2jOOQ!0Lb1G2r1G2rO&4RQpO1G2jO&4aQ`O1G2lO$*zQ`O1G2kOCwQ`O1G2kO$$iQlO1G2lO&4iQ`O1G2kO&5]QMjO,5?bOOQ!0Lh-E<u-E<uO&6OQMjO,5?dOOQ!0Lh-E<w-E<wO!,TQMhO7++^O&6YQMjO7++^O&6dQMjO7++^OOQ!0Lh1G/c1G/cO&6qQ`O1G/cOOQ!0Lh7+'v7+'vO&6vQMjO7+'}O&7WQ!0MxO<<KYOOQ!0Lf<<KY<<KYO&7zQ`O1G0zO!&zQMhO'#I{O&8PQ`O,5@yO&:RQ!fO<<LQO!&zQMhO1G2oO&:YQ!0LrO1G2oOOQ[<<G{<<G{O!COQ!0LrO<<G{O&:kQ!0MxO<<I{OOQ!0Lf<<I{<<I{OOQO,5?m,5?mO&;_Q`O,5?mO&;dQ`O,5?mOOQO-E=P-E=PO&;rQ`O1G6lO&;rQ`O1G6lO9kQ`O1G6lO@zQ`O<<LmOOQ[<<Lm<<LmO&;zQ`O<<LmO9uQ!0LrO<<LmO9kQ`O<<LmOOQ[<<LY<<LYO%:vQ!0MvO<<LYOOQ[<<LZ<<LZO!EcQ`O<<LZO&<PQpO'#I}O&<[Q`O,5@}O!)[QlO,5@}OOQ[1G3X1G3XOOQO'#JP'#JPO9uQ!0LrO'#JPO&<dQpO,5=vOOQ[,5=v,5=vO&<kQpO'#EgO&<rQpO'#GfO&<wQ`O7+({O&<|Q`O7+({OOQ[7+({7+({O!&zQMhO7+({O%[QlO7+({O&=UQ`O7+({OOQ[7+(}7+(}O9uQ!0LrO7+(}O$%UQ`O7+(}O9`Q`O7+(}O!CZQpO7+(}O&=aQ`O,5?lOOQO-E=O-E=OOOQO'#H_'#H_O&=lQ`O1G6jO9uQ!0LrO<<GqOOQ[<<Gq<<GqO@zQ`O<<GqO&=tQ`O7+,XO&=yQ`O7+,YO%[QlO7+,XO%[QlO7+,YOOQ[7+)W7+)WO&>OQ`O7+)WO&>TQlO7+)WO&>[Q`O7+)WOOQ[<<Lz<<LzOOQ[<<L|<<L|OOQ[-E=R-E=ROOQ[1G3{1G3{O&>aQ`O,5>bOOQ[,5>d,5>dO&>fQ`O1G4RO9eQ`O7+&fO!)[QlO7+&fOOQO7+%_7+%_O&>kQ?MtO1G6[O?YQ`O7+%_OOQ!0Lf<<Ia<<IaOOQ!0Lf<<Iz<<IzO?YQ`O<<IzOOQO<<Is<<IsO$AiQ!0MxO<<IsO%[QlO<<IsOOQO<<Id<<IdO!COQ!0LrO<<IdO&>uQ!0LrO<<IsO&?QQ!0MxO<= _O&?bQ`O<= ^OOQO7+*`7+*`O9eQ`O7+*`OOQ[ANAlANAlO&?jQ!fOANAlO!&zQMhOANAlO#'{Q`OANAlO4UQ!fOANAlO&?qQ`OANAlO%[QlOANAlO&?yQ!0MzO7+'{O&B[Q!0MzO,5?bO&DgQ!0MzO,5?dO&FrQ!0MzO7+'}O&ITQ!fO1G4mO&I_Q?MtO7+&aO&KcQ?MvO,5=YO&MjQ?MvO,5=[O&MzQ?MvO,5=YO&N[Q?MvO,5=[O&NlQ?MvO,59uO'!rQ?MvO,5<lO'$uQ?MvO,5<nO''ZQ?MvO,5<|O')PQ?MtO7+'lO')^Q?MtO7+'nO')kQ`O,5<^OOQO7+'a7+'aOOQ!0Lh7+*e7+*eO')pQMjO<<LOOOQO1G4x1G4xO')wQ`O1G4xO'*SQ`O1G4xO'*bQ`O7++}O'*bQ`O7++}O!&zQMhO1G4zO'*jQ!dO1G4zO'*tQ`O7+,OO'*|Q`O7+(WO'+XQ!dO7+(WOOQ!0Lb7+(U7+(UOOQ!0Lb7+(V7+(VO!CZQpO7+(UOCwQ`O7+(UO'+cQ`O7+(WO!&zQMhO7+(WO$*zQ`O7+(VO'+hQ`O7+(WOCwQ`O7+(VO'+pQMjO<<NxO!,TQMhO<<NxOOQ!0Lh7+$}7+$}O'+zQ!dO,5?gOOQO-E<y-E<yO',UQ!0MvO7+(ZO!&zQMhO7+(ZOOQ[AN=gAN=gO9kQ`O1G5XOOQO1G5X1G5XO',fQ`O1G5XO',kQ`O7+,WO',kQ`O7+,WO9uQ!0LrOANBXO@zQ`OANBXOOQ[ANBXANBXO',sQ`OANBXOOQ[ANAtANAtOOQ[ANAuANAuO',xQ`O,5?iOOQO-E<{-E<{O'-TQ?MtO1G6iOOQO,5?k,5?kOOQO-E<}-E<}OOQ[1G3b1G3bO'-_Q`O,5=QOOQ[<<Lg<<LgO!&zQMhO<<LgO&<wQ`O<<LgO'-dQ`O<<LgO%[QlO<<LgOOQ[<<Li<<LiO9uQ!0LrO<<LiO$%UQ`O<<LiO9`Q`O<<LiO'-lQpO1G5WO'-wQ`O7+,UOOQ[AN=]AN=]O9uQ!0LrOAN=]OOQ[<= s<= sOOQ[<= t<= tO'.PQ`O<= sO'.UQ`O<= tOOQ[<<Lr<<LrO'.ZQ`O<<LrO'.`QlO<<LrOOQ[1G3|1G3|O?YQ`O7+)mO'.gQ`O<<JQO'.rQ?MtO<<JQOOQO<<Hy<<HyOOQ!0LfAN?fAN?fOOQOAN?_AN?_O$AiQ!0MxOAN?_OOQOAN?OAN?OO%[QlOAN?_OOQO<<Mz<<MzOOQ[G27WG27WO!&zQMhOG27WO#'{Q`OG27WO'.|Q!fOG27WO4UQ!fOG27WO'/TQ`OG27WO'/]Q?MtO<<JgO'/jQ?MvO1G2aO'1`Q?MvO,5?bO'3cQ?MvO,5?dO'5fQ?MvO1G2tO'7iQ?MvO1G2vO'9lQ?MtO<<KYO'9yQ?MtO<<I{OOQO1G1x1G1xO!,TQMhOANAjOOQO7+*d7+*dO':WQ`O7+*dO':cQ`O<= iO':kQ!dO7+*fOOQ!0Lb<<Kr<<KrO$*zQ`O<<KrOCwQ`O<<KrO':uQ`O<<KrO!&zQMhO<<KrOOQ!0Lb<<Kp<<KpO!CZQpO<<KpO';QQ!dO<<KrOOQ!0Lb<<Kq<<KqO';[Q`O<<KrO!&zQMhO<<KrO$*zQ`O<<KqO';aQMjOANDdO';kQ!0MvO<<KuOOQO7+*s7+*sO9kQ`O7+*sO';{Q`O<= rOOQ[G27sG27sO9uQ!0LrOG27sO@zQ`OG27sO!)[QlO1G5TO'<TQ`O7+,TO'<]Q`O1G2lO&<wQ`OANBROOQ[ANBRANBRO!&zQMhOANBRO'<bQ`OANBROOQ[ANBTANBTO9uQ!0LrOANBTO$%UQ`OANBTOOQO'#H`'#H`OOQO7+*r7+*rOOQ[G22wG22wOOQ[ANE_ANE_OOQ[ANE`ANE`OOQ[ANB^ANB^O'<jQ`OANB^OOQ[<<MX<<MXO!)[QlOAN?lOOQOG24yG24yO$AiQ!0MxOG24yO#'{Q`OLD,rOOQ[LD,rLD,rO!&zQMhOLD,rO'<oQ!fOLD,rO'<vQ?MvO7+'{O'>lQ?MvO,5?bO'@oQ?MvO,5?dO'BrQ?MvO7+'}O'DhQMjOG27UOOQO<<NO<<NOOOQ!0LbANA^ANA^O$*zQ`OANA^OCwQ`OANA^O'DxQ!dOANA^OOQ!0LbANA[ANA[O'EPQ`OANA^O!&zQMhOANA^O'E[Q!dOANA^OOQ!0LbANA]ANA]OOQO<<N_<<N_OOQ[LD-_LD-_O9uQ!0LrOLD-_O'EfQ?MtO7+*oOOQO'#Gg'#GgOOQ[G27mG27mO&<wQ`OG27mO!&zQMhOG27mOOQ[G27oG27oO9uQ!0LrOG27oOOQ[G27xG27xO'EpQ?MtOG25WOOQOLD*eLD*eOOQ[!$(!^!$(!^O#'{Q`O!$(!^O!&zQMhO!$(!^O'EzQ!0MzOG27UOOQ!0LbG26xG26xO$*zQ`OG26xO'H]Q`OG26xOCwQ`OG26xO'HhQ!dOG26xO!&zQMhOG26xOOQ[!$(!y!$(!yOOQ[LD-XLD-XO&<wQ`OLD-XOOQ[LD-ZLD-ZOOQ[!)9Ex!)9ExO#'{Q`O!)9ExOOQ!0LbLD,dLD,dO$*zQ`OLD,dOCwQ`OLD,dO'HoQ`OLD,dO'HzQ!dOLD,dOOQ[!$(!s!$(!sOOQ[!.K;d!.K;dO'IRQ?MvOG27UOOQ!0Lb!$(!O!$(!OO$*zQ`O!$(!OOCwQ`O!$(!OO'JwQ`O!$(!OOOQ!0Lb!)9Ej!)9EjO$*zQ`O!)9EjOCwQ`O!)9EjOOQ!0Lb!.K;U!.K;UO$*zQ`O!.K;UOOQ!0Lb!4/0p!4/0pO!)[QlO'#DzO1PQ`O'#EXO'KSQ!fO'#JsO'KZQ!L^O'#DvO'KbQlO'#EOO'KiQ!fO'#CiO'NPQ!fO'#CiO!)[QlO'#EQO'NaQlO,5;ZO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO'#IqO(!dQ`O,5<jO!)[QlO,5;fO(!lQMhO,5;fO($VQMhO,5;fO!)[QlO,5;xO!&zQMhO'#GnO(!lQMhO'#GnO!&zQMhO'#GpO(!lQMhO'#GpO1SQ`O'#DZO1SQ`O'#DZO!&zQMhO'#GQO(!lQMhO'#GQO!&zQMhO'#GSO(!lQMhO'#GSO!&zQMhO'#GbO(!lQMhO'#GbO!)[QlO,5:jO($^QpO'#D_O!)[QlO,5@pO'NaQlO1G0uO($hQ?MtO'#CiO!)[QlO1G2QO!&zQMhO'#IvO(!lQMhO'#IvO!&zQMhO'#IxO(!lQMhO'#IxO($rQ!dO'#CrO!&zQMhO,5<uO(!lQMhO,5<uO'NaQlO1G2SO!)[QlO7+&{O!&zQMhO1G2aO(!lQMhO1G2aO!&zQMhO'#IvO(!lQMhO'#IvO!&zQMhO'#IxO(!lQMhO'#IxO!&zQMhO1G2cO(!lQMhO1G2cO'NaQlO7+'nO'NaQlO7+&aO!&zQMhOANAjO(!lQMhOANAjO(%VQ`O'#EoO(%[Q`O'#EoO(%dQ`O'#F^O(%iQ`O'#EzO(%nQ`O'#KUO(%yQ`O'#KSO(&UQ`O,5;ZO(&ZQMjO,5<fO(&bQ`O'#GZO(&gQ`O'#GZO(&lQ`O,5<fO(&tQ`O,5<hO(&|Q`O,5;ZO('UQ?MtO1G1aO(']Q`O,5<uO('bQ`O,5<uO('gQ`O,5<wO('lQ`O,5<wO('qQ`O1G2SO('vQ`O1G0uO('{QMjO<<LOO((SQMjO<<LOO((ZQMhO'#F}O9`Q`O'#F|OAuQ`O'#EnO!)[QlO,5;uO!3oQ`O'#GZO!3oQ`O'#GZO!3oQ`O'#G]O!3oQ`O'#G]O!,TQMhO7+(dO!,TQMhO7+(dO%.wQ!dO1G2xO%.wQ!dO1G2xO!&zQMhO,5=^O!&zQMhO,5=^",
-			stateData: "()a~O'}OS(OOSTOS(PRQ~OPYOQYOSfOY!VOaqOdzOeyOl!POpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_XO!iuO!lZO!oYO!pYO!qYO!svO!uwO!xxO!|]O$X|O$oiO%i}O%k!QO%m!OO%n!OO%o!OO%r!RO%t!SO%w!TO%x!TO%z!UO&X!WO&_!XO&a!YO&c!ZO&e![O&h!]O&n!^O&t!_O&v!`O&x!aO&z!bO&|!cO(USO(WTO(ZUO(bVO(p[O~OWtO~P`OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$X!kO$oiO(U!dO(WTO(ZUO(bVO(p[O~Oa!wOs!nO!S!oO!b!yO!c!vO!d!vO!|<VO#T!pO#U!pO#V!xO#W!pO#X!pO#[!zO#]!zO(V!lO(WTO(ZUO(f!mO(p!sO~O(P!{O~OP]XR]X[]Xa]Xj]Xr]X!Q]X!S]X!]]X!l]X!p]X#R]X#S]X#`]X#lfX#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#w]X#y]X#{]X#|]X$R]X'{]X(b]X(s]X(z]X({]X~O!g%SX~P(qO_!}O(W#PO(X!}O(Y#PO~O_#QO(Y#PO(Z#PO([#QO~Ox#SO!U#TO(c#TO(d#VO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$X!kO$oiO(U<ZO(WTO(ZUO(bVO(p[O~O![#ZO!]#WO!Y(iP!Y(wP~P+}O!^#cO~P`OPYOQYOSfOd!jOe!iOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$X!kO$oiO(WTO(ZUO(bVO(p[O~Op#mO![#iO!|]O#j#lO#k#iO(U<[O!k(tP~P.iO!l#oO(U#nO~O!x#sO!|]O%i#tO~O#l#uO~O!g#vO#l#uO~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!]$_O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO#y$UO#{$WO#|$XO(bVO(s$YO(z#|O({#}O~Oa(gX'{(gX'x(gX!k(gX!Y(gX!_(gX%j(gX!g(gX~P1qO#S$dO#`$eO$R$eOP(hXR(hX[(hXj(hXr(hX!Q(hX!S(hX!](hX!l(hX!p(hX#R(hX#o(hX#p(hX#q(hX#r(hX#s(hX#t(hX#u(hX#v(hX#w(hX#y(hX#{(hX#|(hX(b(hX(s(hX(z(hX({(hX!_(hX%j(hX~Oa(hX'{(hX'x(hX!Y(hX!k(hXv(hX!g(hX~P4UO#`$eO~O$^$hO$`$gO$g$mO~OSfO!_$nO$j$oO$l$qO~Oh%VOj%dOk%dOp%WOr%XOs$tOt$tOz%YO|%ZO!O%]O!S${O!_$|O!i%bO!l$xO#k%cO$X%`O$u%^O$w%_O$z%aO(U$sO(WTO(ZUO(b$uO(z$}O({%POg(_P~Ol%[O~P7eO!l%eO~O!S%hO!_%iO(U%gO~O!g%mO~Oa%nO'{%nO~O!Q%rO~P%[O(V!lO~P%[O%o%vO~P%[Oh%VO!l%eO(U%gO(V!lO~Oe%}O!l%eO(U%gO~Oj$RO~O!_&PO(U%gO(V!lO(WTO(ZUO`)XP~O!Q&SO!l&RO%k&VO&U&WO~P;SO!x#sO~O%t&YO!S)TX!_)TX(U)TX~O(U&ZO~Ol!PO!u&`O%k!QO%m!OO%n!OO%o!OO%r!RO%t!SO%w!TO%x!TO~Od&eOe&dO!x&bO%i&cO%|&aO~P<bOd&hOeyOl!PO!_&gO!u&`O!xxO!|]O%i}O%m!OO%n!OO%o!OO%r!RO%t!SO%w!TO%x!TO%z!UO~Ob&kO#`&nO%k&iO(V!lO~P=gO!l&oO!u&sO~O!l#oO~O!_XO~Oa%nO'y&{O'{%nO~Oa%nO'y'OO'{%nO~Oa%nO'y'QO'{%nO~O'x]X!Y]Xv]X!k]X&]]X!_]X%j]X!g]X~P(qO!b'`O!c'WO!d'WO(V!lO(WTO(ZUO~Os'UO!S'TO!['XO(f'SO!^(jP!^(yP~P@nOn'cO!_'aO(U%gO~Oe'hO!l%eO(U%gO~O!Q&SO!l&RO~Os!nO!S!oO!|<VO#T!pO#U!pO#W!pO#X!pO(V!lO(WTO(ZUO(f!mO(p!sO~O!b'nO!c'mO!d'mO#V!pO#['oO#]'oO~PBYOa%nOh%VO!g#vO!l%eO'{%nO(s'qO~O!p'uO#`'sO~PChOs!nO!S!oO(WTO(ZUO(f!mO(p!sO~O!_XOs(nX!S(nX!b(nX!c(nX!d(nX!|(nX#T(nX#U(nX#V(nX#W(nX#X(nX#[(nX#](nX(V(nX(W(nX(Z(nX(f(nX(p(nX~O!c'mO!d'mO(V!lO~PDWO(Q'yO(R'yO(S'{O~O_!}O(W'}O(X!}O(Y'}O~O_#QO(Y'}O(Z'}O([#QO~Ov(PO~P%[Ox#SO!U#TO(c#TO(d(SO~O![(UO!Y'XX!Y'_X!]'XX!]'_X~P+}O!](WO!Y(iX~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!](WO!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO#y$UO#{$WO#|$XO(bVO(s$YO(z#|O({#}O~O!Y(iX~PHRO!Y(]O~O!Y(vX!](vX!g(vX!k(vX(s(vX~O#`(vX#l#dX!^(vX~PJUO#`(^O!Y(xX!](xX~O!](_O!Y(wX~O!Y(bO~O#`$eO~PJUO!^(cO~P`OR#zO!Q#yO!S#{O!l#xO(bVOP!na[!naj!nar!na!]!na!p!na#R!na#o!na#p!na#q!na#r!na#s!na#t!na#u!na#v!na#w!na#y!na#{!na#|!na(s!na(z!na({!na~Oa!na'{!na'x!na!Y!na!k!nav!na!_!na%j!na!g!na~PKlO!k(dO~O!g#vO#`(eO(s'qO!](uXa(uX'{(uX~O!k(uX~PNXO!S%hO!_%iO!|]O#j(jO#k(iO(U%gO~O!](kO!k(tX~O!k(mO~O!S%hO!_%iO#k(iO(U%gO~OP(hXR(hX[(hXj(hXr(hX!Q(hX!S(hX!](hX!l(hX!p(hX#R(hX#o(hX#p(hX#q(hX#r(hX#s(hX#t(hX#u(hX#v(hX#w(hX#y(hX#{(hX#|(hX(b(hX(s(hX(z(hX({(hX~O!g#vO!k(hX~P! uOR(oO!Q(nO!l#xO#S$dO!|!{a!S!{a~O!x!{a%i!{a!_!{a#j!{a#k!{a(U!{a~P!#vO!x(sO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_XO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$X!kO$oiO(U!dO(WTO(ZUO(bVO(p[O~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<sO!S${O!_$|O!i>UO!l$xO#k<yO$X%`O$u<uO$w<wO$z%aO(U(wO(WTO(ZUO(b$uO(z$}O({%PO~O#l(yO~O![({O!k(lP~P%[O(f(}O(p[O~O!S)PO!l#xO(f(}O(p[O~OP<UOQ<UOSfOd>QOe!iOpkOr<UOskOtkOzkO|<UO!O<UO!SWO!WkO!XkO!_!eO!i<XO!lZO!o<UO!p<UO!q<UO!s<YO!u<]O!x!hO$X!kO$o>OO(U)^O(WTO(ZUO(bVO(p[O~O!]$_Oa$ra'{$ra'x$ra!k$ra!Y$ra!_$ra%j$ra!g$ra~Ol)eO~P!&zOh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O%]O!S${O!_$|O!i%bO!l$xO#k%cO$X%`O$u%^O$w%_O$z%aO(U(wO(WTO(ZUO(b$uO(z$}O({%PO~Og(qP~P!,TO!Q)jO!g)iO!_$_X$[$_X$^$_X$`$_X$g$_X~O!g)iO!_(|X$[(|X$^(|X$`(|X$g(|X~O!Q)jO~P!.^O!Q)jO!_(|X$[(|X$^(|X$`(|X$g(|X~O!_)lO$[)pO$^)kO$`)kO$g)qO~O![)tO~P!)[O$^$hO$`$gO$g)xO~On${X!Q${X#S${X'z${X(z${X({${X~OgmXg${XnmX!]mX#`mX~P!0SOx)zO(c){O(d)}O~On*WO!Q*PO'z*QO(z$}O({%PO~Og*OO~P!1WOg*XO~Oh%VOr%XOs$tOt$tOz%YO|%ZO!O<sO!S*ZO!_*[O!i>UO!l$xO#k<yO$X%`O$u<uO$w<wO$z%aO(WTO(ZUO(b$uO(z$}O({%PO~Op*aO![*_O(U*YO!k)PP~P!1uO#l*bO~O!l*cO~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<sO!S${O!_$|O!i>UO!l$xO#k<yO$X%`O$u<uO$w<wO$z%aO(U*eO(WTO(ZUO(b$uO(z$}O({%PO~O![*hO!Y)QP~P!3tOr*tOs!nO!S*jO!b*rO!c*lO!d*lO!l*cO#[*sO%a*nO(V!lO(WTO(ZUO(f!mO~O!^*qO~P!5iO#S$dOn(aX!Q(aX'z(aX(z(aX({(aX!](aX#`(aX~Og(aX$P(aX~P!6kOn*yO#`*xOg(`X!](`X~O!]*zOg(_X~Oj%dOk%dOl%dO(U&ZOg(_P~Os*}O~Og*OO(U&ZO~O!l+TO~O(U(wO~Op+XO!S%hO![#iO!_%iO!|]O#j#lO#k#iO(U%gO!k(tP~O!g#vO#l+YO~O!S%hO![+[O!](_O!_%iO(U%gO!Y(wP~Os']O!S+_O![+^O(WTO(ZUO(f+]O~O!^(yP~P!9|O!]+`Oa)UX'{)UX~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO#y$UO#{$WO#|$XO(bVO(s$YO(z#|O({#}O~Oa!ja!]!ja'{!ja'x!ja!Y!ja!k!jav!ja!_!ja%j!ja!g!ja~P!:tO(f(}O~OR#zO!Q#yO!S#{O!l#xO(bVOP!ra[!raj!rar!ra!]!ra!p!ra#R!ra#o!ra#p!ra#q!ra#r!ra#s!ra#t!ra#u!ra#v!ra#w!ra#y!ra#{!ra#|!ra(s!ra(z!ra({!ra~Oa!ra'{!ra'x!ra!Y!ra!k!rav!ra!_!ra%j!ra!g!ra~P!=aOR#zO!Q#yO!S#{O!l#xO(bVOP!ta[!taj!tar!ta!]!ta!p!ta#R!ta#o!ta#p!ta#q!ta#r!ta#s!ta#t!ta#u!ta#v!ta#w!ta#y!ta#{!ta#|!ta(s!ta(z!ta({!ta~Oa!ta'{!ta'x!ta!Y!ta!k!tav!ta!_!ta%j!ta!g!ta~P!?wOh%VOn+iO!_'aO%j+hO~O!g+kOa(^X!_(^X'{(^X!](^X~Oa%nO!_XO'{%nO~Oh%VO!l%eO~Oh%VO!l%eO(U%gO~O!g#vO#l(yO~Ob+vO%k+wO(U+sO(WTO(ZUO!^)YP~O!]+xO`)XX~O[+|O~O`+}O~O!_&PO(U%gO(V!lO`)XP~O%k,QO~P;SOh%VO#`,UO~Oh%VOn,XO!_$|O~O!_,ZO~O!Q,]O!_XO~O%o%vO~O!x,bO~Oe,gO~Ob,hO(U#nO(WTO(ZUO!^)WP~Oe%}O~O%k!QO(U&ZO~P=gO[,mO`,lO~OPYOQYOSfOdzOeyOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!iuO!lZO!oYO!pYO!qYO!svO!xxO!|]O$oiO%i}O(WTO(ZUO(bVO(p[O~O!_!eO!u!gO$X!kO(U!dO~P!GOO`,lOa%nO'{%nO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!x!hO$X!kO$oiO(U!dO(WTO(ZUO(bVO(p[O~Oa,rOl!OO!uwO%m!OO%n!OO%o!OO~P!IhO!l&oO~O&_,xO~O!_,zO~O&p,|O&r,}OP&maQ&maS&maY&maa&mad&mae&mal&map&mar&mas&mat&maz&ma|&ma!O&ma!S&ma!W&ma!X&ma!_&ma!i&ma!l&ma!o&ma!p&ma!q&ma!s&ma!u&ma!x&ma!|&ma$X&ma$o&ma%i&ma%k&ma%m&ma%n&ma%o&ma%r&ma%t&ma%w&ma%x&ma%z&ma&X&ma&_&ma&a&ma&c&ma&e&ma&h&ma&n&ma&t&ma&v&ma&x&ma&z&ma&|&ma'x&ma(U&ma(W&ma(Z&ma(b&ma(p&ma!^&ma&f&mab&ma&k&ma~O(U-SO~Oh!eX!]#iX!^#iX!g!RX!g!eX!l!eX~O!]!eX!^!eX~P#!nO!g-WOh(kX!](kX!^(kX!g(kX!l(kXr(kX(s(kX~Oh%VO!g-YO!l%eO!]!aX!^!aX~Os!nO!S!oO(WTO(ZUO(f!mO~OP<UOQ<UOSfOd>QOe!iOpkOr<UOskOtkOzkO|<UO!O<UO!SWO!WkO!XkO!_!eO!i<XO!lZO!o<UO!p<UO!q<UO!s<YO!u<]O!x!hO$X!kO$o>OO(WTO(ZUO(bVO(p[O~O(U=PO~P#$lO!]-^O!^(jX~O!^-`O~O!g-WO~O!]-aO!^(yX~O!^-cO~O!c-dO!d-dO(V!lO~P#$ZO!^-gO~P'_On-jO!_'aO~O!Y-oO~Os!{a!b!{a!c!{a!d!{a#T!{a#U!{a#V!{a#W!{a#X!{a#[!{a#]!{a(V!{a(W!{a(Z!{a(f!{a(p!{a~P!#vO!p-tO#`-rO~PChO!c-vO!d-vO(V!lO~PDWOa%nO#`-rO'{%nO~Oa%nO!g#vO#`-rO'{%nO~Oa%nO!g#vO!p-tO#`-rO'{%nO(s'qO~O(Q'yO(R'yO(S-{O~Ov-|O~O!Y'Xa!]'Xa~P!:tO![.QO!Y'XX!]'XX~P%[O!](WO!Y(ia~O!Y(ia~PHRO!](_O!Y(wa~O!S%hO![.UO!_%iO(U%gO!Y'_X!]'_X~O#`.WO!](ua!k(uaa(ua'{(ua~O!g#vO~P#,iO!](kO!k(ta~O!S%hO!_%iO#k.[O(U%gO~Op.aO!S%hO![.^O!_%iO!|]O#j.`O#k.^O(U%gO!]'bX!k'bX~OR.eO!l#xO~Oh%VOn.hO!_'aO%j.gO~Oa#ci!]#ci'{#ci'x#ci!Y#ci!k#civ#ci!_#ci%j#ci!g#ci~P!:tOn>[O!Q*PO'z*QO(z$}O({%PO~O#l#_aa#_a#`#_a'{#_a!]#_a!k#_a!_#_a!Y#_a~P#/eO#l(aXP(aXR(aX[(aXa(aXj(aXr(aX!S(aX!l(aX!p(aX#R(aX#o(aX#p(aX#q(aX#r(aX#s(aX#t(aX#u(aX#v(aX#w(aX#y(aX#{(aX#|(aX'{(aX(b(aX(s(aX!k(aX!Y(aX'x(aXv(aX!_(aX%j(aX!g(aX~P!6kO!].uO!k(lX~P!:tO!k.xO~O!Y.zO~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O(bVO[#nia#nij#nir#ni!]#ni#R#ni#p#ni#q#ni#r#ni#s#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni'{#ni(s#ni(z#ni({#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#o#ni~P#3TO#o$OO~P#3TOP$[OR#zOr$aO!Q#yO!S#{O!l#xO!p$[O#o$OO#p$PO#q$PO#r$PO(bVO[#nia#nij#ni!]#ni#R#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni'{#ni(s#ni(z#ni({#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#s#ni~P#5rO#s$QO~P#5rOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO(bVOa#ni!]#ni#y#ni#{#ni#|#ni'{#ni(s#ni(z#ni({#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#w#ni~P#8aOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO(bVO({#}Oa#ni!]#ni#{#ni#|#ni'{#ni(s#ni(z#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#y$UO~P#:wO#y#ni~P#:wO#w$SO~P#8aOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO#y$UO(bVO(z#|O({#}Oa#ni!]#ni#|#ni'{#ni(s#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#{#ni~P#=mO#{$WO~P#=mOP]XR]X[]Xj]Xr]X!Q]X!S]X!l]X!p]X#R]X#S]X#`]X#lfX#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#w]X#y]X#{]X#|]X$R]X(b]X(s]X(z]X({]X!]]X!^]X~O$P]X~P#@[OP$[OR#zO[<mOj<bOr<kO!Q#yO!S#{O!l#xO!p$[O#R<bO#o<_O#p<`O#q<`O#r<`O#s<aO#t<bO#u<bO#v<lO#w<cO#y<eO#{<gO#|<hO(bVO(s$YO(z#|O({#}O~O$P.|O~P#BiO#S$dO#`<nO$R<nO$P(hX!^(hX~P! uOa'ea!]'ea'{'ea'x'ea!k'ea!Y'eav'ea!_'ea%j'ea!g'ea~P!:tO[#nia#nij#nir#ni!]#ni#R#ni#s#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni'{#ni(s#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O#o$OO#p$PO#q$PO#r$PO(bVO(z#ni({#ni~P#EkOn>[O!Q*PO'z*QO(z$}O({%POP#niR#ni!S#ni!l#ni!p#ni#o#ni#p#ni#q#ni#r#ni(b#ni~P#EkO!]/QOg(qX~P!1WOg/SO~Oa$Qi!]$Qi'{$Qi'x$Qi!Y$Qi!k$Qiv$Qi!_$Qi%j$Qi!g$Qi~P!:tO$^/TO$`/TO~O$^/UO$`/UO~O!g)iO#`/VO!_$dX$[$dX$^$dX$`$dX$g$dX~O![/WO~O!_)lO$[/YO$^)kO$`)kO$g/ZO~O!]<iO!^(gX~P#BiO!^/[O~O!g)iO$g(|X~O$g/^O~Ov/_O~P!&zOx)zO(c){O(d/bO~O!S/eO~O(z$}On%ba!Q%ba'z%ba({%ba!]%ba#`%ba~Og%ba$P%ba~P#LmO({%POn%da!Q%da'z%da(z%da!]%da#`%da~Og%da$P%da~P#M`O!]fX!gfX!kfX!k${X(sfX~P!0SOp%WO![/nO!](_O(U/mO!Y(wP!Y)QP~P!1uOr*tO!b*rO!c*lO!d*lO!l*cO#[*sO%a*nO(V!lO(WTO(ZUO~Os'UO!S/oO![+^O!^*qO(f<|O!^(yP~P#N|O!k/pO~P#/eO!]/qO!g#vO(s'qO!k)PX~O!k/vO~OnoX!QoX'zoX(zoX({oX~O!g#vO!koX~P$!pOp/xO!S%hO![*_O!_%iO(U%gO!k)PP~O#l/yO~O!Y${X!]${X!g%SX~P!0SO!]/zO!Y)QX~P#/eO!g/|O~O!Y0OO~OpkO(U0PO~P.iOh%VOr0UO!g#vO!l%eO(s'qO~O!g+kO~Oa%nO!]0YO'{%nO~O!^0[O~P!5iO!c0]O!d0]O(V!lO~P#$ZOs!nO!S0^O(WTO(ZUO(f!mO~O#[0`O~Og%ba!]%ba#`%ba$P%ba~P!1WOg%da!]%da#`%da$P%da~P!1WOj%dOk%dOl%dO(U&ZOg'nX!]'nX~O!]*zOg(_a~Og0iO~On0kO#`0jOg(`a!](`a~OR0lO!Q0lO!S0mO#S$dOn}a'z}a(z}a({}a!]}a#`}a~Og}a$P}a~P$(TO!Q*PO'z*QOn$ta(z$ta({$ta!]$ta#`$ta~Og$ta$P$ta~P$)PO!Q*PO'z*QOn$va(z$va({$va!]$va#`$va~Og$va$P$va~P$)rO#l0pO~Og%Ua!]%Ua#`%Ua$P%Ua~P!1WO!g#vO~O#l0sO~O!]#iX!^#iX!g!RX~O!]+`Oa)Ua'{)Ua~OR#zO!Q#yO!S#{O!l#xO(bVOP!ri[!rij!rir!ri!]!ri!p!ri#R!ri#o!ri#p!ri#q!ri#r!ri#s!ri#t!ri#u!ri#v!ri#w!ri#y!ri#{!ri#|!ri(s!ri(z!ri({!ri~Oa!ri'{!ri'x!ri!Y!ri!k!riv!ri!_!ri%j!ri!g!ri~P$+lOh%VOr%XOs$tOt$tOz%YO|%ZO!O<sO!S${O!_$|O!i>UO!l$xO#k<yO$X%`O$u<uO$w<wO$z%aO(WTO(ZUO(b$uO(z$}O({%PO~Op0|O%^0}O(U0{O~P$.SO!g+kOa(^a!_(^a'{(^a!](^a~O#l1TO~O[]X!]fX!^fX~O!]1UO!^)YX~O!^1WO~O[1XO~Ob1ZO(U+sO(WTO(ZUO~O!_&PO(U%gO`'vX!]'vX~O!]+xO`)Xa~O!k1^O~P!:tO[1aO~O`1bO~O#`1gO~On1jO!_$|O~O(f(}O!^)VP~Oh%VOn1sO!_1pO%j1rO~O[1}O!]1{O!^)WX~O!^2OO~O`2QOa%nO'{%nO~O(U#nO(WTO(ZUO~O#S$dO#`$eO$R$eOP(hXR(hX[(hXr(hX!Q(hX!S(hX!](hX!l(hX!p(hX#R(hX#o(hX#p(hX#q(hX#r(hX#s(hX#t(hX#u(hX#v(hX#w(hX#y(hX#{(hX#|(hX(b(hX(s(hX(z(hX({(hX~Oj2TO&]2UOa(hX~P$3mOj2TO#`$eO&]2UO~Oa2WO~P%[Oa2YO~O&f2]OP&diQ&diS&diY&dia&did&die&dil&dip&dir&dis&dit&diz&di|&di!O&di!S&di!W&di!X&di!_&di!i&di!l&di!o&di!p&di!q&di!s&di!u&di!x&di!|&di$X&di$o&di%i&di%k&di%m&di%n&di%o&di%r&di%t&di%w&di%x&di%z&di&X&di&_&di&a&di&c&di&e&di&h&di&n&di&t&di&v&di&x&di&z&di&|&di'x&di(U&di(W&di(Z&di(b&di(p&di!^&dib&di&k&di~Ob2cO!^2aO&k2bO~P`O!_XO!l2eO~O&r,}OP&miQ&miS&miY&mia&mid&mie&mil&mip&mir&mis&mit&miz&mi|&mi!O&mi!S&mi!W&mi!X&mi!_&mi!i&mi!l&mi!o&mi!p&mi!q&mi!s&mi!u&mi!x&mi!|&mi$X&mi$o&mi%i&mi%k&mi%m&mi%n&mi%o&mi%r&mi%t&mi%w&mi%x&mi%z&mi&X&mi&_&mi&a&mi&c&mi&e&mi&h&mi&n&mi&t&mi&v&mi&x&mi&z&mi&|&mi'x&mi(U&mi(W&mi(Z&mi(b&mi(p&mi!^&mi&f&mib&mi&k&mi~O!Y2kO~O!]!aa!^!aa~P#BiOs!nO!S!oO![2pO(f!mO!]'YX!^'YX~P@nO!]-^O!^(ja~O!]'`X!^'`X~P!9|O!]-aO!^(ya~O!^2wO~P'_Oa%nO#`3QO'{%nO~Oa%nO!g#vO#`3QO'{%nO~Oa%nO!g#vO!p3UO#`3QO'{%nO(s'qO~Oa%nO'{%nO~P!:tO!]$_Ov$ra~O!Y'Xi!]'Xi~P!:tO!](WO!Y(ii~O!](_O!Y(wi~O!Y(xi!](xi~P!:tO!](ui!k(uia(ui'{(ui~P!:tO#`3WO!](ui!k(uia(ui'{(ui~O!](kO!k(ti~O!S%hO!_%iO!|]O#j3]O#k3[O(U%gO~O!S%hO!_%iO#k3[O(U%gO~On3dO!_'aO%j3cO~Oh%VOn3dO!_'aO%j3cO~O#l%baP%baR%ba[%baa%baj%bar%ba!S%ba!l%ba!p%ba#R%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#v%ba#w%ba#y%ba#{%ba#|%ba'{%ba(b%ba(s%ba!k%ba!Y%ba'x%bav%ba!_%ba%j%ba!g%ba~P#LmO#l%daP%daR%da[%daa%daj%dar%da!S%da!l%da!p%da#R%da#o%da#p%da#q%da#r%da#s%da#t%da#u%da#v%da#w%da#y%da#{%da#|%da'{%da(b%da(s%da!k%da!Y%da'x%dav%da!_%da%j%da!g%da~P#M`O#l%baP%baR%ba[%baa%baj%bar%ba!S%ba!]%ba!l%ba!p%ba#R%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#v%ba#w%ba#y%ba#{%ba#|%ba'{%ba(b%ba(s%ba!k%ba!Y%ba'x%ba#`%bav%ba!_%ba%j%ba!g%ba~P#/eO#l%daP%daR%da[%daa%daj%dar%da!S%da!]%da!l%da!p%da#R%da#o%da#p%da#q%da#r%da#s%da#t%da#u%da#v%da#w%da#y%da#{%da#|%da'{%da(b%da(s%da!k%da!Y%da'x%da#`%dav%da!_%da%j%da!g%da~P#/eO#l}aP}a[}aa}aj}ar}a!l}a!p}a#R}a#o}a#p}a#q}a#r}a#s}a#t}a#u}a#v}a#w}a#y}a#{}a#|}a'{}a(b}a(s}a!k}a!Y}a'x}av}a!_}a%j}a!g}a~P$(TO#l$taP$taR$ta[$taa$taj$tar$ta!S$ta!l$ta!p$ta#R$ta#o$ta#p$ta#q$ta#r$ta#s$ta#t$ta#u$ta#v$ta#w$ta#y$ta#{$ta#|$ta'{$ta(b$ta(s$ta!k$ta!Y$ta'x$tav$ta!_$ta%j$ta!g$ta~P$)PO#l$vaP$vaR$va[$vaa$vaj$var$va!S$va!l$va!p$va#R$va#o$va#p$va#q$va#r$va#s$va#t$va#u$va#v$va#w$va#y$va#{$va#|$va'{$va(b$va(s$va!k$va!Y$va'x$vav$va!_$va%j$va!g$va~P$)rO#l%UaP%UaR%Ua[%Uaa%Uaj%Uar%Ua!S%Ua!]%Ua!l%Ua!p%Ua#R%Ua#o%Ua#p%Ua#q%Ua#r%Ua#s%Ua#t%Ua#u%Ua#v%Ua#w%Ua#y%Ua#{%Ua#|%Ua'{%Ua(b%Ua(s%Ua!k%Ua!Y%Ua'x%Ua#`%Uav%Ua!_%Ua%j%Ua!g%Ua~P#/eOa#cq!]#cq'{#cq'x#cq!Y#cq!k#cqv#cq!_#cq%j#cq!g#cq~P!:tO![3lO!]'ZX!k'ZX~P%[O!].uO!k(la~O!].uO!k(la~P!:tO!Y3oO~O$P!na!^!na~PKlO$P!ja!]!ja!^!ja~P#BiO$P!ra!^!ra~P!=aO$P!ta!^!ta~P!?wOg'^X!]'^X~P!,TO!]/QOg(qa~OSfO!_4TO$e4UO~O!^4YO~Ov4ZO~P#/eOa$nq!]$nq'{$nq'x$nq!Y$nq!k$nqv$nq!_$nq%j$nq!g$nq~P!:tO!Y4]O~P!&zO!S4^O~O!Q*PO'z*QO({%POn'ja(z'ja!]'ja#`'ja~Og'ja$P'ja~P%-cO!Q*PO'z*QOn'la(z'la({'la!]'la#`'la~Og'la$P'la~P%.UO(s$YO~P#/eO!YfX!Y${X!]fX!]${X!g%SX#`fX~P!0SOp%WO(U=VO~P!1uOp4bO!S%hO![4aO!_%iO(U%gO!]'fX!k'fX~O!]/qO!k)Pa~O!]/qO!g#vO!k)Pa~O!]/qO!g#vO(s'qO!k)Pa~Og$}i!]$}i#`$}i$P$}i~P!1WO![4jO!Y'hX!]'hX~P!3tO!]/zO!Y)Qa~O!]/zO!Y)Qa~P#/eOP]XR]X[]Xj]Xr]X!Q]X!S]X!Y]X!]]X!l]X!p]X#R]X#S]X#`]X#lfX#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#w]X#y]X#{]X#|]X$R]X(b]X(s]X(z]X({]X~Oj%ZX!g%ZX~P%1{Oj4oO!g#vO~Oh%VO!g#vO!l%eO~Oh%VOr4tO!l%eO(s'qO~Or4yO!g#vO(s'qO~Os!nO!S4zO(WTO(ZUO(f!mO~O(z$}On%bi!Q%bi'z%bi({%bi!]%bi#`%bi~Og%bi$P%bi~P%5lO({%POn%di!Q%di'z%di(z%di!]%di#`%di~Og%di$P%di~P%6_Og(`i!](`i~P!1WO#`5QOg(`i!](`i~P!1WO!k5VO~Oa$pq!]$pq'{$pq'x$pq!Y$pq!k$pqv$pq!_$pq%j$pq!g$pq~P!:tO!Y5ZO~O!]5[O!_)RX~P#/eOa${X!_${X%_]X'{${X!]${X~P!0SO%_5_OaoX!_oX'{oX!]oX~P$!pOp5`O(U#nO~O%_5_O~Ob5fO%k5gO(U+sO(WTO(ZUO!]'uX!^'uX~O!]1UO!^)Ya~O[5kO~O`5lO~O[5pO~Oa%nO'{%nO~P#/eO!]5uO#`5wO!^)VX~O!^5xO~Or6OOs!nO!S*jO!b!yO!c!vO!d!vO!|<VO#T!pO#U!pO#V!pO#W!pO#X!pO#[5}O#]!zO(V!lO(WTO(ZUO(f!mO(p!sO~O!^5|O~P%;bOn6TO!_1pO%j6SO~Oh%VOn6TO!_1pO%j6SO~Ob6[O(U#nO(WTO(ZUO!]'tX!^'tX~O!]1{O!^)Wa~O(WTO(ZUO(f6^O~O`6bO~Oj6eO&]6fO~PNXO!k6gO~P%[Oa6iO~Oa6iO~P%[Ob2cO!^6nO&k2bO~P`O!g6pO~O!g6rOh(ki!](ki!^(ki!g(ki!l(kir(ki(s(ki~O#`6sO!]#hi!^#hi~O!]!ai!^!ai~P#BiOa%nO#`6|O'{%nO~Oa%nO!g#vO#`6|O'{%nO~O!](uq!k(uqa(uq'{(uq~P!:tO!](kO!k(tq~O!S%hO!_%iO#k7TO(U%gO~O!_'aO%j7WO~On7[O!_'aO%j7WO~O#l'jaP'jaR'ja['jaa'jaj'jar'ja!S'ja!l'ja!p'ja#R'ja#o'ja#p'ja#q'ja#r'ja#s'ja#t'ja#u'ja#v'ja#w'ja#y'ja#{'ja#|'ja'{'ja(b'ja(s'ja!k'ja!Y'ja'x'jav'ja!_'ja%j'ja!g'ja~P%-cO#l'laP'laR'la['laa'laj'lar'la!S'la!l'la!p'la#R'la#o'la#p'la#q'la#r'la#s'la#t'la#u'la#v'la#w'la#y'la#{'la#|'la'{'la(b'la(s'la!k'la!Y'la'x'lav'la!_'la%j'la!g'la~P%.UO#l$}iP$}iR$}i[$}ia$}ij$}ir$}i!S$}i!]$}i!l$}i!p$}i#R$}i#o$}i#p$}i#q$}i#r$}i#s$}i#t$}i#u$}i#v$}i#w$}i#y$}i#{$}i#|$}i'{$}i(b$}i(s$}i!k$}i!Y$}i'x$}i#`$}iv$}i!_$}i%j$}i!g$}i~P#/eO#l%biP%biR%bi[%bia%bij%bir%bi!S%bi!l%bi!p%bi#R%bi#o%bi#p%bi#q%bi#r%bi#s%bi#t%bi#u%bi#v%bi#w%bi#y%bi#{%bi#|%bi'{%bi(b%bi(s%bi!k%bi!Y%bi'x%biv%bi!_%bi%j%bi!g%bi~P%5lO#l%diP%diR%di[%dia%dij%dir%di!S%di!l%di!p%di#R%di#o%di#p%di#q%di#r%di#s%di#t%di#u%di#v%di#w%di#y%di#{%di#|%di'{%di(b%di(s%di!k%di!Y%di'x%div%di!_%di%j%di!g%di~P%6_O!]'Za!k'Za~P!:tO!].uO!k(li~O$P#ci!]#ci!^#ci~P#BiOP$[OR#zO!Q#yO!S#{O!l#xO!p$[O(bVO[#nij#nir#ni#R#ni#p#ni#q#ni#r#ni#s#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni$P#ni(s#ni(z#ni({#ni!]#ni!^#ni~O#o#ni~P%NVO#o<_O~P%NVOP$[OR#zOr<kO!Q#yO!S#{O!l#xO!p$[O#o<_O#p<`O#q<`O#r<`O(bVO[#nij#ni#R#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni$P#ni(s#ni(z#ni({#ni!]#ni!^#ni~O#s#ni~P&!_O#s<aO~P&!_OP$[OR#zO[<mOj<bOr<kO!Q#yO!S#{O!l#xO!p$[O#R<bO#o<_O#p<`O#q<`O#r<`O#s<aO#t<bO#u<bO#v<lO(bVO#y#ni#{#ni#|#ni$P#ni(s#ni(z#ni({#ni!]#ni!^#ni~O#w#ni~P&$gOP$[OR#zO[<mOj<bOr<kO!Q#yO!S#{O!l#xO!p$[O#R<bO#o<_O#p<`O#q<`O#r<`O#s<aO#t<bO#u<bO#v<lO#w<cO(bVO({#}O#{#ni#|#ni$P#ni(s#ni(z#ni!]#ni!^#ni~O#y<eO~P&&hO#y#ni~P&&hO#w<cO~P&$gOP$[OR#zO[<mOj<bOr<kO!Q#yO!S#{O!l#xO!p$[O#R<bO#o<_O#p<`O#q<`O#r<`O#s<aO#t<bO#u<bO#v<lO#w<cO#y<eO(bVO(z#|O({#}O#|#ni$P#ni(s#ni!]#ni!^#ni~O#{#ni~P&(wO#{<gO~P&(wOa#}y!]#}y'{#}y'x#}y!Y#}y!k#}yv#}y!_#}y%j#}y!g#}y~P!:tO[#nij#nir#ni#R#ni#s#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni$P#ni(s#ni!]#ni!^#ni~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O#o<_O#p<`O#q<`O#r<`O(bVO(z#ni({#ni~P&+sOn>]O!Q*PO'z*QO(z$}O({%POP#niR#ni!S#ni!l#ni!p#ni#o#ni#p#ni#q#ni#r#ni(b#ni~P&+sO#S$dOP(aXR(aX[(aXj(aXn(aXr(aX!Q(aX!S(aX!l(aX!p(aX#R(aX#o(aX#p(aX#q(aX#r(aX#s(aX#t(aX#u(aX#v(aX#w(aX#y(aX#{(aX#|(aX$P(aX'z(aX(b(aX(s(aX(z(aX({(aX!](aX!^(aX~O$P$Qi!]$Qi!^$Qi~P#BiO$P!ri!^!ri~P$+lOg'^a!]'^a~P!1WO!^7nO~O!]'ea!^'ea~P#BiO!Y7oO~P#/eO!g#vO(s'qO!]'fa!k'fa~O!]/qO!k)Pi~O!]/qO!g#vO!k)Pi~Og$}q!]$}q#`$}q$P$}q~P!1WO!Y'ha!]'ha~P#/eO!g7vO~O!]/zO!Y)Qi~P#/eO!]/zO!Y)Qi~O!Y7yO~Oh%VOr8OO!l%eO(s'qO~Oj8QO!g#vO~Or8TO!g#vO(s'qO~O!Q*PO'z*QO({%POn'ka(z'ka!]'ka#`'ka~Og'ka$P'ka~P&4tO!Q*PO'z*QOn'ma(z'ma({'ma!]'ma#`'ma~Og'ma$P'ma~P&5gOg(`q!](`q~P!1WO#`8VOg(`q!](`q~P!1WO!Y8WO~Og%Pq!]%Pq#`%Pq$P%Pq~P!1WOa$py!]$py'{$py'x$py!Y$py!k$pyv$py!_$py%j$py!g$py~P!:tO!g6rO~O!]5[O!_)Ra~O!_'aOP$UaR$Ua[$Uaj$Uar$Ua!Q$Ua!S$Ua!]$Ua!l$Ua!p$Ua#R$Ua#o$Ua#p$Ua#q$Ua#r$Ua#s$Ua#t$Ua#u$Ua#v$Ua#w$Ua#y$Ua#{$Ua#|$Ua(b$Ua(s$Ua(z$Ua({$Ua~O%j7WO~P&8XO%_8[Oa%]i!_%]i'{%]i!]%]i~Oa#cy!]#cy'{#cy'x#cy!Y#cy!k#cyv#cy!_#cy%j#cy!g#cy~P!:tO[8^O~Ob8`O(U+sO(WTO(ZUO~O!]1UO!^)Yi~O`8dO~O(f(}O!]'qX!^'qX~O!]5uO!^)Va~O!^8nO~P%;bO(p!sO~P$%zO#[8oO~O!_1pO~O!_1pO%j8qO~On8tO!_1pO%j8qO~O[8yO!]'ta!^'ta~O!]1{O!^)Wi~O!k8}O~O!k9OO~O!k9RO~O!k9RO~P%[Oa9TO~O!g9UO~O!k9VO~O!](xi!^(xi~P#BiOa%nO#`9_O'{%nO~O!](uy!k(uya(uy'{(uy~P!:tO!](kO!k(ty~O%j9bO~P&8XO!_'aO%j9bO~O#l$}qP$}qR$}q[$}qa$}qj$}qr$}q!S$}q!]$}q!l$}q!p$}q#R$}q#o$}q#p$}q#q$}q#r$}q#s$}q#t$}q#u$}q#v$}q#w$}q#y$}q#{$}q#|$}q'{$}q(b$}q(s$}q!k$}q!Y$}q'x$}q#`$}qv$}q!_$}q%j$}q!g$}q~P#/eO#l'kaP'kaR'ka['kaa'kaj'kar'ka!S'ka!l'ka!p'ka#R'ka#o'ka#p'ka#q'ka#r'ka#s'ka#t'ka#u'ka#v'ka#w'ka#y'ka#{'ka#|'ka'{'ka(b'ka(s'ka!k'ka!Y'ka'x'kav'ka!_'ka%j'ka!g'ka~P&4tO#l'maP'maR'ma['maa'maj'mar'ma!S'ma!l'ma!p'ma#R'ma#o'ma#p'ma#q'ma#r'ma#s'ma#t'ma#u'ma#v'ma#w'ma#y'ma#{'ma#|'ma'{'ma(b'ma(s'ma!k'ma!Y'ma'x'mav'ma!_'ma%j'ma!g'ma~P&5gO#l%PqP%PqR%Pq[%Pqa%Pqj%Pqr%Pq!S%Pq!]%Pq!l%Pq!p%Pq#R%Pq#o%Pq#p%Pq#q%Pq#r%Pq#s%Pq#t%Pq#u%Pq#v%Pq#w%Pq#y%Pq#{%Pq#|%Pq'{%Pq(b%Pq(s%Pq!k%Pq!Y%Pq'x%Pq#`%Pqv%Pq!_%Pq%j%Pq!g%Pq~P#/eO!]'Zi!k'Zi~P!:tO$P#cq!]#cq!^#cq~P#BiO(z$}OP%baR%ba[%baj%bar%ba!S%ba!l%ba!p%ba#R%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#v%ba#w%ba#y%ba#{%ba#|%ba$P%ba(b%ba(s%ba!]%ba!^%ba~On%ba!Q%ba'z%ba({%ba~P&IlO({%POP%daR%da[%daj%dar%da!S%da!l%da!p%da#R%da#o%da#p%da#q%da#r%da#s%da#t%da#u%da#v%da#w%da#y%da#{%da#|%da$P%da(b%da(s%da!]%da!^%da~On%da!Q%da'z%da(z%da~P&KsOn>]O!Q*PO'z*QO({%PO~P&IlOn>]O!Q*PO'z*QO(z$}O~P&KsOR0lO!Q0lO!S0mO#S$dOP}a[}aj}an}ar}a!l}a!p}a#R}a#o}a#p}a#q}a#r}a#s}a#t}a#u}a#v}a#w}a#y}a#{}a#|}a$P}a'z}a(b}a(s}a(z}a({}a!]}a!^}a~O!Q*PO'z*QOP$taR$ta[$taj$tan$tar$ta!S$ta!l$ta!p$ta#R$ta#o$ta#p$ta#q$ta#r$ta#s$ta#t$ta#u$ta#v$ta#w$ta#y$ta#{$ta#|$ta$P$ta(b$ta(s$ta(z$ta({$ta!]$ta!^$ta~O!Q*PO'z*QOP$vaR$va[$vaj$van$var$va!S$va!l$va!p$va#R$va#o$va#p$va#q$va#r$va#s$va#t$va#u$va#v$va#w$va#y$va#{$va#|$va$P$va(b$va(s$va(z$va({$va!]$va!^$va~On>]O!Q*PO'z*QO(z$}O({%PO~OP%UaR%Ua[%Uaj%Uar%Ua!S%Ua!l%Ua!p%Ua#R%Ua#o%Ua#p%Ua#q%Ua#r%Ua#s%Ua#t%Ua#u%Ua#v%Ua#w%Ua#y%Ua#{%Ua#|%Ua$P%Ua(b%Ua(s%Ua!]%Ua!^%Ua~P'&xO$P$nq!]$nq!^$nq~P#BiO$P$pq!]$pq!^$pq~P#BiO!^9oO~O$P9pO~P!1WO!g#vO!]'fi!k'fi~O!g#vO(s'qO!]'fi!k'fi~O!]/qO!k)Pq~O!Y'hi!]'hi~P#/eO!]/zO!Y)Qq~Or9wO!g#vO(s'qO~O[9yO!Y9xO~P#/eO!Y9xO~Oj:PO!g#vO~Og(`y!](`y~P!1WO!]'oa!_'oa~P#/eOa%]q!_%]q'{%]q!]%]q~P#/eO[:UO~O!]1UO!^)Yq~O`:YO~O#`:ZO!]'qa!^'qa~O!]5uO!^)Vi~P#BiO!S:]O~O!_1pO%j:`O~O(WTO(ZUO(f:eO~O!]1{O!^)Wq~O!k:hO~O!k:iO~O!k:jO~O!k:jO~P%[O#`:mO!]#hy!^#hy~O!]#hy!^#hy~P#BiO%j:rO~P&8XO!_'aO%j:rO~O$P#}y!]#}y!^#}y~P#BiOP$}iR$}i[$}ij$}ir$}i!S$}i!l$}i!p$}i#R$}i#o$}i#p$}i#q$}i#r$}i#s$}i#t$}i#u$}i#v$}i#w$}i#y$}i#{$}i#|$}i$P$}i(b$}i(s$}i!]$}i!^$}i~P'&xO!Q*PO'z*QO({%POP'jaR'ja['jaj'jan'jar'ja!S'ja!l'ja!p'ja#R'ja#o'ja#p'ja#q'ja#r'ja#s'ja#t'ja#u'ja#v'ja#w'ja#y'ja#{'ja#|'ja$P'ja(b'ja(s'ja(z'ja!]'ja!^'ja~O!Q*PO'z*QOP'laR'la['laj'lan'lar'la!S'la!l'la!p'la#R'la#o'la#p'la#q'la#r'la#s'la#t'la#u'la#v'la#w'la#y'la#{'la#|'la$P'la(b'la(s'la(z'la({'la!]'la!^'la~O(z$}OP%biR%bi[%bij%bin%bir%bi!Q%bi!S%bi!l%bi!p%bi#R%bi#o%bi#p%bi#q%bi#r%bi#s%bi#t%bi#u%bi#v%bi#w%bi#y%bi#{%bi#|%bi$P%bi'z%bi(b%bi(s%bi({%bi!]%bi!^%bi~O({%POP%diR%di[%dij%din%dir%di!Q%di!S%di!l%di!p%di#R%di#o%di#p%di#q%di#r%di#s%di#t%di#u%di#v%di#w%di#y%di#{%di#|%di$P%di'z%di(b%di(s%di(z%di!]%di!^%di~O$P$py!]$py!^$py~P#BiO$P#cy!]#cy!^#cy~P#BiO!g#vO!]'fq!k'fq~O!]/qO!k)Py~O!Y'hq!]'hq~P#/eOr:|O!g#vO(s'qO~O[;QO!Y;PO~P#/eO!Y;PO~Og(`!R!](`!R~P!1WOa%]y!_%]y'{%]y!]%]y~P#/eO!]1UO!^)Yy~O!]5uO!^)Vq~O(U;XO~O!_1pO%j;[O~O!k;_O~O%j;dO~P&8XOP$}qR$}q[$}qj$}qr$}q!S$}q!l$}q!p$}q#R$}q#o$}q#p$}q#q$}q#r$}q#s$}q#t$}q#u$}q#v$}q#w$}q#y$}q#{$}q#|$}q$P$}q(b$}q(s$}q!]$}q!^$}q~P'&xO!Q*PO'z*QO({%POP'kaR'ka['kaj'kan'kar'ka!S'ka!l'ka!p'ka#R'ka#o'ka#p'ka#q'ka#r'ka#s'ka#t'ka#u'ka#v'ka#w'ka#y'ka#{'ka#|'ka$P'ka(b'ka(s'ka(z'ka!]'ka!^'ka~O!Q*PO'z*QOP'maR'ma['maj'man'mar'ma!S'ma!l'ma!p'ma#R'ma#o'ma#p'ma#q'ma#r'ma#s'ma#t'ma#u'ma#v'ma#w'ma#y'ma#{'ma#|'ma$P'ma(b'ma(s'ma(z'ma({'ma!]'ma!^'ma~OP%PqR%Pq[%Pqj%Pqr%Pq!S%Pq!l%Pq!p%Pq#R%Pq#o%Pq#p%Pq#q%Pq#r%Pq#s%Pq#t%Pq#u%Pq#v%Pq#w%Pq#y%Pq#{%Pq#|%Pq$P%Pq(b%Pq(s%Pq!]%Pq!^%Pq~P'&xOg%f!Z!]%f!Z#`%f!Z$P%f!Z~P!1WO!Y;hO~P#/eOr;iO!g#vO(s'qO~O[;kO!Y;hO~P#/eO!]'qq!^'qq~P#BiO!]#h!Z!^#h!Z~P#BiO#l%f!ZP%f!ZR%f!Z[%f!Za%f!Zj%f!Zr%f!Z!S%f!Z!]%f!Z!l%f!Z!p%f!Z#R%f!Z#o%f!Z#p%f!Z#q%f!Z#r%f!Z#s%f!Z#t%f!Z#u%f!Z#v%f!Z#w%f!Z#y%f!Z#{%f!Z#|%f!Z'{%f!Z(b%f!Z(s%f!Z!k%f!Z!Y%f!Z'x%f!Z#`%f!Zv%f!Z!_%f!Z%j%f!Z!g%f!Z~P#/eOr;tO!g#vO(s'qO~O!Y;uO~P#/eOr;|O!g#vO(s'qO~O!Y;}O~P#/eOP%f!ZR%f!Z[%f!Zj%f!Zr%f!Z!S%f!Z!l%f!Z!p%f!Z#R%f!Z#o%f!Z#p%f!Z#q%f!Z#r%f!Z#s%f!Z#t%f!Z#u%f!Z#v%f!Z#w%f!Z#y%f!Z#{%f!Z#|%f!Z$P%f!Z(b%f!Z(s%f!Z!]%f!Z!^%f!Z~P'&xOr<QO!g#vO(s'qO~Ov(gX~P1qO!Q%rO~P!)[O(V!lO~P!)[O!YfX!]fX#`fX~P%1{OP]XR]X[]Xj]Xr]X!Q]X!S]X!]]X!]fX!l]X!p]X#R]X#S]X#`]X#`fX#lfX#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#w]X#y]X#{]X#|]X$R]X(b]X(s]X(z]X({]X~O!gfX!k]X!kfX(sfX~P'KvOP<UOQ<UOSfOd>QOe!iOpkOr<UOskOtkOzkO|<UO!O<UO!SWO!WkO!XkO!_XO!i<XO!lZO!o<UO!p<UO!q<UO!s<YO!u<]O!x!hO$X!kO$o>OO(U)^O(WTO(ZUO(bVO(p[O~O!]<iO!^$ra~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<tO!S${O!_$|O!i>VO!l$xO#k<zO$X%`O$u<vO$w<xO$z%aO(U(wO(WTO(ZUO(b$uO(z$}O({%PO~Ol)eO~P(!lOr!eX(s!eX~P#!nO!^]X!^fX~P'KvO!YfX!Y${X!]fX!]${X#`fX~P!0SO#l<^O~O!g#vO#l<^O~O#`<nO~Oj<bO~O#`<}O!](xX!^(xX~O#`<nO!](vX!^(vX~O#l=OO~Og=QO~P!1WO#l=WO~O#l=XO~Og=QO(U&ZO~O!g#vO#l=YO~O!g#vO#l=OO~O$P=ZO~P#BiO#l=[O~O#l=]O~O#l=bO~O#l=cO~O#l=dO~O#l=eO~O$P=fO~P!1WO$P=gO~P!1WOl=rO~P7eOk#S#T#U#W#X#[#j#k#v$o$u$w$z%^%_%i%j%k%r%t%w%x%z%|~(PT#p!X'}(V#qs#o#rr!Q(O$^(O(U$`(f~",
-			goto: "$8v)^PPPPPP)_PP)bP)sP+X/]PPPP6jPP7QPP<|PPP@pPAYPAYPPPAYPCbPAYPAYPAYPCfPCkPDYPIQPPPIUPPPPIULWPPPL^MOPIUPIUPP! ^IUPPPIUPIUP!#dIUP!&y!(O!(XP!({!)P!({!,]PPPPPPP!,|!(OPP!-^!/OP!2_IUIU!2d!5o!:[!:[!>Y!>bPPP!>hIUPPPPPPPPP!AvP!CSPPIU!DdPIUPIUIUIUIUIUPIU!EuP!IOP!LTP!LX!Lc!Lg!LgP!H{P!Lk!LkP# pP# tIUPIU# z#%OCfAYPAYPAYAYP#&]AYAY#(oAY#+gAY#-sAYAY#.c#0w#0w#0|#1V#0w#1bPP#0wPAY#1zAY#5yAYAY6jPPP#:OPPP#:i#:iP#:iP#;P#:iPP#;VP#:|P#:|#;j#:|#<U#<[#<_)bP#<b)bP#<k#<k#<kP)bP)bP)bP)bPP)bP#<q#<tP#<t)bP#<xP#<{P)bP)bP)bP)bP)bP)b)bPP#=R#=X#=d#=j#=p#=v#=|#>[#>b#>l#>r#>|#?S#?d#?j#@[#@n#@t#@z#AY#Ao#Cd#Cr#Cy#Ee#Es#Ge#Gs#Gy#HP#HV#Ha#Hg#Hm#Hw#IZ#IaPPPPPPPPPPP#IgPPPPPPP#J[#Mi$ R$ Y$ bPPP$&|P$'V$*O$0f$0i$0l$1k$1n$1u$1}P$2T$2WP$2t$2x$3p$5O$5T$5kPP$5p$5v$5z$5}$6R$6V$7R$7j$8R$8V$8Y$8]$8g$8j$8n$8rR!|RoqOXst!Z#d%m&r&t&u&w,u,z2]2`Y!vQ'a-f1p5{Q%tvQ%|yQ&T|Q&j!VS'W!e-^Q'g!iS'm!r!yU*l$|*[*pQ+q%}S,O&V&WQ,f&dQ-d'`Q-n'hQ-v'nQ0]*rQ1c,QQ1z,gR<{<Y%SdOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_,r,u,z-j-r.Q.W.u.|/o0^0m0s1T1s2T2U2W2Y2]2`2b3Q3W3l4z6T6e6f6i6|8t9T9_S#q]<V!p)`$Z$n'X)t-Y/W2p4T5w6s:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RU+Q%]<s<tQ+v&PQ,h&gQ,o&oQ0y+iQ1O+kQ1Z+wQ2S,mQ3`.hQ5`0}Q5f1UQ6[1{Q7Y3dQ8`5gR9e7['OkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-j-r.Q.W.h.u.|/W/o0^0m0s1T1s2T2U2W2Y2]2`2b2p3Q3W3d3l4T4z5w6T6e6f6i6s6|7[8t9T9_:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>R!S!nQ!r!v!y!z$|'W'`'a'm'n'o*l*p*r*s-^-d-f-v0]0`1p5{5}%[$ti#v$b$c$d$x${%O%Q%^%_%c)z*S*U*W*Z*b*h*x*y+h+k,U,X.g/Q/e/n/y/z/|0a0c0j0k0p1g1j1r3c4^4_4j4o5Q5[5_6S7W7v8Q8V8[8q9b9p9y:P:`:r;Q;[;d;k<l<m<o<p<q<r<u<v<w<x<y<z=R=S=T=U=W=X=[=]=^=_=`=a=b=c=f=g>O>W>X>[>]Q&X|S'U!e*[S']%i-aQ+v&PQ,R&WQ,h&gQ0o+TQ1Z+wQ1`+}Q2R,lQ2S,mQ5f1UQ5o1bQ6[1{Q6_1}Q6`2QQ8`5gQ8c5lQ8|6bQ:X8dQ:f8yR;V:YrnOXst!V!Z#d%m&i&r&t&u&w,u,z2]2`R,j&k&x^OPXYstuvwz!Z!`!g!j!o#S#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'c's(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-j-r.Q.W.h.u.|/W/o0^0m0s1T1s2T2U2W2Y2]2`2b2p3Q3W3d3l4T4z5w6T6e6f6i6s6|7[8t9T9_:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>Q>R[#]WZ#W#Z'X(U!b%jm#h#i#l$x%e%h(_(i(j(k*Z*_*c+[+^+`,q-W.U.[.].^.`/n/q2e3[3]4a6r7TQ%wxQ%{yW&Q|&V&W,QQ&_!TQ'd!hQ'f!iQ(r#sS+p%|%}Q+t&PQ,a&bQ,e&dS-m'g'hQ.j(sQ1S+qQ1Y+wQ1[+xQ1_+|Q1u,bS1y,f,gQ2|-nQ5e1UQ5i1XQ5n1aQ6Z1zQ8_5gQ8b5kQ8f5pQ:T8^R;T:U!U$zi$d%O%Q%^%_%c*S*U*b*x*y/Q/y0a0c0j0k0p4_5Q8V9p>O>W>X!^%yy!i!u%{%|%}'V'f'g'h'l'v*k+p+q-Z-m-n-u0S0V1S2u2|3T4r4s4v7}9{Q+j%wQ,V&[Q,Y&]Q,d&dQ.i(rQ1t,aU1x,e,f,gQ3e.jQ6U1uS6Y1y1zQ8x6Z#f>S#v$b$c$x${)z*W*Z*h+h+k,U,X.g/e/n/z/|1g1j1r3c4^4j4o5[5_6S7W7v8Q8[8q9b9y:P:`:r;Q;[;d;k<o<q<u<w<y=R=T=W=[=^=`=b=f>[>]o>T<l<m<p<r<v<x<z=S=U=X=]=_=a=c=gW%Ti%V*z>OS&[!Q&iQ&]!RQ&^!SU+O%[%d=rR,T&Y%]%Si#v$b$c$d$x${%O%Q%^%_%c)z*S*U*W*Z*b*h*x*y+h+k,U,X.g/Q/e/n/y/z/|0a0c0j0k0p1g1j1r3c4^4_4j4o5Q5[5_6S7W7v8Q8V8[8q9b9p9y:P:`:r;Q;[;d;k<l<m<o<p<q<r<u<v<w<x<y<z=R=S=T=U=W=X=[=]=^=_=`=a=b=c=f=g>O>W>X>[>]T){$u)|V+Q%]<s<tW']!e%i*[-aS)O#y#zQ+e%rQ+{&SS.c(n(oQ1k,ZQ5T0lR8i5u'OkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-j-r.Q.W.h.u.|/W/o0^0m0s1T1s2T2U2W2Y2]2`2b2p3Q3W3d3l4T4z5w6T6e6f6i6s6|7[8t9T9_:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>R$g$^c#Y#e%q%s%u(T(Z(u(z)S)T)U)V)W)X)Y)Z)[)])_)a)c)h)r+f+z-[-y.O.T.V.t.w.{.}/O/P/c0q2n3O3V3k3p3q3r3s3t3u3v3w3x3y3z3{3|4P4Q4X5X5c6u6{7Q7a7b7k7l8k9X9]9g9m9n:o;W;`<W=uT#TV#U'PkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-j-r.Q.W.h.u.|/W/o0^0m0s1T1s2T2U2W2Y2]2`2b2p3Q3W3d3l4T4z5w6T6e6f6i6s6|7[8t9T9_:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RQ'Y!eR2q-^!W!nQ!e!r!v!y!z$|'W'`'a'm'n'o*[*l*p*r*s-^-d-f-v0]0`1p5{5}R1m,]nqOXst!Z#d%m&r&t&u&w,u,z2]2`Q&y!^Q'w!xS(t#u<^Q+n%zQ,_&_Q,`&aQ-k'eQ-x'pS.s(y=OS0r+Y=YQ1Q+oQ1o,^Q2d,|Q2f,}Q2m-XQ2z-lQ2}-pS5Y0s=dQ5a1RS5d1T=eQ6t2oQ6x2{Q6}3SQ8]5bQ9Y6vQ9Z6yQ9^7OR:l9V$b$]c#Y#e%s%u(T(Z(u(z)S)T)U)V)W)X)Y)Z)[)])_)a)c)h)r+f+z-[-y.O.T.V.t.w.{/O/P/c0q2n3O3V3k3p3q3r3s3t3u3v3w3x3y3z3{3|4P4Q4X5X5c6u6{7Q7a7b7k7l8k9X9]9g9m9n:o;W;`<W=uS(p#p'jQ)Q#zS+d%q.}S.d(o(qR3^.e'OkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-j-r.Q.W.h.u.|/W/o0^0m0s1T1s2T2U2W2Y2]2`2b2p3Q3W3d3l4T4z5w6T6e6f6i6s6|7[8t9T9_:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RS#q]<VQ&t!XQ&u!YQ&w![Q&x!]R2[,xQ'b!hQ+g%wQ-i'dS.f(r+jQ2x-hW3b.i.j0x0zQ6w2yW7U3_3a3e5^U9a7V7X7ZU:q9c9d9fS;b:p:sQ;p;cR;x;qU!wQ'a-fT5y1p5{!Q_OXZ`st!V!Z#d#h%e%m&i&k&r&t&u&w(k,u,z.]2]2`]!pQ!r'a-f1p5{T#q]<V%^{OPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&o&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_+i,r,u,z-j-r.Q.W.h.u.|/o0^0m0s1T1s2T2U2W2Y2]2`2b3Q3W3d3l4z6T6e6f6i6|7[8t9T9_S)O#y#zS.c(n(o!q=k$Z$n'X)t-Y/W2p4T5w6s:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RU$fd)`,oS(q#p'jU*w%R(x4OU0n+P.o7gQ5^0yQ7V3`Q9d7YR:s9em!tQ!r!v!y!z'a'm'n'o-f-v1p5{5}Q'u!uS(g#g2VS-t'l'xQ/t*^Q0S*kQ3U-wQ4f/uQ4r0UQ4s0VQ4x0_Q7r4`S7}4t4vS8R4y4{Q9r7sQ9v7yQ9{8OQ:Q8TS:{9w9xS;g:|;PS;s;h;iS;{;t;uS<P;|;}R<S<QQ#wbQ't!uS(f#g2VS(h#m+XQ+Z%fQ+l%xQ+r&OU-s'l'u'xQ.X(gU/s*^*a/xQ0T*kQ0W*mQ1P+mQ1v,cS3R-t-wQ3Z.aS4e/t/uQ4n0QS4q0S0_Q4u0XQ6W1wQ7P3US7q4`4bQ7u4fU7|4r4x4{Q8P4wQ8v6XS9q7r7sQ9u7yQ9}8RQ:O8SQ:c8wQ:y9rS:z9v9xQ;S:QQ;^:dS;f:{;PS;r;g;hS;z;s;uS<O;{;}Q<R<PQ<T<SQ=n=iQ=z=sR={=tV!wQ'a-f%^aOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&o&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_+i,r,u,z-j-r.Q.W.h.u.|/o0^0m0s1T1s2T2U2W2Y2]2`2b3Q3W3d3l4z6T6e6f6i6|7[8t9T9_S#wz!j!p=h$Z$n'X)t-Y/W2p4T5w6s:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RR=n>Q%^bOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&o&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_+i,r,u,z-j-r.Q.W.h.u.|/o0^0m0s1T1s2T2U2W2Y2]2`2b3Q3W3d3l4z6T6e6f6i6|7[8t9T9_Q%fj!^%xy!i!u%{%|%}'V'f'g'h'l'v*k+p+q-Z-m-n-u0S0V1S2u2|3T4r4s4v7}9{S&Oz!jQ+m%yQ,c&dW1w,d,e,f,gU6X1x1y1zS8w6Y6ZQ:d8x!p=i$Z$n'X)t-Y/W2p4T5w6s:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RQ=s>PR=t>Q%QeOPXYstuvw!Z!`!g!o#S#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&r&t&u&w&{'T'c's(W(^(e(y({)P*O*j+Y+_+i,r,u,z-j-r.Q.W.h.u.|/o0^0m0s1T1s2T2U2W2Y2]2`2b3Q3W3d3l4z6T6e6f6i6|7[8t9T9_Y#bWZ#W#Z(U!b%jm#h#i#l$x%e%h(_(i(j(k*Z*_*c+[+^+`,q-W.U.[.].^.`/n/q2e3[3]4a6r7TQ,p&o!n=j$Z$n)t-Y/W2p4T5w6s:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RR=m'XU'^!e%i*[R2s-aX'[!e%i*[-a%SdOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_,r,u,z-j-r.Q.W.u.|/o0^0m0s1T1s2T2U2W2Y2]2`2b3Q3W3l4z6T6e6f6i6|8t9T9_!p)`$Z$n'X)t-Y/W2p4T5w6s:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RQ,o&oQ0y+iQ3`.hQ7Y3dR9e7[!b$Tc#Y%q(T(Z(u(z)[)])a)h+z-y.O.T.V.t.w/c0q3O3V3k3{5X5c6{7Q7a9]:o<W}<d)_)r-[.}2n3p3y3z4P4X6u7b7k7l8k9X9g9m9n;W;`=u!f$Vc#Y%q(T(Z(u(z)X)Y)[)])a)h+z-y.O.T.V.t.w/c0q3O3V3k3{5X5c6{7Q7a9]:o<W!R<f)_)r-[.}2n3p3v3w3y3z4P4X6u7b7k7l8k9X9g9m9n;W;`=u!^$Zc#Y%q(T(Z(u(z)a)h+z-y.O.T.V.t.w/c0q3O3V3k3{5X5c6{7Q7a9]:o<WQ4_/lx>R)_)r-[.}2n3p4P4X6u7b7k7l8k9X9g9m9n;W;`=uQ>W>YR>X>Z'OkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-j-r.Q.W.h.u.|/W/o0^0m0s1T1s2T2U2W2Y2]2`2b2p3Q3W3d3l4T4z5w6T6e6f6i6s6|7[8t9T9_:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RS$oh$pR4U/V'VgOPWXYZhstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n$p%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-j-r.Q.W.h.u.|/V/W/o0^0m0s1T1s2T2U2W2Y2]2`2b2p3Q3W3d3l4T4z5w6T6e6f6i6s6|7[8t9T9_:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RT$kf$qQ$ifS)k$l)oR)w$qT$jf$qT)m$l)o'VhOPWXYZhstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n$p%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-j-r.Q.W.h.u.|/V/W/o0^0m0s1T1s2T2U2W2Y2]2`2b2p3Q3W3d3l4T4z5w6T6e6f6i6s6|7[8t9T9_:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>RT$oh$pQ$rhR)v$p%^jOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&o&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_+i,r,u,z-j-r.Q.W.h.u.|/o0^0m0s1T1s2T2U2W2Y2]2`2b3Q3W3d3l4z6T6e6f6i6|7[8t9T9_!q>P$Z$n'X)t-Y/W2p4T5w6s:Z:m<U<X<Y<]<^<_<`<a<b<c<d<e<f<g<h<i<k<n<{<}=O=Q=Y=Z=d=e>R#glOPXZst!Z!`!o#S#d#o#{$n%m&k&n&o&r&t&u&w&{'T'c)P)t*j+_+i,r,u,z-j.h/W/o0^0m1s2T2U2W2Y2]2`2b3d4T4z6T6e6f6i7[8t9T!U%Ri$d%O%Q%^%_%c*S*U*b*x*y/Q/y0a0c0j0k0p4_5Q8V9p>O>W>X#f(x#v$b$c$x${)z*W*Z*h+h+k,U,X.g/e/n/z/|1g1j1r3c4^4j4o5[5_6S7W7v8Q8[8q9b9y:P:`:r;Q;[;d;k<o<q<u<w<y=R=T=W=[=^=`=b=f>[>]Q+U%aQ/d*Po4O<l<m<p<r<v<x<z=S=U=X=]=_=a=c=g!U$yi$d%O%Q%^%_%c*S*U*b*x*y/Q/y0a0c0j0k0p4_5Q8V9p>O>W>XQ*d$zU*m$|*[*pQ+V%bQ0X*n#f=p#v$b$c$x${)z*W*Z*h+h+k,U,X.g/e/n/z/|1g1j1r3c4^4j4o5[5_6S7W7v8Q8[8q9b9y:P:`:r;Q;[;d;k<o<q<u<w<y=R=T=W=[=^=`=b=f>[>]n=q<l<m<p<r<v<x<z=S=U=X=]=_=a=c=gQ=v>SQ=w>TQ=x>UR=y>V!U%Ri$d%O%Q%^%_%c*S*U*b*x*y/Q/y0a0c0j0k0p4_5Q8V9p>O>W>X#f(x#v$b$c$x${)z*W*Z*h+h+k,U,X.g/e/n/z/|1g1j1r3c4^4j4o5[5_6S7W7v8Q8[8q9b9y:P:`:r;Q;[;d;k<o<q<u<w<y=R=T=W=[=^=`=b=f>[>]o4O<l<m<p<r<v<x<z=S=U=X=]=_=a=c=gnoOXst!Z#d%m&r&t&u&w,u,z2]2`S*g${*ZQ-T'OQ-U'QR4i/z%[%Si#v$b$c$d$x${%O%Q%^%_%c)z*S*U*W*Z*b*h*x*y+h+k,U,X.g/Q/e/n/y/z/|0a0c0j0k0p1g1j1r3c4^4_4j4o5Q5[5_6S7W7v8Q8V8[8q9b9p9y:P:`:r;Q;[;d;k<l<m<o<p<q<r<u<v<w<x<y<z=R=S=T=U=W=X=[=]=^=_=`=a=b=c=f=g>O>W>X>[>]Q,W&]Q1i,YQ5s1hR8h5tV*o$|*[*pU*o$|*[*pT5z1p5{S0Q*j/oQ4w0^T8S4z:]Q+l%xQ0W*mQ1P+mQ1v,cQ6W1wQ8v6XQ:c8wR;^:d!U%Oi$d%O%Q%^%_%c*S*U*b*x*y/Q/y0a0c0j0k0p4_5Q8V9p>O>W>Xx*S$v)f*T*v+W/w0e0f4R4g5R5S5W7p8U:R:x=o=|=}S0a*u0b#f<o#v$b$c$x${)z*W*Z*h+h+k,U,X.g/e/n/z/|1g1j1r3c4^4j4o5[5_6S7W7v8Q8[8q9b9y:P:`:r;Q;[;d;k<o<q<u<w<y=R=T=W=[=^=`=b=f>[>]n<p<l<m<p<r<v<x<z=S=U=X=]=_=a=c=g!d=R(v)d*]*f.k.n.r/`/l/}0w1f3h4[4h4l5r7]7`7w7z8X8Z9t9|:S:};R;e;j;v>Y>Z`=S3}7c7f7j9h:t:w;yS=^.m3iT=_7e9k!U%Qi$d%O%Q%^%_%c*S*U*b*x*y/Q/y0a0c0j0k0p4_5Q8V9p>O>W>X|*U$v)f*V*u+W/h/w0e0f4R4g4|5R5S5W7p8U:R:x=o=|=}S0c*v0d#f<q#v$b$c$x${)z*W*Z*h+h+k,U,X.g/e/n/z/|1g1j1r3c4^4j4o5[5_6S7W7v8Q8[8q9b9y:P:`:r;Q;[;d;k<o<q<u<w<y=R=T=W=[=^=`=b=f>[>]n<r<l<m<p<r<v<x<z=S=U=X=]=_=a=c=g!h=T(v)d*]*f.l.m.r/`/l/}0w1f3f3h4[4h4l5r7]7^7`7w7z8X8Z9t9|:S:};R;e;j;v>Y>Zd=U3}7d7e7j9h9i:t:u:w;yS=`.n3jT=a7f9lrnOXst!V!Z#d%m&i&r&t&u&w,u,z2]2`Q&f!UR,r&ornOXst!V!Z#d%m&i&r&t&u&w,u,z2]2`R&f!UQ,[&^R1e,TsnOXst!V!Z#d%m&i&r&t&u&w,u,z2]2`Q1q,aS6R1t1uU8p6P6Q6US:_8r8sS;Y:^:aQ;m;ZR;w;nQ&m!VR,k&iR6_1}R:f8yW&Q|&V&W,QR1[+xQ&r!WR,u&sR,{&xT2^,z2`R-P&yQ-O&yR2g-PQ'z!{R-z'zSsOtQ#dXT%ps#dQ#OTR'|#OQ#RUR(O#RQ)|$uR/a)|Q#UVR(R#UQ#XWU(X#X(Y.RQ(Y#YR.R(ZQ-_'YR2r-_Q.v(zS3m.v3nR3n.wQ-f'aR2v-fY!rQ'a-f1p5{R'k!rQ/R)fR4S/RU#_W%h*ZU(`#_(a.SQ(a#`R.S([Q-b'^R2t-bt`OXst!V!Z#d%m&i&k&r&t&u&w,u,z2]2`S#hZ%eU#r`#h.]R.](kQ(l#jQ.Y(hW.b(l.Y3X7RQ3X.ZR7R3YQ)o$lR/X)oQ$phR)u$pQ$`cU)b$`-}<jQ-}<WR<j)rQ/r*^W4c/r4d7t9sU4d/s/t/uS7t4e4fR9s7u$e*R$v(v)d)f*]*f*u*v+R+S+W.m.n.p.q.r/`/h/j/l/w/}0e0f0w1f3f3g3h3}4R4[4g4h4l4|5O5R5S5W5r7]7^7_7`7e7f7h7i7j7p7w7z8U8X8Z9h9i9j9t9|:R:S:t:u:v:w:x:};R;e;j;v;y=o=|=}>Y>ZQ/{*fU4k/{4m7xQ4m/}R7x4lS*p$|*[R0Z*px*T$v)f*u*v+W/w0e0f4R4g5R5S5W7p8U:R:x=o=|=}!d.k(v)d*]*f.m.n.r/`/l/}0w1f3h4[4h4l5r7]7`7w7z8X8Z9t9|:S:};R;e;j;v>Y>ZU/i*T.k7ca7c3}7e7f7j9h:t:w;yQ0b*uQ3i.mU4}0b3i9kR9k7e|*V$v)f*u*v+W/h/w0e0f4R4g4|5R5S5W7p8U:R:x=o=|=}!h.l(v)d*]*f.m.n.r/`/l/}0w1f3f3h4[4h4l5r7]7^7`7w7z8X8Z9t9|:S:};R;e;j;v>Y>ZU/k*V.l7de7d3}7e7f7j9h9i:t:u:w;yQ0d*vQ3j.nU5P0d3j9lR9l7fQ*{%UR0h*{Q5]0wR8Y5]Q+a%kR0v+aQ5v1kS8j5v:[R:[8kQ,^&_R1n,^Q5{1pR8m5{Q1|,hS6]1|8zR8z6_Q1V+tW5h1V5j8a:VQ5j1YQ8a5iR:V8bQ+y&QR1]+yQ2`,zR6m2`YrOXst#dQ&v!ZQ+c%mQ,t&rQ,v&tQ,w&uQ,y&wQ2Z,uS2^,z2`R6l2]Q%opQ&z!_Q&}!aQ'P!bQ'R!cQ'r!uQ+b%lQ+n%zQ,S&XQ,j&mQ-R&|W-q'l't'u'xQ-x'pQ0Y*oQ1Q+oQ1d,RS2P,k,nQ2h-QQ2i-TQ2j-UQ2}-pW3P-s-t-w-yQ5a1RQ5m1`Q5q1fQ6V1vQ6a2RQ6k2[U6z3O3R3UQ6}3SQ8]5bQ8e5oQ8g5rQ8l5zQ8u6WQ8{6`S9[6{7PQ9^7OQ:W8cQ:b8vQ:g8|Q:n9]Q;U:XQ;]:cQ;a:oQ;l;VR;o;^Q%zyQ'e!iQ'p!uU+o%{%|%}Q-X'VU-l'f'g'hS-p'l'vQ0R*kS1R+p+qQ2o-ZS2{-m-nQ3S-uS4p0S0VQ5b1SQ6v2uQ6y2|Q7O3TU7{4r4s4vQ9z7}R;O9{S$wi>OR*|%VU%Ui%V>OR0g*zQ$viS(v#v+kS)d$b$cQ)f$dQ*]$xS*f${*ZQ*u%OQ*v%QQ+R%^Q+S%_Q+W%cQ.m<oQ.n<qQ.p<uQ.q<wQ.r<yQ/`)zQ/h*SQ/j*UQ/l*WQ/w*bS/}*h/nQ0e*xQ0f*yl0w+h,X.g1j1r3c6S7W8q9b:`:r;[;dQ1f,UQ3f=RQ3g=TQ3h=WS3}<l<mQ4R/QS4[/e4^Q4g/yQ4h/zQ4l/|Q4|0aQ5O0cQ5R0jQ5S0kQ5W0pQ5r1gQ7]=[Q7^=^Q7_=`Q7`=bQ7e<pQ7f<rQ7h<vQ7i<xQ7j<zQ7p4_Q7w4jQ7z4oQ8U5QQ8X5[Q8Z5_Q9h=XQ9i=SQ9j=UQ9t7vQ9|8QQ:R8VQ:S8[Q:t=]Q:u=_Q:v=aQ:w=cQ:x9pQ:}9yQ;R:PQ;e=fQ;j;QQ;v;kQ;y=gQ=o>OQ=|>WQ=}>XQ>Y>[R>Z>]Q+P%]Q.o<sR7g<tnpOXst!Z#d%m&r&t&u&w,u,z2]2`Q!fPS#fZ#oQ&|!`W'i!o*j0^4zQ(Q#SQ)R#{Q)s$nS,n&k&nQ,s&oQ-Q&{S-V'T/oQ-h'cQ.y)PQ/])tQ0t+_Q0z+iQ2X,rQ2y-jQ3a.hQ4W/WQ5U0mQ6Q1sQ6c2TQ6d2UQ6h2WQ6j2YQ6o2bQ7Z3dQ7m4TQ8s6TQ9P6eQ9Q6fQ9S6iQ9f7[Q:a8tR:k9T#[cOPXZst!Z!`!o#d#o#{%m&k&n&o&r&t&u&w&{'T'c)P*j+_+i,r,u,z-j.h/o0^0m1s2T2U2W2Y2]2`2b3d4z6T6e6f6i7[8t9TQ#YWQ#eYQ%quQ%svS%uw!gS(T#W(WQ(Z#ZQ(u#uQ(z#xQ)S$OQ)T$PQ)U$QQ)V$RQ)W$SQ)X$TQ)Y$UQ)Z$VQ)[$WQ)]$XQ)_$ZQ)a$_Q)c$aQ)h$eW)r$n)t/W4TQ+f%tQ+z&RS-['X2pQ-y'sS.O(U.QQ.T(^Q.V(eQ.t(yQ.w({Q.{<UQ.}<XQ/O<YQ/P<]Q/c*OQ0q+YQ2n-YQ3O-rQ3V.WQ3k.uQ3p<^Q3q<_Q3r<`Q3s<aQ3t<bQ3u<cQ3v<dQ3w<eQ3x<fQ3y<gQ3z<hQ3{.|Q3|<kQ4P<nQ4Q<{Q4X<iQ5X0sQ5c1TQ6u<}Q6{3QQ7Q3WQ7a3lQ7b=OQ7k=QQ7l=YQ8k5wQ9X6sQ9]6|Q9g=ZQ9m=dQ9n=eQ:o9_Q;W:ZQ;`:mQ<W#SR=u>RR#[WR'Z!el!tQ!r!v!y!z'a'm'n'o-f-v1p5{5}S'V!e-^U*k$|*[*pS-Z'W'`S0V*l*rQ0_*sQ2u-dQ4v0]R4{0`R(|#xQ!fQT-e'a-f]!qQ!r'a-f1p5{Q#p]R'j<VR)g$dY!uQ'a-f1p5{Q'l!rS'v!v!yS'x!z5}S-u'm'nQ-w'oR3T-vT#kZ%eS#jZ%eS%km,qU(h#h#i#lS.Z(i(jQ._(kQ0u+`Q3Y.[U3Z.].^.`S7S3[3]R9`7Td#^W#W#Z%h(U(_*Z+[.U/nr#gZm#h#i#l%e(i(j(k+`.[.].^.`3[3]7TS*^$x*cQ/u*_Q2V,qQ2l-WQ4`/qQ6q2eQ7s4aQ9W6rT=l'X+^V#aW%h*ZU#`W%h*ZS(V#W(_U([#Z+[/nS-]'X+^T.P(U.UV'_!e%i*[Q$lfR)y$qT)n$l)oR4V/VT*`$x*cT*i${*ZQ0x+hQ1h,XQ3_.gQ5t1jQ6P1rQ7X3cQ8r6SQ9c7WQ:^8qQ:p9bQ;Z:`Q;c:rQ;n;[R;q;dnqOXst!Z#d%m&r&t&u&w,u,z2]2`Q&l!VR,j&itmOXst!U!V!Z#d%m&i&r&t&u&w,u,z2]2`R,q&oT%lm,qR1l,ZR,i&gQ&U|S,P&V&WR1_,QR+u&PT&p!W&sT&q!W&sT2_,z2`",
+			states: "$GSQ%TQlOOO%[QlOOO'_QpOOP(lO`OOO*zQ!0MxO'#CiO+RO#tO'#CjO+aO&jO'#CjO+oO#@ItO'#DaO.QQlO'#DgO.bQlO'#DrO%[QlO'#DzO0fQlO'#ESOOQ!0Lf'#E['#E[O1PQ`O'#EXOOQO'#Ep'#EpOOQO'#Im'#ImO1XQ`O'#GtO1dQ`O'#EoO1iQ`O'#EoO3hQ!0MxO'#JsO6[Q!0MxO'#JtO6uQ`O'#F^O6zQ,UO'#FuOOQ!0Lf'#Fg'#FgO7VO7dO'#FgO9XQMhO'#F}O9`Q`O'#F|OOQ!0Lf'#Jt'#JtOOQ!0Lb'#Js'#JsO9eQ`O'#GxOOQ['#K`'#K`O9pQ`O'#IZO9uQ!0LrO'#I[OOQ['#Ja'#JaOOQ['#I`'#I`Q`QlOOQ`QlOOO9}Q!L^O'#DvO:UQlO'#EOO:]QlO'#EQO9kQ`O'#GtO:dQMhO'#CoO:rQ`O'#EnO:}Q`O'#EzO;hQMhO'#FfO;xQ`O'#GtOOQO'#Ka'#KaO;}Q`O'#KaO<]Q`O'#G|O<]Q`O'#G}O<]Q`O'#HPO9kQ`O'#HSO=SQ`O'#HVO>kQ`O'#CeO>{Q`O'#HdO?TQ`O'#HjO?TQ`O'#HlO`QlO'#HnO?TQ`O'#HpO?TQ`O'#HsO?YQ`O'#HyO?_Q!0LsO'#IPO%[QlO'#IRO?jQ!0LsO'#ITO?uQ!0LsO'#IVO9uQ!0LrO'#IXO@QQ!0MxO'#CiOASQpO'#DlQOQ`OOO%[QlO'#EQOAjQ`O'#ETO:dQMhO'#EnOAuQ`O'#EnOBQQ!bO'#FfOOQ['#Cg'#CgOOQ!0Lb'#Dq'#DqOOQ!0Lb'#Jw'#JwO%[QlO'#JwOOQO'#Jz'#JzOOQO'#Ii'#IiOCQQpO'#EgOOQ!0Lb'#Ef'#EfOOQ!0Lb'#KO'#KOOC|Q!0MSO'#EgODWQpO'#EWOOQO'#Jy'#JyODlQpO'#JzOEyQpO'#EWODWQpO'#EgPFWO&2DjO'#CbPOOO)CEO)CEOOOOO'#Ia'#IaOFcO#tO,59UOOQ!0Lh,59U,59UOOOO'#Ib'#IbOFqO&jO,59UOGPQ!L^O'#DcOOOO'#Id'#IdOGWO#@ItO,59{OOQ!0Lf,59{,59{OGfQlO'#IeOGyQ`O'#JuOIxQ!fO'#JuO+}QlO'#JuOJPQ`O,5:ROJgQ`O'#EpOJtQ`O'#KUOKPQ`O'#KTOKPQ`O'#KTOKXQ`O,5;^OK^Q`O'#KSOOQ!0Ln,5:^,5:^OKeQlO,5:^OMcQ!0MxO,5:fONSQ`O,5:nONmQ!0LrO'#KRONtQ`O'#KQO9eQ`O'#KQO! YQ`O'#KQO! bQ`O,5;]O! gQ`O'#KQO!#lQ!fO'#JtOOQ!0Lh'#Ci'#CiO%[QlO'#ESO!$[Q!fO,5:sOOQS'#J{'#J{OOQO-E<k-E<kO9kQ`O,5=`O!$rQ`O,5=`O!$wQlO,5;ZO!&zQMhO'#EkO!(eQ`O,5;ZO!(jQlO'#DyO!(tQpO,5;eO!(|QpO,5;eO%[QlO,5;eOOQ['#FU'#FUOOQ['#FW'#FWO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fO%[QlO,5;fOOQ['#F['#F[O!)[QlO,5;uOOQ!0Lf,5;z,5;zOOQ!0Lf,5;{,5;{OOQ!0Lf,5;},5;}O%[QlO'#IqO!+_Q!0LrO,5<jO%[QlO,5;fO!&zQMhO,5;fO!+|QMhO,5;fO!-nQMhO'#E^O%[QlO,5;xOOQ!0Lf,5;|,5;|O!-uQ,UO'#FkO!.rQ,UO'#KYO!.^Q,UO'#KYO!.yQ,UO'#KYOOQO'#KY'#KYO!/_Q,UO,5<TOOOW,5<a,5<aO!/pQlO'#FwOOOW'#Ip'#IpO7VO7dO,5<RO!/wQ,UO'#FyOOQ!0Lf,5<R,5<RO!0hQ$IUO'#CyOOQ!0Lh'#C}'#C}O!0{O#@ItO'#DRO!1iQMjO,5<fO!1pQ`O,5<iO!3YQ(CWO'#GYO!3jQ`O'#GZO!3oQ`O'#GZO!5_Q(CWO'#G_O!6dQpO'#GcOOQO'#Go'#GoO!,TQMhO'#GnOOQO'#Gq'#GqO!,TQMhO'#GpO!7VQ$IUO'#JmOOQ!0Lh'#Jm'#JmO!7aQ`O'#JlO!7oQ`O'#JkO!7wQ`O'#CuOOQ!0Lh'#C{'#C{O!8YQ`O'#C}OOQ!0Lh'#DV'#DVOOQ!0Lh'#DX'#DXO!8_Q`O,5<fO1SQ`O'#DZO!,TQMhO'#GQO!,TQMhO'#GSO!8gQ`O'#GUO!8lQ`O'#GVO!3oQ`O'#G]O!,TQMhO'#GbO<]Q`O'#JlO!8qQ`O'#EqO!9`Q`O,5<hOOQ!0Lb'#Cr'#CrO!9hQ`O'#ErO!:bQpO'#EsOOQ!0Lb'#KS'#KSO!:iQ!0LrO'#KbO9uQ!0LrO,5=dO`QlO,5>uOOQ['#Ji'#JiOOQ[,5>v,5>vOOQ[-E<^-E<^O!<hQ!0MxO,5:bO!=[QpO,5:`O!?WQ!0MxO,5:jO%[QlO,5:jO!AnQ!0MxO,5:lOOQO,5@{,5@{O!B_QMhO,5=`O!BmQ!0LrO'#JjO9`Q`O'#JjO!COQ!0LrO,59ZO!CZQpO,59ZO!CcQMhO,59ZO:dQMhO,59ZO!CnQ`O,5;ZO!CvQ`O'#HcO!D[Q`O'#KeO%[QlO,5<OO!=[QpO,5<QO!DdQ`O,5={O!DiQ`O,5={O!DnQ`O,5={O!D|Q`O,5={O9uQ!0LrO,5={O<]Q`O,5=kOOQO'#Cy'#CyO!ETQpO,5=hO!E]QMhO,5=iO!EhQ`O,5=kO!EmQ!bO,5=nO!EuQ`O'#KaO?YQ`O'#HXO9kQ`O'#HZO!EzQ`O'#HZO:dQMhO'#H]O!FPQ`O'#H]OOQ[,5=q,5=qO!FUQ`O'#H^O!FgQ`O'#CoO!FlQ`O,59PO!FvQ`O,59PO!H{QlO,59POOQ[,59P,59PO!I]Q!0LrO,59PO%[QlO,59PO!KhQlO'#HfOOQ['#Hg'#HgOOQ['#Hh'#HhO`QlO,5>OO!LOQ`O,5>OO`QlO,5>UO`QlO,5>WO!LTQ`O,5>YO`QlO,5>[O!LYQ`O,5>_O!L_QlO,5>eOOQ[,5>k,5>kO%[QlO,5>kO9uQ!0LrO,5>mOOQ[,5>o,5>oO#!iQ`O,5>oOOQ[,5>q,5>qO#!iQ`O,5>qOOQ[,5>s,5>sO##VQpO'#D_O%[QlO'#JwO##aQpO'#JwO##{QpO'#DmO#$^QpO'#DmO#&oQlO'#DmO#&vQ`O'#JvO#'OQ`O,5:WO#'TQ`O'#EtO#'`Q`O'#EtO#'eQ`O'#KVO#'mQ`O,5;_O#'rQpO'#DmO#(PQpO'#EVOOQ!0Lf,5:o,5:oO%[QlO,5:oO#(WQ`O,5:oO?YQ`O,5;YO!CZQpO,5;YO!CcQMhO,5;YO:dQMhO,5;YO#(`Q`O,5@cO#(eQ07dO,5:sOOQO-E<g-E<gO#)kQ!0MSO,5;RODWQpO,5:rO#)uQpO,5:rODWQpO,5;RO!COQ!0LrO,5:rOOQ!0Lb'#Ej'#EjOOQO,5;R,5;RO%[QlO,5;RO#*SQ!0LrO,5;RO#*_Q!0LrO,5;RO!CZQpO,5:rOOQO,5;X,5;XO#*mQ!0LrO,5;RPOOO'#I_'#I_P#+RO&2DjO,58|POOO,58|,58|OOOO-E<_-E<_OOQ!0Lh1G.p1G.pOOOO-E<`-E<`OOOO,59},59}O#+^Q!bO,59}OOOO-E<b-E<bOOQ!0Lf1G/g1G/gO#+cQ!fO,5?PO+}QlO,5?POOQO,5?V,5?VO#+mQlO'#IeOOQO-E<c-E<cO#+zQ`O,5@aO#,SQ!fO,5@aO#,ZQ`O,5@oOOQ!0Lf1G/m1G/mO%[QlO,5@pO#,cQ`O'#IkOOQO-E<i-E<iO#,ZQ`O,5@oOOQ!0Lb1G0x1G0xOOQ!0Ln1G/x1G/xOOQ!0Ln1G0Y1G0YO%[QlO,5@mO#,wQ!0LrO,5@mO#-YQ!0LrO,5@mO#-aQ`O,5@lO9eQ`O,5@lO#-iQ`O,5@lO#-wQ`O'#InO#-aQ`O,5@lOOQ!0Lb1G0w1G0wO!(tQpO,5:uO!)PQpO,5:uOOQS,5:w,5:wO#.iQdO,5:wO#.qQMhO1G2zO9kQ`O1G2zOOQ!0Lf1G0u1G0uO#/PQ!0MxO1G0uO#0UQ!0MvO,5;VOOQ!0Lh'#GX'#GXO#0rQ!0MzO'#JmO!$wQlO1G0uO#2}Q!fO'#JxO%[QlO'#JxO#3XQ`O,5:eOOQ!0Lh'#D_'#D_OOQ!0Lf1G1P1G1PO%[QlO1G1POOQ!0Lf1G1g1G1gO#3^Q`O1G1PO#5rQ!0MxO1G1QO#5yQ!0MxO1G1QO#8aQ!0MxO1G1QO#8hQ!0MxO1G1QO#;OQ!0MxO1G1QO#=fQ!0MxO1G1QO#=mQ!0MxO1G1QO#=tQ!0MxO1G1QO#@[Q!0MxO1G1QO#@cQ!0MxO1G1QO#BpQ?MtO'#CiO#DkQ?MtO1G1aO#DrQ?MtO'#JtO#EVQ!0MxO,5?]OOQ!0Lb-E<o-E<oO#GdQ!0MxO1G1QO#HaQ!0MzO1G1QOOQ!0Lf1G1Q1G1QO#IdQMjO'#J}O#InQ`O,5:xO#IsQ!0MxO1G1dO#JgQ,UO,5<XO#JoQ,UO,5<YO#JwQ,UO'#FpO#K`Q`O'#FoOOQO'#KZ'#KZOOQO'#Io'#IoO#KeQ,UO1G1oOOQ!0Lf1G1o1G1oOOOW1G1z1G1zO#KvQ?MtO'#JsO#LQQ`O,5<cO!)[QlO,5<cOOOW-E<n-E<nOOQ!0Lf1G1m1G1mO#LVQpO'#KYOOQ!0Lf,5<e,5<eO#L_QpO,5<eO#LdQMhO'#DTOOOO'#Ic'#IcO#LkO#@ItO,59mOOQ!0Lh,59m,59mO%[QlO1G2QO!8lQ`O'#IsO#LvQ`O,5<{OOQ!0Lh,5<x,5<xO!,TQMhO'#IvO#MdQMjO,5=YO!,TQMhO'#IxO#NVQMjO,5=[O!&zQMhO,5=^OOQO1G2T1G2TO#NaQ!dO'#CrO#NtQ(CWO'#ErO$ |QpO'#GcO$!dQ!dO,5<tO$!kQ`O'#K]O9eQ`O'#K]O$!yQ`O,5<vO$#aQ!dO'#C{O!,TQMhO,5<uO$#kQ`O'#G[O$$PQ`O,5<uO$$UQ!dO'#GXO$$cQ!dO'#K^O$$mQ`O'#K^O!&zQMhO'#K^O$$rQ`O,5<yO$$wQlO'#JwO$%RQpO'#GdO#$^QpO'#GdO$%dQ`O'#GhO!3oQ`O'#GlO$%iQ!0LrO'#IuO$%tQpO,5<}OOQ!0Lp,5<},5<}O$%{QpO'#GdO$&YQpO'#GeO$&kQpO'#GeO$&pQMjO,5=YO$'QQMjO,5=[OOQ!0Lh,5=_,5=_O!,TQMhO,5@WO!,TQMhO,5@WO$'bQ`O'#IzO$'vQ`O,5@VO$(OQ`O,59aOOQ!0Lh,59i,59iO$(TQ`O,5@WO$)TQ$IYO,59uOOQ!0Lh'#Jq'#JqO$)vQMjO,5<lO$*iQMjO,5<nO@zQ`O,5<pOOQ!0Lh,5<q,5<qO$*sQ`O,5<wO$*xQMjO,5<|O$+YQ`O'#KQO!$wQlO1G2SO$+_Q`O1G2SO9eQ`O'#KTO$+dQ`O'#D_O9eQ`O'#EtO%[QlO'#EtO9eQ`O'#I|O$+rQ!0LrO,5@|OOQ[1G3O1G3OOOQ[1G4a1G4aOOQ!0Lf1G/|1G/|OOQ!0Lf1G/z1G/zO$-tQ!0MxO1G0UOOQ[1G2z1G2zO!&zQMhO1G2zO%[QlO1G2zO#.tQ`O1G2zO$/xQMhO'#EkOOQ!0Lb,5@U,5@UO$0VQ!0LrO,5@UOOQ[1G.u1G.uO!COQ!0LrO1G.uO!CZQpO1G.uO!CcQMhO1G.uO$0hQ`O1G0uO$0mQ`O'#CiO$0xQ`O'#KfO$1QQ`O,5=}O$1VQ`O'#KfO$1[Q`O'#KfO$1jQ`O'#JSO$1xQ`O,5APO$2QQ!fO1G1jOOQ!0Lf1G1l1G1lO9kQ`O1G3gO@zQ`O1G3gO$2XQ`O1G3gO$2^Q`O1G3gO!DnQ`O1G3gO9uQ!0LrO1G3gOOQ[1G3g1G3gO!EhQ`O1G3VO!&zQMhO1G3SO$2cQ`O1G3SOOQ[1G3T1G3TO!&zQMhO1G3TO$2hQ`O1G3TO$2pQpO'#HROOQ[1G3V1G3VO!6_QpO'#JOO!EmQ!bO1G3YOOQ[1G3Y1G3YOOQ[,5=s,5=sO$2xQMhO,5=uO9kQ`O,5=uO$%dQ`O,5=wO9`Q`O,5=wO!CZQpO,5=wO!CcQMhO,5=wO:dQMhO,5=wO$3WQ`O'#KdO$3cQ`O,5=xOOQ[1G.k1G.kO$3hQ!0LrO1G.kO@zQ`O1G.kO$3sQ`O1G.kO9uQ!0LrO1G.kO$5{Q!fO,5ARO$6YQ`O,5ARO9eQ`O,5ARO$6eQlO,5>QO$6lQ`O,5>QOOQ[1G3j1G3jO`QlO1G3jOOQ[1G3p1G3pOOQ[1G3r1G3rO?TQ`O1G3tO$6qQlO1G3vO$:uQlO'#HuOOQ[1G3y1G3yO$;SQ`O'#H{O?YQ`O'#H}OOQ[1G4P1G4PO$;[QlO1G4PO9uQ!0LrO1G4VOOQ[1G4X1G4XOOQ!0Lb'#G`'#G`O9uQ!0LrO1G4ZO9uQ!0LrO1G4]O$?cQ`O,5@cO9eQ`O,5;`O?YQ`O,5:XO!)[QlO,5:XO!CZQpO,5:XO$?hQ?MtO,5:XOOQO,5;`,5;`O$?rQpO'#IfO$@YQ`O,5@bOOQ!0Lf1G/r1G/rO!)[QlO,5;`O$@bQpO'#IlO$@lQ`O,5@qOOQ!0Lb1G0y1G0yO#$^QpO,5:XOOQO'#Ih'#IhO$@tQpO,5:qOOQ!0Ln,5:q,5:qO#(ZQ`O1G0ZOOQ!0Lf1G0Z1G0ZO%[QlO1G0ZOOQ!0Lf1G0t1G0tO?YQ`O1G0tO!CZQpO1G0tO!CcQMhO1G0tOOQ!0Lb1G5}1G5}O!COQ!0LrO1G0^OOQO1G0m1G0mO%[QlO1G0mO$@{Q!0LrO1G0mO$AWQ!0LrO1G0mO!CZQpO1G0^ODWQpO1G0^O$AfQ!0LrO1G0mOOQO1G0^1G0^O$AzQ!0MxO1G0mPOOO-E<]-E<]POOO1G.h1G.hOOOO1G/i1G/iO$BUQ!bO,5<jO$B^Q!fO1G4kOOQO1G4q1G4qO%[QlO,5?PO$BhQ`O1G5{O$BpQ`O1G6ZO$BxQ!fO1G6[O9eQ`O,5?VO$CSQ!0MxO1G6XO%[QlO1G6XO$CdQ!0LrO1G6XO$CuQ`O1G6WO$CuQ`O1G6WO9eQ`O1G6WO$C}Q`O,5?YO9eQ`O,5?YOOQO,5?Y,5?YO$DcQ`O,5?YO$+YQ`O,5?YOOQO-E<l-E<lOOQS1G0a1G0aOOQS1G0c1G0cO#.lQ`O1G0cOOQ[7+(f7+(fO!&zQMhO7+(fO%[QlO7+(fO$DqQ`O7+(fO$D|QMhO7+(fO$E[Q!0MzO,5=YO$GgQ!0MzO,5=[O$IrQ!0MzO,5=YO$LTQ!0MzO,5=[O$NfQ!0MzO,59uO%!kQ!0MzO,5<lO%$vQ!0MzO,5<nO%'RQ!0MzO,5<|OOQ!0Lf7+&a7+&aO%)dQ!0MxO7+&aO%*WQlO'#IgO%*eQ`O,5@dO%*mQ!fO,5@dOOQ!0Lf1G0P1G0PO%*wQ`O7+&kOOQ!0Lf7+&k7+&kO%*|Q?MtO,5:fO%[QlO7+&{O%+WQ?MtO,5:bO%+eQ?MtO,5:jO%+oQ?MtO,5:lO%+yQMhO'#IjO%,TQ`O,5@iOOQ!0Lh1G0d1G0dOOQO1G1s1G1sOOQO1G1t1G1tO%,]Q!jO,5<[O!)[QlO,5<ZOOQO-E<m-E<mOOQ!0Lf7+'Z7+'ZOOOW7+'f7+'fOOOW1G1}1G1}O%,hQ`O1G1}OOQ!0Lf1G2P1G2POOOO,59o,59oO%,mQ!dO,59oOOOO-E<a-E<aOOQ!0Lh1G/X1G/XO%,tQ!0MxO7+'lOOQ!0Lh,5?_,5?_O%-hQMhO1G2gP%-oQ`O'#IsPOQ!0Lh-E<q-E<qO%.]QMjO,5?bOOQ!0Lh-E<t-E<tO%/OQMjO,5?dOOQ!0Lh-E<v-E<vO%/YQ!dO1G2xO%/aQ!dO'#CrO%/wQMhO'#KTO$$wQlO'#JwOOQ!0Lh1G2`1G2`O%0RQ`O'#IrO%0jQ`O,5@wO%0jQ`O,5@wO%0rQ`O,5@wO%0}Q`O,5@wOOQO1G2b1G2bO%1]QMjO1G2aO$+YQ`O'#K]O!,TQMhO1G2aO%1mQ(CWO'#ItO%1zQ`O,5@xO!&zQMhO,5@xO%2SQ!dO,5@xOOQ!0Lh1G2e1G2eO%4dQ!fO'#CiO%4nQ`O,5=QOOQ!0Lb,5=O,5=OO%4vQpO,5=OOOQ!0Lb,5=P,5=POCwQ`O,5=OO%5RQpO,5=OOOQ!0Lb,5=S,5=SO$+YQ`O,5=WOOQO,5?a,5?aOOQO-E<s-E<sOOQ!0Lp1G2i1G2iO#$^QpO,5=OO$$wQlO,5=QO%5aQ`O,5=PO%5lQpO,5=PO!,TQMhO'#IvO%6fQMjO1G2tO!,TQMhO'#IxO%7XQMjO1G2vO%7cQMjO1G5rO%7mQMjO1G5rOOQO,5?f,5?fOOQO-E<x-E<xOOQO1G.{1G.{O!,TQMhO1G5rO!,TQMhO1G5rO!=[QpO,59wO%[QlO,59wOOQ!0Lh,5<k,5<kO%7zQ`O1G2[O!,TQMhO1G2cO%8PQ!0MxO7+'nOOQ!0Lf7+'n7+'nO!$wQlO7+'nO%8sQ`O,5;`OOQ!0Lb,5?h,5?hOOQ!0Lb-E<z-E<zO%8xQ!dO'#K_O#(ZQ`O7+(fO4UQ!fO7+(fO$DtQ`O7+(fO%9SQ!0MvO'#CiO%9gQ!0MvO,5=TO%9zQ`O,5=TO%:SQ`O,5=TOOQ!0Lb1G5p1G5pOOQ[7+$a7+$aO!COQ!0LrO7+$aO!CZQpO7+$aO!$wQlO7+&aO%:XQ`O'#JRO%:pQ`O,5AQOOQO1G3i1G3iO9kQ`O,5AQO%:pQ`O,5AQO%:xQ`O,5AQOOQO,5?n,5?nOOQO-E=Q-E=QOOQ!0Lf7+'U7+'UO%:}Q`O7+)RO9uQ!0LrO7+)RO9kQ`O7+)RO@zQ`O7+)RO%;SQ`O7+)ROOQ[7+)R7+)ROOQ[7+(q7+(qO%;XQ!0MvO7+(nO!&zQMhO7+(nO!EcQ`O7+(oOOQ[7+(o7+(oO!&zQMhO7+(oO%;cQ`O'#KcO%;nQ`O,5=mOOQO,5?j,5?jOOQO-E<|-E<|OOQ[7+(t7+(tO%=QQpO'#H[OOQ[1G3a1G3aO!&zQMhO1G3aO%[QlO1G3aO%=XQ`O1G3aO%=dQMhO1G3aO9uQ!0LrO1G3cO$%dQ`O1G3cO9`Q`O1G3cO!CZQpO1G3cO!CcQMhO1G3cO%=rQ`O'#JQO%>WQ`O,5AOO%>`QpO,5AOOOQ!0Lb1G3d1G3dOOQ[7+$V7+$VO@zQ`O7+$VO9uQ!0LrO7+$VO%>kQ`O7+$VO%[QlO1G6mO%[QlO1G6nO%>pQ!0LrO1G6mO%>zQlO1G3lO%?RQ`O1G3lO%?WQlO1G3lOOQ[7+)U7+)UO9uQ!0LrO7+)`O`QlO7+)bOOQ['#Ki'#KiOOQ['#JT'#JTO%?_QlO,5>aOOQ[,5>a,5>aO%[QlO'#HvO%?lQ`O'#HxOOQ[,5>g,5>gO9eQ`O,5>gOOQ[,5>i,5>iOOQ[7+)k7+)kOOQ[7+)q7+)qOOQ[7+)u7+)uOOQ[7+)w7+)wO%?qQpO1G5}O%@]Q`O1G0zOOQO1G/s1G/sO%@hQ?MtO1G/sO?YQ`O1G/sO!)[QlO'#DmOOQO,5?Q,5?QOOQO-E<d-E<dO%@rQ?MtO1G0zOOQO,5?W,5?WOOQO-E<j-E<jO!CZQpO1G/sOOQO-E<f-E<fOOQ!0Ln1G0]1G0]OOQ!0Lf7+%u7+%uO#(ZQ`O7+%uOOQ!0Lf7+&`7+&`O?YQ`O7+&`O!CZQpO7+&`OOQO7+%x7+%xO$AzQ!0MxO7+&XOOQO7+&X7+&XO%[QlO7+&XO%@|Q!0LrO7+&XO!COQ!0LrO7+%xO!CZQpO7+%xO%AXQ!0LrO7+&XO%AgQ!0MxO7++sO%[QlO7++sO%AwQ`O7++rO%AwQ`O7++rOOQO1G4t1G4tO9eQ`O1G4tO%BPQ`O1G4tOOQS7+%}7+%}O#(ZQ`O<<LQO4UQ!fO<<LQO%B_Q`O<<LQOOQ[<<LQ<<LQO!&zQMhO<<LQO%[QlO<<LQO%BgQ`O<<LQO%BrQ!0MzO,5?bO%D}Q!0MzO,5?dO%GYQ!0MzO1G2aO%IkQ!0MzO1G2tO%KvQ!0MzO1G2vO%NRQ!fO,5?RO%[QlO,5?ROOQO-E<e-E<eO%N]Q`O1G6OOOQ!0Lf<<JV<<JVO%NeQ?MtO1G0uO&!lQ?MtO1G1QO&!sQ?MtO1G1QO&$tQ?MtO1G1QO&${Q?MtO1G1QO&&|Q?MtO1G1QO&(}Q?MtO1G1QO&)UQ?MtO1G1QO&)]Q?MtO1G1QO&+^Q?MtO1G1QO&+eQ?MtO1G1QO&+lQ!0MxO<<JgO&-dQ?MtO1G1QO&.aQ?MvO1G1QO&/dQ?MvO'#JmO&1jQ?MtO1G1dO&1wQ?MtO1G0UO&2RQMjO,5?UOOQO-E<h-E<hO!)[QlO'#FrOOQO'#K['#K[OOQO1G1v1G1vO&2]Q`O1G1uO&2bQ?MtO,5?]OOOW7+'i7+'iOOOO1G/Z1G/ZO&2lQ!dO1G4yOOQ!0Lh7+(R7+(RP!&zQMhO,5?_O!,TQMhO7+(dO&2sQ`O,5?^O9eQ`O,5?^O$+YQ`O,5?^OOQO-E<p-E<pO&3RQ`O1G6cO&3RQ`O1G6cO&3ZQ`O1G6cO&3fQMjO7+'{O&3vQ!dO,5?`O&4QQ`O,5?`O!&zQMhO,5?`OOQO-E<r-E<rO&4VQ!dO1G6dO&4aQ`O1G6dO&4iQ`O1G2lO!&zQMhO1G2lOOQ!0Lb1G2j1G2jOOQ!0Lb1G2k1G2kO%4vQpO1G2jO!CZQpO1G2jOCwQ`O1G2jOOQ!0Lb1G2r1G2rO&4nQpO1G2jO&4|Q`O1G2lO$+YQ`O1G2kOCwQ`O1G2kO$$wQlO1G2lO&5UQ`O1G2kO&5xQMjO,5?bOOQ!0Lh-E<u-E<uO&6kQMjO,5?dOOQ!0Lh-E<w-E<wO!,TQMhO7++^O&6uQMjO7++^O&7PQMjO7++^OOQ!0Lh1G/c1G/cO&7^Q`O1G/cOOQ!0Lh7+'v7+'vO&7cQMjO7+'}O&7sQ!0MxO<<KYOOQ!0Lf<<KY<<KYO&8gQ`O1G0zO!&zQMhO'#I{O&8lQ`O,5@yO&:nQ!fO<<LQO!&zQMhO1G2oO&:uQ!0LrO1G2oOOQ[<<G{<<G{O!COQ!0LrO<<G{O&;WQ!0MxO<<I{OOQ!0Lf<<I{<<I{OOQO,5?m,5?mO&;zQ`O,5?mO&<PQ`O,5?mOOQO-E=P-E=PO&<_Q`O1G6lO&<_Q`O1G6lO9kQ`O1G6lO@zQ`O<<LmOOQ[<<Lm<<LmO&<gQ`O<<LmO9uQ!0LrO<<LmO9kQ`O<<LmOOQ[<<LY<<LYO%;XQ!0MvO<<LYOOQ[<<LZ<<LZO!EcQ`O<<LZO&<lQpO'#I}O&<wQ`O,5@}O!)[QlO,5@}OOQ[1G3X1G3XOOQO'#JP'#JPO9uQ!0LrO'#JPO&=PQpO,5=vOOQ[,5=v,5=vO&=WQpO'#EgO&=_QpO'#GfO&=dQ`O7+({O&=iQ`O7+({OOQ[7+({7+({O!&zQMhO7+({O%[QlO7+({O&=qQ`O7+({OOQ[7+(}7+(}O9uQ!0LrO7+(}O$%dQ`O7+(}O9`Q`O7+(}O!CZQpO7+(}O&=|Q`O,5?lOOQO-E=O-E=OOOQO'#H_'#H_O&>XQ`O1G6jO9uQ!0LrO<<GqOOQ[<<Gq<<GqO@zQ`O<<GqO&>aQ`O7+,XO&>fQ`O7+,YO%[QlO7+,XO%[QlO7+,YOOQ[7+)W7+)WO&>kQ`O7+)WO&>pQlO7+)WO&>wQ`O7+)WOOQ[<<Lz<<LzOOQ[<<L|<<L|OOQ[-E=R-E=ROOQ[1G3{1G3{O&>|Q`O,5>bOOQ[,5>d,5>dO&?RQ`O1G4RO9eQ`O7+&fO!)[QlO7+&fOOQO7+%_7+%_O&?WQ?MtO1G6[O?YQ`O7+%_OOQ!0Lf<<Ia<<IaOOQ!0Lf<<Iz<<IzO?YQ`O<<IzOOQO<<Is<<IsO$AzQ!0MxO<<IsO%[QlO<<IsOOQO<<Id<<IdO!COQ!0LrO<<IdO&?bQ!0LrO<<IsO&?mQ!0MxO<= _O&?}Q`O<= ^OOQO7+*`7+*`O9eQ`O7+*`OOQ[ANAlANAlO&@VQ!fOANAlO!&zQMhOANAlO#(ZQ`OANAlO4UQ!fOANAlO&@^Q`OANAlO%[QlOANAlO&@fQ!0MzO7+'{O&BwQ!0MzO,5?bO&ESQ!0MzO,5?dO&G_Q!0MzO7+'}O&IpQ!fO1G4mO&IzQ?MtO7+&aO&LOQ?MvO,5=YO&NVQ?MvO,5=[O&NgQ?MvO,5=YO&NwQ?MvO,5=[O' XQ?MvO,59uO'#_Q?MvO,5<lO'%bQ?MvO,5<nO''vQ?MvO,5<|O')lQ?MtO7+'lO')yQ?MtO7+'nO'*WQ`O,5<^OOQO7+'a7+'aOOQ!0Lh7+*e7+*eO'*]QMjO<<LOOOQO1G4x1G4xO'*dQ`O1G4xO'*oQ`O1G4xO'*}Q`O7++}O'*}Q`O7++}O!&zQMhO1G4zO'+VQ!dO1G4zO'+aQ`O7+,OO'+iQ`O7+(WO'+tQ!dO7+(WOOQ!0Lb7+(U7+(UOOQ!0Lb7+(V7+(VO!CZQpO7+(UOCwQ`O7+(UO',OQ`O7+(WO!&zQMhO7+(WO$+YQ`O7+(VO',TQ`O7+(WOCwQ`O7+(VO',]QMjO<<NxO!,TQMhO<<NxOOQ!0Lh7+$}7+$}O',gQ!dO,5?gOOQO-E<y-E<yO',qQ!0MvO7+(ZO!&zQMhO7+(ZOOQ[AN=gAN=gO9kQ`O1G5XOOQO1G5X1G5XO'-RQ`O1G5XO'-WQ`O7+,WO'-WQ`O7+,WO9uQ!0LrOANBXO@zQ`OANBXOOQ[ANBXANBXO'-`Q`OANBXOOQ[ANAtANAtOOQ[ANAuANAuO'-eQ`O,5?iOOQO-E<{-E<{O'-pQ?MtO1G6iOOQO,5?k,5?kOOQO-E<}-E<}OOQ[1G3b1G3bO'-zQ`O,5=QOOQ[<<Lg<<LgO!&zQMhO<<LgO&=dQ`O<<LgO'.PQ`O<<LgO%[QlO<<LgOOQ[<<Li<<LiO9uQ!0LrO<<LiO$%dQ`O<<LiO9`Q`O<<LiO'.XQpO1G5WO'.dQ`O7+,UOOQ[AN=]AN=]O9uQ!0LrOAN=]OOQ[<= s<= sOOQ[<= t<= tO'.lQ`O<= sO'.qQ`O<= tOOQ[<<Lr<<LrO'.vQ`O<<LrO'.{QlO<<LrOOQ[1G3|1G3|O?YQ`O7+)mO'/SQ`O<<JQO'/_Q?MtO<<JQOOQO<<Hy<<HyOOQ!0LfAN?fAN?fOOQOAN?_AN?_O$AzQ!0MxOAN?_OOQOAN?OAN?OO%[QlOAN?_OOQO<<Mz<<MzOOQ[G27WG27WO!&zQMhOG27WO#(ZQ`OG27WO'/iQ!fOG27WO4UQ!fOG27WO'/pQ`OG27WO'/xQ?MtO<<JgO'0VQ?MvO1G2aO'1{Q?MvO,5?bO'4OQ?MvO,5?dO'6RQ?MvO1G2tO'8UQ?MvO1G2vO':XQ?MtO<<KYO':fQ?MtO<<I{OOQO1G1x1G1xO!,TQMhOANAjOOQO7+*d7+*dO':sQ`O7+*dO';OQ`O<= iO';WQ!dO7+*fOOQ!0Lb<<Kr<<KrO$+YQ`O<<KrOCwQ`O<<KrO';bQ`O<<KrO!&zQMhO<<KrOOQ!0Lb<<Kp<<KpO!CZQpO<<KpO';mQ!dO<<KrOOQ!0Lb<<Kq<<KqO';wQ`O<<KrO!&zQMhO<<KrO$+YQ`O<<KqO';|QMjOANDdO'<WQ!0MvO<<KuOOQO7+*s7+*sO9kQ`O7+*sO'<hQ`O<= rOOQ[G27sG27sO9uQ!0LrOG27sO@zQ`OG27sO!)[QlO1G5TO'<pQ`O7+,TO'<xQ`O1G2lO&=dQ`OANBROOQ[ANBRANBRO!&zQMhOANBRO'<}Q`OANBROOQ[ANBTANBTO9uQ!0LrOANBTO$%dQ`OANBTOOQO'#H`'#H`OOQO7+*r7+*rOOQ[G22wG22wOOQ[ANE_ANE_OOQ[ANE`ANE`OOQ[ANB^ANB^O'=VQ`OANB^OOQ[<<MX<<MXO!)[QlOAN?lOOQOG24yG24yO$AzQ!0MxOG24yO#(ZQ`OLD,rOOQ[LD,rLD,rO!&zQMhOLD,rO'=[Q!fOLD,rO'=cQ?MvO7+'{O'?XQ?MvO,5?bO'A[Q?MvO,5?dO'C_Q?MvO7+'}O'ETQMjOG27UOOQO<<NO<<NOOOQ!0LbANA^ANA^O$+YQ`OANA^OCwQ`OANA^O'EeQ!dOANA^OOQ!0LbANA[ANA[O'ElQ`OANA^O!&zQMhOANA^O'EwQ!dOANA^OOQ!0LbANA]ANA]OOQO<<N_<<N_OOQ[LD-_LD-_O9uQ!0LrOLD-_O'FRQ?MtO7+*oOOQO'#Gg'#GgOOQ[G27mG27mO&=dQ`OG27mO!&zQMhOG27mOOQ[G27oG27oO9uQ!0LrOG27oOOQ[G27xG27xO'F]Q?MtOG25WOOQOLD*eLD*eOOQ[!$(!^!$(!^O#(ZQ`O!$(!^O!&zQMhO!$(!^O'FgQ!0MzOG27UOOQ!0LbG26xG26xO$+YQ`OG26xO'HxQ`OG26xOCwQ`OG26xO'ITQ!dOG26xO!&zQMhOG26xOOQ[!$(!y!$(!yOOQ[LD-XLD-XO&=dQ`OLD-XOOQ[LD-ZLD-ZOOQ[!)9Ex!)9ExO#(ZQ`O!)9ExOOQ!0LbLD,dLD,dO$+YQ`OLD,dOCwQ`OLD,dO'I[Q`OLD,dO'IgQ!dOLD,dOOQ[!$(!s!$(!sOOQ[!.K;d!.K;dO'InQ?MvOG27UOOQ!0Lb!$(!O!$(!OO$+YQ`O!$(!OOCwQ`O!$(!OO'KdQ`O!$(!OOOQ!0Lb!)9Ej!)9EjO$+YQ`O!)9EjOCwQ`O!)9EjOOQ!0Lb!.K;U!.K;UO$+YQ`O!.K;UOOQ!0Lb!4/0p!4/0pO!)[QlO'#DzO1PQ`O'#EXO'KoQ!fO'#JsO'KvQ!L^O'#DvO'K}QlO'#EOO'LUQ!fO'#CiO'NlQ!fO'#CiO!)[QlO'#EQO'N|QlO,5;ZO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO,5;fO!)[QlO'#IqO(#PQ`O,5<jO!)[QlO,5;fO(#XQMhO,5;fO($rQMhO,5;fO!)[QlO,5;xO!&zQMhO'#GnO(#XQMhO'#GnO!&zQMhO'#GpO(#XQMhO'#GpO1SQ`O'#DZO1SQ`O'#DZO!&zQMhO'#GQO(#XQMhO'#GQO!&zQMhO'#GSO(#XQMhO'#GSO!&zQMhO'#GbO(#XQMhO'#GbO!)[QlO,5:jO($yQpO'#D_O!)[QlO,5@pO'N|QlO1G0uO(%TQ?MtO'#CiO!)[QlO1G2QO!&zQMhO'#IvO(#XQMhO'#IvO!&zQMhO'#IxO(#XQMhO'#IxO(%_Q!dO'#CrO!&zQMhO,5<uO(#XQMhO,5<uO'N|QlO1G2SO!)[QlO7+&{O!&zQMhO1G2aO(#XQMhO1G2aO!&zQMhO'#IvO(#XQMhO'#IvO!&zQMhO'#IxO(#XQMhO'#IxO!&zQMhO1G2cO(#XQMhO1G2cO'N|QlO7+'nO'N|QlO7+&aO!&zQMhOANAjO(#XQMhOANAjO(%rQ`O'#EoO(%wQ`O'#EoO(&PQ`O'#F^O(&UQ`O'#EzO(&ZQ`O'#KUO(&fQ`O'#KSO(&qQ`O,5;ZO(&vQMjO,5<fO(&}Q`O'#GZO('SQ`O'#GZO('XQ`O,5<fO('aQ`O,5<hO('iQ`O,5;ZO('qQ?MtO1G1aO('xQ`O,5<uO('}Q`O,5<uO((SQ`O,5<wO((XQ`O,5<wO((^Q`O1G2SO((cQ`O1G0uO((hQMjO<<LOO((oQMjO<<LOO((vQMhO'#F}O9`Q`O'#F|OAuQ`O'#EnO!)[QlO,5;uO!3oQ`O'#GZO!3oQ`O'#GZO!3oQ`O'#G]O!3oQ`O'#G]O!,TQMhO7+(dO!,TQMhO7+(dO%/YQ!dO1G2xO%/YQ!dO1G2xO!&zQMhO,5=^O!&zQMhO,5=^",
+			stateData: "(){~O'}OS(OOSTOS(PRQ~OPYOQYOSfOY!VOaqOdzOeyOl!POpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_XO!iuO!lZO!oYO!pYO!qYO!svO!uwO!xxO!|]O$X|O$oiO%i}O%k!QO%m!OO%n!OO%o!OO%r!RO%t!SO%w!TO%x!TO%z!UO&X!WO&_!XO&a!YO&c!ZO&e![O&h!]O&n!^O&t!_O&v!`O&x!aO&z!bO&|!cO(USO(WTO(ZUO(bVO(p[O~OWtO~P`OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$X!kO$oiO(U!dO(WTO(ZUO(bVO(p[O~Oa!wOs!nO!S!oO!b!yO!c!vO!d!vO!|<XO#T!pO#U!pO#V!xO#W!pO#X!pO#[!zO#]!zO(V!lO(WTO(ZUO(f!mO(p!sO~O(P!{O~OP]XR]X[]Xa]Xj]Xr]X!Q]X!S]X!]]X!l]X!p]X#R]X#S]X#`]X#lfX#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#w]X#y]X#{]X#|]X$R]X'{]X(b]X(s]X(z]X({]X~O!g%SX~P(qO_!}O(W#PO(X!}O(Y#PO~O_#QO(Y#PO(Z#PO([#QO~Ox#SO!U#TO(c#TO(d#VO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$X!kO$oiO(U<]O(WTO(ZUO(bVO(p[O~O![#ZO!]#WO!Y(iP!Y(wP~P+}O!^#cO~P`OPYOQYOSfOd!jOe!iOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$X!kO$oiO(WTO(ZUO(bVO(p[O~Op#mO![#iO!|]O#j#lO#k#iO(U<^O!k(tP~P.iO!l#oO(U#nO~O!x#sO!|]O%i#tO~O#l#uO~O!g#vO#l#uO~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!]$_O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO#y$UO#{$WO#|$XO(bVO(s$YO(z#|O({#}O~Oa(gX'{(gX'x(gX!k(gX!Y(gX!_(gX%j(gX!g(gX~P1qO#S$dO#`$eO$R$eOP(hXR(hX[(hXj(hXr(hX!Q(hX!S(hX!](hX!l(hX!p(hX#R(hX#o(hX#p(hX#q(hX#r(hX#s(hX#t(hX#u(hX#v(hX#w(hX#y(hX#{(hX#|(hX(b(hX(s(hX(z(hX({(hX!_(hX%j(hX~Oa(hX'{(hX'x(hX!Y(hX!k(hXv(hX!g(hX~P4UO#`$eO~O$^$hO$`$gO$g$mO~OSfO!_$nO$j$oO$l$qO~Oh%VOj%dOk%dOp%WOr%XOs$tOt$tOz%YO|%ZO!O%]O!S${O!_$|O!i%bO!l$xO#k%cO$X%`O$u%^O$w%_O$z%aO(U$sO(WTO(ZUO(b$uO(z$}O({%POg(_P~Ol%[O~P7eO!l%eO~O!S%hO!_%iO(U%gO~O!g%mO~Oa%nO'{%nO~O!Q%rO~P%[O(V!lO~P%[O%o%vO~P%[Oh%VO!l%eO(U%gO(V!lO~Oe%}O!l%eO(U%gO~Oj$RO~O!_&PO(U%gO(V!lO(WTO(ZUO`)XP~O!Q&SO!l&RO%k&VO&U&WO~P;SO!x#sO~O%t&YO!S)TX!_)TX(U)TX~O(U&ZO~Ol!PO!u&`O%k!QO%m!OO%n!OO%o!OO%r!RO%t!SO%w!TO%x!TO~Od&eOe&dO!x&bO%i&cO%|&aO~P<bOd&hOeyOl!PO!_&gO!u&`O!xxO!|]O%i}O%m!OO%n!OO%o!OO%r!RO%t!SO%w!TO%x!TO%z!UO~Ob&kO#`&nO%k&iO(V!lO~P=gO!l&oO!u&sO~O!l#oO~O!_XO~Oa%nO'y&{O'{%nO~Oa%nO'y'OO'{%nO~Oa%nO'y'QO'{%nO~O'x]X!Y]Xv]X!k]X&]]X!_]X%j]X!g]X~P(qO!b'`O!c'WO!d'WO(V!lO(WTO(ZUO~Os'UO!S'TO!['XO(f'SO!^(jP!^(yP~P@nOn'cO!_'aO(U%gO~Oe'hO!l%eO(U%gO~O!Q&SO!l&RO~Os!nO!S!oO!|<XO#T!pO#U!pO#W!pO#X!pO(V!lO(WTO(ZUO(f!mO(p!sO~O!b'nO!c'mO!d'mO#V!pO#['oO#]'oO~PBYOa%nOh%VO!g#vO!l%eO'{%nO(s'qO~O!p'uO#`'sO~PChOs!nO!S!oO(WTO(ZUO(f!mO(p!sO~O!_XOs(nX!S(nX!b(nX!c(nX!d(nX!|(nX#T(nX#U(nX#V(nX#W(nX#X(nX#[(nX#](nX(V(nX(W(nX(Z(nX(f(nX(p(nX~O!c'mO!d'mO(V!lO~PDWO(Q'yO(R'yO(S'{O~O_!}O(W'}O(X!}O(Y'}O~O_#QO(Y'}O(Z'}O([#QO~Ov(PO~P%[Ox#SO!U#TO(c#TO(d(SO~O![(UO!Y'XX!Y'_X!]'XX!]'_X~P+}O!](WO!Y(iX~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!](WO!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO#y$UO#{$WO#|$XO(bVO(s$YO(z#|O({#}O~O!Y(iX~PHRO!Y(]O~O!Y(vX!](vX!g(vX!k(vX(s(vX~O#`(vX#l#dX!^(vX~PJUO#`(^O!Y(xX!](xX~O!](_O!Y(wX~O!Y(bO~O#`$eO~PJUO!^(cO~P`OR#zO!Q#yO!S#{O!l#xO(bVOP!na[!naj!nar!na!]!na!p!na#R!na#o!na#p!na#q!na#r!na#s!na#t!na#u!na#v!na#w!na#y!na#{!na#|!na(s!na(z!na({!na~Oa!na'{!na'x!na!Y!na!k!nav!na!_!na%j!na!g!na~PKlO!k(dO~O!g#vO#`(eO(s'qO!](uXa(uX'{(uX~O!k(uX~PNXO!S%hO!_%iO!|]O#j(jO#k(iO(U%gO~O!](kO!k(tX~O!k(mO~O!S%hO!_%iO#k(iO(U%gO~OP(hXR(hX[(hXj(hXr(hX!Q(hX!S(hX!](hX!l(hX!p(hX#R(hX#o(hX#p(hX#q(hX#r(hX#s(hX#t(hX#u(hX#v(hX#w(hX#y(hX#{(hX#|(hX(b(hX(s(hX(z(hX({(hX~O!g#vO!k(hX~P! uOR(oO!Q(nO!l#xO#S$dO!|!{a!S!{a~O!x!{a%i!{a!_!{a#j!{a#k!{a(U!{a~P!#vO!x(sO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_XO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$X!kO$oiO(U!dO(WTO(ZUO(bVO(p[O~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<uO!S${O!_$|O!i>WO!l$xO#k<{O$X%`O$u<wO$w<yO$z%aO(U(wO(WTO(ZUO(b$uO(z$}O({%PO~O#l(yO~O![({O!k(lP~P%[O(f(}O(p[O~O!S)PO!l#xO(f(}O(p[O~OP<WOQ<WOSfOd>SOe!iOpkOr<WOskOtkOzkO|<WO!O<WO!SWO!WkO!XkO!_!eO!i<ZO!lZO!o<WO!p<WO!q<WO!s<[O!u<_O!x!hO$X!kO$o>QO(U)^O(WTO(ZUO(bVO(p[O~O!]$_Oa$ra'{$ra'x$ra!k$ra!Y$ra!_$ra%j$ra!g$ra~Ol)eO~P!&zOh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O%]O!S${O!_$|O!i%bO!l$xO#k%cO$X%`O$u%^O$w%_O$z%aO(U(wO(WTO(ZUO(b$uO(z$}O({%PO~Og(qP~P!,TO!Q)jO!g)iO!_$_X$[$_X$^$_X$`$_X$g$_X~O!g)iO!_(|X$[(|X$^(|X$`(|X$g(|X~O!Q)jO~P!.^O!Q)jO!_(|X$[(|X$^(|X$`(|X$g(|X~O!_)lO$[)pO$^)kO$`)kO$g)qO~O![)tO~P!)[O$^$hO$`$gO$g)xO~On${X!Q${X#S${X'z${X(z${X({${X~OgmXg${XnmX!]mX#`mX~P!0SOx)zO(c){O(d)}O~On*WO!Q*PO'z*QO(z$}O({%PO~Og*OO~P!1WOg*XO~Oh%VOr%XOs$tOt$tOz%YO|%ZO!O<uO!S*ZO!_*[O!i>WO!l$xO#k<{O$X%`O$u<wO$w<yO$z%aO(WTO(ZUO(b$uO(z$}O({%PO~Op*aO![*_O(U*YO!k)PP~P!1uO#l*bO~O!l*cO~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<uO!S${O!_$|O!i>WO!l$xO#k<{O$X%`O$u<wO$w<yO$z%aO(U*eO(WTO(ZUO(b$uO(z$}O({%PO~O![*hO!Y)QP~P!3tOr*tOs!nO!S*jO!b*rO!c*lO!d*lO!l*cO#[*sO%a*nO(V!lO(WTO(ZUO(f!mO~O!^*qO~P!5iO#S$dOn(aX!Q(aX'z(aX(z(aX({(aX!](aX#`(aX~Og(aX$P(aX~P!6kOn*yO#`*xOg(`X!](`X~O!]*zOg(_X~Oj%dOk%dOl%dO(U&ZOg(_P~Os*}O~Og*OO(U&ZO~O!l+TO~O(U(wO~Op+XO!S%hO![#iO!_%iO!|]O#j#lO#k#iO(U%gO!k(tP~O!g#vO#l+YO~O!S%hO![+[O!](_O!_%iO(U%gO!Y(wP~Os']O!S+_O![+^O(WTO(ZUO(f+]O~O!^(yP~P!9|O!]+`Oa)UX'{)UX~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO#y$UO#{$WO#|$XO(bVO(s$YO(z#|O({#}O~Oa!ja!]!ja'{!ja'x!ja!Y!ja!k!jav!ja!_!ja%j!ja!g!ja~P!:tO(f(}O~OR#zO!Q#yO!S#{O!l#xO(bVOP!ra[!raj!rar!ra!]!ra!p!ra#R!ra#o!ra#p!ra#q!ra#r!ra#s!ra#t!ra#u!ra#v!ra#w!ra#y!ra#{!ra#|!ra(s!ra(z!ra({!ra~Oa!ra'{!ra'x!ra!Y!ra!k!rav!ra!_!ra%j!ra!g!ra~P!=aOR#zO!Q#yO!S#{O!l#xO(bVOP!ta[!taj!tar!ta!]!ta!p!ta#R!ta#o!ta#p!ta#q!ta#r!ta#s!ta#t!ta#u!ta#v!ta#w!ta#y!ta#{!ta#|!ta(s!ta(z!ta({!ta~Oa!ta'{!ta'x!ta!Y!ta!k!tav!ta!_!ta%j!ta!g!ta~P!?wOh%VOn+iO!_'aO%j+hO~O!g+kOa(^X!_(^X'{(^X!](^X~Oa%nO!_XO'{%nO~Oh%VO!l%eO~Oh%VO!l%eO(U%gO~O!g#vO#l(yO~Ob+vO%k+wO(U+sO(WTO(ZUO!^)YP~O!]+xO`)XX~O[+|O~O`+}O~O!_&PO(U%gO(V!lO`)XP~O%k,QO~P;SOh%VO#`,UO~Oh%VOn,XO!_$|O~O!_,ZO~O!Q,]O!_XO~O%o%vO~O!x,bO~Oe,gO~Ob,hO(U#nO(WTO(ZUO!^)WP~Oe%}O~O%k!QO(U&ZO~P=gO[,mO`,lO~OPYOQYOSfOdzOeyOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!iuO!lZO!oYO!pYO!qYO!svO!xxO!|]O$oiO%i}O(WTO(ZUO(bVO(p[O~O!_!eO!u!gO$X!kO(U!dO~P!GOO`,lOa%nO'{%nO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!x!hO$X!kO$oiO(U!dO(WTO(ZUO(bVO(p[O~Oa,rOl!OO!uwO%m!OO%n!OO%o!OO~P!IhO!l&oO~O&_,xO~O!_,zO~O&p,|O&r,}OP&maQ&maS&maY&maa&mad&mae&mal&map&mar&mas&mat&maz&ma|&ma!O&ma!S&ma!W&ma!X&ma!_&ma!i&ma!l&ma!o&ma!p&ma!q&ma!s&ma!u&ma!x&ma!|&ma$X&ma$o&ma%i&ma%k&ma%m&ma%n&ma%o&ma%r&ma%t&ma%w&ma%x&ma%z&ma&X&ma&_&ma&a&ma&c&ma&e&ma&h&ma&n&ma&t&ma&v&ma&x&ma&z&ma&|&ma'x&ma(U&ma(W&ma(Z&ma(b&ma(p&ma!^&ma&f&mab&ma&k&ma~O(U-SO~Oh!eX!]#iX!^#iX!g!RX!g!eX!l!eX#`#iX~O!]!eX!^!eX~P#!nO!g-WOh(kX!](kX!^(kX!g(kX!l(kXr(kX(s(kX~Oh%VO!g-YO!l%eO!]!aX!^!aX~Os!nO!S!oO(WTO(ZUO(f!mO~OP<WOQ<WOSfOd>SOe!iOpkOr<WOskOtkOzkO|<WO!O<WO!SWO!WkO!XkO!_!eO!i<ZO!lZO!o<WO!p<WO!q<WO!s<[O!u<_O!x!hO$X!kO$o>QO(WTO(ZUO(bVO(p[O~O(U=RO~P#$oO!]-^O!^(jX~O!^-`O~O#`-aO!]#hX!^#hX~O!g-WO~O!]-bO!^(yX~O!^-dO~O!c-eO!d-eO(V!lO~P#$^O!^-hO~P'_On-kO!_'aO~O!Y-pO~Os!{a!b!{a!c!{a!d!{a#T!{a#U!{a#V!{a#W!{a#X!{a#[!{a#]!{a(V!{a(W!{a(Z!{a(f!{a(p!{a~P!#vO!p-uO#`-sO~PChO!c-wO!d-wO(V!lO~PDWOa%nO#`-sO'{%nO~Oa%nO!g#vO#`-sO'{%nO~Oa%nO!g#vO!p-uO#`-sO'{%nO(s'qO~O(Q'yO(R'yO(S-|O~Ov-}O~O!Y'Xa!]'Xa~P!:tO![.RO!Y'XX!]'XX~P%[O!](WO!Y(ia~O!Y(ia~PHRO!](_O!Y(wa~O!S%hO![.VO!_%iO(U%gO!Y'_X!]'_X~O#`.XO!](ua!k(uaa(ua'{(ua~O!g#vO~P#,wO!](kO!k(ta~O!S%hO!_%iO#k.]O(U%gO~Op.bO!S%hO![._O!_%iO!|]O#j.aO#k._O(U%gO!]'bX!k'bX~OR.fO!l#xO~Oh%VOn.iO!_'aO%j.hO~Oa#ci!]#ci'{#ci'x#ci!Y#ci!k#civ#ci!_#ci%j#ci!g#ci~P!:tOn>^O!Q*PO'z*QO(z$}O({%PO~O#l#_aa#_a#`#_a'{#_a!]#_a!k#_a!_#_a!Y#_a~P#/sO#l(aXP(aXR(aX[(aXa(aXj(aXr(aX!S(aX!l(aX!p(aX#R(aX#o(aX#p(aX#q(aX#r(aX#s(aX#t(aX#u(aX#v(aX#w(aX#y(aX#{(aX#|(aX'{(aX(b(aX(s(aX!k(aX!Y(aX'x(aXv(aX!_(aX%j(aX!g(aX~P!6kO!].vO!k(lX~P!:tO!k.yO~O!Y.{O~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O(bVO[#nia#nij#nir#ni!]#ni#R#ni#p#ni#q#ni#r#ni#s#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni'{#ni(s#ni(z#ni({#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#o#ni~P#3cO#o$OO~P#3cOP$[OR#zOr$aO!Q#yO!S#{O!l#xO!p$[O#o$OO#p$PO#q$PO#r$PO(bVO[#nia#nij#ni!]#ni#R#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni'{#ni(s#ni(z#ni({#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#s#ni~P#6QO#s$QO~P#6QOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO(bVOa#ni!]#ni#y#ni#{#ni#|#ni'{#ni(s#ni(z#ni({#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#w#ni~P#8oOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO(bVO({#}Oa#ni!]#ni#{#ni#|#ni'{#ni(s#ni(z#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#y$UO~P#;VO#y#ni~P#;VO#w$SO~P#8oOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#o$OO#p$PO#q$PO#r$PO#s$QO#t$RO#u$RO#v$bO#w$SO#y$UO(bVO(z#|O({#}Oa#ni!]#ni#|#ni'{#ni(s#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~O#{#ni~P#={O#{$WO~P#={OP]XR]X[]Xj]Xr]X!Q]X!S]X!l]X!p]X#R]X#S]X#`]X#lfX#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#w]X#y]X#{]X#|]X$R]X(b]X(s]X(z]X({]X!]]X!^]X~O$P]X~P#@jOP$[OR#zO[<oOj<dOr<mO!Q#yO!S#{O!l#xO!p$[O#R<dO#o<aO#p<bO#q<bO#r<bO#s<cO#t<dO#u<dO#v<nO#w<eO#y<gO#{<iO#|<jO(bVO(s$YO(z#|O({#}O~O$P.}O~P#BwO#S$dO#`<pO$R<pO$P(hX!^(hX~P! uOa'ea!]'ea'{'ea'x'ea!k'ea!Y'eav'ea!_'ea%j'ea!g'ea~P!:tO[#nia#nij#nir#ni!]#ni#R#ni#s#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni'{#ni(s#ni'x#ni!Y#ni!k#niv#ni!_#ni%j#ni!g#ni~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O#o$OO#p$PO#q$PO#r$PO(bVO(z#ni({#ni~P#EyOn>^O!Q*PO'z*QO(z$}O({%POP#niR#ni!S#ni!l#ni!p#ni#o#ni#p#ni#q#ni#r#ni(b#ni~P#EyO!]/ROg(qX~P!1WOg/TO~Oa$Qi!]$Qi'{$Qi'x$Qi!Y$Qi!k$Qiv$Qi!_$Qi%j$Qi!g$Qi~P!:tO$^/UO$`/UO~O$^/VO$`/VO~O!g)iO#`/WO!_$dX$[$dX$^$dX$`$dX$g$dX~O![/XO~O!_)lO$[/ZO$^)kO$`)kO$g/[O~O!]<kO!^(gX~P#BwO!^/]O~O!g)iO$g(|X~O$g/_O~Ov/`O~P!&zOx)zO(c){O(d/cO~O!S/fO~O(z$}On%ba!Q%ba'z%ba({%ba!]%ba#`%ba~Og%ba$P%ba~P#L{O({%POn%da!Q%da'z%da(z%da!]%da#`%da~Og%da$P%da~P#MnO!]fX!gfX!kfX!k${X(sfX~P!0SOp%WO![/oO!](_O(U/nO!Y(wP!Y)QP~P!1uOr*tO!b*rO!c*lO!d*lO!l*cO#[*sO%a*nO(V!lO(WTO(ZUO~Os'UO!S/pO![+^O!^*qO(f=OO!^(yP~P$ [O!k/qO~P#/sO!]/rO!g#vO(s'qO!k)PX~O!k/wO~OnoX!QoX'zoX(zoX({oX~O!g#vO!koX~P$#OOp/yO!S%hO![*_O!_%iO(U%gO!k)PP~O#l/zO~O!Y${X!]${X!g%SX~P!0SO!]/{O!Y)QX~P#/sO!g/}O~O!Y0PO~OpkO(U0QO~P.iOh%VOr0VO!g#vO!l%eO(s'qO~O!g+kO~Oa%nO!]0ZO'{%nO~O!^0]O~P!5iO!c0^O!d0^O(V!lO~P#$^Os!nO!S0_O(WTO(ZUO(f!mO~O#[0aO~Og%ba!]%ba#`%ba$P%ba~P!1WOg%da!]%da#`%da$P%da~P!1WOj%dOk%dOl%dO(U&ZOg'nX!]'nX~O!]*zOg(_a~Og0jO~On0lO#`0kOg(`a!](`a~OR0mO!Q0mO!S0nO#S$dOn}a'z}a(z}a({}a!]}a#`}a~Og}a$P}a~P$(cO!Q*PO'z*QOn$ta(z$ta({$ta!]$ta#`$ta~Og$ta$P$ta~P$)_O!Q*PO'z*QOn$va(z$va({$va!]$va#`$va~Og$va$P$va~P$*QO#l0qO~Og%Ua!]%Ua#`%Ua$P%Ua~P!1WO!g#vO~O#l0tO~O!]#iX!^#iX!g!RX#`#iX~O!]+`Oa)Ua'{)Ua~OR#zO!Q#yO!S#{O!l#xO(bVOP!ri[!rij!rir!ri!]!ri!p!ri#R!ri#o!ri#p!ri#q!ri#r!ri#s!ri#t!ri#u!ri#v!ri#w!ri#y!ri#{!ri#|!ri(s!ri(z!ri({!ri~Oa!ri'{!ri'x!ri!Y!ri!k!riv!ri!_!ri%j!ri!g!ri~P$+}Oh%VOr%XOs$tOt$tOz%YO|%ZO!O<uO!S${O!_$|O!i>WO!l$xO#k<{O$X%`O$u<wO$w<yO$z%aO(WTO(ZUO(b$uO(z$}O({%PO~Op0}O%^1OO(U0|O~P$.eO!g+kOa(^a!_(^a'{(^a!](^a~O#l1UO~O[]X!]fX!^fX~O!]1VO!^)YX~O!^1XO~O[1YO~Ob1[O(U+sO(WTO(ZUO~O!_&PO(U%gO`'vX!]'vX~O!]+xO`)Xa~O!k1_O~P!:tO[1bO~O`1cO~O#`1hO~On1kO!_$|O~O(f(}O!^)VP~Oh%VOn1tO!_1qO%j1sO~O[2OO!]1|O!^)WX~O!^2PO~O`2ROa%nO'{%nO~O(U#nO(WTO(ZUO~O#S$dO#`$eO$R$eOP(hXR(hX[(hXr(hX!Q(hX!S(hX!](hX!l(hX!p(hX#R(hX#o(hX#p(hX#q(hX#r(hX#s(hX#t(hX#u(hX#v(hX#w(hX#y(hX#{(hX#|(hX(b(hX(s(hX(z(hX({(hX~Oj2UO&]2VOa(hX~P$4OOj2UO#`$eO&]2VO~Oa2XO~P%[Oa2ZO~O&f2^OP&diQ&diS&diY&dia&did&die&dil&dip&dir&dis&dit&diz&di|&di!O&di!S&di!W&di!X&di!_&di!i&di!l&di!o&di!p&di!q&di!s&di!u&di!x&di!|&di$X&di$o&di%i&di%k&di%m&di%n&di%o&di%r&di%t&di%w&di%x&di%z&di&X&di&_&di&a&di&c&di&e&di&h&di&n&di&t&di&v&di&x&di&z&di&|&di'x&di(U&di(W&di(Z&di(b&di(p&di!^&dib&di&k&di~Ob2dO!^2bO&k2cO~P`O!_XO!l2fO~O&r,}OP&miQ&miS&miY&mia&mid&mie&mil&mip&mir&mis&mit&miz&mi|&mi!O&mi!S&mi!W&mi!X&mi!_&mi!i&mi!l&mi!o&mi!p&mi!q&mi!s&mi!u&mi!x&mi!|&mi$X&mi$o&mi%i&mi%k&mi%m&mi%n&mi%o&mi%r&mi%t&mi%w&mi%x&mi%z&mi&X&mi&_&mi&a&mi&c&mi&e&mi&h&mi&n&mi&t&mi&v&mi&x&mi&z&mi&|&mi'x&mi(U&mi(W&mi(Z&mi(b&mi(p&mi!^&mi&f&mib&mi&k&mi~O!Y2lO~O!]!aa!^!aa~P#BwOs!nO!S!oO![2qO(f!mO!]'YX!^'YX~P@nO!]-^O!^(ja~O!]'`X!^'`X~P!9|O!]-bO!^(ya~O!^2yO~P'_Oa%nO#`3SO'{%nO~Oa%nO!g#vO#`3SO'{%nO~Oa%nO!g#vO!p3WO#`3SO'{%nO(s'qO~Oa%nO'{%nO~P!:tO!]$_Ov$ra~O!Y'Xi!]'Xi~P!:tO!](WO!Y(ii~O!](_O!Y(wi~O!Y(xi!](xi~P!:tO!](ui!k(uia(ui'{(ui~P!:tO#`3YO!](ui!k(uia(ui'{(ui~O!](kO!k(ti~O!S%hO!_%iO!|]O#j3_O#k3^O(U%gO~O!S%hO!_%iO#k3^O(U%gO~On3fO!_'aO%j3eO~Oh%VOn3fO!_'aO%j3eO~O#l%baP%baR%ba[%baa%baj%bar%ba!S%ba!l%ba!p%ba#R%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#v%ba#w%ba#y%ba#{%ba#|%ba'{%ba(b%ba(s%ba!k%ba!Y%ba'x%bav%ba!_%ba%j%ba!g%ba~P#L{O#l%daP%daR%da[%daa%daj%dar%da!S%da!l%da!p%da#R%da#o%da#p%da#q%da#r%da#s%da#t%da#u%da#v%da#w%da#y%da#{%da#|%da'{%da(b%da(s%da!k%da!Y%da'x%dav%da!_%da%j%da!g%da~P#MnO#l%baP%baR%ba[%baa%baj%bar%ba!S%ba!]%ba!l%ba!p%ba#R%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#v%ba#w%ba#y%ba#{%ba#|%ba'{%ba(b%ba(s%ba!k%ba!Y%ba'x%ba#`%bav%ba!_%ba%j%ba!g%ba~P#/sO#l%daP%daR%da[%daa%daj%dar%da!S%da!]%da!l%da!p%da#R%da#o%da#p%da#q%da#r%da#s%da#t%da#u%da#v%da#w%da#y%da#{%da#|%da'{%da(b%da(s%da!k%da!Y%da'x%da#`%dav%da!_%da%j%da!g%da~P#/sO#l}aP}a[}aa}aj}ar}a!l}a!p}a#R}a#o}a#p}a#q}a#r}a#s}a#t}a#u}a#v}a#w}a#y}a#{}a#|}a'{}a(b}a(s}a!k}a!Y}a'x}av}a!_}a%j}a!g}a~P$(cO#l$taP$taR$ta[$taa$taj$tar$ta!S$ta!l$ta!p$ta#R$ta#o$ta#p$ta#q$ta#r$ta#s$ta#t$ta#u$ta#v$ta#w$ta#y$ta#{$ta#|$ta'{$ta(b$ta(s$ta!k$ta!Y$ta'x$tav$ta!_$ta%j$ta!g$ta~P$)_O#l$vaP$vaR$va[$vaa$vaj$var$va!S$va!l$va!p$va#R$va#o$va#p$va#q$va#r$va#s$va#t$va#u$va#v$va#w$va#y$va#{$va#|$va'{$va(b$va(s$va!k$va!Y$va'x$vav$va!_$va%j$va!g$va~P$*QO#l%UaP%UaR%Ua[%Uaa%Uaj%Uar%Ua!S%Ua!]%Ua!l%Ua!p%Ua#R%Ua#o%Ua#p%Ua#q%Ua#r%Ua#s%Ua#t%Ua#u%Ua#v%Ua#w%Ua#y%Ua#{%Ua#|%Ua'{%Ua(b%Ua(s%Ua!k%Ua!Y%Ua'x%Ua#`%Uav%Ua!_%Ua%j%Ua!g%Ua~P#/sOa#cq!]#cq'{#cq'x#cq!Y#cq!k#cqv#cq!_#cq%j#cq!g#cq~P!:tO![3nO!]'ZX!k'ZX~P%[O!].vO!k(la~O!].vO!k(la~P!:tO!Y3qO~O$P!na!^!na~PKlO$P!ja!]!ja!^!ja~P#BwO$P!ra!^!ra~P!=aO$P!ta!^!ta~P!?wOg'^X!]'^X~P!,TO!]/ROg(qa~OSfO!_4VO$e4WO~O!^4[O~Ov4]O~P#/sOa$nq!]$nq'{$nq'x$nq!Y$nq!k$nqv$nq!_$nq%j$nq!g$nq~P!:tO!Y4_O~P!&zO!S4`O~O!Q*PO'z*QO({%POn'ja(z'ja!]'ja#`'ja~Og'ja$P'ja~P%-tO!Q*PO'z*QOn'la(z'la({'la!]'la#`'la~Og'la$P'la~P%.gO(s$YO~P#/sO!YfX!Y${X!]fX!]${X!g%SX#`fX~P!0SOp%WO(U=XO~P!1uOp4dO!S%hO![4cO!_%iO(U%gO!]'fX!k'fX~O!]/rO!k)Pa~O!]/rO!g#vO!k)Pa~O!]/rO!g#vO(s'qO!k)Pa~Og$}i!]$}i#`$}i$P$}i~P!1WO![4lO!Y'hX!]'hX~P!3tO!]/{O!Y)Qa~O!]/{O!Y)Qa~P#/sOP]XR]X[]Xj]Xr]X!Q]X!S]X!Y]X!]]X!l]X!p]X#R]X#S]X#`]X#lfX#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#w]X#y]X#{]X#|]X$R]X(b]X(s]X(z]X({]X~Oj%ZX!g%ZX~P%2^Oj4qO!g#vO~Oh%VO!g#vO!l%eO~Oh%VOr4vO!l%eO(s'qO~Or4{O!g#vO(s'qO~Os!nO!S4|O(WTO(ZUO(f!mO~O(z$}On%bi!Q%bi'z%bi({%bi!]%bi#`%bi~Og%bi$P%bi~P%5}O({%POn%di!Q%di'z%di(z%di!]%di#`%di~Og%di$P%di~P%6pOg(`i!](`i~P!1WO#`5SOg(`i!](`i~P!1WO!k5XO~Oa$pq!]$pq'{$pq'x$pq!Y$pq!k$pqv$pq!_$pq%j$pq!g$pq~P!:tO!Y5]O~O!]5^O!_)RX~P#/sOa${X!_${X%_]X'{${X!]${X~P!0SO%_5aOaoX!_oX'{oX!]oX~P$#OOp5bO(U#nO~O%_5aO~Ob5hO%k5iO(U+sO(WTO(ZUO!]'uX!^'uX~O!]1VO!^)Ya~O[5mO~O`5nO~O[5rO~Oa%nO'{%nO~P#/sO!]5wO#`5yO!^)VX~O!^5zO~Or6QOs!nO!S*jO!b!yO!c!vO!d!vO!|<XO#T!pO#U!pO#V!pO#W!pO#X!pO#[6PO#]!zO(V!lO(WTO(ZUO(f!mO(p!sO~O!^6OO~P%;sOn6VO!_1qO%j6UO~Oh%VOn6VO!_1qO%j6UO~Ob6^O(U#nO(WTO(ZUO!]'tX!^'tX~O!]1|O!^)Wa~O(WTO(ZUO(f6`O~O`6dO~Oj6gO&]6hO~PNXO!k6iO~P%[Oa6kO~Oa6kO~P%[Ob2dO!^6pO&k2cO~P`O!g6rO~O!g6tOh(ki!](ki!^(ki!g(ki!l(kir(ki(s(ki~O#`6uO!]#hi!^#hi~O!]!ai!^!ai~P#BwO!]#hi!^#hi~P#BwOa%nO#`7OO'{%nO~Oa%nO!g#vO#`7OO'{%nO~O!](uq!k(uqa(uq'{(uq~P!:tO!](kO!k(tq~O!S%hO!_%iO#k7VO(U%gO~O!_'aO%j7YO~On7^O!_'aO%j7YO~O#l'jaP'jaR'ja['jaa'jaj'jar'ja!S'ja!l'ja!p'ja#R'ja#o'ja#p'ja#q'ja#r'ja#s'ja#t'ja#u'ja#v'ja#w'ja#y'ja#{'ja#|'ja'{'ja(b'ja(s'ja!k'ja!Y'ja'x'jav'ja!_'ja%j'ja!g'ja~P%-tO#l'laP'laR'la['laa'laj'lar'la!S'la!l'la!p'la#R'la#o'la#p'la#q'la#r'la#s'la#t'la#u'la#v'la#w'la#y'la#{'la#|'la'{'la(b'la(s'la!k'la!Y'la'x'lav'la!_'la%j'la!g'la~P%.gO#l$}iP$}iR$}i[$}ia$}ij$}ir$}i!S$}i!]$}i!l$}i!p$}i#R$}i#o$}i#p$}i#q$}i#r$}i#s$}i#t$}i#u$}i#v$}i#w$}i#y$}i#{$}i#|$}i'{$}i(b$}i(s$}i!k$}i!Y$}i'x$}i#`$}iv$}i!_$}i%j$}i!g$}i~P#/sO#l%biP%biR%bi[%bia%bij%bir%bi!S%bi!l%bi!p%bi#R%bi#o%bi#p%bi#q%bi#r%bi#s%bi#t%bi#u%bi#v%bi#w%bi#y%bi#{%bi#|%bi'{%bi(b%bi(s%bi!k%bi!Y%bi'x%biv%bi!_%bi%j%bi!g%bi~P%5}O#l%diP%diR%di[%dia%dij%dir%di!S%di!l%di!p%di#R%di#o%di#p%di#q%di#r%di#s%di#t%di#u%di#v%di#w%di#y%di#{%di#|%di'{%di(b%di(s%di!k%di!Y%di'x%div%di!_%di%j%di!g%di~P%6pO!]'Za!k'Za~P!:tO!].vO!k(li~O$P#ci!]#ci!^#ci~P#BwOP$[OR#zO!Q#yO!S#{O!l#xO!p$[O(bVO[#nij#nir#ni#R#ni#p#ni#q#ni#r#ni#s#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni$P#ni(s#ni(z#ni({#ni!]#ni!^#ni~O#o#ni~P%NrO#o<aO~P%NrOP$[OR#zOr<mO!Q#yO!S#{O!l#xO!p$[O#o<aO#p<bO#q<bO#r<bO(bVO[#nij#ni#R#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni$P#ni(s#ni(z#ni({#ni!]#ni!^#ni~O#s#ni~P&!zO#s<cO~P&!zOP$[OR#zO[<oOj<dOr<mO!Q#yO!S#{O!l#xO!p$[O#R<dO#o<aO#p<bO#q<bO#r<bO#s<cO#t<dO#u<dO#v<nO(bVO#y#ni#{#ni#|#ni$P#ni(s#ni(z#ni({#ni!]#ni!^#ni~O#w#ni~P&%SOP$[OR#zO[<oOj<dOr<mO!Q#yO!S#{O!l#xO!p$[O#R<dO#o<aO#p<bO#q<bO#r<bO#s<cO#t<dO#u<dO#v<nO#w<eO(bVO({#}O#{#ni#|#ni$P#ni(s#ni(z#ni!]#ni!^#ni~O#y<gO~P&'TO#y#ni~P&'TO#w<eO~P&%SOP$[OR#zO[<oOj<dOr<mO!Q#yO!S#{O!l#xO!p$[O#R<dO#o<aO#p<bO#q<bO#r<bO#s<cO#t<dO#u<dO#v<nO#w<eO#y<gO(bVO(z#|O({#}O#|#ni$P#ni(s#ni!]#ni!^#ni~O#{#ni~P&)dO#{<iO~P&)dOa#}y!]#}y'{#}y'x#}y!Y#}y!k#}yv#}y!_#}y%j#}y!g#}y~P!:tO[#nij#nir#ni#R#ni#s#ni#t#ni#u#ni#v#ni#w#ni#y#ni#{#ni#|#ni$P#ni(s#ni!]#ni!^#ni~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O#o<aO#p<bO#q<bO#r<bO(bVO(z#ni({#ni~P&,`On>_O!Q*PO'z*QO(z$}O({%POP#niR#ni!S#ni!l#ni!p#ni#o#ni#p#ni#q#ni#r#ni(b#ni~P&,`O#S$dOP(aXR(aX[(aXj(aXn(aXr(aX!Q(aX!S(aX!l(aX!p(aX#R(aX#o(aX#p(aX#q(aX#r(aX#s(aX#t(aX#u(aX#v(aX#w(aX#y(aX#{(aX#|(aX$P(aX'z(aX(b(aX(s(aX(z(aX({(aX!](aX!^(aX~O$P$Qi!]$Qi!^$Qi~P#BwO$P!ri!^!ri~P$+}Og'^a!]'^a~P!1WO!^7pO~O!]'ea!^'ea~P#BwO!Y7qO~P#/sO!g#vO(s'qO!]'fa!k'fa~O!]/rO!k)Pi~O!]/rO!g#vO!k)Pi~Og$}q!]$}q#`$}q$P$}q~P!1WO!Y'ha!]'ha~P#/sO!g7xO~O!]/{O!Y)Qi~P#/sO!]/{O!Y)Qi~O!Y7{O~Oh%VOr8QO!l%eO(s'qO~Oj8SO!g#vO~Or8VO!g#vO(s'qO~O!Q*PO'z*QO({%POn'ka(z'ka!]'ka#`'ka~Og'ka$P'ka~P&5aO!Q*PO'z*QOn'ma(z'ma({'ma!]'ma#`'ma~Og'ma$P'ma~P&6SOg(`q!](`q~P!1WO#`8XOg(`q!](`q~P!1WO!Y8YO~Og%Pq!]%Pq#`%Pq$P%Pq~P!1WOa$py!]$py'{$py'x$py!Y$py!k$pyv$py!_$py%j$py!g$py~P!:tO!g6tO~O!]5^O!_)Ra~O!_'aOP$UaR$Ua[$Uaj$Uar$Ua!Q$Ua!S$Ua!]$Ua!l$Ua!p$Ua#R$Ua#o$Ua#p$Ua#q$Ua#r$Ua#s$Ua#t$Ua#u$Ua#v$Ua#w$Ua#y$Ua#{$Ua#|$Ua(b$Ua(s$Ua(z$Ua({$Ua~O%j7YO~P&8tO%_8^Oa%]i!_%]i'{%]i!]%]i~Oa#cy!]#cy'{#cy'x#cy!Y#cy!k#cyv#cy!_#cy%j#cy!g#cy~P!:tO[8`O~Ob8bO(U+sO(WTO(ZUO~O!]1VO!^)Yi~O`8fO~O(f(}O!]'qX!^'qX~O!]5wO!^)Va~O!^8pO~P%;sO(p!sO~P$&YO#[8qO~O!_1qO~O!_1qO%j8sO~On8vO!_1qO%j8sO~O[8{O!]'ta!^'ta~O!]1|O!^)Wi~O!k9PO~O!k9QO~O!k9TO~O!k9TO~P%[Oa9VO~O!g9WO~O!k9XO~O!](xi!^(xi~P#BwOa%nO#`9aO'{%nO~O!](uy!k(uya(uy'{(uy~P!:tO!](kO!k(ty~O%j9dO~P&8tO!_'aO%j9dO~O#l$}qP$}qR$}q[$}qa$}qj$}qr$}q!S$}q!]$}q!l$}q!p$}q#R$}q#o$}q#p$}q#q$}q#r$}q#s$}q#t$}q#u$}q#v$}q#w$}q#y$}q#{$}q#|$}q'{$}q(b$}q(s$}q!k$}q!Y$}q'x$}q#`$}qv$}q!_$}q%j$}q!g$}q~P#/sO#l'kaP'kaR'ka['kaa'kaj'kar'ka!S'ka!l'ka!p'ka#R'ka#o'ka#p'ka#q'ka#r'ka#s'ka#t'ka#u'ka#v'ka#w'ka#y'ka#{'ka#|'ka'{'ka(b'ka(s'ka!k'ka!Y'ka'x'kav'ka!_'ka%j'ka!g'ka~P&5aO#l'maP'maR'ma['maa'maj'mar'ma!S'ma!l'ma!p'ma#R'ma#o'ma#p'ma#q'ma#r'ma#s'ma#t'ma#u'ma#v'ma#w'ma#y'ma#{'ma#|'ma'{'ma(b'ma(s'ma!k'ma!Y'ma'x'mav'ma!_'ma%j'ma!g'ma~P&6SO#l%PqP%PqR%Pq[%Pqa%Pqj%Pqr%Pq!S%Pq!]%Pq!l%Pq!p%Pq#R%Pq#o%Pq#p%Pq#q%Pq#r%Pq#s%Pq#t%Pq#u%Pq#v%Pq#w%Pq#y%Pq#{%Pq#|%Pq'{%Pq(b%Pq(s%Pq!k%Pq!Y%Pq'x%Pq#`%Pqv%Pq!_%Pq%j%Pq!g%Pq~P#/sO!]'Zi!k'Zi~P!:tO$P#cq!]#cq!^#cq~P#BwO(z$}OP%baR%ba[%baj%bar%ba!S%ba!l%ba!p%ba#R%ba#o%ba#p%ba#q%ba#r%ba#s%ba#t%ba#u%ba#v%ba#w%ba#y%ba#{%ba#|%ba$P%ba(b%ba(s%ba!]%ba!^%ba~On%ba!Q%ba'z%ba({%ba~P&JXO({%POP%daR%da[%daj%dar%da!S%da!l%da!p%da#R%da#o%da#p%da#q%da#r%da#s%da#t%da#u%da#v%da#w%da#y%da#{%da#|%da$P%da(b%da(s%da!]%da!^%da~On%da!Q%da'z%da(z%da~P&L`On>_O!Q*PO'z*QO({%PO~P&JXOn>_O!Q*PO'z*QO(z$}O~P&L`OR0mO!Q0mO!S0nO#S$dOP}a[}aj}an}ar}a!l}a!p}a#R}a#o}a#p}a#q}a#r}a#s}a#t}a#u}a#v}a#w}a#y}a#{}a#|}a$P}a'z}a(b}a(s}a(z}a({}a!]}a!^}a~O!Q*PO'z*QOP$taR$ta[$taj$tan$tar$ta!S$ta!l$ta!p$ta#R$ta#o$ta#p$ta#q$ta#r$ta#s$ta#t$ta#u$ta#v$ta#w$ta#y$ta#{$ta#|$ta$P$ta(b$ta(s$ta(z$ta({$ta!]$ta!^$ta~O!Q*PO'z*QOP$vaR$va[$vaj$van$var$va!S$va!l$va!p$va#R$va#o$va#p$va#q$va#r$va#s$va#t$va#u$va#v$va#w$va#y$va#{$va#|$va$P$va(b$va(s$va(z$va({$va!]$va!^$va~On>_O!Q*PO'z*QO(z$}O({%PO~OP%UaR%Ua[%Uaj%Uar%Ua!S%Ua!l%Ua!p%Ua#R%Ua#o%Ua#p%Ua#q%Ua#r%Ua#s%Ua#t%Ua#u%Ua#v%Ua#w%Ua#y%Ua#{%Ua#|%Ua$P%Ua(b%Ua(s%Ua!]%Ua!^%Ua~P''eO$P$nq!]$nq!^$nq~P#BwO$P$pq!]$pq!^$pq~P#BwO!^9qO~O$P9rO~P!1WO!g#vO!]'fi!k'fi~O!g#vO(s'qO!]'fi!k'fi~O!]/rO!k)Pq~O!Y'hi!]'hi~P#/sO!]/{O!Y)Qq~Or9yO!g#vO(s'qO~O[9{O!Y9zO~P#/sO!Y9zO~Oj:RO!g#vO~Og(`y!](`y~P!1WO!]'oa!_'oa~P#/sOa%]q!_%]q'{%]q!]%]q~P#/sO[:WO~O!]1VO!^)Yq~O`:[O~O#`:]O!]'qa!^'qa~O!]5wO!^)Vi~P#BwO!S:_O~O!_1qO%j:bO~O(WTO(ZUO(f:gO~O!]1|O!^)Wq~O!k:jO~O!k:kO~O!k:lO~O!k:lO~P%[O#`:oO!]#hy!^#hy~O!]#hy!^#hy~P#BwO%j:tO~P&8tO!_'aO%j:tO~O$P#}y!]#}y!^#}y~P#BwOP$}iR$}i[$}ij$}ir$}i!S$}i!l$}i!p$}i#R$}i#o$}i#p$}i#q$}i#r$}i#s$}i#t$}i#u$}i#v$}i#w$}i#y$}i#{$}i#|$}i$P$}i(b$}i(s$}i!]$}i!^$}i~P''eO!Q*PO'z*QO({%POP'jaR'ja['jaj'jan'jar'ja!S'ja!l'ja!p'ja#R'ja#o'ja#p'ja#q'ja#r'ja#s'ja#t'ja#u'ja#v'ja#w'ja#y'ja#{'ja#|'ja$P'ja(b'ja(s'ja(z'ja!]'ja!^'ja~O!Q*PO'z*QOP'laR'la['laj'lan'lar'la!S'la!l'la!p'la#R'la#o'la#p'la#q'la#r'la#s'la#t'la#u'la#v'la#w'la#y'la#{'la#|'la$P'la(b'la(s'la(z'la({'la!]'la!^'la~O(z$}OP%biR%bi[%bij%bin%bir%bi!Q%bi!S%bi!l%bi!p%bi#R%bi#o%bi#p%bi#q%bi#r%bi#s%bi#t%bi#u%bi#v%bi#w%bi#y%bi#{%bi#|%bi$P%bi'z%bi(b%bi(s%bi({%bi!]%bi!^%bi~O({%POP%diR%di[%dij%din%dir%di!Q%di!S%di!l%di!p%di#R%di#o%di#p%di#q%di#r%di#s%di#t%di#u%di#v%di#w%di#y%di#{%di#|%di$P%di'z%di(b%di(s%di(z%di!]%di!^%di~O$P$py!]$py!^$py~P#BwO$P#cy!]#cy!^#cy~P#BwO!g#vO!]'fq!k'fq~O!]/rO!k)Py~O!Y'hq!]'hq~P#/sOr;OO!g#vO(s'qO~O[;SO!Y;RO~P#/sO!Y;RO~Og(`!R!](`!R~P!1WOa%]y!_%]y'{%]y!]%]y~P#/sO!]1VO!^)Yy~O!]5wO!^)Vq~O(U;ZO~O!_1qO%j;^O~O!k;aO~O%j;fO~P&8tOP$}qR$}q[$}qj$}qr$}q!S$}q!l$}q!p$}q#R$}q#o$}q#p$}q#q$}q#r$}q#s$}q#t$}q#u$}q#v$}q#w$}q#y$}q#{$}q#|$}q$P$}q(b$}q(s$}q!]$}q!^$}q~P''eO!Q*PO'z*QO({%POP'kaR'ka['kaj'kan'kar'ka!S'ka!l'ka!p'ka#R'ka#o'ka#p'ka#q'ka#r'ka#s'ka#t'ka#u'ka#v'ka#w'ka#y'ka#{'ka#|'ka$P'ka(b'ka(s'ka(z'ka!]'ka!^'ka~O!Q*PO'z*QOP'maR'ma['maj'man'mar'ma!S'ma!l'ma!p'ma#R'ma#o'ma#p'ma#q'ma#r'ma#s'ma#t'ma#u'ma#v'ma#w'ma#y'ma#{'ma#|'ma$P'ma(b'ma(s'ma(z'ma({'ma!]'ma!^'ma~OP%PqR%Pq[%Pqj%Pqr%Pq!S%Pq!l%Pq!p%Pq#R%Pq#o%Pq#p%Pq#q%Pq#r%Pq#s%Pq#t%Pq#u%Pq#v%Pq#w%Pq#y%Pq#{%Pq#|%Pq$P%Pq(b%Pq(s%Pq!]%Pq!^%Pq~P''eOg%f!Z!]%f!Z#`%f!Z$P%f!Z~P!1WO!Y;jO~P#/sOr;kO!g#vO(s'qO~O[;mO!Y;jO~P#/sO!]'qq!^'qq~P#BwO!]#h!Z!^#h!Z~P#BwO#l%f!ZP%f!ZR%f!Z[%f!Za%f!Zj%f!Zr%f!Z!S%f!Z!]%f!Z!l%f!Z!p%f!Z#R%f!Z#o%f!Z#p%f!Z#q%f!Z#r%f!Z#s%f!Z#t%f!Z#u%f!Z#v%f!Z#w%f!Z#y%f!Z#{%f!Z#|%f!Z'{%f!Z(b%f!Z(s%f!Z!k%f!Z!Y%f!Z'x%f!Z#`%f!Zv%f!Z!_%f!Z%j%f!Z!g%f!Z~P#/sOr;vO!g#vO(s'qO~O!Y;wO~P#/sOr<OO!g#vO(s'qO~O!Y<PO~P#/sOP%f!ZR%f!Z[%f!Zj%f!Zr%f!Z!S%f!Z!l%f!Z!p%f!Z#R%f!Z#o%f!Z#p%f!Z#q%f!Z#r%f!Z#s%f!Z#t%f!Z#u%f!Z#v%f!Z#w%f!Z#y%f!Z#{%f!Z#|%f!Z$P%f!Z(b%f!Z(s%f!Z!]%f!Z!^%f!Z~P''eOr<SO!g#vO(s'qO~Ov(gX~P1qO!Q%rO~P!)[O(V!lO~P!)[O!YfX!]fX#`fX~P%2^OP]XR]X[]Xj]Xr]X!Q]X!S]X!]]X!]fX!l]X!p]X#R]X#S]X#`]X#`fX#lfX#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#w]X#y]X#{]X#|]X$R]X(b]X(s]X(z]X({]X~O!gfX!k]X!kfX(sfX~P'LcOP<WOQ<WOSfOd>SOe!iOpkOr<WOskOtkOzkO|<WO!O<WO!SWO!WkO!XkO!_XO!i<ZO!lZO!o<WO!p<WO!q<WO!s<[O!u<_O!x!hO$X!kO$o>QO(U)^O(WTO(ZUO(bVO(p[O~O!]<kO!^$ra~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<vO!S${O!_$|O!i>XO!l$xO#k<|O$X%`O$u<xO$w<zO$z%aO(U(wO(WTO(ZUO(b$uO(z$}O({%PO~Ol)eO~P(#XOr!eX(s!eX~P#!nO!^]X!^fX~P'LcO!YfX!Y${X!]fX!]${X#`fX~P!0SO#l<`O~O!g#vO#l<`O~O#`<pO~Oj<dO~O#`=PO!](xX!^(xX~O#`<pO!](vX!^(vX~O#l=QO~Og=SO~P!1WO#l=YO~O#l=ZO~Og=SO(U&ZO~O!g#vO#l=[O~O!g#vO#l=QO~O$P=]O~P#BwO#l=^O~O#l=_O~O#l=dO~O#l=eO~O#l=fO~O#l=gO~O$P=hO~P!1WO$P=iO~P!1WOl=tO~P7eOk#S#T#U#W#X#[#j#k#v$o$u$w$z%^%_%i%j%k%r%t%w%x%z%|~(PT#p!X'}(V#qs#o#rr!Q(O$^(U$`(f~",
+			goto: "$9_)^PPPPPP)_PP)bP)sP+X/^PPPP6lPP7SPP=PPPP@sPA]PA]PPPA]PCePA]PA]PA]PCiPCnPD]PIVPPPIZPPPPIZL^PPPLdMUPIZPIZPP! dIZPPPIZPIZP!#kIZP!'R!(W!(aP!)T!)X!)T!,fPPPPPPP!-V!(WPP!-g!/XP!2hIZIZ!2m!5y!:g!:g!>f!>nPPP!>tIZPPPPPPPPP!BTP!CbPPIZ!DsPIZPIZIZIZIZIZPIZ!FVP!IaP!LgP!Lk!Lu!Ly!LyP!I^P!L}!L}P#!TP#!XIZPIZ#!_#%dCiA]PA]PA]A]P#&qA]A]#)TA]#+{A]#.XA]A]#.w#1]#1]#1b#1k#1]#1vPP#1]PA]#2`A]#6_A]A]6lPPP#:dPPP#:}#:}P#:}P#;e#:}PP#;kP#;bP#;b#<O#;b#<j#<p#<s)bP#<v)bP#=P#=P#=PP)bP)bP)bP)bPP)bP#=V#=YP#=Y)bP#=^P#=aP)bP)bP)bP)bP)bP)b)bPP#=g#=m#=x#>O#>U#>[#>b#>p#>v#?Q#?W#?b#?h#?x#@O#@p#AS#AY#A`#An#BT#Cx#DW#D_#Ey#FX#Gy#HX#H_#He#Hk#Hu#H{#IR#I]#Io#IuPPPPPPPPPPP#I{PPPPPPP#Jp#M}$ g$ n$ vPPP$'bP$'k$*d$0}$1Q$1T$2S$2V$2^$2fP$2l$2oP$3]$3a$4X$5g$5l$6SPP$6X$6_$6c$6f$6j$6n$7j$8R$8j$8n$8q$8t$9O$9R$9V$9ZR!|RoqOXst!Z#d%m&r&t&u&w,u,z2^2aY!vQ'a-g1q5}Q%tvQ%|yQ&T|Q&j!VS'W!e-^Q'g!iS'm!r!yU*l$|*[*pQ+q%}S,O&V&WQ,f&dQ-e'`Q-o'hQ-w'nQ0^*rQ1d,QQ1{,gR<}<[%SdOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_,r,u,z-k-s.R.X.v.}/p0_0n0t1U1t2U2V2X2Z2^2a2c3S3Y3n4|6V6g6h6k7O8v9V9aS#q]<X!r)`$Z$n'X)t-Y-a/X2q4V5y6u:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TU+Q%]<u<vQ+v&PQ,h&gQ,o&oQ0z+iQ1P+kQ1[+wQ2T,mQ3b.iQ5b1OQ5h1VQ6^1|Q7[3fQ8b5iR9g7^'QkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-a-k-s.R.X.i.v.}/X/p0_0n0t1U1t2U2V2X2Z2^2a2c2q3S3Y3f3n4V4|5y6V6g6h6k6u7O7^8v9V9a:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>T!S!nQ!r!v!y!z$|'W'`'a'm'n'o*l*p*r*s-^-e-g-w0^0a1q5}6P%[$ti#v$b$c$d$x${%O%Q%^%_%c)z*S*U*W*Z*b*h*x*y+h+k,U,X.h/R/f/o/z/{/}0b0d0k0l0q1h1k1s3e4`4a4l4q5S5^5a6U7Y7x8S8X8^8s9d9r9{:R:b:t;S;^;f;m<n<o<q<r<s<t<w<x<y<z<{<|=T=U=V=W=Y=Z=^=_=`=a=b=c=d=e=h=i>Q>Y>Z>^>_Q&X|S'U!e*[S']%i-bQ+v&PQ,R&WQ,h&gQ0p+TQ1[+wQ1a+}Q2S,lQ2T,mQ5h1VQ5q1cQ6^1|Q6a2OQ6b2RQ8b5iQ8e5nQ9O6dQ:Z8fQ:h8{R;X:[rnOXst!V!Z#d%m&i&r&t&u&w,u,z2^2aR,j&k&z^OPXYstuvwz!Z!`!g!j!o#S#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'c's(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-a-k-s.R.X.i.v.}/X/p0_0n0t1U1t2U2V2X2Z2^2a2c2q3S3Y3f3n4V4|5y6V6g6h6k6u7O7^8v9V9a:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>S>T[#]WZ#W#Z'X(U!b%jm#h#i#l$x%e%h(_(i(j(k*Z*_*c+[+^+`,q-W.V.].^._.a/o/r2f3^3_4c6t7VQ%wxQ%{yW&Q|&V&W,QQ&_!TQ'd!hQ'f!iQ(r#sS+p%|%}Q+t&PQ,a&bQ,e&dS-n'g'hQ.k(sQ1T+qQ1Z+wQ1]+xQ1`+|Q1v,bS1z,f,gQ3O-oQ5g1VQ5k1YQ5p1bQ6]1{Q8a5iQ8d5mQ8h5rQ:V8`R;V:W!U$zi$d%O%Q%^%_%c*S*U*b*x*y/R/z0b0d0k0l0q4a5S8X9r>Q>Y>Z!^%yy!i!u%{%|%}'V'f'g'h'l'v*k+p+q-Z-n-o-v0T0W1T2w3O3V4t4u4x8P9}Q+j%wQ,V&[Q,Y&]Q,d&dQ.j(rQ1u,aU1y,e,f,gQ3g.kQ6W1vS6[1z1{Q8z6]#f>U#v$b$c$x${)z*W*Z*h+h+k,U,X.h/f/o/{/}1h1k1s3e4`4l4q5^5a6U7Y7x8S8^8s9d9{:R:b:t;S;^;f;m<q<s<w<y<{=T=V=Y=^=`=b=d=h>^>_o>V<n<o<r<t<x<z<|=U=W=Z=_=a=c=e=iW%Ti%V*z>QS&[!Q&iQ&]!RQ&^!SU+O%[%d=tR,T&Y%]%Si#v$b$c$d$x${%O%Q%^%_%c)z*S*U*W*Z*b*h*x*y+h+k,U,X.h/R/f/o/z/{/}0b0d0k0l0q1h1k1s3e4`4a4l4q5S5^5a6U7Y7x8S8X8^8s9d9r9{:R:b:t;S;^;f;m<n<o<q<r<s<t<w<x<y<z<{<|=T=U=V=W=Y=Z=^=_=`=a=b=c=d=e=h=i>Q>Y>Z>^>_T){$u)|V+Q%]<u<vW']!e%i*[-bS)O#y#zQ+e%rQ+{&SS.d(n(oQ1l,ZQ5V0mR8k5w'QkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-a-k-s.R.X.i.v.}/X/p0_0n0t1U1t2U2V2X2Z2^2a2c2q3S3Y3f3n4V4|5y6V6g6h6k6u7O7^8v9V9a:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>T$i$^c#Y#e%q%s%u(T(Z(u(z)S)T)U)V)W)X)Y)Z)[)])_)a)c)h)r+f+z-[-z.P.U.W.u.x.|/O/P/Q/d0r2o2t3Q3X3m3r3s3t3u3v3w3x3y3z3{3|3}4O4R4S4Z5Z5e6w6}7S7c7d7m7n8m9Z9_9i9o9p:q;Y;b<Y=wT#TV#U'RkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-a-k-s.R.X.i.v.}/X/p0_0n0t1U1t2U2V2X2Z2^2a2c2q3S3Y3f3n4V4|5y6V6g6h6k6u7O7^8v9V9a:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TQ'Y!eR2r-^!W!nQ!e!r!v!y!z$|'W'`'a'm'n'o*[*l*p*r*s-^-e-g-w0^0a1q5}6PR1n,]nqOXst!Z#d%m&r&t&u&w,u,z2^2aQ&y!^Q'w!xS(t#u<`Q+n%zQ,_&_Q,`&aQ-l'eQ-y'pS.t(y=QS0s+Y=[Q1R+oQ1p,^Q2e,|Q2g,}Q2n-XQ2|-mQ3P-qS5[0t=fQ5c1SS5f1U=gQ6v2pQ6z2}Q7P3UQ8_5dQ9[6xQ9]6{Q9`7QR:n9X$d$]c#Y#e%s%u(T(Z(u(z)S)T)U)V)W)X)Y)Z)[)])_)a)c)h)r+f+z-[-z.P.U.W.u.x.|/P/Q/d0r2o2t3Q3X3m3r3s3t3u3v3w3x3y3z3{3|3}4O4R4S4Z5Z5e6w6}7S7c7d7m7n8m9Z9_9i9o9p:q;Y;b<Y=wS(p#p'jQ)Q#zS+d%q/OS.e(o(qR3`.f'QkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-a-k-s.R.X.i.v.}/X/p0_0n0t1U1t2U2V2X2Z2^2a2c2q3S3Y3f3n4V4|5y6V6g6h6k6u7O7^8v9V9a:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TS#q]<XQ&t!XQ&u!YQ&w![Q&x!]R2],xQ'b!hQ+g%wQ-j'dS.g(r+jQ2z-iW3d.j.k0y0{Q6y2{W7W3a3c3g5`U9c7X7Z7]U:s9e9f9hS;d:r:uQ;r;eR;z;sU!wQ'a-gT5{1q5}!Q_OXZ`st!V!Z#d#h%e%m&i&k&r&t&u&w(k,u,z.^2^2a]!pQ!r'a-g1q5}T#q]<X%^{OPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&o&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_+i,r,u,z-k-s.R.X.i.v.}/p0_0n0t1U1t2U2V2X2Z2^2a2c3S3Y3f3n4|6V6g6h6k7O7^8v9V9aS)O#y#zS.d(n(o!s=m$Z$n'X)t-Y-a/X2q4V5y6u:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TU$fd)`,oS(q#p'jU*w%R(x4QU0o+P.p7iQ5`0zQ7X3bQ9f7[R:u9gm!tQ!r!v!y!z'a'm'n'o-g-w1q5}6PQ'u!uS(g#g2WS-u'l'xQ/u*^Q0T*kQ3W-xQ4h/vQ4t0VQ4u0WQ4z0`Q7t4bS8P4v4xS8T4{4}Q9t7uQ9x7{Q9}8QQ:S8VS:}9y9zS;i;O;RS;u;j;kS;};v;wS<R<O<PR<U<SQ#wbQ't!uS(f#g2WS(h#m+XQ+Z%fQ+l%xQ+r&OU-t'l'u'xQ.Y(gU/t*^*a/yQ0U*kQ0X*mQ1Q+mQ1w,cS3T-u-xQ3].bS4g/u/vQ4p0RS4s0T0`Q4w0YQ6Y1xQ7R3WS7s4b4dQ7w4hU8O4t4z4}Q8R4yQ8x6ZS9s7t7uQ9w7{Q:P8TQ:Q8UQ:e8yQ:{9tS:|9x9zQ;U:SQ;`:fS;h:};RS;t;i;jS;|;u;wS<Q;}<PQ<T<RQ<V<UQ=p=kQ=|=uR=}=vV!wQ'a-g%^aOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&o&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_+i,r,u,z-k-s.R.X.i.v.}/p0_0n0t1U1t2U2V2X2Z2^2a2c3S3Y3f3n4|6V6g6h6k7O7^8v9V9aS#wz!j!r=j$Z$n'X)t-Y-a/X2q4V5y6u:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TR=p>S%^bOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&o&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_+i,r,u,z-k-s.R.X.i.v.}/p0_0n0t1U1t2U2V2X2Z2^2a2c3S3Y3f3n4|6V6g6h6k7O7^8v9V9aQ%fj!^%xy!i!u%{%|%}'V'f'g'h'l'v*k+p+q-Z-n-o-v0T0W1T2w3O3V4t4u4x8P9}S&Oz!jQ+m%yQ,c&dW1x,d,e,f,gU6Z1y1z1{S8y6[6]Q:f8z!r=k$Z$n'X)t-Y-a/X2q4V5y6u:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TQ=u>RR=v>S%QeOPXYstuvw!Z!`!g!o#S#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&r&t&u&w&{'T'c's(W(^(e(y({)P*O*j+Y+_+i,r,u,z-k-s.R.X.i.v.}/p0_0n0t1U1t2U2V2X2Z2^2a2c3S3Y3f3n4|6V6g6h6k7O7^8v9V9aY#bWZ#W#Z(U!b%jm#h#i#l$x%e%h(_(i(j(k*Z*_*c+[+^+`,q-W.V.].^._.a/o/r2f3^3_4c6t7VQ,p&o!p=l$Z$n)t-Y-a/X2q4V5y6u:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TR=o'XU'^!e%i*[R2u-bX'[!e%i*[-b%SdOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_,r,u,z-k-s.R.X.v.}/p0_0n0t1U1t2U2V2X2Z2^2a2c3S3Y3n4|6V6g6h6k7O8v9V9a!r)`$Z$n'X)t-Y-a/X2q4V5y6u:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TQ,o&oQ0z+iQ3b.iQ7[3fR9g7^!b$Tc#Y%q(T(Z(u(z)[)])a)h+z-z.P.U.W.u.x/d0r3Q3X3m3}5Z5e6}7S7c9_:q<Y!P<f)_)r-[/O2o2t3r3{3|4R4Z6w7d7m7n8m9Z9i9o9p;Y;b=w!f$Vc#Y%q(T(Z(u(z)X)Y)[)])a)h+z-z.P.U.W.u.x/d0r3Q3X3m3}5Z5e6}7S7c9_:q<Y!T<h)_)r-[/O2o2t3r3x3y3{3|4R4Z6w7d7m7n8m9Z9i9o9p;Y;b=w!^$Zc#Y%q(T(Z(u(z)a)h+z-z.P.U.W.u.x/d0r3Q3X3m3}5Z5e6}7S7c9_:q<YQ4a/mz>T)_)r-[/O2o2t3r4R4Z6w7d7m7n8m9Z9i9o9p;Y;b=wQ>Y>[R>Z>]'QkOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-a-k-s.R.X.i.v.}/X/p0_0n0t1U1t2U2V2X2Z2^2a2c2q3S3Y3f3n4V4|5y6V6g6h6k6u7O7^8v9V9a:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TS$oh$pR4W/W'XgOPWXYZhstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n$p%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-a-k-s.R.X.i.v.}/W/X/p0_0n0t1U1t2U2V2X2Z2^2a2c2q3S3Y3f3n4V4|5y6V6g6h6k6u7O7^8v9V9a:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TT$kf$qQ$ifS)k$l)oR)w$qT$jf$qT)m$l)o'XhOPWXYZhstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$Z$_$a$e$n$p%m%t&R&k&n&o&r&t&u&w&{'T'X'c's(U(W(^(e(y({)P)t*O*j+Y+_+i,r,u,z-Y-a-k-s.R.X.i.v.}/W/X/p0_0n0t1U1t2U2V2X2Z2^2a2c2q3S3Y3f3n4V4|5y6V6g6h6k6u7O7^8v9V9a:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>TT$oh$pQ$rhR)v$p%^jOPWXYZstuvw!Z!`!g!o#S#W#Z#d#o#u#x#{$O$P$Q$R$S$T$U$V$W$X$_$a$e%m%t&R&k&n&o&r&t&u&w&{'T'c's(U(W(^(e(y({)P*O*j+Y+_+i,r,u,z-k-s.R.X.i.v.}/p0_0n0t1U1t2U2V2X2Z2^2a2c3S3Y3f3n4|6V6g6h6k7O7^8v9V9a!s>R$Z$n'X)t-Y-a/X2q4V5y6u:]:o<W<Z<[<_<`<a<b<c<d<e<f<g<h<i<j<k<m<p<}=P=Q=S=[=]=f=g>T#glOPXZst!Z!`!o#S#d#o#{$n%m&k&n&o&r&t&u&w&{'T'c)P)t*j+_+i,r,u,z-k.i/X/p0_0n1t2U2V2X2Z2^2a2c3f4V4|6V6g6h6k7^8v9V!U%Ri$d%O%Q%^%_%c*S*U*b*x*y/R/z0b0d0k0l0q4a5S8X9r>Q>Y>Z#f(x#v$b$c$x${)z*W*Z*h+h+k,U,X.h/f/o/{/}1h1k1s3e4`4l4q5^5a6U7Y7x8S8^8s9d9{:R:b:t;S;^;f;m<q<s<w<y<{=T=V=Y=^=`=b=d=h>^>_Q+U%aQ/e*Po4Q<n<o<r<t<x<z<|=U=W=Z=_=a=c=e=i!U$yi$d%O%Q%^%_%c*S*U*b*x*y/R/z0b0d0k0l0q4a5S8X9r>Q>Y>ZQ*d$zU*m$|*[*pQ+V%bQ0Y*n#f=r#v$b$c$x${)z*W*Z*h+h+k,U,X.h/f/o/{/}1h1k1s3e4`4l4q5^5a6U7Y7x8S8^8s9d9{:R:b:t;S;^;f;m<q<s<w<y<{=T=V=Y=^=`=b=d=h>^>_n=s<n<o<r<t<x<z<|=U=W=Z=_=a=c=e=iQ=x>UQ=y>VQ=z>WR={>X!U%Ri$d%O%Q%^%_%c*S*U*b*x*y/R/z0b0d0k0l0q4a5S8X9r>Q>Y>Z#f(x#v$b$c$x${)z*W*Z*h+h+k,U,X.h/f/o/{/}1h1k1s3e4`4l4q5^5a6U7Y7x8S8^8s9d9{:R:b:t;S;^;f;m<q<s<w<y<{=T=V=Y=^=`=b=d=h>^>_o4Q<n<o<r<t<x<z<|=U=W=Z=_=a=c=e=inoOXst!Z#d%m&r&t&u&w,u,z2^2aS*g${*ZQ-T'OQ-U'QR4k/{%[%Si#v$b$c$d$x${%O%Q%^%_%c)z*S*U*W*Z*b*h*x*y+h+k,U,X.h/R/f/o/z/{/}0b0d0k0l0q1h1k1s3e4`4a4l4q5S5^5a6U7Y7x8S8X8^8s9d9r9{:R:b:t;S;^;f;m<n<o<q<r<s<t<w<x<y<z<{<|=T=U=V=W=Y=Z=^=_=`=a=b=c=d=e=h=i>Q>Y>Z>^>_Q,W&]Q1j,YQ5u1iR8j5vV*o$|*[*pU*o$|*[*pT5|1q5}S0R*j/pQ4y0_T8U4|:_Q+l%xQ0X*mQ1Q+mQ1w,cQ6Y1xQ8x6ZQ:e8yR;`:f!U%Oi$d%O%Q%^%_%c*S*U*b*x*y/R/z0b0d0k0l0q4a5S8X9r>Q>Y>Zx*S$v)f*T*v+W/x0f0g4T4i5T5U5Y7r8W:T:z=q>O>PS0b*u0c#f<q#v$b$c$x${)z*W*Z*h+h+k,U,X.h/f/o/{/}1h1k1s3e4`4l4q5^5a6U7Y7x8S8^8s9d9{:R:b:t;S;^;f;m<q<s<w<y<{=T=V=Y=^=`=b=d=h>^>_n<r<n<o<r<t<x<z<|=U=W=Z=_=a=c=e=i!d=T(v)d*]*f.l.o.s/a/m0O0x1g3j4^4j4n5t7_7b7y7|8Z8]9v:O:U;P;T;g;l;x>[>]`=U4P7e7h7l9j:v:y;{S=`.n3kT=a7g9m!U%Qi$d%O%Q%^%_%c*S*U*b*x*y/R/z0b0d0k0l0q4a5S8X9r>Q>Y>Z|*U$v)f*V*u+W/i/x0f0g4T4i5O5T5U5Y7r8W:T:z=q>O>PS0d*v0e#f<s#v$b$c$x${)z*W*Z*h+h+k,U,X.h/f/o/{/}1h1k1s3e4`4l4q5^5a6U7Y7x8S8^8s9d9{:R:b:t;S;^;f;m<q<s<w<y<{=T=V=Y=^=`=b=d=h>^>_n<t<n<o<r<t<x<z<|=U=W=Z=_=a=c=e=i!h=V(v)d*]*f.m.n.s/a/m0O0x1g3h3j4^4j4n5t7_7`7b7y7|8Z8]9v:O:U;P;T;g;l;x>[>]d=W4P7f7g7l9j9k:v:w:y;{S=b.o3lT=c7h9nrnOXst!V!Z#d%m&i&r&t&u&w,u,z2^2aQ&f!UR,r&ornOXst!V!Z#d%m&i&r&t&u&w,u,z2^2aR&f!UQ,[&^R1f,TsnOXst!V!Z#d%m&i&r&t&u&w,u,z2^2aQ1r,aS6T1u1vU8r6R6S6WS:a8t8uS;[:`:cQ;o;]R;y;pQ&m!VR,k&iR6a2OR:h8{W&Q|&V&W,QR1]+xQ&r!WR,u&sR,{&xT2_,z2aR-P&yQ-O&yR2h-PQ'z!{R-{'zSsOtQ#dXT%ps#dQ#OTR'|#OQ#RUR(O#RQ)|$uR/b)|Q#UVR(R#UQ#XWU(X#X(Y.SQ(Y#YR.S(ZQ-_'YR2s-_Q.w(zS3o.w3pR3p.xQ-g'aR2x-gY!rQ'a-g1q5}R'k!rQ/S)fR4U/SU#_W%h*ZU(`#_(a.TQ(a#`R.T([Q-c'^R2v-ct`OXst!V!Z#d%m&i&k&r&t&u&w,u,z2^2aS#hZ%eU#r`#h.^R.^(kQ(l#jQ.Z(hW.c(l.Z3Z7TQ3Z.[R7T3[Q)o$lR/Y)oQ$phR)u$pQ$`cU)b$`.O<lQ.O<YR<l)rQ/s*^W4e/s4f7v9uU4f/t/u/vS7v4g4hR9u7w$e*R$v(v)d)f*]*f*u*v+R+S+W.n.o.q.r.s/a/i/k/m/x0O0f0g0x1g3h3i3j4P4T4^4i4j4n5O5Q5T5U5Y5t7_7`7a7b7g7h7j7k7l7r7y7|8W8Z8]9j9k9l9v:O:T:U:v:w:x:y:z;P;T;g;l;x;{=q>O>P>[>]Q/|*fU4m/|4o7zQ4o0OR7z4nS*p$|*[R0[*px*T$v)f*u*v+W/x0f0g4T4i5T5U5Y7r8W:T:z=q>O>P!d.l(v)d*]*f.n.o.s/a/m0O0x1g3j4^4j4n5t7_7b7y7|8Z8]9v:O:U;P;T;g;l;x>[>]U/j*T.l7ea7e4P7g7h7l9j:v:y;{Q0c*uQ3k.nU5P0c3k9mR9m7g|*V$v)f*u*v+W/i/x0f0g4T4i5O5T5U5Y7r8W:T:z=q>O>P!h.m(v)d*]*f.n.o.s/a/m0O0x1g3h3j4^4j4n5t7_7`7b7y7|8Z8]9v:O:U;P;T;g;l;x>[>]U/l*V.m7fe7f4P7g7h7l9j9k:v:w:y;{Q0e*vQ3l.oU5R0e3l9nR9n7hQ*{%UR0i*{Q5_0xR8[5_Q+a%kR0w+aQ5x1lS8l5x:^R:^8mQ,^&_R1o,^Q5}1qR8o5}Q1},hS6_1}8|R8|6aQ1W+tW5j1W5l8c:XQ5l1ZQ8c5kR:X8dQ+y&QR1^+yQ2a,zR6o2aYrOXst#dQ&v!ZQ+c%mQ,t&rQ,v&tQ,w&uQ,y&wQ2[,uS2_,z2aR6n2^Q%opQ&z!_Q&}!aQ'P!bQ'R!cQ'r!uQ+b%lQ+n%zQ,S&XQ,j&mQ-R&|W-r'l't'u'xQ-y'pQ0Z*oQ1R+oQ1e,RS2Q,k,nQ2i-QQ2j-TQ2k-UQ3P-qW3R-t-u-x-zQ5c1SQ5o1aQ5s1gQ6X1wQ6c2SQ6m2]U6|3Q3T3WQ7P3UQ8_5dQ8g5qQ8i5tQ8n5|Q8w6YQ8}6bS9^6}7RQ9`7QQ:Y8eQ:d8xQ:i9OQ:p9_Q;W:ZQ;_:eQ;c:qQ;n;XR;q;`Q%zyQ'e!iQ'p!uU+o%{%|%}Q-X'VU-m'f'g'hS-q'l'vQ0S*kS1S+p+qQ2p-ZS2}-n-oQ3U-vS4r0T0WQ5d1TQ6x2wQ6{3OQ7Q3VU7}4t4u4xQ9|8PR;Q9}S$wi>QR*|%VU%Ui%V>QR0h*zQ$viS(v#v+kS)d$b$cQ)f$dQ*]$xS*f${*ZQ*u%OQ*v%QQ+R%^Q+S%_Q+W%cQ.n<qQ.o<sQ.q<wQ.r<yQ.s<{Q/a)zQ/i*SQ/k*UQ/m*WQ/x*bS0O*h/oQ0f*xQ0g*yl0x+h,X.h1k1s3e6U7Y8s9d:b:t;^;fQ1g,UQ3h=TQ3i=VQ3j=YS4P<n<oQ4T/RS4^/f4`Q4i/zQ4j/{Q4n/}Q5O0bQ5Q0dQ5T0kQ5U0lQ5Y0qQ5t1hQ7_=^Q7`=`Q7a=bQ7b=dQ7g<rQ7h<tQ7j<xQ7k<zQ7l<|Q7r4aQ7y4lQ7|4qQ8W5SQ8Z5^Q8]5aQ9j=ZQ9k=UQ9l=WQ9v7xQ:O8SQ:T8XQ:U8^Q:v=_Q:w=aQ:x=cQ:y=eQ:z9rQ;P9{Q;T:RQ;g=hQ;l;SQ;x;mQ;{=iQ=q>QQ>O>YQ>P>ZQ>[>^R>]>_Q+P%]Q.p<uR7i<vnpOXst!Z#d%m&r&t&u&w,u,z2^2aQ!fPS#fZ#oQ&|!`W'i!o*j0_4|Q(Q#SQ)R#{Q)s$nS,n&k&nQ,s&oQ-Q&{S-V'T/pQ-i'cQ.z)PQ/^)tQ0u+_Q0{+iQ2Y,rQ2{-kQ3c.iQ4Y/XQ5W0nQ6S1tQ6e2UQ6f2VQ6j2XQ6l2ZQ6q2cQ7]3fQ7o4VQ8u6VQ9R6gQ9S6hQ9U6kQ9h7^Q:c8vR:m9V#[cOPXZst!Z!`!o#d#o#{%m&k&n&o&r&t&u&w&{'T'c)P*j+_+i,r,u,z-k.i/p0_0n1t2U2V2X2Z2^2a2c3f4|6V6g6h6k7^8v9VQ#YWQ#eYQ%quQ%svS%uw!gS(T#W(WQ(Z#ZQ(u#uQ(z#xQ)S$OQ)T$PQ)U$QQ)V$RQ)W$SQ)X$TQ)Y$UQ)Z$VQ)[$WQ)]$XQ)_$ZQ)a$_Q)c$aQ)h$eW)r$n)t/X4VQ+f%tQ+z&RS-['X2qQ-z'sS.P(U.RQ.U(^Q.W(eQ.u(yQ.x({Q.|<WQ/O<ZQ/P<[Q/Q<_Q/d*OQ0r+YQ2o-YQ2t-aQ3Q-sQ3X.XQ3m.vQ3r<`Q3s<aQ3t<bQ3u<cQ3v<dQ3w<eQ3x<fQ3y<gQ3z<hQ3{<iQ3|<jQ3}.}Q4O<mQ4R<pQ4S<}Q4Z<kQ5Z0tQ5e1UQ6w=PQ6}3SQ7S3YQ7c3nQ7d=QQ7m=SQ7n=[Q8m5yQ9Z6uQ9_7OQ9i=]Q9o=fQ9p=gQ:q9aQ;Y:]Q;b:oQ<Y#SR=w>TR#[WR'Z!el!tQ!r!v!y!z'a'm'n'o-g-w1q5}6PS'V!e-^U*k$|*[*pS-Z'W'`S0W*l*rQ0`*sQ2w-eQ4x0^R4}0aR(|#xQ!fQT-f'a-g]!qQ!r'a-g1q5}Q#p]R'j<XR)g$dY!uQ'a-g1q5}Q'l!rS'v!v!yS'x!z6PS-v'm'nQ-x'oR3V-wT#kZ%eS#jZ%eS%km,qU(h#h#i#lS.[(i(jQ.`(kQ0v+`Q3[.]U3].^._.aS7U3^3_R9b7Vd#^W#W#Z%h(U(_*Z+[.V/or#gZm#h#i#l%e(i(j(k+`.].^._.a3^3_7VS*^$x*cQ/v*_Q2W,qQ2m-WQ4b/rQ6s2fQ7u4cQ9Y6tT=n'X+^V#aW%h*ZU#`W%h*ZS(V#W(_U([#Z+[/oS-]'X+^T.Q(U.VV'_!e%i*[Q$lfR)y$qT)n$l)oR4X/WT*`$x*cT*i${*ZQ0y+hQ1i,XQ3a.hQ5v1kQ6R1sQ7Z3eQ8t6UQ9e7YQ:`8sQ:r9dQ;]:bQ;e:tQ;p;^R;s;fnqOXst!Z#d%m&r&t&u&w,u,z2^2aQ&l!VR,j&itmOXst!U!V!Z#d%m&i&r&t&u&w,u,z2^2aR,q&oT%lm,qR1m,ZR,i&gQ&U|S,P&V&WR1`,QR+u&PT&p!W&sT&q!W&sT2`,z2a",
 			nodeNames: "⚠ ArithOp ArithOp ?. JSXStartTag LineComment BlockComment Script Hashbang ExportDeclaration export Star as VariableName String Escape from ; default FunctionDeclaration async function VariableDefinition > < TypeParamList in out const TypeDefinition extends ThisType this LiteralType ArithOp Number BooleanLiteral TemplateType InterpolationEnd Interpolation InterpolationStart NullType null VoidType void TypeofType typeof MemberExpression . PropertyName [ TemplateString Escape Interpolation super RegExp ] ArrayExpression Spread , } { ObjectExpression Property async get set PropertyDefinition Block : NewTarget new NewExpression ) ( ArgList UnaryExpression delete LogicOp BitOp YieldExpression yield AwaitExpression await ParenthesizedExpression ClassExpression class ClassBody MethodDeclaration Decorator @ MemberExpression PrivatePropertyName CallExpression TypeArgList CompareOp < declare Privacy static abstract override PrivatePropertyDefinition PropertyDeclaration readonly accessor Optional TypeAnnotation Equals StaticBlock FunctionExpression ArrowFunction ParamList ParamList ArrayPattern ObjectPattern PatternProperty VariableDefinition Privacy readonly Arrow MemberExpression BinaryExpression ArithOp ArithOp ArithOp ArithOp BitOp CompareOp instanceof satisfies CompareOp BitOp BitOp BitOp LogicOp LogicOp ConditionalExpression LogicOp LogicOp AssignmentExpression UpdateOp PostfixExpression CallExpression InstantiationExpression TaggedTemplateExpression DynamicImport import ImportMeta JSXElement JSXSelfCloseEndTag JSXSelfClosingTag JSXIdentifier JSXBuiltin JSXIdentifier JSXNamespacedName JSXMemberExpression JSXSpreadAttribute JSXAttribute JSXAttributeValue JSXEscape JSXEndTag JSXOpenTag JSXFragmentTag JSXText JSXEscape JSXStartCloseTag JSXCloseTag PrefixCast < ArrowFunction TypeParamList SequenceExpression InstantiationExpression KeyofType keyof UniqueType unique ImportType InferredType infer TypeName ParenthesizedType FunctionSignature ParamList NewSignature IndexedType TupleType Label ArrayType ReadonlyType ObjectType MethodType PropertyType IndexSignature PropertyDefinition CallSignature TypePredicate asserts is NewSignature new UnionType LogicOp IntersectionType LogicOp ConditionalType ParameterizedType ClassDeclaration abstract implements type VariableDeclaration let var using TypeAliasDeclaration InterfaceDeclaration interface EnumDeclaration enum EnumBody NamespaceDeclaration namespace module AmbientDeclaration declare GlobalDeclaration global ClassDeclaration ClassBody AmbientFunctionDeclaration ExportGroup VariableName VariableName ImportDeclaration defer ImportGroup ForStatement for ForSpec ForInSpec ForOfSpec of WhileStatement while WithStatement with DoStatement do IfStatement if else SwitchStatement switch SwitchBody CaseLabel case DefaultLabel TryStatement try CatchClause catch FinallyClause finally ReturnStatement return ThrowStatement throw BreakStatement break ContinueStatement continue DebuggerStatement debugger LabeledStatement ExpressionStatement SingleExpression SingleClassItem",
 			maxTerm: 381,
 			context: trackNewline,
@@ -29199,7 +29158,7 @@ window.__ModuleLoader__.load({
 			},
 			dialects: {
 				jsx: 0,
-				ts: 15152
+				ts: 15179
 			},
 			dynamicPrecedences: {
 				"80": 1,
@@ -29222,10 +29181,9 @@ window.__ModuleLoader__.load({
 					get: (value) => spec_LessThan[value] || -1
 				}
 			],
-			tokenPrec: 15178
+			tokenPrec: 15205
 		});
-		//#endregion
-		//#region node_modules/@codemirror/lang-javascript/dist/index.js
+		// node_modules/.pnpm/@codemirror+lang-javascript@6.2.5/node_modules/@codemirror/lang-javascript/dist/index.js
 		/**
 		A collection of JavaScript-related
 		[snippets](https://codemirror.net/6/docs/ref/#autocomplete.snippet).
@@ -29593,8 +29551,7 @@ window.__ModuleLoader__.load({
 			})]);
 			return true;
 		});
-		//#endregion
-		//#region node_modules/@lezer/json/dist/index.js
+		// node_modules/.pnpm/@lezer+json@1.0.3/node_modules/@lezer/json/dist/index.js
 		const jsonHighlighting = styleTags({
 			String: tags$1.string,
 			Number: tags$1.number,
@@ -29643,8 +29600,7 @@ window.__ModuleLoader__.load({
 			topRules: { "JsonText": [0, 1] },
 			tokenPrec: 0
 		});
-		//#endregion
-		//#region node_modules/@codemirror/lang-json/dist/index.js
+		// node_modules/.pnpm/@codemirror+lang-json@6.0.2/node_modules/@codemirror/lang-json/dist/index.js
 		/**
 		A language provider that provides JSON parsing.
 		*/
@@ -29669,8 +29625,7 @@ window.__ModuleLoader__.load({
 		function json$1() {
 			return new LanguageSupport(jsonLanguage);
 		}
-		//#endregion
-		//#region node_modules/@lezer/markdown/dist/index.js
+		// node_modules/.pnpm/@lezer+markdown@1.8.1/node_modules/@lezer/markdown/dist/index.js
 		var CompositeBlock = class CompositeBlock {
 			static create(type, value, from, parentHash, end) {
 				let hash = parentHash + (parentHash << 8) + type + (value << 4) | 0;
@@ -29684,6 +29639,10 @@ window.__ModuleLoader__.load({
 				this.end = end;
 				this.children = children;
 				this.positions = positions;
+				/**
+				@internal Used only in list items
+				*/
+				this.blankFirstLine = false;
 				this.hashProp = [[NodeProp.contextHash, hash]];
 			}
 			addChild(child, pos) {
@@ -29906,7 +29865,7 @@ window.__ModuleLoader__.load({
 				return true;
 			},
 			[Type.ListItem](bl, _cx, line) {
-				if (line.indent < line.baseIndent + bl.value && line.next > -1) return false;
+				if (line.next < 0 ? bl.blankFirstLine && bl.children.length == 1 : line.indent < line.baseIndent + bl.value) return false;
 				line.moveBaseColumn(line.baseIndent + bl.value);
 				return true;
 			},
@@ -29973,7 +29932,7 @@ window.__ModuleLoader__.load({
 			if (line.next != 35) return -1;
 			let pos = line.pos + 1;
 			while (pos < line.text.length && line.text.charCodeAt(pos) == 35) pos++;
-			if (pos < line.text.length && line.text.charCodeAt(pos) != 32) return -1;
+			if (pos < line.text.length && !space$2(line.text.charCodeAt(pos))) return -1;
 			let size = pos - line.pos;
 			return size > 6 ? -1 : size;
 		}
@@ -29989,7 +29948,7 @@ window.__ModuleLoader__.load({
 		const CommentEnd = /-->/;
 		const ProcessingEnd = /\?>/;
 		const HTMLBlockStyle = [
-			[/^<(?:script|pre|style)(?:\s|>|$)/i, /<\/(?:script|pre|style)>/i],
+			[/^<(?:script|pre|style|textarea)(?:\s|>|$)/i, /<\/(?:script|pre|style|textarea)>/i],
 			[/^\s*<!--/, CommentEnd],
 			[/^\s*<\?/, ProcessingEnd],
 			[/^\s*<![A-Z]/, />/],
@@ -30102,6 +30061,7 @@ window.__ModuleLoader__.load({
 				cx.startContext(Type.ListItem, line.basePos, newBase - line.baseIndent);
 				cx.addNode(Type.ListMark, cx.lineStart + line.pos, cx.lineStart + line.pos + size);
 				line.moveBaseColumn(newBase);
+				cx.block.blankFirstLine = newBase >= line.text.length;
 				return null;
 			},
 			OrderedList(cx, line) {
@@ -30112,6 +30072,7 @@ window.__ModuleLoader__.load({
 				cx.startContext(Type.ListItem, line.basePos, newBase - line.baseIndent);
 				cx.addNode(Type.ListMark, cx.lineStart + line.pos, cx.lineStart + line.pos + size);
 				line.moveBaseColumn(newBase);
+				cx.block.blankFirstLine = newBase == line.text.length;
 				return null;
 			},
 			ATXHeading(cx, line) {
@@ -30803,11 +30764,12 @@ window.__ModuleLoader__.load({
 		const LinkStart = {};
 		const ImageStart = {};
 		var InlineDelimiter = class {
-			constructor(type, from, to, side) {
+			constructor(type, from, to, side, size = to - from) {
 				this.type = type;
 				this.from = from;
 				this.to = to;
 				this.side = side;
+				this.size = size;
 			}
 		};
 		const Escapable = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
@@ -30847,11 +30809,11 @@ window.__ModuleLoader__.load({
 					elt(Type.URL, start + 1, start + url[0].length),
 					elt(Type.LinkMark, start + url[0].length, start + 1 + url[0].length)
 				]));
-				let comment = /^!--[^>](?:-[^-]|[^-])*?-->/i.exec(after);
+				let comment = /^!--(?:-?>|[^]*?-->)/.exec(after);
 				if (comment) return cx.append(elt(Type.Comment, start, start + 1 + comment[0].length));
 				let procInst = /^\?[^]*?\?>/.exec(after);
 				if (procInst) return cx.append(elt(Type.ProcessingInstruction, start, start + 1 + procInst[0].length));
-				let m = /^(?:![A-Z][^]*?>|!\[CDATA\[[^]*?\]\]>|\/\s*[a-zA-Z][\w-]*\s*>|\s*[a-zA-Z][\w-]*(\s+[a-zA-Z:_][\w-.:]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*(\/\s*)?>)/.exec(after);
+				let m = /^(?:![A-Z][^]*?>|!\[CDATA\[[^]*?\]\]>|\/[a-zA-Z][\w-]*\s*>|[a-zA-Z][\w-]*(\s+[a-zA-Z:_][\w-.:]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*\/?>)/.exec(after);
 				if (!m) return -1;
 				return cx.append(elt(Type.HTMLTag, start, start + 1 + m[0].length));
 			},
@@ -30936,10 +30898,11 @@ window.__ModuleLoader__.load({
 		}
 		function parseURL(text, start, offset) {
 			if (text.charCodeAt(start) == 60) {
-				for (let pos = start + 1; pos < text.length; pos++) {
+				for (let pos = start + 1, esc = false; pos < text.length; pos++) {
 					let ch = text.charCodeAt(pos);
-					if (ch == 62) return elt(Type.URL, start + offset, pos + 1 + offset);
-					if (ch == 60 || ch == 10) return false;
+					if (ch == 62 && !esc) return elt(Type.URL, start + offset, pos + 1 + offset);
+					if (ch == 60 && !esc || ch == 10) return false;
+					esc = ch == 92;
 				}
 				return null;
 			} else {
@@ -31065,7 +31028,7 @@ window.__ModuleLoader__.load({
 					let open, j = i - 1;
 					for (; j >= from; j--) {
 						let part = this.parts[j];
-						if (part instanceof InlineDelimiter && part.side & 1 && part.type == close.type && !(emp && (close.side & 1 || part.side & 2) && (part.to - part.from + closeSize) % 3 == 0 && ((part.to - part.from) % 3 || closeSize % 3))) {
+						if (part instanceof InlineDelimiter && part.side & 1 && part.type == close.type && !(emp && (close.side & 1 || part.side & 2) && (part.size + close.size) % 3 == 0 && (part.size % 3 || close.size % 3))) {
 							open = part;
 							break;
 						}
@@ -31086,8 +31049,8 @@ window.__ModuleLoader__.load({
 					}
 					if (close.type.mark) content.push(this.elt(close.type.mark, close.from, end));
 					let element = this.elt(type, start, end, content);
-					this.parts[j] = emp && open.from != start ? new InlineDelimiter(open.type, open.from, start, open.side) : null;
-					if (this.parts[i] = emp && close.to != end ? new InlineDelimiter(close.type, end, close.to, close.side) : null) this.parts.splice(i, 0, element);
+					this.parts[j] = emp && open.from != start ? new InlineDelimiter(open.type, open.from, start, open.side, open.size) : null;
+					if (this.parts[i] = emp && close.to != end ? new InlineDelimiter(close.type, end, close.to, close.side, close.size) : null) this.parts.splice(i, 0, element);
 					else this.parts[i] = element;
 				}
 				let result = [];
@@ -31152,6 +31115,14 @@ window.__ModuleLoader__.load({
 		Opening delimiter type used for standard images.
 		*/
 		InlineContext.imageStart = ImageStart;
+		/**
+		The delimiter type used for `*` emphasis notation.
+		*/
+		InlineContext.emphasisAsterisk = EmphasisAsterisk;
+		/**
+		Delimiter type for `_` emphasis notation.
+		*/
+		InlineContext.emphasisUnderscore = EmphasisUnderscore;
 		function injectMarks(elements, marks) {
 			if (!marks.length) return elements;
 			if (!elements.length) return marks;
@@ -31196,7 +31167,7 @@ window.__ModuleLoader__.load({
 				}
 				let c = this.cursor;
 				if (!c) {
-					c = this.cursor = this.fragment.tree.cursor();
+					c = this.cursor = this.fragment.tree.cursor(IterMode.IncludeAnonymous | IterMode.IgnoreMounts);
 					c.firstChild();
 				}
 				let rPos = pos + this.fragment.offset;
@@ -31208,14 +31179,16 @@ window.__ModuleLoader__.load({
 			}
 			matches(hash) {
 				let tree = this.cursor.tree;
+				while (tree && tree.type.isAnonymous && tree.children[0] instanceof Tree) tree = tree.children[0];
 				return tree && tree.prop(NodeProp.contextHash) == hash;
 			}
 			takeNodes(cx) {
 				let cur = this.cursor, off = this.fragment.offset, fragEnd = this.fragmentEnd - (this.fragment.openEnd ? 1 : 0);
 				let start = cx.absoluteLineStart, end = start, blockI = cx.block.children.length;
+				let maxAnonSize = cx.lineStart - cx.block.from >> 2;
 				let prevEnd = end, prevI = blockI;
-				for (;;) {
-					if (cur.to - off > fragEnd) {
+				scan: for (;;) {
+					if (cur.to - off > Math.min(fragEnd, cx.to) || cur.type.isAnonymous && cur.tree && (cur.to - cur.from > maxAnonSize || !canStopAfterLastChild(cur.tree))) {
 						if (cur.type.isAnonymous && cur.firstChild()) continue;
 						break;
 					}
@@ -31226,8 +31199,8 @@ window.__ModuleLoader__.load({
 						cx.reusePlaceholders.set(dummy, cur.tree);
 						cx.addNode(dummy, pos);
 					}
-					if (cur.type.is("Block")) {
-						if (NotLast.indexOf(cur.type.id) < 0) {
+					if (cur.type.isAnonymous || cur.type.is("Block")) {
+						if (cur.type.isAnonymous || NotLast.indexOf(cur.type.id) < 0) {
 							end = cur.to - off;
 							blockI = cx.block.children.length;
 						} else {
@@ -31237,7 +31210,10 @@ window.__ModuleLoader__.load({
 						prevEnd = cur.to - off;
 						prevI = cx.block.children.length;
 					}
-					if (!cur.nextSibling()) break;
+					for (;;) {
+						if (cur.nextSibling()) continue scan;
+						if (!cur.parent() || !cur.type.isAnonymous) break scan;
+					}
 				}
 				while (cx.block.children.length > blockI) {
 					cx.block.children.pop();
@@ -31246,6 +31222,14 @@ window.__ModuleLoader__.load({
 				return end - start;
 			}
 		};
+		function canStopAfterLastChild(tree) {
+			while (tree.type.isAnonymous) {
+				let last = tree.children[tree.children.length - 1];
+				if (last instanceof Tree) tree = last;
+				else return false;
+			}
+			return tree.type.is("Block") && NotLast.indexOf(tree.type.id) < 0;
+		}
 		function toRelative(abs, ranges) {
 			let pos = abs;
 			for (let i = 1; i < ranges.length; i++) {
@@ -31620,8 +31604,7 @@ window.__ModuleLoader__.load({
 				}
 			}]
 		};
-		//#endregion
-		//#region node_modules/@lezer/html/dist/index.js
+		// node_modules/.pnpm/@lezer+html@1.3.13/node_modules/@lezer/html/dist/index.js
 		const scriptText = 55;
 		const StartCloseScriptTag = 1;
 		const styleText = 56;
@@ -32091,8 +32074,7 @@ window.__ModuleLoader__.load({
 				return null;
 			});
 		}
-		//#endregion
-		//#region node_modules/@lezer/css/dist/index.js
+		// node_modules/.pnpm/@lezer+css@1.3.9/node_modules/@lezer/css/dist/index.js
 		const descendantOp = 148;
 		const Unit = 1;
 		const identifier$3 = 149;
@@ -32196,7 +32178,8 @@ window.__ModuleLoader__.load({
 			}
 		});
 		function hashColor(name) {
-			return /^#[a-f\d]{3}([a-f\d]{3}([a-f\d]{2})?)?$/i.test(name) ? hashNameColor : -1;
+			let l = name.length;
+			return (l == 4 || l == 5 || l == 7 || l == 9) && /^#[a-f\d]+$/i.test(name) ? hashNameColor : -1;
 		}
 		const cssHighlighting = styleTags({
 			"AtKeyword import charset namespace keyframes media supports font-feature-values": tags$1.definitionKeyword,
@@ -32279,7 +32262,7 @@ window.__ModuleLoader__.load({
 		const parser$3 = LRParser.deserialize({
 			version: 14,
 			states: "MrQYQdOOO$TQdOOP$[O`OOO%XQaO'#CfOOQP'#Ce'#CeO%`QdO'#CgO%eQ`O'#CgO%jQaO'#FrO&eQdO'#CkO'XQaO'#CcO'cQdO'#CnOOQP'#ES'#ESOOQP'#ER'#ERO'nQdO'#ETO'yQdO'#E[O'yQdO'#E_OOQP'#Fr'#FrO)`QhO'#FQOOQS'#Fq'#FqOOQS'#FT'#FTQYQdOOO)gQdO'#EeO*vQhO'#EkO)gQdO'#EmO*}QdO'#EoO+YQdO'#ErO*[QhO'#ExO+bQdO'#EzO+mQdO'#E}O+rQaO'#CfO+yQ`O'#EbO,OQ`O'#GPO,ZQdO'#GPQOQ`OOP,eO&jO'#CaPOOO)CAa)CAaOOQP'#Ci'#CiOOQP,59R,59RO%`QdO,59ROOQP'#Cm'#CmOOQP,59V,59VO&eQdO,59VO,pQdO,59YOOQP,5:m,5:mO'nQdO,5:oO'yQdO,5:vO'yQdO,5:xO'yQdO,5:yO'yQdO'#F[O,{Q`O,58}O-TQdO'#EaOOQS,58},58}OOQP'#Cq'#CqOOQO'#EP'#EPOOQP,59Y,59YO-[Q`O,59YO-aQ`O,59YO-fQpO'#EUO-qQdO'#EVO-vQ`O'#EVO-{QpO,5:oO.iQaO,5:vO/PQaO,5:yOOQW'#D]'#D]O0OQhO'#DgO0cQhO,5;lO*[QhO'#DeO0pQ`O'#DnO0uQhO'#D{OOQW'#Fx'#FxOOQS,5;l,5;lO0zQ`O'#DhO1PQ`O'#DkOOQS-E9R-E9ROOQ['#Cv'#CvO1UQdO'#CwO1iQdO'#C|O1|QdO'#DPOOQ['#DQ'#DQO2aQ!pO'#DRO4jQ!jO,5;POOQO'#DW'#DWO-aQ`O'#DVO4zQ!nO'#FuO6}Q`O'#DXO7SQ`O'#D|OOQ['#Fu'#FuO7XQhO'#GSO7gQ`O,5;VO7lQ!bO,5;XOOQS'#Eq'#EqO7tQ`O,5;ZO7yQdO,5;ZOOQO'#Et'#EtO8RQ`O,5;^O8WQhO,5;dO'yQdO'#DjOOQS,5;f,5;fO0zQ`O,5;fO8`QdO,5;fOOQS'#Fc'#FcO8hQdO'#FPO7gQ`O,5;iO8pQdO,5:|O9QQdO'#F^O9_Q`O,5<kO9_Q`O,5<kPOOO'#FS'#FSP9jO&jO,58{POOO,58{,58{OOQP1G.m1G.mOOQP1G.q1G.qOOQP1G.t1G.tO-[Q`O1G.tO-aQ`O1G.tO9uQpO1G0ZO9}QaO1G0bO:eQaO1G0dO:{QaO1G0eO;cQaO,5;vOOQO-E9Y-E9YOOQS1G.i1G.iO;mQ`O,5:{O;rQdO'#EQO;yQdO'#CuOOQO'#EX'#EXOOQO,5:q,5:qO-qQdO,5:qOOQP1G0Z1G0ZO)gQdO1G0ZO<QQ!jO'#D]O<`Q!bO,59xO<hQhO,5:ROOQO'#Dc'#DcOOQO'#Fy'#FyO<cQ!bO,59|O<pQhO'#FdO*[QhO,59zO*[QhO'#FdO=hQhO1G1WOOQS1G1W1G1WO=rQhO,5:PO>mQhO'#DoOOQW,5:Y,5:YOOQW,5:g,5:gOOQW,5:S,5:SO>wQhO,5:VO?cQ!fO'#FvOOQS'#Fv'#FvOOQS'#FV'#FVO@pQdO,59cOOQ[,59c,59cOATQdO,59hOOQ[,59h,59hOAhQdO,59kOOQ[,59k,59kOOQ[,59m,59mO)gQdO,59oOA{QhO'#EgOOQW'#Eg'#EgOBjQ`O1G0kO4sQhO1G0kOOQ[,59q,59qO*[QhO'#DZOOQ[,59s,59sOBoQ#tO,5:hOBzQhO'#F`OCXQ`O,5<nOOQS1G0q1G0qOOQS1G0s1G0sOOQS1G0u1G0uOCdQ`O1G0uOCiQdO'#EuOOQS1G0x1G0xOOQS1G1O1G1OOCtQaO,5:UO7gQ`O1G1QOOQS1G1Q1G1QO0zQ`O1G1QOOQS-E9a-E9aOOQS1G1T1G1TOC{Q!fO1G0hODcQ`O'#EdOOQO1G0h1G0hOOQO,5;x,5;xODhQdO,5;xOOQO-E9[-E9[ODuQ`O1G2VPOOO-E9Q-E9QPOOO1G.g1G.gOOQP7+$`7+$`OOQP7+%u7+%uO)gQdO7+%uOOQS1G0g1G0gOEQQaO'#F}OE[Q`O,5:lOEaQ!fO'#FUOF_QdO'#FtOFiQ`O,59aOOQO1G0]1G0]OFnQ!bO7+%uO)gQdO1G/dOFyQhO1G/hOOQW1G/m1G/mOOQW1G/f1G/fOG[QhO,5<OOOQW-E9b-E9bOOQS7+&r7+&rOHSQhO'#D]OHbQhO'#F|OHmQ`O'#F|OHrQ`O,5:ZOHwQ!bO'#D_O>wQhO'#DmOISQhO'#DsOI[QhO'#DuOIaQ!jO'#F{OOQO'#F{'#F{OIlQ`O'#DxOItQ!bO'#DzOOQO'#Fz'#FzOIyQ`O1G/qOOQS-E9T-E9TOOQ[1G.}1G.}OOQ[1G/S1G/SOOQ[1G/V1G/VOOQ[1G/Z1G/ZOJOQdO,5;ROOQS7+&V7+&VOJTQ`O7+&VOJYQhO'#D[OJbQ`O,59uO*[QhO,59uOOQ[1G0S1G0SOJjQ`O1G0SOJoQhO,5;zOOQO-E9^-E9^OOQS7+&a7+&aOJ}QbO'#DROOQO'#Ew'#EwOK]Q`O'#EvOOQO'#Ev'#EvOKhQ`O'#FaOKpQdO,5;aOOQS,5;a,5;aOOQ[1G/p1G/pOOQS7+&l7+&lO7gQ`O7+&lOK{Q!fO'#F]O)gQdO'#F]OMSQdO7+&SOOQO7+&S7+&SOOQO,5;O,5;OOOQO1G1d1G1dOMgQ!bO<<IaOMrQdO'#FZOM|Q`O,5<iOOQP1G0W1G0WOOQS-E9S-E9SONUQdO'#FYON`Q`O,5<`OOQ]1G.{1G.{OOQP<<Ia<<IaONhQ`O<<IaONmQdO7+%OOOQO'#D_'#D_ONtQ!bO7+%SON|QhO'#FXO! ZQ`O,5<hO)gQdO,5<hOOQW1G/u1G/uO! cQ`O,5:XO>wQhO'#DtOOQO,5:_,5:_O! hQhO,5:aO! pQhO,5:fO)gQdO,5:dOOQW7+%]7+%]OOQO'#Ei'#EiO! wQ`O1G0mOOQS<<Iq<<IqO)gQdO,59vO!!kQhO1G/aOOQ[1G/a1G/aO!!rQ`O1G/aOOQW-E9U-E9UOOQ[7+%n7+%nOOQO,5;b,5;bOClQdO'#FbOKhQ`O,5;{OOQS,5;{,5;{OOQS-E9_-E9_OOQS1G0{1G0{OOQS<<JW<<JWO!!zQ!fO,5;wOOQS-E9Z-E9ZOOQO<<In<<InOOQPAN>{AN>{O!$RQ`OAN>{O!$WQaO,5;uOOQO-E9X-E9XO!$bQdO,5;tOOQO-E9W-E9WOOQW<<Hj<<HjOOQW<<Hn<<HnO!$lQhO<<HnO!$}QhO'#D]O!%]QhO,5;sO!%hQ`O,5;sOOQO-E9V-E9VO!%mQdO1G2SO!%wQhO1G/sO!&PQ`O,5:`O>wQhO'#DwOOQO1G/{1G/{O!&UQ!bO1G0QO!&^QdO1G0OOJOQdO'#F_O!&eQ`O7+&XOOQW7+&X7+&XO!&mQ!bO1G/bOOQ[7+${7+${O!&xQhO7+${P!'PQ`O'#FWOOQO,5;|,5;|OOQO-E9`-E9`OOQS1G1g1G1gOOQPG24gG24gO!'UQ`OAN>YO)gQdO1G1_O!'ZQ`O7+'nOOQO1G/z1G/zO!'cQ`O,5:cO!'hQhO7+%lOOQO,5;y,5;yOOQO-E9]-E9]OOQW<<Is<<IsOOQ[<<Hg<<HgPOQW,5;r,5;rOOQWG23tG23tO!'oQdO7+&yOOQO1G/}1G/}OOQO<<IW<<IW",
-			stateData: "!(S~O$`OS$aQQ~OWVO^`O`WOcYOdYOlaOo]O#P^O#S_O#YeO#`fO#bgO#dhO#giO#mjO#okO#rlO$ZRO$^ZO$gTO$rZO~OQnOWVO^`O`WOcYOdYOlaOo]O#P^O#S_O#YeO#`fO#bgO#dhO#giO#mjO#okO#rlO$ZmO$^ZO$gTO$rZO~O$X$sP~P!mO$arO~O`YXcYXdYXoYXrYX!eYX#PYX#SYX$YYX$^YX$g[X$rYX~OgYX~P$aO$ZtO~O$gvO~O$gvO`$fXc$fXd$fXo$fXr$fX!e$fX#P$fX#S$fX$Y$fX$^$fX$r$fXg$fX~O$ZwO~O`yOczOdzOo|O#P}O#S!PO$Y!OO$^ZO$rZO~Or!SO!e!QO~P&jOf!YO$Z!UO$[!VO~OW!]O$Z!ZO$g![O~OWVO^`O`WOcYOdYOo]O#P^O#S_O$ZRO$^ZO$gTO$rZO~OS!eOc!fOd!fOh!bOr!SO!Y!dO!]!iO!`!jO$]!aO~Om!hO~P(qOQ!uOh!mOo!nOr!oOv!xO|!vO!q!wO$Z!lO$[!sO$^!pO$k!qO~OS!eOc!fOd!fOh!bO!Y!dO!]!iO!`!jO$]!aO~Or$vP~P*[Ov!}O!q!wO$Z!|O~Ov#PO$Z#PO~Oh#SOr!SO#p#UO~O$Z#WO~Oc#VX~P$aOc#ZO~Om#[O$X$sXq$sX~O$X$sXq$sX~P!mO$b#_O$c#_O$d#aO~Of#fO$Z!UO$[!VO~Or!SO!e!QO~Oq$sP~P!mOh#oO~Oh#pO~On!xX!|!xX$g!zX~O$Z#qO~O$g#sO~On#tO!|#uO~O`yOczOdzOo|O$^ZO$rZO~Or#Oa!e#Oa#P#Oa#S#Oa$Y#Oag#Oa~P.TOr#Ra!e#Ra#P#Ra#S#Ra$Y#Rag#Ra~P.TOS!eOc!fOd!fOh!bO!Y!dO!]!iO!`!jO~OR#zOv#zO$]#vO$^#yO$k!qO~P/gOm$QO!T#}O!e$OO~P(qOh$SO~O$]$UO~Oh#SO~Oh$WO~O`$YOc$YOg$]Ol$YOm$YO~P)gO`$YOc$YOl$YOm$YOn$_O~P)gO`$YOc$YOl$YOm$YOq$aO~P)gOP$bOSuXcuXduXhuXmuXxuX!YuX!]uX!`uX#[uX#^uX$]uX!WuXQuX`uXguXluXouXruXvuX|uX!quX$ZuX$[uX$^uX$kuXnuXquX!euX$XuX$uuX!}uX~Ox$cO#[$dO#^$eOm$vP~P*[Oh#pOS$iXc$iXd$iXm$iXx$iX!Y$iX!]$iX!`$iX#[$iX#^$iX$]$iXQ$iX`$iXg$iXl$iXo$iXr$iXv$iX|$iX!q$iX$Z$iX$[$iX$^$iX$k$iXn$iXq$iX!e$iX$X$iX$u$iX!}$iX~Oh$iO~Oh$kO~O!T#}O!e$lOr$vXm$vX~Or!SO~Om$oOx$cO~Om$pO~Ov$qO!q!wO~Or$rO~Or!SO!T#}O~Or!SO#p$xO~O$Z#WOr#sX~O$u$|Om#Ua$X#Uaq#Ua~P)gOm$QX$X$QXq$QX~P!mOm#[O$X$saq$sa~O$b#_O$c#_O$d%TO~On%VO!|%WO~Or#Oi!e#Oi#P#Oi#S#Oi$Y#Oig#Oi~P.TOr#Qi!e#Qi#P#Qi#S#Qi$Y#Qig#Qi~P.TOr#Ri!e#Ri#P#Ri#S#Ri$Y#Rig#Ri~P.TOr$Oa!e$Oa~P&jOq%XO~Og$qP~P'yOg$hP~P)gOc!RXg!PX!T!PX!W!RX~Oc%aO!W%bO~Og%cO!T#}O~O!T#}OS$WXc$WXd$WXh$WXm$WXr$WX!Y$WX!]$WX!`$WX!e$WX$]$WX~Om%gO!e$OO~P(qO!T#}OS!Xac!Xad!Xah!Xam!Xar!Xa!Y!Xa!]!Xa!`!Xa!e!Xa$]!Xag!Xa~O$]%hOg$pP~P/gOR#zOS!eOh%mOv#zO!Y%nO$]%lO$^#yO$k!qO~Ox$cOQ$jX`$jXc$jXg$jXh$jXl$jXm$jXo$jXr$jXv$jX|$jX!q$jX$Z$jX$[$jX$^$jX$k$jXn$jXq$jX~O`$YOc$YOg%wOl$YOm$YO~P)gO`$YOc$YOl$YOm$YOn%xO~P)gO`$YOc$YOl$YOm$YOq%yO~P)gOh%{OS#ZXc#ZXd#ZXm#ZX!Y#ZX!]#ZX!`#ZX$]#ZX~Om%|O~Og&ROv&SO!r&SO~Or$SX!e$SXm$SX~P*[O!e$lOr$vam$va~Om&VO~Oq&^O$Z&XO$k&WO~Og&_O~P&jOx$cO!e&cO$u$|Om#Ui$X#Uiq#Ui~P)gO$t&fO~Om$Qa$X$Qaq$Qa~P!mOm#[O$X$siq$si~O!e&iOg$qX~P&jOg&kO~Ox$cOQ#xXg#xXh#xXo#xXr#xXv#xX|#xX!e#xX!q#xX$Z#xX$[#xX$^#xX$k#xX~O!e&mOg$hX~P)gOg&oO~On&pOx$cO!}&qO~OR#zOv#zO$]&sO$^#yO$k!qO~O!T#}OS$Wac$Wad$Wah$Wam$War$Wa!Y$Wa!]$Wa!`$Wa!e$Wa$]$Wa~Oc!dXg!PX!T!PX!e!PX~O!T#}O!e&uOg$pX~Oc&wO~Og&xO~Oc!mXg!mX!W!RX~OS!eOh&zO~O!T&|O~O!T&|O!W&}Og$oX~Oc'OOg!lX~O!W&}O~Og'PO~O$Z'QO~Om'SO~Oc'TO!T#}O~Og'VOm'UO~Og'YO~O!T#}Or$Sa!e$Sam$Sa~OP$bOruX!euXguX~O$k&WOr#jX!e#jX~Or!SO!e'[O~Oq'`O$Z&XO$k&WO~Ox$cOQ$PXh$PXm$PXo$PXr$PXv$PX|$PX!e$PX!q$PX$X$PX$Z$PX$[$PX$^$PX$k$PX$u$PXq$PX~O!e&cO$u$|Om#Uq$X#Uqq#Uq~P)gOn'eOx$cO!}'fO~Og#}X!e#}X~P'yO!e&iOg$qa~Og#|X!e#|X~P)gO!e&mOg$ha~On'eO~Og'kO~P)gOg'lO!W'mO~O$]'nOg#{X!e#{X~P/gO!e&uOg$pa~Og'sO~OS!eOh'uO~OS!eO~PFyO`'yOg'{O~OS#zac#zad#zah#za!Y#za!]#za!`#za$]#za~Og'}O~P!!POg'}Om(OO~Ox$cOQ$Pah$Pam$Pao$Par$Pav$Pa|$Pa!e$Pa!q$Pa$X$Pa$Z$Pa$[$Pa$^$Pa$k$Pa$u$Paq$Pa~On(TO~Og#}a!e#}a~P&jOg#|a!e#|a~P)gOR#zOv#zO$]&sO$^#yO$k&WO~Oc!fXg!PX!T!PX!e!PX~O!T#}Og#{a!e#{a~Oc(VO~O!e&uOg$pi~P)gOg!ai!T!ji~Og(XO~O!W(ZOg!ni~Og!li~P)gO`'yOg(^O~Ox$cOg!Oim!Oi~Og(_O~P!!POm(`O~Og(aO~O!e&uOg$pq~Og(cO~OS!eO~P!$lOg#{q!e#{q~P)gO$`!r$a$k`$kx#S~",
+			stateData: "!(R~O$`OS$aQQ~OWVO^`O`WOcYOdYOlaOo]O#P^O#S_O#YeO#`fO#bgO#dhO#giO#mjO#okO#rlO$ZRO$^ZO$gTO$rZO~OQnOWVO^`O`WOcYOdYOlaOo]O#P^O#S_O#YeO#`fO#bgO#dhO#giO#mjO#okO#rlO$ZmO$^ZO$gTO$rZO~O$X$sP~P!mO$arO~O`YXcYXdYXoYXrYX!eYX#PYX#SYX$YYX$^YX$g[X$rYX~OgYX~P$aO$ZtO~O$gvO~O$gvO`$fXc$fXd$fXo$fXr$fX!e$fX#P$fX#S$fX$Y$fX$^$fX$r$fXg$fX~O$ZwO~O`yOczOdzOo|O#P}O#S!PO$Y!OO$^ZO$rZO~Or!SO!e!QO~P&jOf!YO$Z!UO$[!VO~OW!]O$Z!ZO$g![O~OWVO^`O`WOcYOdYOo]O#P^O#S_O$ZRO$^ZO$gTO$rZO~OS!eOc!fOd!fOh!bOr!SO!Y!dO!]!iO!`!jO$]!aO~Om!hO~P(qOQ!uOh!mOo!nOr!oOv!xO|!vO!q!wO$Z!lO$[!sO$^!pO$k!qO~OS!eOc!fOd!fOh!bO!Y!dO!]!iO!`!jO$]!aO~Or$vP~P*[Ov!}O!q!wO$Z!|O~Ov#PO$Z#PO~Oh#SOr!SO#p#UO~O$Z#WO~Oc#VX~P$aOc#ZO~Om#[O$X$sXq$sX~O$X$sXq$sX~P!mO$b#_O$c#_O$d#aO~Of#fO$Z!UO$[!VO~Or!SO!e!QO~Oq$sP~P!mOh#oO~Oh#pO~On!xX!|!xX$g!zX~O$Z#qO~O$g#sO~On#tO!|#uO~O`yOczOdzOo|O$^ZO$rZO~Or#Oa!e#Oa#P#Oa#S#Oa$Y#Oag#Oa~P.TOr#Ra!e#Ra#P#Ra#S#Ra$Y#Rag#Ra~P.TOS!eOc!fOd!fOh!bO!Y!dO!]!iO!`!jO~OR#zOv#zO$]#vO$^#yO$k!qO~P/gOm$QO!T#}O!e$OO~P(qOh$SO~O$]$UO~Oh#SO~Oh$WO~O`$YOc$YOg$]Ol$YOm$YO~P)gO`$YOc$YOl$YOm$YOn$_O~P)gO`$YOc$YOl$YOm$YOq$aO~P)gOP$bOSuXcuXduXhuXmuXxuX!YuX!]uX!`uX#[uX#^uX$]uX!WuXQuX`uXguXluXouXruXvuX|uX!quX$ZuX$[uX$^uX$kuXnuXquX!euX$XuX$uuX!}uX~Ox$cO#[$dO#^$eOm$vP~P*[Oh#pOS$iXc$iXd$iXm$iXx$iX!Y$iX!]$iX!`$iX#[$iX#^$iX$]$iXQ$iX`$iXg$iXl$iXo$iXr$iXv$iX|$iX!q$iX$Z$iX$[$iX$^$iX$k$iXn$iXq$iX!e$iX$X$iX$u$iX!}$iX~Oh$iO~Oh$kO~O!T#}O!e$lOr$vXm$vX~Or!SO~Om$oOx$cO~Om$pO~Ov$qO!q!wO~Or$rO~Or!SO!T#}O~Or!SO#p$xO~O$Z#WOr#sX~O$u$|Om#Ua$X#Uaq#Ua~P)gOm$QX$X$QXq$QX~P!mOm#[O$X$saq$sa~O$b#_O$c#_O$d%TO~On%VO!|%WO~Or#Oi!e#Oi#P#Oi#S#Oi$Y#Oig#Oi~P.TOr#Qi!e#Qi#P#Qi#S#Qi$Y#Qig#Qi~P.TOr#Ri!e#Ri#P#Ri#S#Ri$Y#Rig#Ri~P.TOr$Oa!e$Oa~P&jOq%XO~Og$qP~P'yOg$hP~P)gOc!RXg!PX!T!PX!W!RX~Oc%aO!W%bO~Og%cO!T#}O~O!T#}OS$WXc$WXd$WXh$WXm$WXr$WX!Y$WX!]$WX!`$WX!e$WX$]$WX~Om%gO!e$OO~P(qO!T#}OS!Xac!Xad!Xah!Xam!Xar!Xa!Y!Xa!]!Xa!`!Xa!e!Xa$]!Xag!Xa~O$]%hOg$pP~P/gOR#zOS!eOh%mOv#zO!Y%nO$]%lO$^#yO$k!qO~Ox$cOQ$jX`$jXc$jXg$jXh$jXl$jXm$jXo$jXr$jXv$jX|$jX!q$jX$Z$jX$[$jX$^$jX$k$jXn$jXq$jX~O`$YOc$YOg%wOl$YOm$YO~P)gO`$YOc$YOl$YOm$YOn%xO~P)gO`$YOc$YOl$YOm$YOq%yO~P)gOh%{OS#ZXc#ZXd#ZXm#ZX!Y#ZX!]#ZX!`#ZX$]#ZX~Om%|O~Og&ROv&SO!r&SO~Or$SX!e$SXm$SX~P*[O!e$lOr$vam$va~Om&VO~Oq&^O$Z&XO$k&WO~Og&_O~P&jOx$cO!e&cO$u$|Om#Ui$X#Uiq#Ui~P)gO$t&fO~Om$Qa$X$Qaq$Qa~P!mOm#[O$X$siq$si~O!e&iOg$qX~P&jOg&kO~Ox$cOQ#xXg#xXh#xXo#xXr#xXv#xX|#xX!e#xX!q#xX$Z#xX$[#xX$^#xX$k#xX~O!e&mOg$hX~P)gOg&oO~On&pOx$cO!}&qO~OR#zOv#zO$]&sO$^#yO$k!qO~O!T#}OS$Wac$Wad$Wah$Wam$War$Wa!Y$Wa!]$Wa!`$Wa!e$Wa$]$Wa~Oc!dXg!PX!T!PX!e!PX~O!T#}O!e&uOg$pX~Oc&wO~Og&xO~Oc!mXg!mX!W!RX~OS!eOh&zO~O!T&|O~O!T&|O!W&}Og$oX~Oc'OOg!lX~O!W&}O~Og'PO~O$Z'QO~Om'SO~Oc'TO!T#}O~Og'VOm'UO~Og'YO~O!T#}Or$Sa!e$Sam$Sa~OP$bOruX!euXguX~O$k&WOr#jX!e#jX~Or!SO!e'[O~Oq'`O$Z&XO$k&WO~Ox$cOQ$PXh$PXm$PXo$PXr$PXv$PX|$PX!e$PX!q$PX$X$PX$Z$PX$[$PX$^$PX$k$PX$u$PXq$PX~O!e&cO$u$|Om#Uq$X#Uqq#Uq~P)gOn'eOx$cO!}'fO~Og#}X!e#}X~P'yO!e&iOg$qa~Og#|X!e#|X~P)gO!e&mOg$ha~On'eO~Og'kO~P)gOg'lO!W'mO~O$]'nOg#{X!e#{X~P/gO!e&uOg$pa~Og'sO~OS!eOh'uO~OS!eO~PFyO`'yOg'{O~OS#zac#zad#zah#za!Y#za!]#za!`#za$]#za~Og'}O~P!!POg'}Om(OO~Ox$cOQ$Pah$Pam$Pao$Par$Pav$Pa|$Pa!e$Pa!q$Pa$X$Pa$Z$Pa$[$Pa$^$Pa$k$Pa$u$Paq$Pa~On(TO~Og#}a!e#}a~P&jOg#|a!e#|a~P)gOR#zOv#zO$]&sO$^#yO$k&WO~Oc!fXg!PX!T!PX!e!PX~O!T#}Og#{a!e#{a~Oc(VO~O!e&uOg$pi~P)gOg!ai!T!ji~Og(XO~O!W(ZOg!ni~Og!li~P)gO`'yOg(^O~Ox$cOg!Oim!Oi~Og(_O~P!!POm(`O~Og(aO~O!e&uOg$pq~Og(cO~OS!eO~P!$lOg#{q!e#{q~P)gO$`!r$a$k`x#S~",
 			goto: "8^$wPPPPP$xP${P%U%h%U%z&^P%UP&d%UPP&jPPP&p&z&zPPPP&zPP&z&z'jP&zP&z(m&zP)])`)f)f)x)fP)f*_P)fP)f)fP*j)fP*v*|+r+uP+x*v+{*v,O,U,X,_,X)f,ePP-Z-a%U-g%U.V.V.].aPP%UP%U%UP.g/c/p/w${P0QP0TP${P${P${P0Z${P0^0a0d0k${P${PP${P0p${P0s0y1Y1t2S2Y2d2j2p2v2|3W3^3d3j3p3vPPPPPPPPPPPP3|4VP4{5O6SP6[7U7k,X7w7zP7}PP8TRsQ_bOPdp!S#[%Pq`OP^_dp}!O!P!Q!S#S#[#o%P&iqSOP^_dp}!O!P!Q!S#S#[#o%P&iqUOP^_dp}!O!P!Q!S#S#[#o%P&iQuTR#bvQxWR#cyQ!WYR#dzQ#d!YS$h!t!uR%U#f!Z!xeg!m!n!o#Z#p#u$[$^$`$c${%W%]%a&c&d&m&r&w'O'T'i'r'x(V(b!Y!xeg!m!n!o#Z#p#u$[$^$`$c${%W%]%a&c&d&m&r&w'O'T'i'r'x(V(bb#z!b$W%b%m&z&}'m'u(ZU&Z$r&]'[R'Z&Y!Z!teg!m!n!o#Z#p#u$[$^$`$c${%W%]%a&c&d&m&r&w'O'T'i'r'x(V(bR$j!vQ&P$iR'W&Qq!gafj!b!c!d!r#}$O$P$S$g$i$l&Q&uQ#w!bW%s$W%m&z'uQ&t%bQ'w&}Q(U'mR(d(Zc#z!b$W%b%m&z&}'m'u(ZQ#VkQ$V!iQ$v#UR&a$xX%q$W%m&z'up!gafj!b!c!d!r#}$O$P$S$g$i$l&Q&uW%p$W%m&z'uQ&{%nQ'v&|Q'w&}R(d(ZR$T!eR%j$SR'p&uR&{%nX%o$W%m&z'uR'v&|X%t$W%m&z'uX%r$W%m&z'u!Y!xeg!m!n!o#Z#p#u$[$^$`$c${%W%]%a&c&d&m&r&w'O'T'i'r'x(V(bQ!}hR$q#OQ!XYR#ezQ#d!XR%U#ep[OP^_dp}!O!P!Q!S#S#[#o%P&ie{X!_!`#h#i#j#k$u%Y'gQ!^]R#g|T!]]|Q#r![R%_#sQ!TXQ!haQ#TkQ#m!RQ$Q!cQ$n!zQ$t#RQ$w#VQ$z#YQ%g$PQ&`$vQ'^&[Q'a&aR(S']SoP!SQ#^pQ%O#[R&g%PZnPp!S#[%PQ$}#ZQ&e${R'd&dR$g!rQ'R%{R(['yR#OhR#QiR$s#QS&[$r&]R(Q'[V&Y$r&]'[R#YlQ#`rR%S#`QdOSpP!SU!kdp%PR%P#[Q%]#p[&l%]&r'i'r'x(bQ&r%aQ'i&mQ'r&wQ'x'OR(b(VQ$[!mQ$^!nQ$`!oV%v$[$^$`Q&Q$iR'X&QQ&v%iS'q&v(WR(W'rQ&n%]R'j&nQ&j%YR'h&jQ!RXR#l!RQ&d${R'c&dQ#]oS%Q#]%RR%R#^Q'z'RR(]'zQ$m!yR&U$mQ&]$rR'_&]Q']&[R(R']Q#XlR$y#XQ$P!cR%f$P_cOPdp!S#[%P^XOPdp!S#[%PQ!_^Q!`_Q#h}Q#i!OQ#j!PQ#k!QQ$u#SQ%Y#oR'g&iR%^#pQ!reQ!{g[$X!m!n!o$[$^$`Q${#Zh%[#p%]%a&m&r&w'O'i'r'x(V(bQ%`#uQ%z$cS&b${&dQ&h%WQ'b&cR'|'T]$Z!m!n!o$[$^$`Q!caU!yf!r$gQ#RjQ#x!bS#|!c$PQ$R!dQ%d#}Q%e$OQ%i$SS&O$i&QQ&T$lR'o&uQ#{!bW%s$W%m&z'uQ&t%bQ'w&}Q(U'mR(d(ZQ%u$WQ&y%mQ't&zR(Y'uR%k$SR%Z#oQqPR#n!SQ!zfQ$f!rR%}$g",
 			nodeNames: "⚠ Unit VariableName VariableName QueryCallee Comment StyleSheet RuleSet UniversalSelector TagSelector TagName NamespacedTagSelector NamespaceName TagName NestingSelector ClassSelector . ClassName PseudoClassSelector : :: PseudoClassName PseudoClassName ) ( ArgList ValueName ParenthesizedValue AtKeyword ; ] [ BracketedValue } { BracedValue ColorLiteral NumberLiteral StringLiteral BinaryExpression BinOp CallExpression Callee IfExpression if ArgList IfBranch KeywordQuery FeatureQuery FeatureName BinaryQuery LogicOp ComparisonQuery ColorLiteral CompareOp UnaryQuery UnaryQueryOp ParenthesizedQuery SelectorQuery selector ParenthesizedSelector StyleQuery style ParenthesedQuery CallQuery ArgList PropertyName , PropertyName UnaryQuery ParenthesedQuery BinaryQuery ParenthesedQuery ParenthesedQuery StyleFeature PropertyName StyleRange PseudoQuery CallLiteral CallTag ParenthesizedContent PseudoClassName ArgList IdSelector IdName AttributeSelector AttributeName NamespacedAttribute NamespaceName AttributeName MatchOp MatchFlag ChildSelector ChildOp DescendantSelector SiblingSelector SiblingOp Block Declaration PropertyName Important ImportStatement import Layer layer LayerName layer MediaStatement media CharsetStatement charset NamespaceStatement namespace NamespaceName KeyframesStatement keyframes KeyframeName KeyframeList KeyframeSelector KeyframeRangeName SupportsStatement supports ScopeStatement scope to FontFeatureStatement font-feature-values FontName AtRule Styles",
 			maxTerm: 176,
@@ -32363,8 +32346,7 @@ window.__ModuleLoader__.load({
 			],
 			tokenPrec: 2433
 		});
-		//#endregion
-		//#region node_modules/@codemirror/lang-css/dist/index.js
+		// node_modules/.pnpm/@codemirror+lang-css@6.3.1/node_modules/@codemirror/lang-css/dist/index.js
 		let _properties = null;
 		function properties$1() {
 			if (!_properties && typeof document == "object" && document.body) {
@@ -33272,8 +33254,7 @@ window.__ModuleLoader__.load({
 		function css$1() {
 			return new LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
 		}
-		//#endregion
-		//#region node_modules/@codemirror/lang-html/dist/index.js
+		// node_modules/.pnpm/@codemirror+lang-html@6.4.12/node_modules/@codemirror/lang-html/dist/index.js
 		const Targets = [
 			"_blank",
 			"_self",
@@ -34268,8 +34249,7 @@ window.__ModuleLoader__.load({
 			})]);
 			return true;
 		});
-		//#endregion
-		//#region node_modules/@codemirror/lang-markdown/dist/index.js
+		// node_modules/.pnpm/@codemirror+lang-markdown@6.5.2/node_modules/@codemirror/lang-markdown/dist/index.js
 		const data = /*@__PURE__*/ defineLanguageFacet({ commentTokens: { block: {
 			open: "<!--",
 			close: "-->"
@@ -34730,8 +34710,7 @@ window.__ModuleLoader__.load({
 			});
 			return true;
 		} });
-		//#endregion
-		//#region node_modules/@lezer/python/dist/index.js
+		// node_modules/.pnpm/@lezer+python@1.1.19/node_modules/@lezer/python/dist/index.js
 		const printKeyword = 1;
 		const indent$3 = 194;
 		const dedent$2 = 195;
@@ -35187,8 +35166,7 @@ window.__ModuleLoader__.load({
 			}],
 			tokenPrec: 7668
 		});
-		//#endregion
-		//#region node_modules/@codemirror/lang-python/dist/index.js
+		// node_modules/.pnpm/@codemirror+lang-python@6.2.1/node_modules/@codemirror/lang-python/dist/index.js
 		const cache$2 = /*@__PURE__*/ new NodeWeakMap();
 		const ScopeNodes = /*@__PURE__*/ new Set([
 			"Script",
@@ -35614,8 +35592,7 @@ window.__ModuleLoader__.load({
 		function python() {
 			return new LanguageSupport(pythonLanguage, [pythonLanguage.data.of({ autocomplete: localCompletionSource }), pythonLanguage.data.of({ autocomplete: globalCompletion })]);
 		}
-		//#endregion
-		//#region node_modules/@lezer/yaml/dist/index.js
+		// node_modules/.pnpm/@lezer+yaml@1.0.4/node_modules/@lezer/yaml/dist/index.js
 		const blockEnd = 63;
 		const eof = 64;
 		const DirectiveEnd = 1;
@@ -35993,8 +35970,7 @@ window.__ModuleLoader__.load({
 			return new LanguageSupport(yamlLanguage);
 		}
 		tags$1.meta;
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/shell.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/shell.js
 		var words$5 = {};
 		function define(style, dict) {
 			for (var i = 0; i < dict.length; i++) words$5[dict[i]] = style;
@@ -36215,8 +36191,7 @@ window.__ModuleLoader__.load({
 				commentTokens: { line: "#" }
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/toml.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/toml.js
 		const toml = {
 			name: "toml",
 			startState: function() {
@@ -36273,8 +36248,7 @@ window.__ModuleLoader__.load({
 			},
 			languageData: { commentTokens: { line: "#" } }
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/nginx.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/nginx.js
 		function words$4(str) {
 			var obj = {}, words = str.split(" ");
 			for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
@@ -36393,8 +36367,7 @@ window.__ModuleLoader__.load({
 			},
 			languageData: { indentOnInput: /^\s*\}$/ }
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/simple-mode.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/simple-mode.js
 		function simpleMode(states) {
 			ensureState(states, "start");
 			var states_ = {}, meta = states.languageData || {}, hasIndentation = false;
@@ -36517,8 +36490,7 @@ window.__ModuleLoader__.load({
 				return pos < 0 ? 0 : state.indent[pos];
 			};
 		}
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/dockerfile.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/dockerfile.js
 		var from = "from";
 		var fromRegex = new RegExp("^(\\s*)\\b(" + from + ")\\b", "i");
 		var shells = [
@@ -36721,8 +36693,7 @@ window.__ModuleLoader__.load({
 			],
 			languageData: { commentTokens: { line: "#" } }
 		});
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/properties.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/properties.js
 		const properties = {
 			name: "properties",
 			token: function(stream, state) {
@@ -36767,8 +36738,7 @@ window.__ModuleLoader__.load({
 				};
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/clike.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/clike.js
 		function Context$4(indented, column, type, info, align, prev) {
 			this.indented = indented;
 			this.column = column;
@@ -37509,8 +37479,7 @@ window.__ModuleLoader__.load({
 				}
 			}
 		});
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/swift.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/swift.js
 		function wordSet(words) {
 			var set = {};
 			for (var i = 0; i < words.length; i++) set[words[i]] = true;
@@ -37824,8 +37793,7 @@ window.__ModuleLoader__.load({
 				] }
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/css.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/css.js
 		function mkCSS(parserConfig) {
 			parserConfig = {
 				...defaults,
@@ -39546,8 +39514,7 @@ window.__ModuleLoader__.load({
 				return tokenCComment$1(stream, state);
 			} }
 		});
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/sass.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/sass.js
 		const propertyKeywords$1 = new Set(keywords$10.properties);
 		const colorKeywords$1 = new Set(keywords$10.colors);
 		const valueKeywords$1 = new Set(keywords$10.values);
@@ -39878,8 +39845,7 @@ window.__ModuleLoader__.load({
 				autocomplete: keywords$10.all
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/stylus.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/stylus.js
 		var tagKeywords_ = [
 			"a",
 			"abbr",
@@ -41611,8 +41577,7 @@ window.__ModuleLoader__.load({
 				autocomplete: hintWords
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/ruby.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/ruby.js
 		function wordObj$1(words) {
 			var o = {};
 			for (var i = 0, e = words.length; i < e; ++i) o[words[i]] = true;
@@ -41929,8 +41894,7 @@ window.__ModuleLoader__.load({
 				autocomplete: keywordList
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/lua.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/lua.js
 		function prefixRE(words) {
 			return new RegExp("^(?:" + words.join("|") + ")", "i");
 		}
@@ -42208,8 +42172,7 @@ window.__ModuleLoader__.load({
 				}
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/perl.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/perl.js
 		function look(stream, c) {
 			return stream.string.charAt(stream.pos + (c || 0));
 		}
@@ -43002,8 +42965,7 @@ window.__ModuleLoader__.load({
 				wordChars: "$"
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/r.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/r.js
 		function wordObj(words) {
 			var res = {};
 			for (var i = 0; i < words.length; ++i) res[words[i]] = true;
@@ -43204,8 +43166,7 @@ window.__ModuleLoader__.load({
 				autocomplete: commonAtoms.concat(commonBuiltins, commonKeywords$1)
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/groovy.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/groovy.js
 		function words$2(str) {
 			var obj = {}, words = str.split(" ");
 			for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
@@ -43426,8 +43387,7 @@ window.__ModuleLoader__.load({
 				] }
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/powershell.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/powershell.js
 		function buildRegexp(patterns, options) {
 			options = options || {};
 			var prefix = options.prefix !== void 0 ? options.prefix : "^";
@@ -43726,8 +43686,7 @@ window.__ModuleLoader__.load({
 				}
 			} }
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/diff.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/diff.js
 		var TOKEN_NAMES = {
 			"+": "inserted",
 			"-": "deleted",
@@ -43747,8 +43706,7 @@ window.__ModuleLoader__.load({
 				return token_name;
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/protobuf.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/protobuf.js
 		function wordRegexp$2(words) {
 			return new RegExp("^((" + words.join(")|(") + "))\\b", "i");
 		}
@@ -43810,8 +43768,7 @@ window.__ModuleLoader__.load({
 			token: tokenBase$5,
 			languageData: { autocomplete: keywordArray }
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/cmake.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/cmake.js
 		var variable_regex = /({)?[a-zA-Z0-9_]+(})?/;
 		function tokenString$3(stream, state) {
 			var current, prev, found_var = false;
@@ -43869,8 +43826,7 @@ window.__ModuleLoader__.load({
 				return tokenize(stream, state);
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/javascript.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/javascript.js
 		function mkJavaScript(parserConfig) {
 			var statementIndent = parserConfig.statementIndent;
 			var jsonldMode = parserConfig.jsonld;
@@ -44827,8 +44783,7 @@ window.__ModuleLoader__.load({
 			name: "typescript",
 			typescript: true
 		});
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/pug.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/pug.js
 		var ATTRS_NEST = {
 			"{": "}",
 			"(": ")",
@@ -45197,8 +45152,7 @@ window.__ModuleLoader__.load({
 			copyState,
 			token: nextToken
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/tcl.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/tcl.js
 		function parseWords(str) {
 			var obj = {}, words = str.split(" ");
 			for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
@@ -45302,8 +45256,7 @@ window.__ModuleLoader__.load({
 			},
 			languageData: { commentTokens: { line: "#" } }
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/haskell.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/haskell.js
 		function switchState(source, setState, f) {
 			setState(f);
 			return f(source, setState);
@@ -45459,8 +45412,7 @@ window.__ModuleLoader__.load({
 				}
 			} }
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/clojure.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/clojure.js
 		var atoms$2 = [
 			"false",
 			"nil",
@@ -46318,8 +46270,7 @@ window.__ModuleLoader__.load({
 				autocomplete: [].concat(atoms$2, specialForms, coreSymbols)
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/erlang.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/erlang.js
 		var typeWords = [
 			"-type",
 			"-spec",
@@ -46904,8 +46855,7 @@ window.__ModuleLoader__.load({
 			indent: indenter,
 			languageData: { commentTokens: { line: "%" } }
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/julia.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/julia.js
 		function wordRegexp$1(words, end, pre) {
 			if (typeof pre === "undefined") pre = "";
 			if (typeof end === "undefined") end = "\\b";
@@ -47261,8 +47211,7 @@ window.__ModuleLoader__.load({
 				autocomplete: keywordsList.concat(builtinsList)
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/pascal.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/pascal.js
 		function words$1(str) {
 			var obj = {}, words = str.split(" ");
 			for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
@@ -47362,8 +47311,7 @@ window.__ModuleLoader__.load({
 				} }
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/vb.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/vb.js
 		var ERRORCLASS = "error";
 		function wordRegexp(words) {
 			return new RegExp("^((" + words.join(")|(") + "))\\b", "i");
@@ -47701,8 +47649,7 @@ window.__ModuleLoader__.load({
 				autocomplete: openingKeywords.concat(middleKeywords).concat(endKeywords).concat(operatorKeywords).concat(commonKeywords).concat(commontypes)
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/vhdl.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/vhdl.js
 		function words(str) {
 			var obj = {}, words = str.split(",");
 			for (var i = 0; i < words.length; ++i) {
@@ -47859,8 +47806,7 @@ window.__ModuleLoader__.load({
 				commentTokens: { line: "--" }
 			}
 		};
-		//#endregion
-		//#region node_modules/@codemirror/legacy-modes/mode/stex.js
+		// node_modules/.pnpm/@codemirror+legacy-modes@6.5.5/node_modules/@codemirror/legacy-modes/mode/stex.js
 		function mkStex(mathMode) {
 			function pushCommand(state, command) {
 				state.cmdState.push(command);
@@ -48050,8 +47996,7 @@ window.__ModuleLoader__.load({
 		}
 		const stex = mkStex(false);
 		mkStex(true);
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/code-viewer-lang.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/code-viewer-lang.js
 		/**
 		* 源码态语法高亮：扩展名 → CodeMirror 语言映射。
 		*
@@ -48203,8 +48148,7 @@ window.__ModuleLoader__.load({
 				return null;
 			}
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/code-viewer-theme.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/code-viewer-theme.js
 		/**
 		* CodeMirror 6 主题（DSH 共享底座版）。
 		*
@@ -48607,11 +48551,9 @@ window.__ModuleLoader__.load({
 				syntaxHighlighting(HighlightStyle.define(dark ? HIGHLIGHTS_DARK : HIGHLIGHTS_LIGHT))
 			];
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/code-viewer-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/code-viewer-css.generated.js
 		const CODE_VIEWER_CSS = "/* CodeViewer（只读 CodeMirror 查看器）样式。类名固定 dshpc-cv*；颜色吃 --dshpc-* token，\n   深色由 design 的 token 深色段自动生效（不写死颜色值）。 */\n/* flex:1 1 auto + min-width:0：调用方常把它放进 display:flex 的容器里（TextPreview），\n   不写会在主轴按内容宽排 —— 短文本时 __copy（absolute 相对本层）落在文字右端而不是面板右缘。 */\n.dshpc-cv{position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-width:0;height:100%;min-height:0;}\n/* 复制钮复用核心 IconButton（variant=outline / size=md）：盒型、描边、圆角（已统一 md）、底色、hover 全由核心提供；\n   这里只管「绝对定位 + 默认隐藏、hover/聚焦才显」（overlay 浮在编辑器右上角）。 */\n.dshpc-cv__copy{position:absolute;top:6px;right:6px;z-index:5;opacity:0;}\n.dshpc-cv:hover .dshpc-cv__copy,.dshpc-cv__copy:focus-visible{opacity:1;}\n.dshpc-cv__copy svg{width:16px;height:16px;}\n/* 外层只把 .dshpc-scroll-thin 传给官方生成的 .cm-scroller（线宽 + 右让位都由 tokens.css\n   的后代规则给），自己 overflow:hidden 不滚 ⇒ 关掉自身让位，否则两层各 1px 会叠成 2px。\n   scroller 只让右不让底：给底会改 scroller 高度，CodeMirror 的测量循环会多算一条横滚条。 */\n.dshpc-cv__editor{flex:1 1 auto;min-height:0;overflow:hidden;--dshpc-scroll-inset-right:0px;}\n.dshpc-cv__editor .cm-editor{height:100%;}\n.dshpc-cv__editor .cm-scroller{overflow:auto}\n\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/CodeViewer.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/CodeViewer.js
 		/**
 		* CodeViewer —— 只读源码查看器（替代官方 Shiki CodeBlock），DSH 共享底座版。
 		*
@@ -48714,8 +48656,7 @@ window.__ModuleLoader__.load({
 				}
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/utils/number.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/utils/number.js
 		/**
 		* 字节数 → 人话（`12 KB` / `3.4 MB`）。
 		* 0 与负数 ⇒ `—`（不显示「0 B」这种假精确）。
@@ -48737,8 +48678,7 @@ window.__ModuleLoader__.load({
 			}
 			return `${value >= 10 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/md-labels.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/preview/md-labels.js
 		function markdownLabels() {
 			return {
 				code: {
@@ -48753,8 +48693,7 @@ window.__ModuleLoader__.load({
 				footnotes: t$1("mdFootnotes")
 			};
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/TextPreview.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/preview/TextPreview.js
 		/** 定位到行时最多自动续翻的页数（远处行号不值得为它打一整圈往返；用户仍可手动「加载更多」）。 */
 		const FOCUS_MAX_PAGES = 10;
 		function TextPreview(props) {
@@ -48854,8 +48793,7 @@ window.__ModuleLoader__.load({
 				onClick: () => void load(nextOffset, true)
 			}, tt("previewLoadMore"))) : null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/HtmlPreview.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/preview/HtmlPreview.js
 		/** 官方 CSP 原文（documentpreview lib/client.js 同款，不多开不少关）。 */
 		const HTML_CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:";
 		/** 禁用标签（官方清单）。 */
@@ -48959,8 +48897,7 @@ window.__ModuleLoader__.load({
 				title: props.path
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/OfficePreview.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/preview/OfficePreview.js
 		function OfficePreview(props) {
 			ensureComponentStyles("explorer", EXPLORER_CSS);
 			const tt = props.translate ?? t$1;
@@ -49010,8 +48947,7 @@ window.__ModuleLoader__.load({
 				title: props.path
 			});
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview/index.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/preview/index.js
 		function FilePreview(props) {
 			ensureControls();
 			const tt = props.translate ?? t$1;
@@ -49050,8 +48986,7 @@ window.__ModuleLoader__.load({
 			}
 			return null;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/crumbs-menu.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/crumbs-menu.js
 		/**
 		* ▾ 选层下拉的**条目构造**（picker 与 dock 共用同一段代码，差别只在入参 —— 源实现用户 2026-09-29
 		* 点名提炼，严禁两处各写一份）。
@@ -49152,8 +49087,7 @@ window.__ModuleLoader__.load({
 			}
 			return out;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/crumb-nav.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/crumb-nav.js
 		/**
 		* 文件浏览器的第一排：▾ 选层 + 面包屑 + 右侧动作（选择 / ✕）。
 		*
@@ -49236,8 +49170,7 @@ window.__ModuleLoader__.load({
 				}
 			}), actions(pickNow, tt, onClose));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/landing.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/landing.js
 		/**
 		* 落地页主体（picker 刚打开、还没进任何目录时的那张表）：上面一排根层（「根目录」或盘符），
 		* 下面全部工作区。行 = 进去，行尾钮 = 直接选这个目录。
@@ -49268,8 +49201,7 @@ window.__ModuleLoader__.load({
 			}, tt("explorerPickDir")) : null);
 			return (0, react$1.createElement)("div", { className: "dshpc-fb__tree dshpc-scroll-thin dshpc-scroll-thin--both" }, roots.map((root) => row(`root:${root.path}`, root.label, root.path)), anchors.filter((item) => item.path !== void 0 && item.path !== "").map((item) => row(`ws:${item.title}`, item.title, item.path)));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/tooltip.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/tooltip.js
 		let renderer;
 		/** 注入官方 Tooltip（插件启动时调一次；传 undefined 撤销，回到自绘降级）。 */
 		function setTooltipRenderer(fn) {
@@ -49279,8 +49211,7 @@ window.__ModuleLoader__.load({
 		function getTooltipRenderer() {
 			return renderer;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Segmented.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/Segmented.js
 		/**
 		* 角标 / 计数要不要显示，返回要显示的文本。
 		* 数字 ≤0 是「没东西可数」的老口径；字符串（`'1K'` / `'99+'`）由调用方决定，原样显示，空串不显示。
@@ -49401,8 +49332,7 @@ window.__ModuleLoader__.load({
 				return itemButton;
 			})]);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/preview-title-bar.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/preview-title-bar.js
 		/**
 		* 预览态的第二排：文件名 + 渲染⇄源码切换 / 复制路径 / 刷新。
 		*
@@ -49446,8 +49376,7 @@ window.__ModuleLoader__.load({
 				onClick: onReload
 			})));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/FileBrowser.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/FileBrowser.js
 		/**
 		* 「根」在 POSIX 上的落点 `/`。Windows 没有这一个根 —— 根层是盘符清单，由宿主 `op:'roots'` 给出
 		* （见下面 `roots` 状态），本常量只在 POSIX / 探不到盘符时用。
@@ -49962,8 +49891,7 @@ window.__ModuleLoader__.load({
 				style: props.style ?? void 0
 			}, nav, titleBar, body);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/layout/resizer.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/layout/resizer.js
 		/** 开始一次拖拽调宽（监听 window 的 pointermove / pointerup，松手自动清理）。 */
 		function startResizeLayoutWidth(opts) {
 			opts.startEvent.preventDefault?.();
@@ -50001,8 +49929,7 @@ window.__ModuleLoader__.load({
 			window.addEventListener("pointermove", onMove);
 			window.addEventListener("pointerup", onUp);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/layout/panel-dock-logic.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/layout/panel-dock-logic.js
 		/**
 		* 停靠面板的状态逻辑（纯函数，零 React / 零 DOM）。
 		*
@@ -50132,14 +50059,11 @@ window.__ModuleLoader__.load({
 				return sum + (state.widths[item] ?? fallbackOf(item));
 			}, 0);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/layout/panel-dock-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/layout/panel-dock-css.generated.js
 		const PANEL_DOCK_CSS = "/* 停靠栏 = **布局成员**，不是浮层：它占宽度、把主区真正挤窄（兄弟项目 2026-09-28：\n   「分栏压过来，不是盖上去」）。所以调用方必须把它放进自己的 flex 根里。\n   皮肤（头部 / 拖拽条 / 关闭钮 / 背景阴影）在 side-panel.css，与 SideSheet 共用。 */\n.dshpc-dock{display:flex;flex:0 0 auto;align-self:stretch;min-width:0}\n/* dock 不再替主区让缝（原 --dshpc-dock-gap 的 1px margin 已删，用户 2026-11-02）：\n   滚动条与容器边缘的 1px 统一由滚动容器自己的透明边框提供（见 style.md §滚动条让位），\n   主区容器带了让位，滚动条与这条分隔线之间自然还是 1px。别再往这里加 margin。 */\n\n/* 自动加的宿主行（openFilePreview 加 / 关闭即摘）：消费方那行不必自己写 flex。\n   只让「第一个非预览子项」当主区伸展，其余直接子项不动（页脚条、工具条不误伤）；\n   display 不在这里写死 —— 本来就是 grid 等布局的元素保持原样，由 TS 侧按计算值补 flex。 */\n.dshpc-dock-host{min-width:0;min-height:0}\n.dshpc-dock-host>:not([data-dshpc-file-preview]){min-width:0}\n.dshpc-dock-host>:first-child:not([data-dshpc-file-preview]){flex:1 1 auto}\n\n/* 单栏**占位**：sticky + 视口高让它在页面滚动时保持可见，同时仍然占宽度。\n   ⚠️ **本条刻意不设 z-index**：布局成员一旦带正 z-index，就会无条件压过宿主 portal 到 body 的\n   弹窗（兄弟项目 2026-10-05 真机事故「侧边栏盖住宿主设置弹窗」）。层序交给 DOM 顺序裁决。\n   外观来自 .dshpc-side-surface（side-panel.css），这里只管怎么占位与朝哪边描边。 */\n.dshpc-dock__panel{\n  position:sticky;top:0;align-self:stretch;\n  /* 高度默认视口高（整页场景）；嵌在定高容器里时由调用方给 --dshpc-dock-h（如 420px / 100%）。 */\n  height:var(--dshpc-dock-h,100vh);max-height:var(--dshpc-dock-h,100vh);\n  border-left:1px solid var(--dshpc-border);\n}\n/* 收起的出场：宽度收到 0、透明淡出；落定后组件才真正摘掉这一栏（JS 延时 220ms 配合）。 */\n.dshpc-dock__panel--closing{\n  width:0!important;min-width:0!important;opacity:0;border-left-width:0;\n  transition:width .2s var(--dshpc-ease),opacity .2s var(--dshpc-ease),border-left-width .2s var(--dshpc-ease);\n}\n\n/* 拖动期：① <iframe>（PDF / HTML 预览）是独立文档，会吞掉父文档的 pointermove，\n   向右拖进 iframe 就卡死 —— 整片让出指针事件；② contain 把重排隔离在栏内，\n   否则每帧改宽度都会牵动整页重排（兄弟项目 2026-10-04 真机「挪很久才动一下」）。 */\n.dshpc-dock.dshpc-dock--resizing iframe{pointer-events:none}\n.dshpc-dock.dshpc-dock--resizing .dshpc-dock__panel{contain:layout paint;will-change:width}\n\n/* 收起钮：**待在面板自己的框里**（用户 2026-10-28 三轮：占面板内部空间，不伸到外面去）。\n   left:0 从内侧贴着分隔线 —— 贴线的一边不描边（线是面板自己的 border-left），页签与线不重合。\n   20×44（用户 2026-10-28 四轮定尺寸）；实色底（--dshpc-plate，明暗各有实值），hover 亮一档。\n   padding-right:2px 是**视觉居中**：右侧是圆角，箭头往直线那边挪 1px（用户 2026-10-28 四轮）。 */\n.dshpc-dock__collapse{\n  position:absolute;left:0;top:50%;transform:translateY(-50%);\n  z-index:8;display:inline-flex;align-items:center;justify-content:center;\n  width:20px;height:44px;padding:0 2px 0 0;\n  border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  border-right:1px solid var(--dshpc-border);\n  border-left:none;\n  border-radius:0 var(--dshpc-radius-sm) var(--dshpc-radius-sm) 0;\n  background:var(--dshpc-plate);color:var(--dshpc-fg-3);\n  font-family:inherit;font-size:16px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-dock__collapse:hover{background:var(--dshpc-plate-hover);color:var(--dshpc-fg)}\n.dshpc-dock__collapse:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n\n/* 收起后的浮动耳朵：**fixed 贴右缘、垂直居中、独立于分栏**（用户 2026-10-28 定稿：\n   小页签挂中间、里面放面板图标、不显示文字，箭头与收起钮反向）。多个按收起顺序纵向堆叠。\n   z 走 ear 档（高于弹窗遮罩，2026-11-04）：面板在弹窗下面时，耳朵仍是唯一能点到的入口。\n   DOM 上 portal 到 body（PanelDock.ts），否则会被弹窗的 stacking context 关在里面。\n   ⚠️ 这一列**全页唯一**（id = dshpc-dock-ears，由 PanelDock 懒创建、各实例共用）：\n   每个 dock 各建一个的话，容器全部落在 top:50% ⇒ 两个 dock 收起时耳朵重叠\n   （兄弟项目 2026-11-06 真机：文件预览 + 编辑任务）。堆叠交给这里的 flex，别再按实例定位。 */\n.dshpc-dock__ears{\n  position:fixed;top:50%;right:0;transform:translateY(-50%);\n  z-index:var(--dshpc-z-ear,950);\n  display:flex;flex-direction:column;gap:8px;align-items:flex-end;\n  pointer-events:none;\n}\n.dshpc-dock__ear{\n  pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;\n  /* 与收起钮**同尺寸**（20×44，用户 2026-10-28 四轮）：上/下/左描边，贴右缘的一侧不描。\n     实色底（--dshpc-plate），不用透明色 —— 透明底下透出东西很难看。\n     padding-left:2px 是**视觉居中**：左侧是圆角，箭头往直线（右缘）那边挪 1px。 */\n  width:20px;height:44px;box-sizing:border-box;padding:0 0 0 2px;\n  border-top:1px solid var(--dshpc-border);\n  border-bottom:1px solid var(--dshpc-border);\n  border-left:1px solid var(--dshpc-border);\n  border-right:none;\n  border-radius:var(--dshpc-radius-sm) 0 0 var(--dshpc-radius-sm);\n  background:var(--dshpc-plate);color:var(--dshpc-fg-2);\n  cursor:pointer;font-family:inherit;line-height:1;\n  animation:dshpc-ear-in .2s var(--dshpc-ease);\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n/* 入场：从右缘外滑进来，别「突然出现」（用户 2026-10-28）。 */\n@keyframes dshpc-ear-in{from{opacity:0;transform:translateX(14px)}}\n.dshpc-dock__ear:hover{background:var(--dshpc-plate-hover);color:var(--dshpc-fg)}\n.dshpc-dock__ear:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 与收起钮的箭头同一字号（16px）：收进去前后箭头一模一样大（用户 2026-10-28）。 */\n.dshpc-dock__ear-arrow{font-size:16px;color:var(--dshpc-fg-3)}\n.dshpc-dock__ear:hover .dshpc-dock__ear-arrow{color:var(--dshpc-fg)}\n/* 动效礼貌：系统声明减少动效时全部关掉，收起退化为瞬时、功能不受影响。 */\n@media (prefers-reduced-motion:reduce){\n  .dshpc-dock__panel{animation:none}\n  .dshpc-dock__panel--closing{transition:none}\n  .dshpc-dock__ear{animation:none}\n}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/side-panel-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/side-panel-css.generated.js
 		const SIDE_PANEL_CSS = "/* 侧边面板的公共皮肤 —— PanelDock（占宽分栏）与 SideSheet（覆盖抽屉）共用这一份。\n *\n * 分界：**皮肤在这里，定位各自写**。两者唯一的形态差异就是「怎么占位」——\n * PanelDock 用 sticky 占宽挤窄主区（panel-dock.css），SideSheet 用 absolute 盖在页面上（side-sheet.css）。\n *\n * 类名沿用 dshpc-dock__* 前缀：那是既有公开面（文档与消费方都在用），\n * 这里只搬文件不改名；新增的中性类是 .dshpc-side-surface（外观基类）。 */\n\n/* 入场：宽度从 0 长出来（keyframes 只写 from，终点取内联 / 状态宽度）。两边共用。 */\n@keyframes dshpc-side-in{from{width:0;opacity:0;overflow:hidden}}\n\n/* 外观基类：背景 / 文字色 / 阴影 / 纵向 flex。**不含** position、高度、边框方向、动画触发。 */\n.dshpc-side-surface{\n  box-sizing:border-box;\n  display:flex;flex-direction:column;flex:0 0 auto;min-width:0;\n  background:var(--dshpc-surface-base);color:var(--dshpc-fg);\n  box-shadow:var(--dshpc-shadow-2);\n  transition:border-color var(--dshpc-dur-fast) var(--dshpc-ease);\n  animation:dshpc-side-in .22s var(--dshpc-ease);\n}\n\n/* 头部：右侧 34px = 8(边距) + 20(关钮) + 6(呼吸)：给绝对定位的关钮留位，标题/extra 不从它底下钻。 */\n.dshpc-dock__head{\n  flex:none;display:flex;align-items:center;gap:8px;\n  padding:10px 34px 10px 14px;\n  border-bottom:1px solid var(--dshpc-border-faint);\n}\n/* 图标位 / 标题右侧的内容位：消费方传 ReactNode，可塞多个；库只负责排布，不抢宽度。 */\n.dshpc-dock__lead{display:inline-flex;align-items:center;gap:6px;flex:none;color:var(--dshpc-fg-2)}\n.dshpc-dock__extra{display:inline-flex;align-items:center;gap:6px;flex:none;margin-left:auto}\n/* 自定义头部：整行归调用方 —— 不加内边距/边框/背景，也不给关钮留内联空间（关钮是绝对定位的）。 */\n.dshpc-dock__head--custom{display:block;padding:0;border-bottom:none}\n.dshpc-dock__title{\n  flex:1 1 auto;min-width:0;\n  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\n  font-size:var(--dshpc-font-md);font-weight:600;\n}\n/* 关闭钮：20×20 方角图标位（与 Modal 的关闭钮同规格，不借 Picker 触发器皮肤）。 */\n.dshpc-dock__close{\n  display:inline-flex;align-items:center;justify-content:center;flex:none;\n  width:20px;height:20px;padding:0;border:none;border-radius:var(--dshpc-radius-sm);\n  background:transparent;color:var(--dshpc-fg-3);\n  font-family:inherit;font-size:13px;line-height:1;cursor:pointer;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease),color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-dock__close:hover{background:var(--dshpc-hover);color:var(--dshpc-fg)}\n.dshpc-dock__close:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 头部关钮：绝对定位（top 10 / right 8），锚点是面板本身 —— 正文滚动它不跟滚。 */\n.dshpc-dock__close--abs{position:absolute;top:10px;right:8px;z-index:8}\n/* 浮动关钮：无头部面板用，略收一点边距。 */\n.dshpc-dock__close--floating{\n  position:absolute;top:6px;right:6px;z-index:8;\n  background:var(--dshpc-surface-menu);border:1px solid var(--dshpc-border-faint);\n}\n\n/* 内容区自己滚（面板高度锁死，内容不设内部滚动就会把页面撑高）。\n   细滚动条与 1px 让位由 .dshpc-scroll-thin 统一给（口径见 style.md §滚动条让位）。 */\n.dshpc-dock__body{flex:1 1 auto;min-height:0;overflow:auto}\n\n\n/* 拖拽条：6px 命中区，**自己不画任何线**（贴在朝内那一侧，镜像由各自的定位文件做）。\n   hover / 拖动时把面板自己的边框染成蓝 —— 蓝线只准改原线，不准在旁边再加一条。\n   z-index 7 必须高于面板内容里的浮层（复制钮一类），否则命中区会被内容盖住。 */\n.dshpc-dock__resizer{\n  position:absolute;left:0;top:0;bottom:0;width:6px;\n  z-index:7;cursor:col-resize;background:transparent;\n}\n.dshpc-side-surface:has(> .dshpc-dock__resizer:hover),\n.dshpc-side-surface--resizing{\n  /* 原线保留「上下渐隐」工作区指示条质感：把面板自己的那条边框换成同款渐变。\n     面板四边里只有朝内一侧有宽度，所以渐变只落在那一侧。 */\n  border-image:linear-gradient(180deg,transparent,var(--dshpc-business) 30% 70%,transparent) 1;\n}\n/* 拖动期：① <iframe>（PDF / HTML 预览）是独立文档，会吞掉父文档的 pointermove ——\n   让出指针事件；② contain 把重排隔离在面板内，否则每帧改宽都会牵动整页重排。 */\n.dshpc-side-surface--resizing{contain:layout paint;will-change:width}\n.dshpc-side-surface--resizing iframe{pointer-events:none}\n\n/* 动效礼貌：系统声明减少动效时退化为瞬时（功能不受影响）。 */\n@media (prefers-reduced-motion:reduce){\n  .dshpc-side-surface{animation:none}\n}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/layout/PanelDock.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/layout/PanelDock.js
 		/**
 		* 停靠面板（PanelDock）—— 可停靠的右侧分栏容器。
 		*
@@ -50470,8 +50394,7 @@ window.__ModuleLoader__.load({
 				onClick: () => collapseWithAnim(pane.id)
 			}, "›"), renderHeader(pane), headerCloseOf(pane), floatingCloseOf(pane), (0, react$1.createElement)("div", { className: "dshpc-dock__body dshpc-scroll-thin" }, pane.children ?? null))), earHost === null ? null : (0, react_dom.createPortal)(ears, earHost));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/fs-face.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/fs-face.js
 		/**
 		* client 侧的**只读文件面**：fetch 宿主 `serveFsRoute` 挂的那条路由（`src/host/fs-route.ts`）。
 		*
@@ -50628,8 +50551,7 @@ window.__ModuleLoader__.load({
 				height: Math.round(box.height)
 			};
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/explorer/open.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/explorer/open.js
 		/**
 		* 入参路径解析成**绝对路径**（`''` = 虚拟根）。用户 2026-11-03 定：绝对/相对都收。
 		*
@@ -50916,8 +50838,7 @@ window.__ModuleLoader__.load({
 				}))));
 			});
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/picker-logic.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/picker-logic.js
 		/** 两种输入归一成 groups：给了 `options` 就当成一个无标题的组。 */
 		function toGroups(groups, options) {
 			if (groups !== void 0 && groups.length > 0) return groups;
@@ -51000,8 +50921,7 @@ window.__ModuleLoader__.load({
 			if (opts.maxWidth !== void 0) style.maxWidth = px(opts.maxWidth);
 			return style;
 		}
-		//#endregion
-		//#region node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs
+		// node_modules/.pnpm/@floating-ui+utils@0.2.12/node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs
 		function hasWindow() {
 			return typeof window !== "undefined";
 		}
@@ -51113,8 +51033,7 @@ window.__ModuleLoader__.load({
 		function getFrameElement(win) {
 			return win.parent && Object.getPrototypeOf(win.parent) ? win.frameElement : null;
 		}
-		//#endregion
-		//#region node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs
+		// node_modules/.pnpm/@floating-ui+utils@0.2.12/node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs
 		const min = Math.min;
 		const max = Math.max;
 		const round = Math.round;
@@ -51236,8 +51155,7 @@ window.__ModuleLoader__.load({
 		* tabbable 6.5.1
 		* @license MIT, https://github.com/focus-trap/tabbable/blob/master/LICENSE
 		*/
-		//#endregion
-		//#region node_modules/@floating-ui/react/dist/floating-ui.react.utils.mjs
+		// node_modules/.pnpm/@floating-ui+react@0.27.20_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@floating-ui/react/dist/floating-ui.react.utils.mjs
 		var import_dist$1 = (/* @__PURE__ */ __commonJSMin(((exports) => {
 			var candidateSelector = /* #__PURE__ */ [
 				"input:not([inert]):not([inert] *)",
@@ -51629,8 +51547,7 @@ window.__ModuleLoader__.load({
 				else element.removeAttribute("tabindex");
 			});
 		}
-		//#endregion
-		//#region node_modules/@floating-ui/core/dist/floating-ui.core.mjs
+		// node_modules/.pnpm/@floating-ui+core@1.8.0/node_modules/@floating-ui/core/dist/floating-ui.core.mjs
 		function computeCoordsFromPlacement(_ref, placement, rtl) {
 			let { reference, floating } = _ref;
 			const sideAxis = getSideAxis(placement);
@@ -51797,7 +51714,7 @@ window.__ModuleLoader__.load({
 		* clipping boundary. Alternative to `autoPlacement`.
 		* @see https://floating-ui.com/docs/flip
 		*/
-		const flip$2 = function(options) {
+		const flip$1 = function(options) {
 			if (options === void 0) options = {};
 			return {
 				name: "flip",
@@ -51897,7 +51814,7 @@ window.__ModuleLoader__.load({
 		* object may be passed.
 		* @see https://floating-ui.com/docs/offset
 		*/
-		const offset$2 = function(options) {
+		const offset$1 = function(options) {
 			if (options === void 0) options = 0;
 			return {
 				name: "offset",
@@ -51923,7 +51840,7 @@ window.__ModuleLoader__.load({
 		* keep it in view when it will overflow the clipping boundary.
 		* @see https://floating-ui.com/docs/shift
 		*/
-		const shift$2 = function(options) {
+		const shift$1 = function(options) {
 			if (options === void 0) options = {};
 			return {
 				name: "shift",
@@ -51974,7 +51891,7 @@ window.__ModuleLoader__.load({
 		* width of the reference element.
 		* @see https://floating-ui.com/docs/size
 		*/
-		const size$2 = function(options) {
+		const size$1 = function(options) {
 			if (options === void 0) options = {};
 			return {
 				name: "size",
@@ -52021,8 +51938,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		};
-		//#endregion
-		//#region node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs
+		// node_modules/.pnpm/@floating-ui+dom@1.8.0/node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs
 		function getCssDimensions(element) {
 			const css = getComputedStyle$1(element);
 			let width = parseFloat(css.width) || 0;
@@ -52501,27 +52417,27 @@ window.__ModuleLoader__.load({
 		* object may be passed.
 		* @see https://floating-ui.com/docs/offset
 		*/
-		const offset$1 = offset$2;
+		const offset$2 = offset$1;
 		/**
 		* Optimizes the visibility of the floating element by shifting it in order to
 		* keep it in view when it will overflow the clipping boundary.
 		* @see https://floating-ui.com/docs/shift
 		*/
-		const shift$1 = shift$2;
+		const shift$2 = shift$1;
 		/**
 		* Optimizes the visibility of the floating element by flipping the `placement`
 		* in order to keep it in view when the preferred placement(s) will overflow the
 		* clipping boundary. Alternative to `autoPlacement`.
 		* @see https://floating-ui.com/docs/flip
 		*/
-		const flip$1 = flip$2;
+		const flip$2 = flip$1;
 		/**
 		* Provides data that allows you to change the size of the floating element —
 		* for instance, prevent it from overflowing the clipping boundary or match the
 		* width of the reference element.
 		* @see https://floating-ui.com/docs/size
 		*/
-		const size$1 = size$2;
+		const size$2 = size$1;
 		/**
 		* Computes the `x` and `y` coordinates that will place the floating element
 		* next to a given reference element.
@@ -52539,8 +52455,7 @@ window.__ModuleLoader__.load({
 				platform: platformWithCache
 			});
 		};
-		//#endregion
-		//#region node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs
+		// node_modules/.pnpm/@floating-ui+react-dom@2.1.9_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs
 		var index = typeof document !== "undefined" ? react$1.useLayoutEffect : function noop() {};
 		function deepEqual(a, b) {
 			if (a === b) return true;
@@ -52739,7 +52654,7 @@ window.__ModuleLoader__.load({
 		* @see https://floating-ui.com/docs/offset
 		*/
 		const offset = (options, deps) => {
-			const result = offset$1(options);
+			const result = offset$2(options);
 			return {
 				name: result.name,
 				fn: result.fn,
@@ -52752,7 +52667,7 @@ window.__ModuleLoader__.load({
 		* @see https://floating-ui.com/docs/shift
 		*/
 		const shift = (options, deps) => {
-			const result = shift$1(options);
+			const result = shift$2(options);
 			return {
 				name: result.name,
 				fn: result.fn,
@@ -52766,7 +52681,7 @@ window.__ModuleLoader__.load({
 		* @see https://floating-ui.com/docs/flip
 		*/
 		const flip = (options, deps) => {
-			const result = flip$1(options);
+			const result = flip$2(options);
 			return {
 				name: result.name,
 				fn: result.fn,
@@ -52780,15 +52695,14 @@ window.__ModuleLoader__.load({
 		* @see https://floating-ui.com/docs/size
 		*/
 		const size = (options, deps) => {
-			const result = size$1(options);
+			const result = size$2(options);
 			return {
 				name: result.name,
 				fn: result.fn,
 				options: [options, deps]
 			};
 		};
-		//#endregion
-		//#region node_modules/@floating-ui/react/dist/floating-ui.react.mjs
+		// node_modules/.pnpm/@floating-ui+react@0.27.20_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@floating-ui/react/dist/floating-ui.react.mjs
 		const ARROW_LEFT = "ArrowLeft";
 		const ARROW_RIGHT = "ArrowRight";
 		const ARROW_UP = "ArrowUp";
@@ -53170,8 +53084,7 @@ window.__ModuleLoader__.load({
 				context
 			]);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/chevron.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/chevron.js
 		/**
 		* 全站唯一的箭头：**自绘 chevron**（就是下拉框右侧那颗）。
 		*
@@ -53208,8 +53121,7 @@ window.__ModuleLoader__.load({
 				"stroke-linejoin": "round"
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/FieldHint.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/FieldHint.js
 		/**
 		* 问号提示 —— **全站唯一实现、独立组件**（L2，P4）
 		*
@@ -53242,11 +53154,9 @@ window.__ModuleLoader__.load({
 				children: anchor
 			});
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/picker-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/picker-css.generated.js
 		const PICKER_CSS = "\n.dshpc-picker{position:relative;display:inline-block;max-width:100%;font-size:13px;line-height:20px}\n.dshpc-picker__trigger{\n  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;\n  min-width:120px;max-width:100%;height:28px;padding:0 8px;\n  color:var(--dshpc-fg);background:var(--dshpc-surface-1);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);cursor:pointer;\n}\n.dshpc-picker__trigger:disabled{color:var(--dshpc-fg-dim);cursor:not-allowed;opacity:.7}\n/* 聚焦（键盘或点击选中）时与全站一致的蓝色描边；菜单打开后焦点会进去，触发器自然失去焦点。 */\n.dshpc-picker__trigger:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 文字默认靠左（吃掉剩余宽度），不给 space-between 把短文案推到中间的机会；\n   确实要居中就显式传 align=\"center\"。 */\n.dshpc-picker__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}\n.dshpc-picker__trigger--center .dshpc-picker__label{text-align:center}\n.dshpc-picker__caret{flex:none;color:var(--dshpc-fg-3)}\n.dshpc-picker__icon{display:inline-flex;flex:none;color:var(--dshpc-fg-2)}\n.dshpc-picker__option-icon{display:inline-flex;flex:none;color:var(--dshpc-fg-2)}\n/* 下拉面板只留定位 / 裁切 / 字号：底色·描边·圆角·阴影来自 panel.css 的 menu 档。 */\n.dshpc-picker__menu{\n  z-index:var(--dshpc-z-popmenu);max-height:280px;overflow:hidden;\n  display:flex;flex-direction:column;\n  /* 菜单经 FloatingPortal 挂到 body，脱离 .dshpc-picker，须显式字号，否则继承 body 的大字号 */\n  font-size:13px;line-height:20px;\n}\n/* 固定头部（提示 + 搜索框），不随列表滚（2026-11-06 用户）。 */\n.dshpc-picker__head{flex:none;padding:4px 4px 0}\n/* 滚动在内层：列表贴满面板内容区，1px 让位由 .dshpc-scroll-thin 统一给\n   （不留缝就贴死在边框内壁上，2026-11-06 用户反馈）。上下角溢出由面板 overflow:hidden 裁掉。 */\n.dshpc-picker__list{flex:1 1 auto;min-height:0;overflow-y:auto;padding:0 4px 4px}\n/* 尺寸档（与 Field 的 sm/md/lg 对应）。 */\n.dshpc-picker__trigger--sm{height:24px;font-size:12px}\n.dshpc-picker__trigger--lg{height:32px}\n/* 键盘游标所在项（无 hover 也要看得见）。 */\n.dshpc-picker__option[data-active='true']{background:var(--dshpc-surface-sunken);outline:1px solid var(--dshpc-border)}\n.dshpc-picker__option--clear{color:var(--dshpc-fg-3)}\n.dshpc-picker__search{\n  width:100%;height:28px;margin-bottom:4px;padding:0 8px;box-sizing:border-box;\n  color:var(--dshpc-fg);background:var(--dshpc-surface-sunken);\n  border:1px solid var(--dshpc-border-heavy);border-radius:var(--dshpc-radius-md);outline:none;\n}\n.dshpc-picker__search::placeholder{color:var(--dshpc-fg-3)}\n.dshpc-picker__group-label{\n  padding:6px 8px 2px;color:var(--dshpc-fg-3);font-size:11px;\n}\n.dshpc-picker__option{\n  display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n  color:var(--dshpc-fg);white-space:nowrap;\n}\n.dshpc-picker__option:hover{background:var(--dshpc-surface-sunken)}\n.dshpc-picker__option--active{background:var(--dshpc-open-bg);color:var(--dshpc-business)}\n.dshpc-picker__option--disabled{color:var(--dshpc-fg-dim);cursor:not-allowed}\n/* 选项文字吃掉剩余宽度：超长省略号（配合 MarqueeText hover 跑马灯），不撑宽菜单。 */\n.dshpc-picker__option-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.dshpc-picker__tick{width:12px;color:var(--dshpc-business)}\n.dshpc-picker__empty{padding:8px;color:var(--dshpc-fg-3);text-align:center}\n.dshpc-picker__degraded{\n  padding:6px 8px;margin-bottom:4px;border-radius:var(--dshpc-radius-sm);\n  color:var(--dshpc-warning-label);background:color-mix(in srgb,var(--dshpc-warning) 12%,transparent);\n  font-size:11px;\n}\n.dshpc-picker__row{display:flex;align-items:center;gap:8px}\n/* 「显示更多」跟在最后一条后面、长得像多一条选项（2026-11-06 用户：翻到底发现不全才会找它）。 */\n.dshpc-picker__more{\n  display:block;width:100%;margin-top:2px;padding:6px 8px;\n  color:var(--dshpc-business);background:none;\n  border:0;border-radius:var(--dshpc-radius-sm);cursor:pointer;\n  font-size:12px;line-height:20px;text-align:center;\n}\n.dshpc-picker__more:hover{background:var(--dshpc-surface-sunken)}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Picker.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/Picker.js
 		/**
 		* 通用选择器：单选 / 多选 / 上限 / 搜索 / 分组 / 空态 / 降级。
 		*
@@ -53436,8 +53346,7 @@ window.__ModuleLoader__.load({
 			if (v === void 0) return [];
 			return Array.isArray(v) ? [...v] : [v];
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/utils/date.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/utils/date.js
 		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
 		function pad2$1(value) {
 			return String(value).padStart(2, "0");
@@ -53456,8 +53365,7 @@ window.__ModuleLoader__.load({
 			const clock = `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
 			return precision === "second" ? `${day} ${clock}:${pad2$1(d.getSeconds())}` : `${day} ${clock}`;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/datetime-logic.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/datetime-logic.js
 		const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?)?$/;
 		const STEP_MAX = {
 			hour: 23,
@@ -53786,8 +53694,7 @@ window.__ModuleLoader__.load({
 			const [startMs, endMs] = m[4] !== void 0 ? unitBounds(shifted, m[4]) : [Math.min(base, shifted), Math.max(base, shifted)];
 			return [formatDateTimeIso(floorToPrecision(msToParts(startMs), precision)), formatDateTimeIso(ceilToPrecision(msToParts(endMs), precision))];
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/DateTimePicker.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/DateTimePicker.js
 		const UNIT_LABEL = {
 			hour: "dtHour",
 			minute: "dtMinute",
@@ -54430,8 +54337,7 @@ window.__ModuleLoader__.load({
 				ref: rootRef
 			}, triggerRow, open ? (0, react$1.createElement)(FloatingPortal, null, pop) : null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/picker-icons.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/picker-icons.js
 		/**
 		* 领域选择器的默认前置图标（2026-10-20 用户：默认就带一个 icon，可换、可去掉）。
 		*
@@ -54456,8 +54362,7 @@ window.__ModuleLoader__.load({
 				"stroke-linejoin": "round"
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/ModelPicker.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/ModelPicker.js
 		function ModelPicker(props) {
 			ensureComponentStyles("picker", PICKER_CSS);
 			const tt = props.translate ?? t$1;
@@ -54542,14 +54447,11 @@ window.__ModuleLoader__.load({
 				onChange: emitModel
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/card-css.generated.js
-		const CARD_CSS = "\n/* ── Card / StripCard：Surface 外框 + 头部契约 + 色条 ─────────────────────\n   外框（底 / 边框 / 圆角 / 内距）全部来自 .dshpc-surface（src/ui/surface.css）：\n   本文件**不再写 border / border-radius**，圆角契约因此只有一个定义点（容器档 = 12）。\n   这里只管两件 Surface 不该知道的事：色条几何、头部布局。\n\n   色条几何默认值都可被 props 覆盖（Card.ts 写对应的 CSS 变量）：\n     --card-bar-size   条子粗细\n     --card-bar-inset  条子距卡片边缘的距离（= 贴边那一侧的内距）\n     --card-bar-gap    条子距内容的距离（= body 的 gap）\n     --card-bar-length 上下方位时的条长（100% = 跟内容同宽）\n   这些变量只在本文件消费（3 份文件一起引时，跨文件引用别处的变量会静默失效），\n   所以默认值必须写在这里，而不是令牌或别的皮肤里。 */\n.dshpc-card{\n  --card-accent:var(--dshpc-business);\n  --card-accent-soft:var(--dshpc-business-soft);\n  --card-bar-size:6px;\n  --card-bar-inset:12px;\n  --card-bar-gap:12px;\n  --card-bar-length:100%;\n}\n/* 档位 → token（照 records-timeline 的 tone 模式：一个变量切档，不写 5 套规则；浅底与色条同源）。 */\n.dshpc-card--success{--card-accent:var(--dshpc-success);--card-accent-soft:var(--dshpc-success-soft)}\n.dshpc-card--warning{--card-accent:var(--dshpc-warning);--card-accent-soft:var(--dshpc-warning-soft)}\n.dshpc-card--danger{--card-accent:var(--dshpc-danger);--card-accent-soft:var(--dshpc-danger-soft)}\n/* neutral 浅底借 chip 底（兄弟项目 mute 档同款：明暗都成立）。 */\n.dshpc-card--neutral{--card-accent:var(--dshpc-fg-4);--card-accent-soft:var(--dshpc-chip-bg)}\n/* 扩展八色（2026-10-29）：色条 + 浅底同源，软底走各自 -soft。 */\n.dshpc-card--purple{--card-accent:var(--dshpc-purple);--card-accent-soft:var(--dshpc-purple-soft)}\n.dshpc-card--pink{--card-accent:var(--dshpc-pink);--card-accent-soft:var(--dshpc-pink-soft)}\n.dshpc-card--cyan{--card-accent:var(--dshpc-cyan);--card-accent-soft:var(--dshpc-cyan-soft)}\n.dshpc-card--teal{--card-accent:var(--dshpc-teal);--card-accent-soft:var(--dshpc-teal-soft)}\n.dshpc-card--orange{--card-accent:var(--dshpc-orange);--card-accent-soft:var(--dshpc-orange-soft)}\n.dshpc-card--indigo{--card-accent:var(--dshpc-indigo);--card-accent-soft:var(--dshpc-indigo-soft)}\n.dshpc-card--rose{--card-accent:var(--dshpc-rose);--card-accent-soft:var(--dshpc-rose-soft)}\n.dshpc-card--slate{--card-accent:var(--dshpc-slate);--card-accent-soft:var(--dshpc-slate-soft)}\n\n/* body = 色条 + 头部。方向跟着条子贴的边切 ⇒ 四个方位只是「换一个方向的 flex 项」，\n   不用为每个方位各写一套定位。 */\n.dshpc-card__body{display:flex;gap:var(--card-bar-gap);min-width:0}\n.dshpc-card--bar-top .dshpc-card__body,\n.dshpc-card--bar-bottom .dshpc-card__body{flex-direction:column}\n\n/* 头部一行 = 主内容 + 右侧槽，**整体垂直居中**：调用方在 action 里裸放一个元素\n   （按钮 / 文字 / 图标）不用自己套容器居中；一行两行、右边怎么放由调用方在框内自定。 */\n.dshpc-card__head{display:flex;align-items:center;gap:8px;min-width:0}\n.dshpc-card--bar-left .dshpc-card__head,\n.dshpc-card--bar-right .dshpc-card__head{flex:1 1 auto}\n.dshpc-card__main{flex:1;min-width:0}\n.dshpc-card__side{display:flex;align-items:center;gap:6px;flex:none}\n\n/* 色条：左/右 = 竖向条（高度跟内容，最小一行）；上/下 = 横向条（长度默认跟内容同宽）。\n   右/下方位靠 order 排到头部之后，DOM 顺序始终不变。 */\n.dshpc-card__bar{flex:none;background:var(--card-accent);border-radius:var(--dshpc-radius-xs)}\n.dshpc-card--bar-left .dshpc-card__bar,\n.dshpc-card--bar-right .dshpc-card__bar{width:var(--card-bar-size);align-self:stretch;min-height:var(--dshpc-line-md)}\n.dshpc-card--bar-top .dshpc-card__bar,\n.dshpc-card--bar-bottom .dshpc-card__bar{width:var(--card-bar-length);height:var(--card-bar-size);align-self:flex-start}\n.dshpc-card--bar-right .dshpc-card__bar,\n.dshpc-card--bar-bottom .dshpc-card__bar{order:1}\n\n/* ── 外观一 · StripCard：同色系浅底 + 1px 不可见占位边框 + 方角 + 4px 通高方角色条贴左缘 ──\n   底色 / 方角 / 占位边框由 Surface 的三条修饰类提供（Card.ts 按 kind 传），此处只管内距与条子。 */\n.dshpc-card.dshpc-card--strip{\n  --card-bar-size:4px;--card-bar-inset:0;\n  padding:12px 12px 12px 20px;\n  background:var(--card-accent-soft,transparent);\n}\n/* 左内边距 20px = 16 留白 + 4 条宽 ⇒ 内容从色条右缘起算；色条绝对定位通高，跟着内容高度自适应。\n   特异性 0,3,0：压过上面 .dshpc-card--bar-left .dshpc-card__bar 的宽度规则，与注入顺序无关。 */\n.dshpc-card.dshpc-card--strip .dshpc-card__bar{position:absolute;left:0;top:0;bottom:0;width:4px;align-self:auto}\n\n/* ── 外观二 · Card：Surface 外框（底 + 1px 实色边框 + 圆角 12）+ 色条贴边那一侧的内距 ──\n   内距用 0,2,0 / 0,3,0 的长写法：高过 .dshpc-surface 的 padding 简写，与两份 CSS 的注入顺序无关。 */\n.dshpc-card.dshpc-card--bordered{padding:14px}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-left{padding-left:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-right{padding-right:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-top{padding-top:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-bottom{padding-bottom:var(--card-bar-inset)}\n\n.dshpc-card__toggle{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:24px;height:24px;padding:0;background:none;border:none;border-radius:var(--dshpc-radius-sm);\n  color:var(--dshpc-fg-3);cursor:pointer;\n}\n.dshpc-card__toggle:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n/* 箭头是 svg（Chevron），不是字形 ⇒ 不要 font-size；inline-flex 免掉 svg 的基线留白。 */\n.dshpc-card__caret{display:inline-flex;transition:transform .15s ease}\n.dshpc-card__caret.is-open{transform:rotate(180deg)}\n.dshpc-card__panel{margin-top:8px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/surface-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/card-css.generated.js
+		const CARD_CSS = "\n/* ── Card / StripCard：Surface 外框 + 头部契约 + 色条 ─────────────────────\n   外框（底 / 边框 / 圆角 / 内距）全部来自 .dshpc-surface（src/ui/surface.css）：\n   本文件**不再写 border / border-radius**，圆角契约因此只有一个定义点（容器档 = 12）。\n   这里只管两件 Surface 不该知道的事：色条几何、头部布局。\n\n   色条几何默认值都可被 props 覆盖（Card.ts 写对应的 CSS 变量）：\n     --card-bar-size   条子粗细\n     --card-bar-inset  条子距卡片边缘的距离（= 贴边那一侧的内距）\n     --card-bar-gap    条子距内容的距离（= body 的 gap）\n     --card-bar-length 上下方位时的条长（100% = 跟内容同宽）\n   这些变量只在本文件消费（3 份文件一起引时，跨文件引用别处的变量会静默失效），\n   所以默认值必须写在这里，而不是令牌或别的皮肤里。 */\n.dshpc-card{\n  --card-accent:var(--dshpc-business);\n  --card-accent-soft:var(--dshpc-business-soft);\n  --card-bar-size:6px;\n  --card-bar-inset:12px;\n  --card-bar-gap:12px;\n  --card-bar-length:100%;\n}\n/* 档位 → token（照 records-timeline 的 tone 模式：一个变量切档，不写 5 套规则；浅底与色条同源）。 */\n.dshpc-card--success{--card-accent:var(--dshpc-success);--card-accent-soft:var(--dshpc-success-soft)}\n.dshpc-card--warning{--card-accent:var(--dshpc-warning);--card-accent-soft:var(--dshpc-warning-soft)}\n.dshpc-card--danger{--card-accent:var(--dshpc-danger);--card-accent-soft:var(--dshpc-danger-soft)}\n/* neutral 浅底借 chip 底（兄弟项目 mute 档同款：明暗都成立）。 */\n.dshpc-card--neutral{--card-accent:var(--dshpc-fg-4);--card-accent-soft:var(--dshpc-chip-bg)}\n/* 扩展八色（2026-10-29）：色条 + 浅底同源，软底走各自 -soft。 */\n.dshpc-card--purple{--card-accent:var(--dshpc-purple);--card-accent-soft:var(--dshpc-purple-soft)}\n.dshpc-card--pink{--card-accent:var(--dshpc-pink);--card-accent-soft:var(--dshpc-pink-soft)}\n.dshpc-card--cyan{--card-accent:var(--dshpc-cyan);--card-accent-soft:var(--dshpc-cyan-soft)}\n.dshpc-card--teal{--card-accent:var(--dshpc-teal);--card-accent-soft:var(--dshpc-teal-soft)}\n.dshpc-card--orange{--card-accent:var(--dshpc-orange);--card-accent-soft:var(--dshpc-orange-soft)}\n.dshpc-card--indigo{--card-accent:var(--dshpc-indigo);--card-accent-soft:var(--dshpc-indigo-soft)}\n.dshpc-card--rose{--card-accent:var(--dshpc-rose);--card-accent-soft:var(--dshpc-rose-soft)}\n.dshpc-card--slate{--card-accent:var(--dshpc-slate);--card-accent-soft:var(--dshpc-slate-soft)}\n\n/* body = 色条 + 头部。方向跟着条子贴的边切 ⇒ 四个方位只是「换一个方向的 flex 项」，\n   不用为每个方位各写一套定位。 */\n.dshpc-card__body{display:flex;gap:var(--card-bar-gap);min-width:0}\n.dshpc-card--bar-top .dshpc-card__body,\n.dshpc-card--bar-bottom .dshpc-card__body{flex-direction:column}\n\n/* 头部一行 = 主内容 + 右侧槽，**整体垂直居中**：调用方在 action 里裸放一个元素\n   （按钮 / 文字 / 图标）不用自己套容器居中；一行两行、右边怎么放由调用方在框内自定。 */\n.dshpc-card__head{display:flex;align-items:center;gap:8px;min-width:0}\n.dshpc-card--bar-left .dshpc-card__head,\n.dshpc-card--bar-right .dshpc-card__head{flex:1 1 auto}\n.dshpc-card__main{flex:1;min-width:0}\n.dshpc-card__side{display:flex;align-items:center;gap:6px;flex:none}\n\n/* 色条：左/右 = 竖向条（高度跟内容，最小一行）；上/下 = 横向条（长度默认跟内容同宽）。\n   右/下方位靠 order 排到头部之后，DOM 顺序始终不变。 */\n.dshpc-card__bar{flex:none;background:var(--card-accent);border-radius:var(--dshpc-radius-xs)}\n.dshpc-card--bar-left .dshpc-card__bar,\n.dshpc-card--bar-right .dshpc-card__bar{width:var(--card-bar-size);align-self:stretch;min-height:var(--dshpc-line-md)}\n.dshpc-card--bar-top .dshpc-card__bar,\n.dshpc-card--bar-bottom .dshpc-card__bar{width:var(--card-bar-length);height:var(--card-bar-size);align-self:flex-start}\n.dshpc-card--bar-right .dshpc-card__bar,\n.dshpc-card--bar-bottom .dshpc-card__bar{order:1}\n\n/* ── 外观一 · StripCard：同色系浅底 + 1px 不可见占位边框 + 方角 + 4px 通高方角色条贴左缘 ──\n   底色 / 方角 / 占位边框由 Surface 的三条修饰类提供（Card.ts 按 kind 传），此处只管内距与条子。 */\n.dshpc-card.dshpc-card--strip{\n  --card-bar-size:4px;--card-bar-inset:0;\n  padding:12px 12px 12px 20px;\n  /* 底色改走 Surface 的 --surface-bg 变量（surface.css:7-8 契约）：不能写 background 属性，\n     否则 hover / 透明档要覆盖时会被属性层打架（兄弟项目曾用 background-image 渐变绕过）。 */\n  --surface-bg:var(--card-accent-soft,transparent);\n}\n/* 左内边距 20px = 16 留白 + 4 条宽 ⇒ 内容从色条右缘起算；色条绝对定位通高，跟着内容高度自适应。\n   特异性 0,3,0：压过上面 .dshpc-card--bar-left .dshpc-card__bar 的宽度规则，与注入顺序无关。 */\n.dshpc-card.dshpc-card--strip .dshpc-card__bar{position:absolute;left:0;top:0;bottom:0;width:4px;align-self:auto}\n\n/* ── 外观二 · Card：Surface 外框（底 + 1px 实色边框 + 圆角 12）+ 色条贴边那一侧的内距 ──\n   内距用 0,2,0 / 0,3,0 的长写法：高过 .dshpc-surface 的 padding 简写，与两份 CSS 的注入顺序无关。 */\n.dshpc-card.dshpc-card--bordered{padding:14px}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-left{padding-left:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-right{padding-right:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-top{padding-top:var(--card-bar-inset)}\n.dshpc-card.dshpc-card--bordered.dshpc-card--bar-bottom{padding-bottom:var(--card-bar-inset)}\n\n/* ── 外观轴（2026-11-07）：整卡 hover + 底色开关 ───────────────────────────\n   只改 --surface-bg 一个变量，Surface 基类的 background:var(--surface-bg) 自动吃到；\n   不写 background / background-image，免得跟浅底属性打架。\n   顺序即优先级：strip 浅底(0,2,0) → no-fill 透明(0,2,0，靠后胜) → hoverable:hover(0,3,0，最高)。 */\n.dshpc-card.dshpc-card--no-fill{--surface-bg:transparent}\n/* 开关打开即声明「整卡可交互」：光标跟着一起变，别只换背景不改手势。 */\n.dshpc-card.dshpc-card--hoverable{cursor:pointer}\n.dshpc-card.dshpc-card--hoverable:hover{--surface-bg:var(--dshpc-card-hover)}\n\n.dshpc-card__toggle{\n  display:inline-flex;align-items:center;justify-content:center;\n  width:24px;height:24px;padding:0;background:none;border:none;border-radius:var(--dshpc-radius-sm);\n  color:var(--dshpc-fg-3);cursor:pointer;\n}\n.dshpc-card__toggle:hover{background:var(--dshpc-surface-sunken);color:var(--dshpc-fg)}\n/* 箭头是 svg（Chevron），不是字形 ⇒ 不要 font-size；inline-flex 免掉 svg 的基线留白。 */\n.dshpc-card__caret{display:inline-flex;transition:transform .15s ease}\n.dshpc-card__caret.is-open{transform:rotate(180deg)}\n.dshpc-card__panel{margin-top:8px;padding-top:8px;border-top:1px solid var(--dshpc-border-faint)}\n";
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/surface-css.generated.js
 		const SURFACE_CSS = "\n/* ── Surface · 纯框容器 ───────────────────────────────────────────────────\n   只回答「一块面长什么样」：底 / 边 / 圆角 / 内距，四根轴，零业务语义。\n   它是**圆角契约的唯一真源**：容器档 = --dshpc-radius-md(12)，与 Button / Input 同档，\n   外框永远不小于里面的控件 —— 杜绝「卡片 8 < 按钮 12」这类倒挂（2026-11-01）。\n\n   所有轴都用**变量**表达，修饰类只改这些变量、不改属性：\n   消费方（Card、下游插件）自己写规则时，无论两份 CSS 谁先注入，胜负都不依赖顺序。\n\n     tone    plain(默认 surface-1) / raised / sunken / subtle\n     border  默认 1px 实线；faint 更淡；none 透明（保留 1px 占位，不跳高）；\n             dashed 虚线（占位框用，线色仍是 border token）\n     radius  默认 md；none / sm / lg\n     padding 默认由调用方选档；none / sm(8) / md(12) / lg(16)\n   基类不带内距：容器要自己算四边内距时（如 Card 的色条贴边），不传 pad 档即可，不需要覆盖。 */\n.dshpc-surface{\n  position:relative;box-sizing:border-box;color:var(--dshpc-fg);font:inherit;text-align:left;\n  --surface-bg:var(--dshpc-surface-1);\n  --surface-border:var(--dshpc-border);\n  --surface-border-style:solid;\n  --surface-radius:var(--dshpc-radius-md);\n  --surface-pad:0;\n  border:1px var(--surface-border-style) var(--surface-border);\n  border-radius:var(--surface-radius);\n  background:var(--surface-bg);\n  padding:var(--surface-pad);\n}\n.dshpc-surface--tone-raised{--surface-bg:var(--dshpc-surface-raised)}\n.dshpc-surface--tone-sunken{--surface-bg:var(--dshpc-surface-sunken)}\n.dshpc-surface--tone-subtle{--surface-bg:var(--dshpc-chip-bg)}\n.dshpc-surface--border-faint{--surface-border:var(--dshpc-border-faint)}\n.dshpc-surface--border-none{--surface-border:transparent}\n.dshpc-surface--border-dashed{--surface-border-style:dashed}\n.dshpc-surface--radius-none{--surface-radius:0}\n.dshpc-surface--radius-sm{--surface-radius:var(--dshpc-radius-sm)}\n.dshpc-surface--radius-lg{--surface-radius:var(--dshpc-radius-lg)}\n.dshpc-surface--pad-none{--surface-pad:0}\n.dshpc-surface--pad-sm{--surface-pad:var(--dshpc-space-2)}\n.dshpc-surface--pad-md{--surface-pad:var(--dshpc-space-3)}\n.dshpc-surface--pad-lg{--surface-pad:var(--dshpc-space-4)}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/Surface.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/Surface.js
 		/**
 		* 拼 Surface 的类名。独立导出是给组合类容器（Card）用的：
 		* 容器要把 Surface 当外框、又不想吃它的内距时，传 `padding: null` 即可。
@@ -54583,8 +54485,7 @@ window.__ModuleLoader__.load({
 				style: props.style
 			}, props.children ?? null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/Card.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/Card.js
 		/** 色条档位（映射到 design 的 token，不新增 token；也接受任意 CSS 颜色值）。 */
 		const CARD_ACCENTS = [
 			"business",
@@ -54632,6 +54533,8 @@ window.__ModuleLoader__.load({
 				kind === "strip" ? "dshpc-card--strip" : "dshpc-card--bordered",
 				`dshpc-card--bar-${side}`,
 				isPreset ? `dshpc-card--${accent}` : "",
+				props.hoverable === true ? "dshpc-card--hoverable" : "",
+				props.filled === false ? "dshpc-card--no-fill" : "",
 				props.className ?? ""
 			].filter((s) => s !== "").join(" ");
 			const vars = {};
@@ -54689,11 +54592,9 @@ window.__ModuleLoader__.load({
 		function StripCard(props) {
 			return CardShell("strip", props);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/chip-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/chip-css.generated.js
 		const CHIP_CSS = "\n/* 三条局部变量承载配色：neutral 走旧灰面；语义档换底字配对（2026-10-20 用户要多色多尺寸标签）。 */\n.dshpc-chip{--chip-bg:var(--dshpc-chip-bg);--chip-fg:var(--dshpc-fg);--chip-bg-hover:var(--dshpc-chip-bg-hover);\n  display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:1px 8px;\n  box-sizing:border-box;border-radius:var(--dshpc-radius-pill,999px);border:none;\n  background:var(--chip-bg);color:var(--chip-fg);\n  font-family:inherit;font-size:11px;line-height:18px;margin:0;\n  /* 2026-10-18：chip 是 flex 行里的常用项，禁止被压缩换行（预览站出现过文字竖排、互相叠压的挤压）。 */\n  white-space:nowrap;flex:none;\n  appearance:none;-webkit-appearance:none;\n}\n/* md 档：卡片元信息行等稍大场景；sm 即旧版默认，逐像素不动。 */\n.dshpc-chip--md{padding:2px 10px;font-size:12px;line-height:20px;}\n/* xs 档：标题后缀等极紧凑场景（2026-10-20 用户要更小标签）；16px 高、font 10。 */\n.dshpc-chip--xs{padding:0 6px;font-size:10px;line-height:16px;}\n/* 语义色实心档：底 / 字 / hover 配对与 Button 同源（黄底中高明度 ⇒ 字用 --dshpc-on-warning）。 */\n.dshpc-chip--business{--chip-bg:var(--dshpc-business);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-business-hover);}\n.dshpc-chip--success{--chip-bg:var(--dshpc-success);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-success-hover);}\n.dshpc-chip--warning{--chip-bg:var(--dshpc-warning);--chip-fg:var(--dshpc-on-warning);--chip-bg-hover:var(--dshpc-warning-hover);}\n.dshpc-chip--danger{--chip-bg:var(--dshpc-danger);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-danger-hover);}\n/* 扩展八色（2026-10-29）：实心面字色统一白（on-signal），明度均低于黄 / 青柠，白字两主题可读。 */\n.dshpc-chip--purple{--chip-bg:var(--dshpc-purple);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-purple-hover);}\n.dshpc-chip--pink{--chip-bg:var(--dshpc-pink);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-pink-hover);}\n.dshpc-chip--cyan{--chip-bg:var(--dshpc-cyan);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-cyan-hover);}\n.dshpc-chip--teal{--chip-bg:var(--dshpc-teal);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-teal-hover);}\n.dshpc-chip--orange{--chip-bg:var(--dshpc-orange);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-orange-hover);}\n.dshpc-chip--indigo{--chip-bg:var(--dshpc-indigo);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-indigo-hover);}\n.dshpc-chip--rose{--chip-bg:var(--dshpc-rose);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-rose-hover);}\n.dshpc-chip--slate{--chip-bg:var(--dshpc-slate);--chip-fg:var(--dshpc-on-signal);--chip-bg-hover:var(--dshpc-slate-hover);}\n/* 可点态：button 渲染（见 Chip.ts），光标 + hover 加深。 */\n.dshpc-chip--clickable{cursor:pointer;transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease);}\n.dshpc-chip--clickable:hover:not(:disabled){background:var(--chip-bg-hover)}\n.dshpc-chip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px}\n/* 禁用态字色从 --chip-fg 派生（45% ≈ 旧 fg-3 的弱化观感），不许直接用 --dshpc-fg-3：\n   它跟主题走，暗色下是深灰 ⇒ 语义色实心标签（蓝 / 红底）上几乎看不见（与 Segmented 计数 2026-10-29 同类）。 */\n.dshpc-chip:disabled{cursor:default;color:color-mix(in srgb,var(--chip-fg) 45%,transparent)}\n/* maxWidth 包 MarqueeText 时：标签作为 flex 子项必须能收缩到内容以下，否则省略号 / 跑马灯测不准 */\n.dshpc-chip .dshpc-chip__label{min-width:0;}\n@media (prefers-reduced-motion: reduce){.dshpc-chip{transition:none}}\n";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/Chip.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/Chip.js
 		/** 小标签（neutral 用现成的 `--dshpc-chip-bg`；传 `onClick` 才是可点的）。 */
 		function Chip(props) {
 			ensureComponentStyles("chip", CHIP_CSS);
@@ -54716,8 +54617,66 @@ window.__ModuleLoader__.load({
 				className: "dshpc-chip__label"
 			}) : children ?? null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/navigation/pagination-logic.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/list-row-css.generated.js
+		const LIST_ROW_CSS = "/* ── ListRow · 一行一条的列表条目 ───────────────────────────────────────────\n   外框（底 / 边 / 圆角 / 内距）全部由 Surface 提供：组件调 surfaceClass 拿\n   dshpc-surface + tone-sunken + border-none，本文件不写 background / border / border-radius。\n   所有轴只改 --surface-* 变量：无论 Surface 与本皮肤谁先注入，胜负都不依赖顺序\n   （surface.css:7-8 的既定契约）。本文件只管「行」独有的：默认字号、高度、两槽布局、行级 hover、选中态。 */\n\n/* 双类选择器压过 .dshpc-surface 基类，避免注入顺序影响变量覆盖。 */\n.dshpc-surface.dshpc-listrow{\n  /* 四边等距（8px，与 Surface 的 pad-sm 同档）：不写「上下 0 / 左右 12」那种横宽纵窄的值。 */\n  --surface-pad:var(--dshpc-space-2);\n  /* 具体控件自带默认字号：只有 Surface 这种纯容器才用 font:inherit，行内容不能继承宿主默认 16px。\n     与 Table(table.css:11) / Input md(field.css:22) 同口径；调用方仍可用内联 style 覆盖。 */\n  font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);\n  display:flex;align-items:center;gap:var(--dshpc-space-2);\n  min-height:var(--dshpc-control-h-md);width:100%;\n  transition:background-color var(--dshpc-dur-fast) var(--dshpc-ease);\n}\n.dshpc-listrow__main{flex:1 1 auto;min-width:0;}\n.dshpc-listrow__actions{flex:none;display:flex;align-items:center;gap:4px;}\n\n/* 整行可点：光标 + 键盘焦点环（与 Button / Chip 同口径）。 */\n.dshpc-listrow--interactive{cursor:pointer;}\n.dshpc-listrow--interactive:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}\n\n/* 三态各只换一个 --surface-bg，颜色全取 Button 灰色档那一组 token：\n     常态     tone-sunken（淡底，由 surface.css 给，此处不重写）\n     hover    --dshpc-active = secondary 灰按钮的 hover 色（亮色黑 18% / 暗色白 24%）\n     selected --dshpc-listrow-selected-bg = slate 极浅蓝灰（双主题各自定义）\n   ⚠️ 亮色别用 --dshpc-plate-hover：它是 #f5f5f5 实色，常态 tone-sunken 是叠 6% 蓝灰\n   ≈ #f0f1f3，白底上几乎同色甚至更白 ⇒ 移上去看不出变化（真踩过，见 tokens.css:153）。\n   ⚠️ 选中别用通用 --dshpc-selected-bg：暗色它是两个深色面互掺 ⇒ 选中行发黑（2026-11-07 用户反馈）。\n   双类 + :hover 压得过单类 tone-sunken，不需要 !important。 */\n.dshpc-surface.dshpc-listrow--hoverable:not(.dshpc-listrow--selected):hover{\n  --surface-bg:var(--dshpc-active);\n}\n\n/* 选中只换一个背景色：slate 极浅蓝灰，不描边、不渐变、不竖条；状态仍由调用方管。 */\n.dshpc-surface.dshpc-listrow--selected{\n  --surface-bg:var(--dshpc-listrow-selected-bg);\n}\n\n@media (prefers-reduced-motion: reduce){.dshpc-listrow{transition:none}}\n";
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/ListRow.js
+		/**
+		* 一行一条的列表条目：常态带底、整行可点、右侧挂一组小操作。
+		*
+		* 外框（底 / 边 / 圆角 / 内距）复用 `Surface`，颜色全走 token；本控件只补
+		* 「行」独有的：高度档、两槽布局、行级 hover、选中态。
+		*
+		* 整行刻意**不渲染成 `<button>`**：调用方要在里面放 Button / IconButton，
+		* 嵌 button 是非法 HTML。改用 `div[role=button] + tabIndex + Enter/Space`，
+		* 与 `src/adv/explorer/landing.ts` 的既有口径一致。
+		*
+		* ```tsx
+		* h(ListRow, {
+		*   onClick: () => open(file),
+		*   selected: file.path === current,
+		*   actions: h(IconButton, { size: 'sm', icon: ..., label: '移除', onClick: () => remove(file) }),
+		* }, h('span', null, file.name))
+		* ```
+		*/
+		function ListRow(props) {
+			ensureComponentStyles("surface", SURFACE_CSS);
+			ensureComponentStyles("list-row", LIST_ROW_CSS);
+			const { children, actions, onClick, selected = false, bordered = false, hoverable, className, style } = props;
+			const interactive = onClick !== void 0;
+			const hover = hoverable ?? interactive;
+			const classes = [
+				surfaceClass({
+					tone: "sunken",
+					padding: null,
+					border: bordered ? true : "none"
+				}),
+				"dshpc-listrow",
+				interactive ? "dshpc-listrow--interactive" : "",
+				hover ? "dshpc-listrow--hoverable" : "",
+				selected ? "dshpc-listrow--selected" : "",
+				className ?? ""
+			].filter((name) => name !== "").join(" ");
+			return (0, react$1.createElement)("div", {
+				className: classes,
+				style,
+				role: interactive ? "button" : void 0,
+				tabIndex: interactive ? 0 : void 0,
+				"aria-pressed": interactive && selected ? true : void 0,
+				onClick: interactive ? onClick : void 0,
+				onKeyDown: interactive ? (event) => {
+					if (event.target !== event.currentTarget) return;
+					if (event.key !== "Enter" && event.key !== " ") return;
+					event.preventDefault();
+					onClick?.();
+				} : void 0
+			}, (0, react$1.createElement)("div", { className: "dshpc-listrow__main" }, children ?? null), actions === void 0 ? null : (0, react$1.createElement)("div", {
+				className: "dshpc-listrow__actions",
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, actions));
+		}
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/navigation/pagination-logic.js
 		/**
 		* 分页纯逻辑：总页数、页码夹取、省略号窗口、当前页可见区间。
 		*
@@ -54780,8 +54739,7 @@ window.__ModuleLoader__.load({
 			items.push(...endPages);
 			return items;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/navigation/Pagination.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/navigation/Pagination.js
 		/**
 		* 分页（`‹ Previous  1 [2] 3 … 36  Next ›`）。
 		*
@@ -54882,8 +54840,7 @@ window.__ModuleLoader__.load({
 				"aria-label": props.ariaLabel ?? tt("paginationAria")
 			}, totalNode === null ? null : (0, react$1.createElement)("span", { className: "dshpc-pagination__total" }, totalNode), (0, react$1.createElement)("div", { className: "dshpc-pagination__pages" }, navButton("prev"), ...middle, navButton("next")), sizeNode);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/SectionHead.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/SectionHead.js
 		/**
 		* 模块标题行（UI 基础层）：**标签（可选，画出来的短竖线）/ icon（可选）+ 标题 + 右侧控件**。
 		*
@@ -54931,8 +54888,7 @@ window.__ModuleLoader__.load({
 				style: accent === "default" ? void 0 : barStyleOf(accent)
 			}), props.icon === void 0 ? null : (0, react$1.createElement)("span", { className: "dshpc-section-head__icon" }, props.icon), (0, react$1.createElement)("span", { className: "dshpc-section-head__title" }, props.title), props.right === void 0 ? null : (0, react$1.createElement)("div", { className: "dshpc-section-head__right" }, props.right));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/table-logic.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/table-logic.js
 		/**
 		* 单元格值是不是「对象写法」（跨列 / 跨行 / 对齐）。
 		*
@@ -55002,8 +54958,7 @@ window.__ModuleLoader__.load({
 			for (const column of columns) visit(column, 0);
 			return rows;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/table-shared.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/table-shared.js
 		function widthOf(width) {
 			if (width === void 0) return void 0;
 			return typeof width === "number" ? `${width}px` : width;
@@ -55221,8 +55176,7 @@ window.__ModuleLoader__.load({
 				style: widthOf(column.width) === void 0 ? void 0 : { width: widthOf(column.width) }
 			}))), groups.length > 0 ? null : (0, react$1.createElement)("thead", { className: "dshpc-table__head" }, ...headRows.map((cells, level) => headRowOf(cells, level))), ...body);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/Table.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/Table.js
 		/**
 		* 底部哨兵的滚动监听：哨兵进入视口（提前 200px）就调一次 `onLoadMore`。
 		* `enabled` 由调用方决定（分页 / 分组模式下关掉）；正在加载或已到底时 `blockedRef` 挡住重复触发。
@@ -55309,8 +55263,7 @@ window.__ModuleLoader__.load({
 				align: pager.align ?? "right"
 			}));
 		}
-		//#endregion
-		//#region node_modules/sonner/dist/index.mjs
+		// node_modules/.pnpm/sonner@2.0.8_@types+react@18.3.31_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/sonner/dist/index.mjs
 		function __insertCSS(code) {
 			if (!code || typeof document == "undefined") return;
 			let head = document.head || document.getElementsByTagName("head")[0];
@@ -56259,8 +56212,7 @@ window.__ModuleLoader__.load({
 				}));
 			}));
 		});
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/toast-host.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/toast-host.js
 		/** 全局注册表键：Symbol.for 跨 bundle 副本天然共享同一个符号。 */
 		const TOAST_HOST_KEY = Symbol.for("dsh-plugin-core/toast-host");
 		/** 全局单例：已注册则直接返回（不触发 create），否则建一个并注册。 */
@@ -56272,8 +56224,7 @@ window.__ModuleLoader__.load({
 			g[TOAST_HOST_KEY] = created;
 			return created;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/Toast.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/Toast.js
 		const DEFAULT_MS = 2600;
 		const ROOT_ID = "dshpc-toast-root";
 		function currentTheme() {
@@ -56477,8 +56428,7 @@ window.__ModuleLoader__.load({
 				actions: opts?.actions
 			});
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Field.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/Field.js
 		/**
 		* 输入类控件 —— **全站唯一实现**（L2 组件皮肤，P3）
 		*
@@ -56628,8 +56578,7 @@ window.__ModuleLoader__.load({
 			minWidth: 0,
 			textAlign: "left"
 		};
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/InputGroup.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/InputGroup.js
 		/**
 		* 组合输入框 —— 输入框 + 后置按钮组（+ 可选前置标题）焊成一体（L2 组件皮肤，P3）
 		*
@@ -56744,8 +56693,7 @@ window.__ModuleLoader__.load({
 				}
 			}, nodes), props.hint);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Textarea.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/Textarea.js
 		/**
 		* 多行文本输入（P3 输入类家族唯一实现；皮肤见 controls-css.ts 的 `.dshpc-textarea`）。
 		*
@@ -56774,8 +56722,7 @@ window.__ModuleLoader__.load({
 			if (props.hint === void 0) return box;
 			return (0, react$1.createElement)("span", { className: "dshpc-fieldwrap dshpc-fieldwrap--block" }, box, (0, react$1.createElement)(FieldHint, { text: props.hint }));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/inputs/Checkbox.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/inputs/Checkbox.js
 		/**
 		* 勾选框（P3 输入类家族唯一实现；U20 #6，2026-10-05）。
 		*
@@ -56814,8 +56761,7 @@ window.__ModuleLoader__.load({
 				}
 			}), label !== void 0 ? (0, react$1.createElement)("span", null, label) : null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/feedback/Loading.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/feedback/Loading.js
 		/**
 		* 全局浮动 Loading 指示器（UI 基础层 · P1）。
 		*
@@ -56899,8 +56845,7 @@ window.__ModuleLoader__.load({
 			ensureComponentStyles("loading", LOADING_CSS);
 			return (0, react$1.createElement)("span", { className: "dshpc-run-blocks" }, (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/infra/ticker.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/infra/ticker.js
 		const tickerListeners$1 = /* @__PURE__ */ new Set();
 		let tickerTimer$1 = null;
 		/**
@@ -56932,8 +56877,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/display/LiveText.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/display/LiveText.js
 		/**
 		* 每秒自刷新的一小块：只有它自己重渲染（`render` 永远取最新闭包，ref 转发）。
 		* 2026-09-30（决策 54）：`render` 由「只能返回字符串」放宽为**可返回节点** —— 「到点未派发」
@@ -56977,8 +56921,7 @@ window.__ModuleLoader__.load({
 			if ((entry.when ?? "always") === "scroll") return scrollTop > (entry.threshold ?? 320);
 			return true;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/ui/layout/QuickToolbar.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/ui/layout/QuickToolbar.js
 		/**
 		* 快捷工具栏（UI 基础层）：**右侧悬浮的一列圆钮**，内置「回到顶部」，并可挂自定义按钮。
 		*
@@ -57223,8 +57166,7 @@ window.__ModuleLoader__.load({
 				"aria-label": props.ariaLabel ?? t$1("quickToolbarAria")
 			}, ...rendered.map((entry) => renderItem(entry, leavingSet.has(entry.id))));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/utils/string.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/utils/string.js
 		/**
 		* 路径取末段（文件名显示用）。`/` 与 `\` 都认。
 		*
@@ -57237,8 +57179,7 @@ window.__ModuleLoader__.load({
 			const cut = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
 			return cut < 0 ? trimmed : trimmed.slice(cut + 1);
 		}
-		//#endregion
-		//#region src/deps.ts
+		// src/deps.ts
 		/** 解析 resolvedDeps：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃（不让坏数据进 UI）。 */
 		function parseResolvedDeps(raw) {
 			if (raw === void 0) return void 0;
@@ -57276,8 +57217,7 @@ window.__ModuleLoader__.load({
 				return [];
 			}
 		}
-		//#endregion
-		//#region src/event-catalog.ts
+		// src/event-catalog.ts
 		/** 事件类型目录（前后端唯一真源；新增类型只在这里加）。 */
 		const EventType = {
 			/** 任务定义增删改（含开关 / 整批替换 / 版本删除 / 附件文件变更；这些写路径都汇聚到 onDefinitionsChanged）。 */
@@ -57305,8 +57245,7 @@ window.__ModuleLoader__.load({
 			EventType.TASK_RUN_SKIPPED,
 			EventType.TASK_RUN_CHANGED
 		];
-		//#endregion
-		//#region src/fs-route.ts
+		// src/fs-route.ts
 		/**
 		* 核心 `adv/explorer` 的文件系统 HTTP 路由（宿主注册 / 客户端连接共用一条常量）。
 		*
@@ -57314,8 +57253,7 @@ window.__ModuleLoader__.load({
 		* 客户端由 `connectFs({ path })` 建 HTTP face。路径与插件路由同前缀，避免与其他插件撞车。
 		*/
 		const FS_ROUTE = "/api/task-dispatch-table/fs";
-		//#endregion
-		//#region src/client/config-panel.tsx
+		// src/client/config-panel.tsx
 		function ConfigPanel(props) {
 			const { t, view } = props;
 			if (view !== void 0 && view !== "page") return null;
@@ -57330,8 +57268,7 @@ window.__ModuleLoader__.load({
 				whiteSpace: "pre-wrap"
 			} }, t("settingsIntro")));
 		}
-		//#endregion
-		//#region src/client/error-text.ts
+		// src/client/error-text.ts
 		/**
 		* 把宿主返回的机器码错误翻成人话（保底用：客户端校验已拦掉绝大多数必填问题，这里只兜底漏网的）。
 		* 命中已知 zod 片段就翻译，否则原样返回（前缀「任务定义不合法（…）」尽量保留上下文）。
@@ -57345,8 +57282,7 @@ window.__ModuleLoader__.load({
 			if (raw.includes("附件 ref 非法") || raw.includes("attachments") && raw.includes("ref")) return "附加文件的引用路径不合法——必须是工作区内的相对路径。请删掉那个附件、重新选择一次。";
 			return raw;
 		}
-		//#endregion
-		//#region src/client/http.ts
+		// src/client/http.ts
 		const DEFAULT_TIMEOUT_MS = 8e3;
 		/** 带超时的 fetch：超时即 `controller.abort()`（调用方按「本次请求失败」处理，保持上一份数据）。 */
 		async function fetchWithTimeout(input, init = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
@@ -57363,8 +57299,7 @@ window.__ModuleLoader__.load({
 				window.clearTimeout(timer);
 			}
 		}
-		//#endregion
-		//#region src/client/query.ts
+		// src/client/query.ts
 		/**
 		* 本插件 webServer 路由的 API 前缀（**全仓唯一**：本文件 / 宿主页 / 事件流 / 设置页都从这里引，
 		* 不再各处再写一遍字面量——2026-10-06 M9，此前有 4 份、其中一处还多了前导 `/`）。
@@ -57477,8 +57412,7 @@ window.__ModuleLoader__.load({
 			if (!Array.isArray(body.events)) throw new Error("事件读取失败：events 形状不符");
 			return body.events;
 		}
-		//#endregion
-		//#region src/client/event-subscribe.ts
+		// src/client/event-subscribe.ts
 		/** 事件流地址：前缀取自唯一真源 `query.ts`（M9；不 import index 以免成环）。 */
 		const EVENTS_URL = `${API_PREFIX}/events`;
 		/** 看门狗巡检间隔。 */
@@ -57615,8 +57549,7 @@ window.__ModuleLoader__.load({
 				};
 			}, []);
 		}
-		//#endregion
-		//#region src/client/format.ts
+		// src/client/format.ts
 		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
 		function pad2(value) {
 			return String(value).padStart(2, "0");
@@ -57699,8 +57632,7 @@ window.__ModuleLoader__.load({
 			const part = (v) => v === null ? "—" : formatTokenCount(v);
 			return `${part(row.token_in)} / ${part(row.token_out)} / ${part(row.token_in_cache)}`;
 		}
-		//#endregion
-		//#region src/client/locales.ts
+		// src/client/locales.ts
 		/** 把宿主给的无参 t 包成带占位符替换的 t（官方模板一律 `{name}`）。 */
 		function interpolateTranslate(base) {
 			return (key, params) => {
@@ -59043,8 +58975,7 @@ window.__ModuleLoader__.load({
 			vWeekdayRequired: "Weekly schedule with no weekday selected — pick at least one, or the task never runs.",
 			vAttachmentInvalid: "Attachment \"{name}\" has an invalid ref — it must be a workspace-relative path. Remove and re-pick it."
 		};
-		//#endregion
-		//#region src/client/ui/style.ts
+		// src/client/ui/style.ts
 		/**
 		* 样式注入器（薄壳）：实现全部交给 `dsh-plugin-core` 的 style kit。
 		*
@@ -59080,8 +59011,7 @@ window.__ModuleLoader__.load({
 			registerStyle(TOKENS_DOMAIN, active.tokensCss);
 			ensureUiStyles();
 		}
-		//#endregion
-		//#region src/client/ui/controls-css.ts
+		// src/client/ui/controls-css.ts
 		/**
 		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
 		*
@@ -59161,8 +59091,7 @@ window.__ModuleLoader__.load({
 		function ensureControlsStyle() {
 			applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS + SCROLL_CSS);
 		}
-		//#endregion
-		//#region src/client/ui/Field.tsx
+		// src/client/ui/Field.tsx
 		/**
 		* 下拉选择 —— 核心 `Picker` 的薄包装（2026-11-06）。
 		*
@@ -59201,8 +59130,7 @@ window.__ModuleLoader__.load({
 				...props.searchable === true ? { searchable: true } : {}
 			});
 		}
-		//#endregion
-		//#region src/client/ui/TaskPicker.tsx
+		// src/client/ui/TaskPicker.tsx
 		/**
 		* 任务选择器 —— **核心 `Picker` 的薄包装**（2026-11-06 起）。
 		*
@@ -59273,8 +59201,7 @@ window.__ModuleLoader__.load({
 				}
 			});
 		}
-		//#endregion
-		//#region src/client/ui/time-range.ts
+		// src/client/ui/time-range.ts
 		/** 全部预设档（缺省显示顺序）。 */
 		const ALL_TIME_PRESETS = [
 			"today",
@@ -59320,8 +59247,7 @@ window.__ModuleLoader__.load({
 				toTs
 			};
 		}
-		//#endregion
-		//#region src/client/ui/TimeRange.tsx
+		// src/client/ui/TimeRange.tsx
 		/**
 		* 时间范围筛选 —— **核心 `DateTimePicker` 的薄包装**（2026-11-06 起）。
 		*
@@ -59387,8 +59313,7 @@ window.__ModuleLoader__.load({
 				disabled: props.disabled
 			});
 		}
-		//#endregion
-		//#region src/client/ui/ticker.ts
+		// src/client/ui/ticker.ts
 		const tickerListeners = /* @__PURE__ */ new Set();
 		let tickerTimer = null;
 		/**
@@ -59429,8 +59354,7 @@ window.__ModuleLoader__.load({
 			(0, react$1.useEffect)(() => subscribeTicker(() => setNowMs(Date.now())), []);
 			return nowMs;
 		}
-		//#endregion
-		//#region src/client/ui/running.ts
+		// src/client/ui/running.ts
 		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
 		const RUNNING_TONE = "var(--dshpc-business)";
 		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
@@ -59447,8 +59371,7 @@ window.__ModuleLoader__.load({
 			ensured = true;
 			applyStyle("domain:running", RUNNING_CSS);
 		};
-		//#endregion
-		//#region src/client/ui/index.ts
+		// src/client/ui/index.ts
 		/**
 		* 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
 		* 同时它是基础层 `Loading` 的锚点契约（`Loading` 默认 `anchorId = PANEL_CONTENT_ID`）——
@@ -59462,8 +59385,7 @@ window.__ModuleLoader__.load({
 			minWidth: "760px",
 			boxSizing: "border-box"
 		};
-		//#endregion
-		//#region src/client/process-files.tsx
+		// src/client/process-files.tsx
 		/** 目录以尾斜杠表达（与 `normalizeOutputs` / `baseNameOf` 同一约定）。 */
 		const isDirPath$1 = (path) => path.endsWith("/");
 		function ProcessFiles(props) {
@@ -59475,24 +59397,41 @@ window.__ModuleLoader__.load({
 			return (0, react$1.createElement)("div", {
 				className: className === void 0 ? "dsh-tdt-proc" : `dsh-tdt-proc ${className}`,
 				"data-process-files": true
-			}, (0, react$1.createElement)(Button$1, {
-				variant: "ghost",
-				size: "sm",
-				block: true,
+			}, (0, react$1.createElement)("div", {
+				role: "button",
+				tabIndex: 0,
 				"aria-expanded": open,
+				style: {
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+					gap: "8px",
+					cursor: "pointer"
+				},
 				onClick: () => {
 					setOpen((value) => !value);
 				},
-				iconRight: open ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 12 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 }),
-				style: {
-					justifyContent: "space-between",
-					fontSize: "var(--dshpc-font-sm)",
-					fontWeight: 400
+				onKeyDown: (event) => {
+					if (event.key === "Enter" || event.key === " ") {
+						event.preventDefault();
+						setOpen((value) => !value);
+					}
 				}
-			}, t("procFilesTitle", { count: list.length })), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-proc-list" }, list.map((path) => (0, react$1.createElement)(Button$1, {
+			}, (0, react$1.createElement)("span", { style: {
+				fontSize: "var(--dshpc-font-sm)",
+				fontWeight: 400
+			} }, t("procFilesTitle", { count: list.length })), (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: open ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 12 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 }),
+				label: t("procFilesTitle", { count: list.length }),
+				"aria-expanded": open,
+				title: ""
+			})), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-proc-list" }, list.map((path) => (0, react$1.createElement)(Button$1, {
 				key: path,
 				variant: "ghost",
 				size: "sm",
+				dense: true,
 				icon: isDirPath$1(path) ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 14
@@ -59513,16 +59452,14 @@ window.__ModuleLoader__.load({
 				}
 			})))) : null);
 		}
-		//#endregion
-		//#region src/client/workspace-options.ts
+		// src/client/workspace-options.ts
 		/** 展示归一：id → 当前标题；认不出原样返回（不编造工作区名）。 */
 		function workspaceLabelOf(options, raw) {
 			if (raw === "") return "";
 			const hit = options.find((option) => option.value === raw);
 			return hit === void 0 ? raw : hit.label;
 		}
-		//#endregion
-		//#region src/client/status-text.ts
+		// src/client/status-text.ts
 		/** 状态 → 文案键（唯一映射表）。 */
 		const STATUS_LABEL_KEYS = {
 			pending: "statusPending",
@@ -59574,8 +59511,7 @@ window.__ModuleLoader__.load({
 			if (isRunningStatus(status)) return "busy";
 			return "neutral";
 		}
-		//#endregion
-		//#region src/client/task-info-css.ts
+		// src/client/task-info-css.ts
 		/** 本皮肤所属的样式域（`ui/style.ts` 的域清单里登记）。 */
 		const TASK_INFO_DOMAIN = "domain:task-info";
 		const TASK_INFO_CSS = [
@@ -59685,8 +59621,7 @@ window.__ModuleLoader__.load({
 				fallback: "--"
 			})));
 		}
-		//#endregion
-		//#region src/client/records-timeline.tsx
+		// src/client/records-timeline.tsx
 		/** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
 		const PAGE_SIZE = 50;
 		/** 硬上限：到此停止自动续拉并提示缩小范围（用户拍板「保底 2000 条」）。 */
@@ -59749,8 +59684,8 @@ window.__ModuleLoader__.load({
    还是没展开时的颜色呀。只是鼠标移到这一块，它才换一个颜色」；展开与否**不再影响**头部底色。 */
 /* 内距由核心 StripCard 统一给（12 / 12 / 12 / 20，色条已含在内）⇒ 头部不再自己加 padding。 */
 .dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;padding:0;}
+/* 2026-11-07：整卡 hover 变色改走核心 StripCard 的 hoverable，本仓不再自写 :hover。 */
 .dsh-tdt-rec-head{cursor:pointer;}
-.dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--dshpc-hover),var(--dshpc-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--dshpc-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;}
 /* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
@@ -60043,7 +59978,8 @@ window.__ModuleLoader__.load({
 			}, (0, react$1.createElement)("span", { style: fieldInnerStyle }, formatTokenCount(tokens)))) : null;
 			return (0, react$1.createElement)(StripCard, {
 				accent: toneAccentOf(tone),
-				className: `dsh-tdt-rec-item${running ? " dsh-tdt-rec-item--running" : ""}${tone === "planned" ? " dsh-tdt-rec-item--planned" : ""}`
+				className: `dsh-tdt-rec-item${running ? " dsh-tdt-rec-item--running" : ""}${tone === "planned" ? " dsh-tdt-rec-item--planned" : ""}`,
+				hoverable: true
 			}, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-rec-main dsh-tdt-rec-head",
 				onClick: onHeadClick
@@ -60106,6 +60042,7 @@ window.__ModuleLoader__.load({
 			}, (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
+				dense: true,
 				icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 16
@@ -60151,6 +60088,7 @@ window.__ModuleLoader__.load({
 				key: path,
 				variant: "ghost",
 				size: "sm",
+				dense: true,
 				icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 14
@@ -60215,6 +60153,7 @@ window.__ModuleLoader__.load({
 				}, (0, react$1.createElement)(IconButton, {
 					variant: "plain",
 					size: "md",
+					dense: true,
 					icon: path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 						path,
 						size: 16
@@ -60570,8 +60509,7 @@ window.__ModuleLoader__.load({
 				onClick: loadMore
 			}, t("recordsLoadMore"))))));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/official-classes.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/official-classes.js
 		/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool / ui-skill 工具卡 + ui-deliverables）。 */
 		const CSS_PKG_PREFIXES$1 = [
 			"@deepseek-ai/dsh-client-ui-chat/",
@@ -60663,8 +60601,7 @@ window.__ModuleLoader__.load({
 		function officialClass$1(module, semantic) {
 			return discoverOfficialClasses$1().get(module)?.get(semantic) ?? null;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ChatNodeSeat.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ChatNodeSeat.js
 		/**
 		* 官方 TURN_PROCESS_INDEPENDENT_KINDS（lib/client.js:1525）：这些 kind 永远不进过程折叠区。
 		*/
@@ -60752,8 +60689,7 @@ window.__ModuleLoader__.load({
 				hidden: processHidden || void 0
 			}, inner);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/process-groups.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/process-groups.js
 		/** 官方 INDEPENDENT（process-groups.js:10565；注意与 ChatNodeSeat 的清单不同）。 */
 		const INDEPENDENT = /* @__PURE__ */ new Set([
 			"user",
@@ -60966,8 +60902,7 @@ window.__ModuleLoader__.load({
 			const title = [first, ...labels.slice(1).map(continuation)].join(t("stepProcessComma"));
 			return summary.counts.length > 3 ? t("stepProcessMore", { title }) : title;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ChatGroupSeat.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ChatGroupSeat.js
 		/** 官方 PROCESS_ICONS（lib/client.js:2187-2201）；工具行图标同源（edit/write=铅笔、generic=sparkle）。 */
 		const PROCESS_ICONS = {
 			thinking: official_exports.IconThinkOutlineRegular,
@@ -61092,11 +61027,9 @@ window.__ModuleLoader__.load({
 				renderNode
 			})))));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/session-css.generated.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/session-css.generated.js
 		const SESSION_CSS = "/* 会话预览（SessionViewModal）自绘样式：只装本包自己的组件（暂存输入区 / fork / 探针等）\n   + 两个稳定钩子类（dshpc-sv-frame / dshpc-sv-scroll）。\n   已删：ChangedFiles 卡与 FileDiff 的全部自绘规则（2026-10-24）——官方 ChangedFiles /\n   FileDiff 模块类由 officialClass() 运行时发现并挂在元素上，本包不再有一行兜底。\n   ⚠️ 2026-10-23 起不再有官方类兜底：镜像官方组件的元素一律挂官方 CSS-module 类名\n   （officialClass() 运行时发现，取不到 = 空类、裸结构不白屏）——本包只跑 DSH 宿主、官方样式必在场，\n   自绘一一对应是死代码。要改官方观感走 token 覆盖 / 双类名钩子（见 ChatView.ts 头注），别在这加兜底。\n   类名固定 dshpc-sv-*；颜色一律走 --dshpc-* token（明暗自适应）。\n   外壳（遮罩 / 面板 / 头部 / 关闭钮）= 核心 Modal（size lg）。 */\n/* 会话区 = 普通纵向流：不设高度、不自己滚（滚动与内距归核心 Modal body，用户 2026-10-22 口径）。 */\n.dshpc-sv{display:flex;flex-direction:column;min-width:0;gap:10px}\n\n/* 正文两端插槽：只给布局（宽度不被内容撑破），背景 / 边框 / 圆角 / 阴影归调用方自己。\n   不传时不渲染元素 ⇒ 不会多出一个 10px gap。\n   顶端槽**自带固定下边距**：相邻项自己的 margin 各不相同（turn-trigger / 用户气泡 / 提示条），\n   靠它算间距会漂；这里一条规则定死，要调只动这一个值。\n   底端槽在 TurnTailNodeView 的 tailSlot 里，上下间距由该 root 的 gap 负责。 */\n.dshpc-sv-body-header,.dshpc-sv-body-footer{min-width:0}\n\n.dshpc-sv-body-header{margin-bottom:var(--dshpc-space-3)}\n\n/* 官方样式未命中时的可见探针（挂在头部副标题行，不占正文）。 */\n.dshpc-sv-probe{font-size:var(--dshpc-font-xs);color:var(--dshpc-warning)}\n\n/* 头部归档标识（官方归档图标 + 「已归档」）。 */\n.dshpc-sv-archived{display:inline-flex;align-items:center;gap:4px;font-size:var(--dshpc-font-xs);font-weight:400;color:var(--dshpc-fg-3)}\n\n/* 内距与滚动全部让给核心 Modal body ⇒ 这里把官方 ChatView.frame / scroll 的内距、\n   overflow、高度一律归零（双类名 0,2,0 压过 CSS module，不靠注入顺序）。\n   ⚠️ 必须同时把 flex 收掉：官方 scroll 是 flex:1（basis=0），在**自动高**的容器里会把\n   会话区压成 0 高 —— 这正是「内容自管高度」的老毛病，别再放回来。 */\n.dshpc-sv-frame.dshpc-sv-frame{padding-top:0;padding-bottom:0;}\n\n/* 官方组件拿 --dsw-alias-bg-base 做 sticky 遮挡底（思考行展开头等），取值是宿主 app\n   全局基底色，与弹窗面板底不同层 ⇒ 会话区内改指向弹窗面板底（背景保留、颜色贴合）。 */\n.dshpc-sv-frame.dshpc-sv-frame{--dsw-alias-bg-base:var(--dshpc-surface-1);}\n\n.dshpc-sv-scroll.dshpc-sv-scroll{padding:0;overflow:visible;height:auto;max-height:none;flex:none;}\n\n/* 会话区保底：高度由内容决定（撑开由 Modal body 滚）。 */\n.dshpc-sv-chat{flex:none;min-height:0;}\n\n\n.dshpc-sv-assistant{align-self:stretch;font-size:var(--dshpc-font-lg);line-height:1.7;word-break:break-word;}\n\n.dshpc-sv-image{align-self:flex-start;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3);border:1px dashed var(--dshpc-border);border-radius:var(--dshpc-radius-sm);padding:4px 10px;}\n\n/* 工具卡根（SessionViewModal legacy 兜底渲染直接用；正常 keyed 路径一律挂官方 ToolRow 类）。 */\n.dshpc-sv-tool{flex-direction:column;display:flex;}\n\n.dshpc-sv-notice{align-self:center;font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3);padding:2px 8px;}\n\n\n.dshpc-sv-forkerr{margin:0;font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);color:var(--dshpc-danger);word-break:break-word;}\n\n.dshpc-sv-forktext{margin:0;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);color:var(--dshpc-fg-2);}\n\n/* ── 暂存输入区（期4：打字 → 确定 → fork 带话跳官方视图）── */\n.dshpc-sv-composer{flex:1;display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;}\n\n.dshpc-sv-composer textarea{flex:1;min-width:0;resize:none;font:inherit;font-size:var(--dshpc-font-lg);line-height:var(--dshpc-line-lg);color:var(--dshpc-fg);background:var(--dshpc-surface-2);border:1px solid var(--dshpc-border);border-radius:var(--dshpc-radius-md);padding:8px 12px;min-height:40px;max-height:120px;}\n\n.dshpc-sv-composer textarea:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:-1px;}\n\n.dshpc-sv-composer-hint{flex:none;font-size:var(--dshpc-font-xs);color:var(--dshpc-fg-3);padding-bottom:10px;white-space:nowrap;}";
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ChatView.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ChatView.js
 		/** 会话区骨架：frame > root > scroll > column（类名一律取官方 ChatView.module.css，取不到 = 空类）。
 		*
 		*  `dshpc-sv-frame` / `dshpc-sv-scroll` = 本包**稳定钩子类**（不走 officialClass 发现，官方类命中时也照样挂）：
@@ -61197,8 +61130,7 @@ window.__ModuleLoader__.load({
 				onClick: props.onClick
 			}, props.label));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/MessageImage.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/MessageImage.js
 		/** 官方 singleFit（client.js:2168-2184）：长边 240px，显示比夹在 [0.25, 4]，且不放大超过原图。 */
 		function singleFit(dimensions) {
 			const natural = dimensions.width / dimensions.height;
@@ -61310,8 +61242,7 @@ window.__ModuleLoader__.load({
 				t
 			})));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/AskCard.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/AskCard.js
 		const isRecord$3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 		function parseJson(text) {
 			try {
@@ -61440,8 +61371,7 @@ window.__ModuleLoader__.load({
 				}, answer))));
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/detail-i18n.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/detail-i18n.js
 		const DETAIL_KEYS = {
 			"detail.agent.reply": "detailAgentReply",
 			"detail.agents.count": "detailAgentsCount",
@@ -61594,8 +61524,7 @@ window.__ModuleLoader__.load({
 			const mapped = DETAIL_KEYS[key];
 			return mapped === void 0 ? key : params === void 0 ? t(mapped) : t(mapped, params);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/control-details.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/control-details.js
 		const isRecord$2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 		const arg = (args, key) => typeof args[key] === "string" ? args[key] : "";
 		function detailJson$1(text) {
@@ -62349,8 +62278,7 @@ window.__ModuleLoader__.load({
 				default: return null;
 			}
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ToolDetails.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ToolDetails.js
 		const isRecord$1 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 		const nonempty = (value) => typeof value === "string" && value.trim() !== "";
 		const count = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
@@ -62628,8 +62556,7 @@ window.__ModuleLoader__.load({
 				onOpenFile
 			})))) : null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/GenericCommandCard.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/GenericCommandCard.js
 		/** 官方 TOOL_VARIANTS（tool client.js:83-100，cordis_* 一并保留）。 */
 		const TOOL_VARIANTS = {
 			bash: "bash",
@@ -63635,8 +63562,7 @@ window.__ModuleLoader__.load({
 				children: expandedContent
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/CommandCard.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/CommandCard.js
 		/** 官方 GenericCommandCard 模块类（宿主必注入；缺席 = 空串，裸结构不白屏，不写自绘兜底）。 */
 		const gcc = (semantic) => officialClass$1("GenericCommandCard", semantic) ?? "";
 		/** 官方 stateOf：未决 = running；outcome.kind==='error' = error；否则 ok。 */
@@ -63687,8 +63613,7 @@ window.__ModuleLoader__.load({
 				}, body) : void 0
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/message-chrome.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/message-chrome.js
 		/**
 		* 官方 formatRunDuration（0.2.x，lib/client.js:5067-5095）：整秒；≥1 分带分；≥1 小时带小时。
 		* 单位是独立片段（`duration.hourUnit` / `minuteUnit` / `secondUnit`），不是一条带占位的模板。
@@ -63815,8 +63740,7 @@ window.__ModuleLoader__.load({
 			}
 			return `99.${"9".repeat(distinguishingPlaces - 1)}${10 - roundedLoss}`;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/MessageIconActions.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/MessageIconActions.js
 		/** 官方「已复制」复位时间。 */
 		const COPIED_RESET_MS = 1e3;
 		/** 消息操作行（复制 / 分支 / 用量 / 时钟）。 */
@@ -63874,8 +63798,7 @@ window.__ModuleLoader__.load({
 				className: officialClass$1("MessageIconActions", "visuallyHidden") ?? ""
 			}, t("branchUnavailableLabel")), clock === "end" ? (0, react$1.createElement)("span", { className: officialClass$1("MessageIconActions", "endInfo") ?? "" }, usageAction, clockEl) : usageAction);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/MessageItem.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/MessageItem.js
 		/** 助手正文：官方 DOM = AssistantMarkdown.root > body > MarkdownText（chat lib/client.js:8370-8378）。
 		* root 定 14px/24px，body 定 flex-column + 块间 gap 16px（宽表格规则也挂在 body 上）。
 		* U11：fileMentions 词表就位时行内 code 文件引用渲成可点链接（官方语义：resolve 不出保持惰性 code）。 */
@@ -64058,8 +63981,7 @@ window.__ModuleLoader__.load({
 				className: officialClass$1("MessageItem", "turnErrorDot") ?? ""
 			}), (0, react$1.createElement)("div", { className: officialClass$1("MessageItem", "turnErrorCopy") ?? "" }, (0, react$1.createElement)("span", { className: officialClass$1("MessageItem", "maxTokensTitle") ?? "" }, t("maxTokensTitle")), (0, react$1.createElement)("span", { className: officialClass$1("MessageItem", "turnErrorMessage") ?? "" }, t("maxTokensHint"))));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/BashRow.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/BashRow.js
 		/** 官方 BASH_ICON（tool client.js:2469）：终端图标 14px。 */
 		const BASH_ICON = (0, react$1.createElement)(official_exports.IconApiOutlineRegular, { size: 14 });
 		const firstLine$2 = (text) => {
@@ -64166,8 +64088,7 @@ window.__ModuleLoader__.load({
 				"data-error": rowState === "error" || void 0
 			}, outputText)) : null)) : void 0);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/SkillRow.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/SkillRow.js
 		const cls = (semantic) => officialClass$1("SkillRow", semantic) ?? "";
 		const firstLine$1 = (text) => {
 			const nl = text.indexOf("\n");
@@ -64236,8 +64157,7 @@ window.__ModuleLoader__.load({
 				"data-error": state === "error" || void 0
 			}, output))) : null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ContextBody.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ContextBody.js
 		/** 官方 ContextBody 模块类（宿主必注入；缺席 = 空串，裸结构不白屏）。 */
 		const C$2 = (semantic) => officialClass$1("ContextBody", semantic) ?? "";
 		/** 官方 MAX_CHARS / MAX_ENTRIES（lib/client.js:5196/5198）。 */
@@ -64563,8 +64483,7 @@ window.__ModuleLoader__.load({
 				default: return opaque;
 			}
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ContextInjectionRow.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ContextInjectionRow.js
 		/** 官方 ContextInjectionRow 的标题与汇总口径（纯函数）。 */
 		function contextRowFacts(content, producerRole, t) {
 			const toolBlocks = content.length > 0 && content.every((block) => {
@@ -64633,8 +64552,7 @@ window.__ModuleLoader__.load({
 				}, toolBlocks === void 0 ? body : (0, react$1.createElement)("div", { className: officialClass$1("ContextInjectionRow", "toolChanges") ?? "" }, added.length > 0 ? (0, react$1.createElement)("div", null, t("toolsAdded", { names: added.join(", ") })) : null, removed.length > 0 ? (0, react$1.createElement)("div", null, t("toolsRemoved", { names: removed.join(", ") })) : null))
 			});
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ReasoningRow.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ReasoningRow.js
 		/** 官方 firstLine（lib/client.js:6140 区）：首行。 */
 		function firstLine(text) {
 			const newline = text.indexOf("\n");
@@ -64714,8 +64632,7 @@ window.__ModuleLoader__.load({
 				})) : void 0
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/RunningStatus.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/RunningStatus.js
 		/** 官方 LIVE_RUN_CLOCK_INTERVAL_MS（lib/client.js:979）。 */
 		const LIVE_RUN_CLOCK_INTERVAL_MS = 1e3;
 		/** 官方静态兜底 SVG 的鲸尾路径（lib/client.js:6340 REST_PATH，16×16）。 */
@@ -64772,8 +64689,7 @@ window.__ModuleLoader__.load({
 				className: officialClass$1("ChatView", "runningText") ?? ""
 			}, label)));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/TurnProcessNodeView.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/TurnProcessNodeView.js
 		/** Turn 过程行：折叠时只有 label + 箭头；点开由外层 seat 把过程节点放出来。 */
 		function TurnProcessNodeViewMirror(props) {
 			const { turn, turnProcess, t } = props;
@@ -64810,8 +64726,7 @@ window.__ModuleLoader__.load({
 				className: part.numeric ? durationNumberClass : void 0
 			}, part.text))), canCollapse ? (0, react$1.createElement)(official_exports.IconChevronDownOutlineRegular, { className: officialClass$1("TurnProcessNodeView", "chevron") ?? "" }) : null));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/StatDialog.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/StatDialog.js
 		const PANEL_MARGIN = 12;
 		const PANEL_GAP = 8;
 		/**
@@ -64866,8 +64781,7 @@ window.__ModuleLoader__.load({
 				pos
 			};
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/TurnUsagePanel.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/TurnUsagePanel.js
 		/** 本轮用量 pill + 明细弹层。 */
 		function TurnUsagePanelMirror(props) {
 			const { usage, t } = props;
@@ -64900,8 +64814,7 @@ window.__ModuleLoader__.load({
 				"data-turn-usage-details": true
 			}, routes === "" ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageModel")), (0, react$1.createElement)("dd", { className: officialClass$1("stat-dialog", "route") ?? "" }, routes)), cacheHit === null ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheHit")), (0, react$1.createElement)("dd", null, `${cacheHit}%`)), (0, react$1.createElement)("dt", null, t("turnUsageInput")), (0, react$1.createElement)("dd", null, formatExactCount(usage.uncachedInputTokens, t)), usage.cacheReadTokens === void 0 ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheRead")), (0, react$1.createElement)("dd", null, formatExactCount(usage.cacheReadTokens, t))), usage.cacheWriteTokens === void 0 ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheWrite")), (0, react$1.createElement)("dd", null, formatExactCount(usage.cacheWriteTokens, t))), (0, react$1.createElement)("dt", null, t("turnUsageOutput")), (0, react$1.createElement)("dd", null, formatExactCount(usage.outputTokens, t), usage.reasoningTokens === void 0 ? null : (0, react$1.createElement)("span", { className: officialClass$1("stat-dialog", "reasoning") ?? "" }, t("turnUsageReasoning", { tokens: formatExactCount(usage.reasoningTokens, t) }))))), document.body) : null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/TurnTailNodeView.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/TurnTailNodeView.js
 		/** 官方 hasAssistantReplyContent。 */
 		function hasAssistantReplyContent(blocks) {
 			return blocks.some((block) => {
@@ -64984,8 +64897,7 @@ window.__ModuleLoader__.load({
 				t
 			}));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/TurnTriggerNodeView.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/TurnTriggerNodeView.js
 		/** 官方 TRIGGER_ICONS（lib/client.js:7122-7131）。 */
 		const TRIGGER_ICONS = {
 			request: official_exports.IconContextInjectionOutlineRegular,
@@ -65097,8 +65009,7 @@ window.__ModuleLoader__.load({
 			}
 			return runs.length === 0 ? [t("sessionEmpty")] : runs;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/Deliverables.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/Deliverables.js
 		const basename$1 = (path) => path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
 		/** 交付路径的所在目录；无分隔符（纯文件名）⇒ undefined，不出「在文件夹中显示」。 */
 		function parentOf(path) {
@@ -65252,8 +65163,7 @@ window.__ModuleLoader__.load({
 				}
 			}, (0, react$1.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react$1.createElement)(official_exports.IconChevronUpOutlineRegular, {}) : (0, react$1.createElement)(official_exports.IconChevronDownOutlineRegular, {})) : null);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/changes.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/changes.js
 		/** 官方 changesSummaryUrl（client.js:90-96）：文档相对路由。 */
 		function changesSummaryUrl(sessionId, seq) {
 			return `api/changes.summary?${new URLSearchParams({
@@ -65394,8 +65304,7 @@ window.__ModuleLoader__.load({
 			const seq = (turnDeliverablesValue(face, "deliverables")?.changes)?.seq;
 			return isInt(seq) ? seq : null;
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ChangedFileDiff.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ChangedFileDiff.js
 		/** 官方 ChangedFiles / FileDiff 模块类（ui-deliverables；取不到 = 空类，不白屏）。 */
 		const C$1 = (semantic) => officialClass$1("ChangedFiles", semantic) ?? "";
 		const D = (semantic) => officialClass$1("FileDiff", semantic) ?? "";
@@ -65574,8 +65483,7 @@ window.__ModuleLoader__.load({
 				onClick: onClose
 			})), body);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/mirror/ChangedFilesCard.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/mirror/ChangedFilesCard.js
 		/** 官方 ChangedFiles 模块类（ui-deliverables；取不到 = 空类，不白屏）。 */
 		const C = (semantic) => officialClass$1("ChangedFiles", semantic) ?? "";
 		/** 会话级缓存：同一 (sessionId, seq) 只拉一次（官方 ChangesSummaryStore 同语义）。 */
@@ -65718,8 +65626,7 @@ window.__ModuleLoader__.load({
 				"data-single": single !== void 0 || void 0
 			}, header, list, toggle);
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/pending-inputs.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/pending-inputs.js
 		/** 官方 observedInputs：durable user 节点 source.rpcId（本地回显被持久节点取代的判据）。 */
 		function observedRpcIds(order, readNode) {
 			const ids = /* @__PURE__ */ new Set();
@@ -65918,8 +65825,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/SessionViewModal.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/SessionViewModal.js
 		/** 稳定的空序列（避免默认值每次新建数组）。 */
 		const EMPTY_ORDER = [];
 		/** SSR / 数据面未接线时的归档态：如实按未归档，不编造。 */
@@ -67045,8 +66951,7 @@ window.__ModuleLoader__.load({
 				}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))]
 			}, (0, react$1.createElement)("p", { className: "dshpc-sv-forktext" }, tt("forkConfirmText")), canFork ? null : (0, react$1.createElement)("p", { className: "dshpc-sv-forkerr" }, tt("forkUnavailable")), forkErr !== null ? (0, react$1.createElement)("p", { className: "dshpc-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
 		}
-		//#endregion
-		//#region node_modules/dsh-plugin-core/dist/adv/session/open-session-view.js
+		// node_modules/.pnpm/dsh-plugin-core@0.35.4_@babel+runtime@8.1.0_@codemirror+autocomplete@6.20.4_@codemirror_344dfeaff986f33a783676c7e9459969/node_modules/dsh-plugin-core/dist/adv/session/open-session-view.js
 		/** 默认 retain source（写进宿主 retainedBy；调用方可覆盖成自己的插件名）。 */
 		const DEFAULT_RETAIN_SOURCE = "dsh-plugin-core";
 		/** 投影面缺席时的稳定空快照：能力缺席按 undefined 呈现，不编造数据。 */
@@ -67144,8 +67049,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}
-		//#endregion
-		//#region src/client/archive-session-css.ts
+		// src/client/archive-session-css.ts
 		/** 会话弹窗业务内容样式（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
 /* ── 交付文件卡（官方 ui-deliverables Deliverables.module.css 逐值兜底镜像；官方类命中时 ocOr 走官方） ── */
@@ -67216,8 +67120,7 @@ window.__ModuleLoader__.load({
 		function ensureArchiveSessionStyle() {
 			applyStyle("domain:session-view", ARCHIVE_SESSION_CSS);
 		}
-		//#endregion
-		//#region src/client/official-classes.ts
+		// src/client/official-classes.ts
 		/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡 + ui-deliverables）。 */
 		const CSS_PKG_PREFIXES = [
 			"@deepseek-ai/dsh-client-ui-chat/",
@@ -67300,8 +67203,7 @@ window.__ModuleLoader__.load({
 		function ocOr(module, semantic, fallback) {
 			return officialClass(module, semantic) ?? fallback;
 		}
-		//#endregion
-		//#region src/client/mirror/Deliverables.tsx
+		// src/client/mirror/Deliverables.tsx
 		const basename = (path) => path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
 		/** 官方 COLLAPSED_PRESENTED_COUNT（Deliverables.tsx）：超过 4 张折叠。 */
 		const COLLAPSED_DELIVERED_COUNT = 4;
@@ -67368,8 +67270,7 @@ window.__ModuleLoader__.load({
 				}
 			}, (0, react$1.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
 		}
-		//#endregion
-		//#region src/client/task-file-context.tsx
+		// src/client/task-file-context.tsx
 		/**
 		* 实例快照 → 本任务工作区 path（判上游目录是否跨区用）。
 		* 与 `attachmentsOf` 同款：**不强求整份快照合法**，取不到 ⇒ null（调用方按「未知」处理）。
@@ -67447,6 +67348,7 @@ window.__ModuleLoader__.load({
 			return (0, react$1.createElement)(Button$1, {
 				variant: "ghost",
 				size: "sm",
+				dense: true,
 				icon: file.isDir ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: file.iconPath,
 					size: 14
@@ -67589,8 +67491,7 @@ window.__ModuleLoader__.load({
 				t
 			}));
 		}
-		//#endregion
-		//#region src/client/session-view.ts
+		// src/client/session-view.ts
 		/** 本插件在宿主 `retainedBy` 里登记的保留来源（弹窗关闭即 release）。 */
 		const RETAIN_SOURCE = "dsh-task-dispatch-table";
 		/**
@@ -67687,8 +67588,7 @@ window.__ModuleLoader__.load({
 				onOpenFile
 			});
 		}
-		//#endregion
-		//#region src/client/settings-data.ts
+		// src/client/settings-data.ts
 		/**
 		* 设置页（配置 / 日志 / 数据表）的数据通道与共享类型。
 		*
@@ -67762,8 +67662,7 @@ window.__ModuleLoader__.load({
 				defaults: body.defaults
 			};
 		}
-		//#endregion
-		//#region src/attachment-allowlist.ts
+		// src/attachment-allowlist.ts
 		/**
 		* 附件上传的**共享约束**：体积上限 + 扩展名白名单 + 扩展名解析。
 		*
@@ -67855,8 +67754,7 @@ window.__ModuleLoader__.load({
 		* 「选工作区文件报 422 附件 ref 非法」那类 bug 的温床就在这。
 		*/
 		const isSafeAttachmentRef = (ref) => ref !== "" && !ref.includes("..") && !ref.startsWith("/") && !ref.startsWith("\\") && !ref.includes("\\");
-		//#endregion
-		//#region src/client/editor-fields.tsx
+		// src/client/editor-fields.tsx
 		/**
 		* 日历文案**单源**（决策 55）：任务日历页共用这一份，
 		* 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
@@ -67916,8 +67814,7 @@ window.__ModuleLoader__.load({
 				color: "var(--dshpc-fg-dim)"
 			} }, props.labels.empty) : null);
 		}
-		//#endregion
-		//#region src/client/md-labels.ts
+		// src/client/md-labels.ts
 		/** markdown 文档外壳文案（代码块工具条 + 复制 + 脚注）。 */
 		const MD_LABELS = {
 			code: {
@@ -67931,13 +67828,11 @@ window.__ModuleLoader__.load({
 			},
 			footnotes: "脚注"
 		};
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/types.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/types.js
 		var require_types = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/CronField.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/CronField.js
 		var require_CronField = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronField = void 0;
@@ -68129,8 +68024,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}));
-		//#endregion
-		//#region node_modules/luxon/build/node/luxon.js
+		// node_modules/.pnpm/luxon@3.7.2/node_modules/luxon/build/node/luxon.js
 		var require_luxon = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			/**
@@ -74357,8 +74251,7 @@ window.__ModuleLoader__.load({
 			exports.VERSION = VERSION;
 			exports.Zone = Zone;
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/CronDate.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/CronDate.js
 		var require_CronDate = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronDate = exports.DAYS_IN_MONTH = exports.DateMathOp = exports.TimeUnit = void 0;
@@ -74420,6 +74313,7 @@ window.__ModuleLoader__.load({
 						this.#date.isValid || (this.#date = luxon_1.DateTime.fromRFC2822(timestamp, dateOpts));
 						this.#date.isValid || (this.#date = luxon_1.DateTime.fromSQL(timestamp, dateOpts));
 						this.#date.isValid || (this.#date = luxon_1.DateTime.fromFormat(timestamp, "EEE, d MMM yyyy HH:mm:ss", dateOpts));
+						this.#date.isValid || (this.#date = luxon_1.DateTime.fromHTTP(timestamp, dateOpts));
 					}
 					if (!this.#date.isValid) throw new Error(`CronDate: unhandled timestamp: ${timestamp}`);
 					if (tz && tz !== this.#date.zoneName) this.#date = this.#date.setZone(tz);
@@ -74870,8 +74764,7 @@ window.__ModuleLoader__.load({
 			exports.CronDate = CronDate;
 			exports.default = CronDate;
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/CronMonth.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/CronMonth.js
 		var require_CronMonth = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronMonth = void 0;
@@ -74917,8 +74810,7 @@ window.__ModuleLoader__.load({
 			};
 			exports.CronMonth = CronMonth;
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/CronDayOfMonth.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/CronDayOfMonth.js
 		var require_CronDayOfMonth = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronDayOfMonth = void 0;
@@ -74972,8 +74864,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/CronDayOfWeek.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/CronDayOfWeek.js
 		var require_CronDayOfWeek = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronDayOfWeek = void 0;
@@ -75027,8 +74918,7 @@ window.__ModuleLoader__.load({
 			};
 			exports.CronDayOfWeek = CronDayOfWeek;
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/CronHour.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/CronHour.js
 		var require_CronHour = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronHour = void 0;
@@ -75070,8 +74960,7 @@ window.__ModuleLoader__.load({
 			};
 			exports.CronHour = CronHour;
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/CronMinute.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/CronMinute.js
 		var require_CronMinute = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronMinute = void 0;
@@ -75113,8 +75002,7 @@ window.__ModuleLoader__.load({
 			};
 			exports.CronMinute = CronMinute;
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/CronSecond.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/CronSecond.js
 		var require_CronSecond = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronSecond = void 0;
@@ -75156,10 +75044,9 @@ window.__ModuleLoader__.load({
 			};
 			exports.CronSecond = CronSecond;
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/fields/index.js
-		var require_fields = /* @__PURE__ */ __commonJSMin(((exports) => {
-			var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/fields/index.js
+		var require_fields = /* @__PURE__ */ __commonJSMin(((exports, module, this$2) => {
+			var __createBinding = this$2 && this$2.__createBinding || (Object.create ? (function(o, m, k, k2) {
 				if (k2 === void 0) k2 = k;
 				var desc = Object.getOwnPropertyDescriptor(m, k);
 				if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) desc = {
@@ -75173,8 +75060,8 @@ window.__ModuleLoader__.load({
 				if (k2 === void 0) k2 = k;
 				o[k2] = m[k];
 			}));
-			var __exportStar = exports && exports.__exportStar || function(m, exports$2) {
-				for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$2, p)) __createBinding(exports$2, m, p);
+			var __exportStar = this$2 && this$2.__exportStar || function(m, exports) {
+				for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 			};
 			Object.defineProperty(exports, "__esModule", { value: true });
 			__exportStar(require_types(), exports);
@@ -75186,8 +75073,7 @@ window.__ModuleLoader__.load({
 			__exportStar(require_CronMonth(), exports);
 			__exportStar(require_CronSecond(), exports);
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/CronFieldCollection.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/CronFieldCollection.js
 		var require_CronFieldCollection = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronFieldCollection = void 0;
@@ -75496,8 +75382,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/CronExpression.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/CronExpression.js
 		var require_CronExpression = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronExpression = exports.LOOPS_LIMIT_EXCEEDED_ERROR_MESSAGE = exports.TIME_SPAN_OUT_OF_BOUNDS_ERROR_MESSAGE = void 0;
@@ -75892,12 +75777,12 @@ window.__ModuleLoader__.load({
 					let stepCount = 0;
 					while (++stepCount < LOOP_LIMIT) {
 						this.#validateTimeSpan(currentDate);
-						if (!this.#matchDayOfMonth(currentDate)) {
-							currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Day, this.#fields.hour.values.length);
-							continue;
-						}
 						if (!CronExpression.#matchSchedule(currentDate.getMonth() + 1, this.#fields.month.values)) {
 							currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Month, this.#fields.hour.values.length);
+							continue;
+						}
+						if (!this.#matchDayOfMonth(currentDate)) {
+							currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Day, this.#fields.hour.values.length);
 							continue;
 						}
 						if (!this.#matchHour(currentDate, dateMathVerb, reverse)) continue;
@@ -75945,8 +75830,7 @@ window.__ModuleLoader__.load({
 			exports.CronExpression = CronExpression;
 			exports.default = CronExpression;
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/utils/random.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/utils/random.js
 		var require_random = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.seededRandom = seededRandom;
@@ -75985,8 +75869,7 @@ window.__ModuleLoader__.load({
 				return mulberry32(str ? xfnv1a(str)() : Math.floor(Math.random() * 1e10));
 			}
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/CronExpressionParser.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/CronExpressionParser.js
 		var require_CronExpressionParser = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronExpressionParser = exports.DayOfWeek = exports.Months = exports.CronUnit = exports.PredefinedExpressions = void 0;
@@ -76051,6 +75934,11 @@ window.__ModuleLoader__.load({
 			* No field can hold this many distinct values, so exceeding it always means the list repeats values.
 			*/
 			const MAX_FIELD_VALUES = 256;
+			/**
+			* Upper bound on the length of a cron expression.
+			* Listing every value of every field needs about half of this, so a longer expression is never meaningful.
+			*/
+			const MAX_EXPRESSION_LENGTH = 1024;
 			exports.CronExpressionParser = class CronExpressionParser {
 				/**
 				* Parses a cron expression and returns a CronExpression object.
@@ -76064,7 +75952,7 @@ window.__ModuleLoader__.load({
 				static parse(expression, options = {}) {
 					const { strict = false, hashSeed } = options;
 					const rand = (0, random_1.seededRandom)(hashSeed);
-					expression = PredefinedExpressions[expression] || expression;
+					if (Object.hasOwn(PredefinedExpressions, expression)) expression = PredefinedExpressions[expression];
 					const rawFields = CronExpressionParser.#getRawFields(expression, strict);
 					if (!(rawFields.dayOfMonth === "*" || rawFields.dayOfWeek === "*" || !strict)) throw new Error("Cannot use both dayOfMonth and dayOfWeek together in strict mode!");
 					const second = CronExpressionParser.#parseField(CronUnit.Second, rawFields.second, fields_1.CronSecond.constraints, rand, strict);
@@ -76100,6 +75988,7 @@ window.__ModuleLoader__.load({
 				static #getRawFields(expression, strict) {
 					if (strict && !expression.length) throw new Error("Invalid cron expression");
 					expression = expression || "0 * * * * *";
+					if (expression.length > MAX_EXPRESSION_LENGTH) throw new Error(`Invalid cron expression, too long, expected at most ${MAX_EXPRESSION_LENGTH} characters`);
 					const atoms = expression.trim().split(/\s+/);
 					if (strict && atoms.length < 6) throw new Error("Invalid cron expression, expected 6 fields");
 					if (atoms.length > 6) throw new Error("Invalid cron expression, too many fields");
@@ -76164,6 +76053,7 @@ window.__ModuleLoader__.load({
 				*/
 				static #parseHashed(value, constraints, rand, field, strict) {
 					const randomValue = rand();
+					let count = 0;
 					return value.replace(/H(?:\((\d+)-(\d+)\))?(?:\/(\d+))?/g, (_, min, max, step) => {
 						if (min && max && step) {
 							const minNum = parseInt(min, 10);
@@ -76171,6 +76061,8 @@ window.__ModuleLoader__.load({
 							const stepNum = parseInt(step, 10);
 							if (stepNum <= 0) throw new Error(`Invalid step: ${stepNum}, must be positive`);
 							const range = CronExpressionParser.#hashedRange(minNum, maxNum, constraints, field, strict);
+							count += Math.ceil((range.max - range.min + 1) / stepNum);
+							CronExpressionParser.#assertMaxFieldValues(field, count);
 							return CronExpressionParser.#hashedStep(randomValue, range.min, range.max, stepNum, field, strict);
 						} else if (min && max) {
 							const minNum = parseInt(min, 10);
@@ -76180,6 +76072,8 @@ window.__ModuleLoader__.load({
 						} else if (step) {
 							const stepNum = parseInt(step, 10);
 							if (stepNum <= 0) throw new Error(`Invalid step: ${stepNum}, must be positive`);
+							count += Math.ceil((constraints.max - constraints.min + 1) / stepNum);
+							CronExpressionParser.#assertMaxFieldValues(field, count);
 							return CronExpressionParser.#hashedStep(randomValue, constraints.min, constraints.max, stepNum, field, strict);
 						} else return String(CronExpressionParser.#hashedValue(randomValue, constraints.min, constraints.max));
 					});
@@ -76247,6 +76141,15 @@ window.__ModuleLoader__.load({
 					return values.join(",");
 				}
 				/**
+				* Throw once a field has expanded to more than MAX_FIELD_VALUES values.
+				* @param {CronUnit} field - The field being parsed.
+				* @param {number} count - The number of values collected so far.
+				* @private
+				*/
+				static #assertMaxFieldValues(field, count) {
+					if (count > MAX_FIELD_VALUES) throw new Error(`Constraint error, too many values in ${field} field, expected at most ${MAX_FIELD_VALUES}`);
+				}
+				/**
 				* Parse a sequence from a cron expression.
 				* @param {CronUnit} field - The field to parse.
 				* @param {string} val - The sequence to parse.
@@ -76266,7 +76169,7 @@ window.__ModuleLoader__.load({
 					}
 					const atoms = val.split(",");
 					for (const atom of atoms) {
-						if (stack.length > MAX_FIELD_VALUES) throw new Error(`Constraint error, too many values in ${field} field, expected at most ${MAX_FIELD_VALUES}`);
+						CronExpressionParser.#assertMaxFieldValues(field, stack.length);
 						if (!(atom.length > 0)) throw new Error("Invalid list value format");
 						handleResult(CronExpressionParser.#parseRepeat(field, atom, constraints), constraints);
 					}
@@ -76374,8 +76277,7 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}));
-		//#endregion
-		//#region node_modules/cron-parser/dist/CronFileParser.js
+		// node_modules/.pnpm/cron-parser@5.10.3/node_modules/cron-parser/dist/CronFileParser.js
 		var require_CronFileParser = /* @__PURE__ */ __commonJSMin(((exports) => {
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronFileParser = void 0;
@@ -76420,14 +76322,24 @@ window.__ModuleLoader__.load({
 						const variableMatch = entry.match(/^(.*)=(.*)$/);
 						if (variableMatch) {
 							const [, key, value] = variableMatch;
-							result.variables[key] = value.replace(/["']/g, "");
+							Object.defineProperty(result.variables, key, {
+								value: value.replace(/["']/g, ""),
+								enumerable: true,
+								writable: true,
+								configurable: true
+							});
 							continue;
 						}
 						try {
 							const parsedEntry = CronFileParser.#parseEntry(entry);
 							result.expressions.push(parsedEntry.interval);
 						} catch (err) {
-							result.errors[entry] = err;
+							Object.defineProperty(result.errors, entry, {
+								value: err,
+								enumerable: true,
+								writable: true,
+								configurable: true
+							});
 						}
 					}
 					return result;
@@ -76437,7 +76349,7 @@ window.__ModuleLoader__.load({
 				* @private
 				*/
 				static #parseEntry(entry) {
-					const atoms = entry.split(" ");
+					const atoms = entry.split(/\s+/);
 					return {
 						interval: CronExpressionParser_1.CronExpressionParser.parse(atoms.slice(0, 5).join(" ")),
 						command: atoms.slice(5, atoms.length)
@@ -76446,10 +76358,9 @@ window.__ModuleLoader__.load({
 			};
 		}));
 		/* istanbul ignore file */
-		//#endregion
-		//#region src/schedule-next.ts
-		var import_dist = (/* @__PURE__ */ __commonJSMin(((exports) => {
-			var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
+		// src/schedule-next.ts
+		var import_dist = (/* @__PURE__ */ __commonJSMin(((exports, module, this$1) => {
+			var __createBinding = this$1 && this$1.__createBinding || (Object.create ? (function(o, m, k, k2) {
 				if (k2 === void 0) k2 = k;
 				var desc = Object.getOwnPropertyDescriptor(m, k);
 				if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) desc = {
@@ -76463,8 +76374,8 @@ window.__ModuleLoader__.load({
 				if (k2 === void 0) k2 = k;
 				o[k2] = m[k];
 			}));
-			var __exportStar = exports && exports.__exportStar || function(m, exports$1) {
-				for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+			var __exportStar = this$1 && this$1.__exportStar || function(m, exports) {
+				for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 			};
 			Object.defineProperty(exports, "__esModule", { value: true });
 			exports.CronFileParser = exports.CronExpressionParser = exports.CronExpression = exports.CronFieldCollection = exports.CronDate = void 0;
@@ -76686,8 +76597,7 @@ window.__ModuleLoader__.load({
 			t = new Date(wallAsUTC - tzOffsetMs(t, tz));
 			return t;
 		}
-		//#endregion
-		//#region src/client/schedule-text.ts
+		// src/client/schedule-text.ts
 		const WEEKDAY_KEYS$1 = [
 			"editorWeekday1",
 			"editorWeekday2",
@@ -77057,8 +76967,7 @@ window.__ModuleLoader__.load({
 			})() }, now);
 			return next === void 0 ? null : next.toISOString();
 		}
-		//#endregion
-		//#region src/client/task-editor-css.ts
+		// src/client/task-editor-css.ts
 		const TASK_EDITOR_CSS = `
 /* 分栏外壳（面板 / 拖拽条 / 宽度 / sticky）已全部归核心 PanelDock（2026-11-06）：
    .dshpc-dock__panel 就是原来那条 sticky 一列，宽度由核心按 storageKey 记忆，
@@ -77130,10 +77039,8 @@ window.__ModuleLoader__.load({
 /* 小问号已改接核心 FieldHint（2026-11-06）：图标 / 气泡 / 焦点全部归核心，本地皮肤已删。 */
 /* 前置任务卡选择行（用户 2026-11-07）：分组下拉吃掉整行剩余宽度，右侧「添加」定宽 72px。
    核心 Picker 的根是 inline-block flex 子项 ⇒ 必须给 min-width:0 才能收缩，否则整行被撑爆。 */
-.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
-/* 附件行（2026-11-06 改接核心，与查看档附件同款）：只有排布，不画皮肤 ——
-   文件名 / 来源标签 / 移除钮分别由核心 Chip、Chip(xs)、IconButton(danger) 承载。 */
-.dsh-tdt-ed-attline{display:flex;align-items:center;gap:6px;min-width:0;}
+/* 前置任务条目 / 附件行 = 核心 ListRow（0.35.4）：常态底、hover 提亮、整行可点、右侧操作槽全归核心，
+   本仓不再留任何条目皮肤。 */
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task > *{flex:1 1 auto;min-width:0;width:100%;}
@@ -77163,8 +77070,7 @@ window.__ModuleLoader__.load({
 		function ensureTaskEditorStyle() {
 			applyStyle("domain:editor", TASK_EDITOR_CSS);
 		}
-		//#endregion
-		//#region src/task-sort.ts
+		// src/task-sort.ts
 		/** 分组：运行中 0 → 已启用 1 → 无刻度 2 → 已关闭 3。 */
 		const groupOf = (row) => {
 			if (row.running) return 0;
@@ -77201,8 +77107,7 @@ window.__ModuleLoader__.load({
 		function pinMsFor(tickMs, pollMs) {
 			return Math.min(6e5, Math.max(3e4, (Number.isFinite(tickMs) && tickMs > 0 ? tickMs : 6e4) + 2 * pollMs));
 		}
-		//#endregion
-		//#region src/client/task-overview.ts
+		// src/client/task-overview.ts
 		/**
 		* 原轮询间隔（**已不再轮询**，只作为「派发延迟」公式的输入保留）。
 		* 见 `dueLoadingMs`：`pinMsFor` 的公式要用它算「到点未派发」的 loading 上界。
@@ -77314,8 +77219,7 @@ window.__ModuleLoader__.load({
 				}, [])
 			};
 		}
-		//#endregion
-		//#region src/client/task-info.tsx
+		// src/client/task-info.tsx
 		/** 「上次执行」只看最近一条**终态**实例；名单与卡片基础信息**完全一致**（单源，不许各处自创）。 */
 		const LAST_RUN_STATUSES = [
 			"succeeded",
@@ -77488,6 +77392,7 @@ window.__ModuleLoader__.load({
 						key,
 						variant: "ghost",
 						size: "sm",
+						dense: true,
 						icon,
 						disabled: !canOpen,
 						onClick: canOpen ? () => {
@@ -77660,6 +77565,7 @@ window.__ModuleLoader__.load({
 				variant: "ghost",
 				size: "sm",
 				block: true,
+				dense: true,
 				icon: output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: output,
 					size: 14
@@ -77684,8 +77590,7 @@ window.__ModuleLoader__.load({
 				t
 			}));
 		}
-		//#endregion
-		//#region src/client/task-view.tsx
+		// src/client/task-view.tsx
 		/**
 		* 查看档正文：只读、无输入控件、无保存动作（要改就切到编辑档）。
 		* 块标题带小图标（r12 用户反馈：不然一片全是文字）。
@@ -77867,8 +77772,7 @@ window.__ModuleLoader__.load({
 				labels: MD_LABELS
 			}))) : (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-empty" }, t("editorViewPromptEmpty"))));
 		}
-		//#endregion
-		//#region src/client/task-editor.tsx
+		// src/client/task-editor.tsx
 		/**
 		* 「?」说明钮 —— 核心 `FieldHint` 的薄包装（2026-11-06）。
 		*
@@ -79349,49 +79253,47 @@ window.__ModuleLoader__.load({
 			} }, draft.attachments.map((att) => {
 				const target = previewTargetOf(att);
 				const canView = target !== null && onOpenFile !== void 0;
-				const icon = att.isDir === true ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				const icon = att.isDir === true ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 18 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: att.name,
-					size: 14
+					size: 18
 				});
 				const name = (0, react$1.createElement)(MarqueeText, {
 					text: att.name,
-					style: {
-						maxWidth: "40ch",
-						minWidth: 0
-					}
+					style: { minWidth: 0 }
 				});
-				return (0, react$1.createElement)("div", {
+				return (0, react$1.createElement)(ListRow, {
 					key: att.id,
-					className: "dsh-tdt-ed-attline"
-				}, (0, react$1.createElement)(Button$1, {
-					variant: "ghost",
-					size: "sm",
-					icon,
-					disabled: !canView,
+					hoverable: true,
 					onClick: canView ? () => {
 						onOpenFile?.(target.anchorSessionId, target.path);
 					} : void 0,
-					style: {
-						minWidth: 0,
-						maxWidth: "100%"
-					}
-				}, name), (0, react$1.createElement)(Chip, { size: "xs" }, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react$1.createElement)(IconButton, {
-					variant: "danger",
-					size: "sm",
-					icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
-					label: t("editorAttachmentRemove"),
-					title: "",
-					onClick: (event) => {
-						event.stopPropagation();
-						patch({ attachments: draft.attachments.filter((a) => a.id !== att.id) });
-						setUploadPaths((prev) => {
-							const next = { ...prev };
-							delete next[att.id];
-							return next;
-						});
-					},
-					style: { flex: "none" }
-				}));
+					actions: (0, react$1.createElement)("span", { style: {
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "4px"
+					} }, (0, react$1.createElement)(Chip, { size: "xs" }, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react$1.createElement)(IconButton, {
+						variant: "danger",
+						size: "sm",
+						icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
+						label: t("editorAttachmentRemove"),
+						title: "",
+						onClick: (event) => {
+							event.stopPropagation();
+							patch({ attachments: draft.attachments.filter((a) => a.id !== att.id) });
+							setUploadPaths((prev) => {
+								const next = { ...prev };
+								delete next[att.id];
+								return next;
+							});
+						},
+						style: { flex: "none" }
+					}))
+				}, (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "6px",
+					minWidth: 0
+				} }, icon, name));
 			})), (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				gap: "10px",
@@ -79663,50 +79565,49 @@ window.__ModuleLoader__.load({
 			} }, draft.deps.filter((dep) => dep.task !== currentTaskId).map((dep, index) => {
 				const known = tasks.find((task) => task.id === dep.task);
 				const ws = known?.workspace ?? "";
-				return (0, react$1.createElement)("div", {
+				return (0, react$1.createElement)(ListRow, {
 					key: index,
-					className: "dsh-tdt-ed-depitem"
+					hoverable: true,
+					onClick: onViewTask === void 0 ? void 0 : () => {
+						onViewTask(dep.task);
+					},
+					actions: (0, react$1.createElement)("span", { style: {
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "4px"
+					} }, ws === "" ? null : (0, react$1.createElement)(MarqueeText, {
+						text: ws,
+						style: {
+							width: "72px",
+							color: "var(--dshpc-fg-2)",
+							fontSize: "var(--dshpc-font-xs)"
+						}
+					}), (0, react$1.createElement)(IconButton, {
+						variant: "danger",
+						size: "sm",
+						icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
+						label: t("editorDepRemove"),
+						title: "",
+						onClick: () => {
+							patch({ deps: draft.deps.filter((d) => d.task !== dep.task) });
+						}
+					}))
 				}, (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "6px",
+					minWidth: 0
+				} }, (0, react$1.createElement)("span", { style: {
 					display: "inline-flex",
 					flex: "none",
 					color: "var(--dshpc-fg-3)"
-				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), onViewTask === void 0 ? (0, react$1.createElement)(MarqueeText, {
+				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), (0, react$1.createElement)(MarqueeText, {
 					text: known?.label ?? dep.task,
 					style: {
-						flex: "1 1 auto",
 						minWidth: 0,
 						fontSize: "var(--dshpc-font-md)"
 					}
-				}) : (0, react$1.createElement)(Button$1, {
-					variant: "link",
-					size: "sm",
-					style: {
-						flex: "1 1 auto",
-						minWidth: 0,
-						fontSize: "var(--dshpc-font-md)",
-						textAlign: "left"
-					},
-					onClick: () => {
-						onViewTask(dep.task);
-					}
-				}, (0, react$1.createElement)(MarqueeText, { text: known?.label ?? dep.task })), ws === "" ? null : (0, react$1.createElement)(MarqueeText, {
-					text: ws,
-					style: {
-						flex: "0 0 72px",
-						color: "var(--dshpc-fg-2)",
-						fontSize: "var(--dshpc-font-xs)"
-					}
-				}), (0, react$1.createElement)(IconButton, {
-					variant: "danger",
-					size: "sm",
-					icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
-					label: t("editorDepRemove"),
-					title: "",
-					style: { flex: "none" },
-					onClick: () => {
-						patch({ deps: draft.deps.filter((d) => d.task !== dep.task) });
-					}
-				}));
+				})));
 			}))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-deppick" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-deppick-task" }, (0, react$1.createElement)(SelectField, {
 				value: depTaskId,
 				groups: depGroups,
@@ -79749,16 +79650,37 @@ window.__ModuleLoader__.load({
 			const advancedBlock = (0, react$1.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react$1.createElement)(Surface, {
 				className: "dsh-tdt-ed-card",
 				padding: "md"
-			}, (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-				gap: "8px"
-			} }, (0, react$1.createElement)("span", { style: {
+			}, (0, react$1.createElement)("div", {
+				role: "button",
+				tabIndex: 0,
+				"aria-expanded": advancedOpen,
+				style: {
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+					gap: "8px",
+					cursor: "pointer"
+				},
+				onClick: () => {
+					setAdvancedOpen(!advancedOpen);
+				},
+				onKeyDown: (event) => {
+					if (event.key === "Enter" || event.key === " ") {
+						event.preventDefault();
+						setAdvancedOpen(!advancedOpen);
+					}
+				}
+			}, (0, react$1.createElement)("span", { style: {
 				display: "inline-flex",
 				alignItems: "center",
-				gap: "4px"
-			} }, t("editorAdvanced"), (0, react$1.createElement)(HelpButton, { hint: t("editorAdvancedHelp") })), (0, react$1.createElement)(IconButton, {
+				gap: "4px",
+				fontSize: "var(--dshpc-font-lg)",
+				lineHeight: "var(--dshpc-line-lg)",
+				fontWeight: 600
+			} }, t("editorAdvanced"), (0, react$1.createElement)(HelpButton, {
+				hint: t("editorAdvancedHelp"),
+				insideClickable: true
+			})), (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "sm",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
@@ -79767,10 +79689,7 @@ window.__ModuleLoader__.load({
 				}),
 				label: t("editorAdvanced"),
 				"aria-expanded": advancedOpen,
-				title: "",
-				onClick: () => {
-					setAdvancedOpen(!advancedOpen);
-				}
+				title: ""
 			})), advancedOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advbody" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)("span", { style: FIELD_LABEL_STYLE }, t("editorRetry")), (0, react$1.createElement)(Segmented, {
 				id: "dsh-tdt-ed-retry",
 				value: draft.maxAttempts,
@@ -79993,8 +79912,7 @@ window.__ModuleLoader__.load({
 				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit")
 			}, panelInner);
 		}
-		//#endregion
-		//#region src/client/settings-config-block.tsx
+		// src/client/settings-config-block.tsx
 		/**
 		* 设置页第 1 块 · 插件设置（配置编辑主入口）。
 		*
@@ -80418,8 +80336,7 @@ window.__ModuleLoader__.load({
 				color: "var(--dshpc-warning)"
 			} }, t("settingsUnsaved")) : null));
 		}
-		//#endregion
-		//#region src/client/db-table.tsx
+		// src/client/db-table.tsx
 		/**
 		* 单表结果渲染（现在只有「设置 → 日志」在用）。
 		*
@@ -80484,8 +80401,7 @@ window.__ModuleLoader__.load({
 				density: "compact"
 			});
 		}
-		//#endregion
-		//#region src/client/settings-log-block.tsx
+		// src/client/settings-log-block.tsx
 		/**
 		* 设置页第 2 块 · 整体日志（`plugin_log`，插件进程日志，非任务日志）。
 		*
@@ -80597,8 +80513,7 @@ window.__ModuleLoader__.load({
 				emptyText: t("settingsLogEmpty")
 			}));
 		}
-		//#endregion
-		//#region src/client/settings-page.tsx
+		// src/client/settings-page.tsx
 		/**
 		* 设置页顶层：纵向三个模块（插件设置 / 整体日志 / 数据库表查询）。
 		*
@@ -80629,8 +80544,7 @@ window.__ModuleLoader__.load({
 				style: SECTION_GAP
 			}, (0, react$1.createElement)(SettingsLogBlock, { t }))));
 		}
-		//#endregion
-		//#region src/calendar-plan.ts
+		// src/calendar-plan.ts
 		/**
 		* 单次调用 `scheduledSlotsFor` 的迭代上限。
 		* 刻度最密的 cron 是「每分钟」⇒ 一周最多 10080 个刻度，取 11000 留一档余量。
@@ -80721,8 +80635,7 @@ window.__ModuleLoader__.load({
 			for (const list of out.values()) list.sort((a, b) => a.scheduledAt < b.scheduledAt ? -1 : a.scheduledAt > b.scheduledAt ? 1 : 0);
 			return out;
 		}
-		//#endregion
-		//#region src/client/task-calendar.tsx
+		// src/client/task-calendar.tsx
 		const CALENDAR_CSS = `
 /* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
 .dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--dshpc-space-2);margin-bottom:var(--dshpc-space-3);}
@@ -81357,8 +81270,7 @@ window.__ModuleLoader__.load({
 				}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-date" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-weekday" }, weekdayFormatter === null ? "" : weekdayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
 			}))));
 		}
-		//#endregion
-		//#region src/client/task-list.tsx
+		// src/client/task-list.tsx
 		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
 		const monoFont$1 = "var(--dshpc-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
@@ -81371,7 +81283,6 @@ window.__ModuleLoader__.load({
 			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
 			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--dshpc-font-sm); }`,
 			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--dshpc-head-bg); }",
-			".dsh-tdt-card-row:hover { background: var(--dshpc-card-hover); }",
 			".dsh-tdt-rec-row:hover { background: var(--dshpc-plate-hover); }",
 			".dsh-tdt-rec-alt { background: var(--dshpc-plate); }"
 		].join("\n");
@@ -82143,6 +82054,7 @@ window.__ModuleLoader__.load({
 							}, (0, react$1.createElement)(IconButton, {
 								variant: "plain",
 								size: "md",
+								dense: true,
 								icon: output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 									path: output,
 									size: 16
@@ -82322,7 +82234,8 @@ window.__ModuleLoader__.load({
 					inset: 0,
 					gap: 0
 				},
-				style: { padding: 0 }
+				style: { padding: 0 },
+				hoverable: true
 			}, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-card-row",
 				style: {
@@ -82612,8 +82525,7 @@ window.__ModuleLoader__.load({
 				refOf: refOf(row.id)
 			})))));
 		}
-		//#endregion
-		//#region src/client/index.ts
+		// src/client/index.ts
 		/** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 		const SETTINGS_NS = "dsh-task-dispatch-table";
 		/** 字典命名空间（locale 注册表独立于 settings 命名空间，取同名便于对应）。 */
@@ -84058,7 +83970,6 @@ window.__ModuleLoader__.load({
 				})));
 			});
 		}
-		//#endregion
 		exports.apply = apply;
 		return module.exports;
 	}

@@ -82,10 +82,8 @@ export const TASK_EDITOR_CSS = `
 /* 小问号已改接核心 FieldHint（2026-11-06）：图标 / 气泡 / 焦点全部归核心，本地皮肤已删。 */
 /* 前置任务卡选择行（用户 2026-11-07）：分组下拉吃掉整行剩余宽度，右侧「添加」定宽 72px。
    核心 Picker 的根是 inline-block flex 子项 ⇒ 必须给 min-width:0 才能收缩，否则整行被撑爆。 */
-.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--dshpc-radius-sm);background:var(--dshpc-hover,rgba(38,49,72,.06));}
-/* 附件行（2026-11-06 改接核心，与查看档附件同款）：只有排布，不画皮肤 ——
-   文件名 / 来源标签 / 移除钮分别由核心 Chip、Chip(xs)、IconButton(danger) 承载。 */
-.dsh-tdt-ed-attline{display:flex;align-items:center;gap:6px;min-width:0;}
+/* 前置任务条目 / 附件行 = 核心 ListRow（0.35.4）：常态底、hover 提亮、整行可点、右侧操作槽全归核心，
+   本仓不再留任何条目皮肤。 */
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task > *{flex:1 1 auto;min-width:0;width:100%;}

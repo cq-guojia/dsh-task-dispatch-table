@@ -141,6 +141,8 @@ function FileChip(props: { file: FileLine }): ReturnType<typeof h> {
   return h(Button, {
     variant: 'ghost',
     size: 'sm',
+    // dense = 核心 0.35.4 紧凑图标档：图标放大一档、按钮高度不变。
+    dense: true,
     icon: file.isDir ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: file.iconPath, size: 14 }),
     disabled: !clickable,
     onClick: file.onClick,

@@ -12,7 +12,7 @@
 // 拿不到就整块不渲染（返回 null），绝不显示假文件。
 import { createElement as h, useState } from 'react'
 import { FileTypeIcon, IconChevronDownOutlineRegular, IconChevronUpOutlineRegular, IconFolderCloseRegular } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button, MarqueeText, ensureControlsStyle } from './ui'
+import { Button, IconButton, MarqueeText, ensureControlsStyle } from './ui'
 import { baseNameOf } from './format'
 import type { Translate } from './locales'
 
@@ -39,21 +39,32 @@ export function ProcessFiles(props: {
     className: className === undefined ? 'dsh-tdt-proc' : `dsh-tdt-proc ${className}`,
     'data-process-files': true,
   },
-    h(Button, {
-      variant: 'ghost',
-      size: 'sm',
-      block: true,
-      'aria-expanded': open,
+    // 折叠头（用户 2026-11-07）：整行可点展开、hover 不变底色；只有右侧核心 IconButton 三角 hover 亮。
+    h('div', {
+      role: 'button', tabIndex: 0, 'aria-expanded': open,
+      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', cursor: 'pointer' },
       onClick: () => { setOpen((value) => !value) },
-      iconRight: open ? h(IconChevronUpOutlineRegular, { size: 12 }) : h(IconChevronDownOutlineRegular, { size: 12 }),
-      style: { justifyContent: 'space-between', fontSize: 'var(--dshpc-font-sm)', fontWeight: 400 },
-    }, t('procFilesTitle', { count: list.length })),
+      onKeyDown: (event: { key: string; preventDefault: () => void }) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen((value) => !value) }
+      },
+    },
+      h('span', { style: { fontSize: 'var(--dshpc-font-sm)', fontWeight: 400 } }, t('procFilesTitle', { count: list.length })),
+      // 三角不另绑 onClick：点击冒泡到整行，避免同一次点击切换两回。
+      h(IconButton, {
+        variant: 'plain',
+        size: 'sm',
+        icon: open ? h(IconChevronUpOutlineRegular, { size: 12 }) : h(IconChevronDownOutlineRegular, { size: 12 }),
+        label: t('procFilesTitle', { count: list.length }),
+        'aria-expanded': open,
+        title: '',
+      }),
+    ),
     open
       ? h('div', { className: 'dsh-tdt-proc-list' },
         list.map((path) => h(Button, {
           key: path,
           // 文件行 = 核心 Button 的 ghost 档（图标 + 文字，与产出物清单同一套皮肤；2026-11-06 全站收口）。
-          variant: 'ghost', size: 'sm',
+          variant: 'ghost', size: 'sm', dense: true,
           icon: isDirPath(path) ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
           disabled: onOpen === undefined,
           onClick: onOpen === undefined ? undefined : () => { onOpen(path) },
