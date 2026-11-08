@@ -1,7 +1,7 @@
 {
   "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
   "tasks": {
-    "20261108-1313-ec72-设置界面-显示名-入口位置-屏蔽官方自动化": {"category": "功能建设", "created": "2026-11-08 13:13:09", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-08 13:58:20", "status": "doing", "tags": ["设置界面", "侧栏入口", "自动化"], "title": "设置界面：显示名、入口位置、屏蔽官方自动化", "updated": "2026-11-08 13:58:20", "worklog": "worklog/202611/08-1313-ec72-设置界面-显示名-入口位置-屏蔽官方自动化.md"}
+    "20261108-1313-ec72-设置界面-显示名-入口位置-屏蔽官方自动化": {"category": "功能建设", "created": "2026-11-08 13:13:09", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-08 13:58:20", "status": "doing", "tags": ["设置界面", "侧栏入口", "自动化"], "title": "设置界面：显示名、入口位置、屏蔽官方自动化", "updated": "2026-11-08 13:58:45", "worklog": "worklog/202611/08-1313-ec72-设置界面-显示名-入口位置-屏蔽官方自动化.md"}
   },
   "version": "20261022000000"
 }
