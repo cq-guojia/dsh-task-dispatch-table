@@ -194,10 +194,11 @@ const RECORDS_CSS = `
    ⚠️ **不可点、无 cursor**：展开出来的内容（产出物 / 前置 / 日志）要能直接拖选复制
       （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 /* 展开区同样从竖条右缘起算 ⇒ 展开后的内容与头部标题**左对齐**（条子是通高的，也压在展开区上）。 */
-/* 左右 / 底部内距同样由核心 StripCard 给，这里只留「与头部之间那 8px + 分隔线」。 */
-/* 2026-11-07：分隔线上下各留 8px（原来只有线下有 padding，线贴着头部最后一行文字）。 */
+/* 左右 / 底部内距、以及头部与展开区之间的上间距全部由核心 StripCard 给（__panel 的 margin-top 归 0）：
+   本仓不再加 margin-top ⇒ 分隔线紧贴头部区下沿，中间不多一条不变色的带子。 */
+/* 2026-11-08：线到「产出」标题的间距改 --dshpc-space-4（原 8px 的两倍，用户点名不够）。 */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--dshpc-space-2);
-  margin-top:var(--dshpc-space-2);padding:var(--dshpc-space-2) 0 0;
+  padding:var(--dshpc-space-4) 0 0;
   border-top:1px solid var(--dshpc-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */

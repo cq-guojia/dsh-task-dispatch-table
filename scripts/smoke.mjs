@@ -3869,9 +3869,10 @@ check(
 	!tlSrc10.includes("--rec-bar-w") &&
 		!tlSrc10.includes("dsh-tdt-rec-bar") &&
 		/\.dsh-tdt-rec-main\{[^}]*padding:0;/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-exp\{[^}]*padding:var\(--dshpc-space-2\) 0 0/.test(
+		/\.dsh-tdt-rec-exp\{[^}]*padding:var\(--dshpc-space-4\) 0 0/.test(
 			tlSrc10,
-		),
+		) &&
+		!/\.dsh-tdt-rec-exp\{[^}]*margin-top/.test(tlSrc10),
 );
 check(
 	"第十一轮：执行记录页过滤行的分段控件与「任务配置」页**同一皮肤**（走默认变体：有外描边；不再 inset）",
@@ -6288,6 +6289,15 @@ console.log("\n[14] runtime-index");
 			!barBlock.includes("borderTop") && !barBlock.includes("marginTop") && barBlock.includes("paddingTop: '10px'"),
 		);
 		check(
+			"2026-11-08：展开区左右 / 下内距全交核心 Card.__panel，本仓不再二次缩进（虚线与滚动条同宽、底部不双倍留白）",
+			(() => {
+				const wrapBlock = /const panelWrapStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? "";
+				return wrapBlock.includes("borderTop") &&
+					!wrapBlock.includes("paddingLeft") && !wrapBlock.includes("paddingRight") &&
+					!wrapBlock.includes("paddingBottom") && !wrapBlock.includes("marginTop");
+			})(),
+		);
+		check(
 			"2026-11-08：细滚动条只挂核心 dshpc-scroll-thin（3px）；本仓不再自绘 1px 滚动条皮肤",
 			(() => {
 				const cc = readFileSync(join(process.cwd(), "src", "client", "ui", "controls-css.ts"), "utf8");
@@ -6731,6 +6741,8 @@ console.log("\n[14] runtime-index");
 				tv.includes("dsh-tdt-ed-view-prompt--source") &&
 				tec.includes(".dsh-tdt-ed-view-prompt--source{max-height:none;overflow:visible;") &&
 				tec.includes("min-height:calc((var(--dshpc-control-h-md) + 6px) * 2);") &&
+				// 复制图标尺寸交还核心 IconButton 的 1em 档位，不写像素。
+				tec.includes(".dsh-tdt-ed-view-doc .dshpc-cv__copy svg{width:1em;height:1em;}") &&
 				!tec.includes(".dsh-tdt-ed-view-more") &&
 				!lcSrc.includes("editorViewFullscreen"),
 		);

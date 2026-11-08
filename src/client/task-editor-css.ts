@@ -115,6 +115,10 @@ export const TASK_EDITOR_CSS = `
   /* 2026-11-08：最小高度 = (复制 IconButton 的 md 高度 + 它离顶 6px) × 2，
      短提示词也能让浮动复制钮落在边框垂直中间，不再贴在底边；长了就随内容长，钮仍在右上角。 */
   min-height:calc((var(--dshpc-control-h-md) + 6px) * 2);}
+/* 核心 CodeViewer 自带的 .dshpc-cv__copy svg{16px} 顶掉了核心 IconButton 的 1em 档位，
+   把这里交还档位即可：不写任何像素，图标按 IconButton size:md 的 font-size 自然渲染，
+   与核心 preview-title-bar 那颗复制钮同一尺寸。 */
+.dsh-tdt-ed-view-doc .dshpc-cv__copy svg{width:1em;height:1em;}
 .dsh-tdt-ed-view-empty{font-size:var(--dshpc-font-sm);color:var(--dshpc-fg-3,rgba(128,128,128,.8));}
 `;
 

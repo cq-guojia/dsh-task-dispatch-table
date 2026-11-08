@@ -397,9 +397,10 @@ const panelScrollFillStyle: Record<string, string | number> = {
   flex: '1 1 auto', minHeight: 0, overflowY: 'auto',
 }
 const panelWrapStyle: Record<string, string | number> = {
-  // 卡片不再统一留白后，展开区自己补左右 / 下内边距，否则内容贴边。
-  // 顶部间距交给主行的 12px 下内边距，这里不再留 marginTop（只留虚线 + 10px 上内边距）。
-  borderTop: `1px dashed var(--dshpc-border)`, paddingTop: '10px', paddingLeft: '14px', paddingRight: '14px', paddingBottom: '12px',
+  // 左右 / 底部内距全归核心 Card.__panel（左右 margin 各 14px、padding-bottom 14px）。
+  // 本仓再补一遍会二次内缩 ⇒ 虚线与右侧滚动条不对齐、底部留白翻倍（2026-11-08 用户点名）。
+  // 上间距同理归核心；这里只留消费端自绘的那条虚线 + 线下的内容间距。
+  borderTop: `1px dashed var(--dshpc-border)`, paddingTop: '10px',
 }
 const panelBarStyle: Record<string, string | number> = {
   // 2026-11-08 用户点名删掉底栏上方那条 1px dashed（截图里「其他产出」正下方那条 border）：
