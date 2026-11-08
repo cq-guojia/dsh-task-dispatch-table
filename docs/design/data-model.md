@@ -32,7 +32,7 @@
 | `retry.maxAttempts` | int? | 默认 1；重试耗尽 → `failed`，下游跳过 | 决策 10 |
 | `depends_on` | object[]? | `{ task, semantics }`，**由下游声明**；`semantics` = `same_period`（同 logical date）/ `latest_success`（上游最近一条必须 succeeded）。⚠️ `freshness` 字段已于**决策 33 删除** | 决策 8/9/33 |
 | `attachments` | object[]? | **附加文件清单**（只记引用，不存内容）：`{ id, name, kind, ref, workspace? }`。`kind='link'` = 工作区已有文件（只记路径、不复制，`workspace` = 来源工作区 **id**（老数据为 title，按 id/title 两种键解析），派发注入时按它把 `ref` 绝对化）；`kind='upload'` = 已上传到插件数据目录的文件，**`ref` = 相对该任务目录的路径**（`attachments/<原始文件名>`，迁移见 §五.3）。同源文件见 §五 | 2026-09-30 |
-| `schedule.ui` | object? | **结构化排期（编辑态反解用）**：`{ scheduleKind, periodFreq, weekdays[], monthDay, monthMode, quarterMonth, yearMonth, intervalUnit, intervalStep, weekStep }`，与 `cron` / `once` / `start` / `everyNWeeks` **并存**。**执行只读 `cron`/`once`（唯一排期真源），表单反解只读 `schedule.ui`**；两者不一致（用户手改过 cron）⇒ 表单进「自定义 cron」只读态并提示，`schedule.ui` 不回写。✅ 已定双写（见 §5.4） | 2026-09-30 |
+| `schedule.ui` | object? | **结构化排期（编辑态反解用）**：`{ scheduleKind, periodFreq, weekdays[], monthDay, monthMode, quarterMonth, yearMonth, intervalUnit, intervalStep, weekStep, dayStep }`，与 `cron` / `once` / `start` / `everyNWeeks` / `everyNDays` **并存**。**执行只读 `cron`/`once`（唯一排期真源），表单反解只读 `schedule.ui`**；两者不一致（用户手改过 cron）⇒ 表单进「自定义 cron」只读态并提示，`schedule.ui` 不回写。✅ 已定双写（见 §5.4） | 2026-09-30 |
 
 **回执机制（决策 19 + 决策 24 改通道；2026-10-10 产出拆双桶）**：agent 跑完调用插件注册的工具 `task_dispatch_table_receipt({ status, outputs?, processOutputs?, note? })` 提交回执——该工具由插件在派发时经 `agentCtx.tools.register` 注册，**只对该任务会话可见**，`execute` 在**插件进程内**直写状态库 `task_events`（`kind='receipt'`，detail 形状 `{ status, outputs, processOutputs, note, session_id }`）。对账**只查库**：取派发时刻之后的最新 receipt，校验 `status ∈ contract.validStatuses` + **两桶**逐一路径在目标工作区**存在**（`output-missing` 的 detail 里带 `bucket: 'main' | 'process'`）。
 
@@ -268,7 +268,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_log_ts ON plugin_log(ts);
 
 | 谁 | 读什么 | 写什么 |
 |---|---|---|
-| 执行（Loop A / `scheduledSlotsFor`） | **只读 `cron` / `once` / `start` / `everyNWeeks`**，永不读 `schedule.ui` | 不写 |
+| 执行（Loop A / `scheduledSlotsFor`） | **只读 `cron` / `once` / `start` / `everyNWeeks` / `everyNDays`**，永不读 `schedule.ui` | 不写 |
 | 表单（编辑态反解 / 展示） | 只读 `schedule.ui` | 保存时**同时写两者**，且 **cron 以表单为准重新生成** |
 
 - `schedule.ui` 缺失（手写的老 JSON）⇒ 表单按 cron 尽力反解，解不出进「自定义 cron」态（不丢原值）。
@@ -282,6 +282,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_log_ts ON plugin_log(ts);
 | C2 | DOM 与 DOW 不得同时指定（cron 的 OR 语义陷阱） | ✅ 现状各档只写其一（周档 DOW、月/季/年档 DOM + 月份位） |
 | C3 | 每月 31 日 / 2 月 29 日 | ⚠️ 已知边界：cron 语义下该月**不出刻度**（不顺延）。UI 提示待定 |
 | C4 | 「每 N 周」取模基准 | ✅ `start` 锚点 + 整周差取模（`filterSlotsBySchedule`）。⚠️ 跨 DST 的一周不是整 168h ⇒ 基准周可能偏移（宿主无 DST，低风险） |
+| C4b | 「每 N 天」取模基准 | ✅ 同 C4，但按**日历日**差取模（`logicalDateOf` → 日序，DST 的 23/25 小时日不会推歪相位）。**不能**用 cron 日位 `*/N`：那是「每月第 N 天」，月底会重数（28 号 → 1 号只隔 1 天）。无 `start` 锚点（手写 JSON）⇒ 不算相位、按每天跑（不猜） |
 | C5 | 时区 | ✅ 无时区字段，一律跟随宿主时区；`wallClockToAbsolute` 与 cron-parser 同一口径 |
 | C6 | cron 合法性 | ✅ 服务端 `parseInlineTasks` 已用 `CronExpressionParser.parse` 校验，非法整条跳过 + warn |
 
@@ -308,7 +309,7 @@ attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: 
 | 权限下拉 | `permission` | `target.permission` | 决策 50 |
 | 附加文件 | `attachments[]` | `attachments[]` | 内容不进 JSON |
 | 前置任务 | `deps[]` | `depends_on[]` | 固定 `latest_success` |
-| 周期 / 间隔 / 频率 / 星期 / 月日 / 每 N 周 / 开始时间 | `scheduleKind` `periodFreq` `weekdays` `monthDay` `monthMode` `quarterMonth` `yearMonth` `intervalUnit` `intervalStep` `weekStep` `date` `time` | `schedule.cron` / `schedule.start` / `schedule.everyNWeeks` / （`schedule.ui`，见 5.4） | 执行真源 = cron |
+| 周期 / 间隔 / 频率 / 星期 / 月日 / 每 N 周 / 每 N 天 / 开始时间 | `scheduleKind` `periodFreq` `weekdays` `monthDay` `monthMode` `quarterMonth` `yearMonth` `intervalUnit` `intervalStep` `weekStep` `dayStep` `date` `time` | `schedule.cron` / `schedule.start` / `schedule.everyNWeeks` / `schedule.everyNDays` / （`schedule.ui`，见 5.4） | 执行真源 = cron |
 | 单次运行 | `periodFreq='once'` | `schedule.once` | 与 cron 互斥 |
 | 允许延迟 | `window` | `schedule.window` | |
 | 重试次数 | `maxAttempts` | `retry.maxAttempts` | |

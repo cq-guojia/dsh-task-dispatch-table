@@ -37,6 +37,7 @@ export interface TaskOverviewRow {
         timezone: string | null;
         start: string | null;
         everyNWeeks: number | null;
+        everyNDays: number | null;
         window: string;
         /**
          * 结构化排期（新建 / 编辑时双写的 `schedule.ui`，2026-09-30 用户拍板）：

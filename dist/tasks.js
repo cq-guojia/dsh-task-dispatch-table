@@ -44,6 +44,8 @@ export const taskDefinitionSchema = z.object({
         start: z.string().optional(),
         /** 每周档的重复步长（周）：1 = 每周；≥2 = 每 N 周。cron 无隔周位 ⇒ 用锚点 + 取模实现（决策）。 */
         everyNWeeks: z.number().int().min(1).optional(),
+        /** 每天档的重复步长（天）：1 = 每天；≥2 = 每 N 天。cron 的日位 `*&#47;N` 是「每月第 N 天」（月底会重数）⇒ 同「每 N 周」用锚点 + 日历日差取模。 */
+        everyNDays: z.number().int().min(1).optional(),
         /**
          * 结构化排期的**编辑态快照**（2026-09-30 双写，data-model §5.4）：表单控件原样留档，
          * 供「编辑现有任务」反解。**执行永不读它**——排期真源恒为 `cron` / `once`。

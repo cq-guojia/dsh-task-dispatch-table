@@ -36,6 +36,7 @@ export interface TaskOverviewRow {
     timezone: string | null
     start: string | null
     everyNWeeks: number | null
+    everyNDays: number | null
     window: string
     /** 结构化排期（新建 / 编辑双写）；老任务为 null ⇒ 文案模块退回从 cron 反解。 */
     ui: Record<string, unknown> | null

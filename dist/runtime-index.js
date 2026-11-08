@@ -9,6 +9,7 @@ function scheduleKeyOf(task) {
         s.timezone ?? '',
         s.start ?? '',
         s.everyNWeeks === undefined ? '' : String(s.everyNWeeks),
+        s.everyNDays === undefined ? '' : String(s.everyNDays),
         // ⚠️ `window`（允许延迟）**必须在这里**（2026-10-07 审计 🟡）：它是「该冻还是该前移」与候选槽
         // 搜索的核心输入，改了它 nextSlotAt 就得重算。原先漏了它 ⇒ `overviewKey` 会 bump（界面拿到新行）
         // 但 `nextSlotAt` 仍按**旧 window** 算出来 ⇒ 卡片「下次执行」与调度器实际判定分叉，直到刻度过期才自愈。
@@ -35,7 +36,7 @@ function overviewKeyOf(task) {
         provider: task.target.provider ?? '',
         model: task.target.model ?? '',
         prompt: task.target.prompt,
-        schedule: { cron: s.cron ?? '', once: s.once ?? '', timezone: s.timezone ?? '', start: s.start ?? '', everyNWeeks: s.everyNWeeks ?? 0, window: s.window, ui: s.ui ?? null },
+        schedule: { cron: s.cron ?? '', once: s.once ?? '', timezone: s.timezone ?? '', start: s.start ?? '', everyNWeeks: s.everyNWeeks ?? 0, everyNDays: s.everyNDays ?? 0, window: s.window, ui: s.ui ?? null },
         retry: task.retry?.maxAttempts ?? 1,
         attachments: (task.attachments ?? []).map(a => `${a.name}:${a.kind}:${a.ref}`),
         depends: (task.depends_on ?? []).map(d => d.task),
@@ -298,6 +299,7 @@ export function createRuntimeIndex() {
                         timezone: task.schedule.timezone ?? null,
                         start: task.schedule.start ?? null,
                         everyNWeeks: task.schedule.everyNWeeks ?? null,
+                        everyNDays: task.schedule.everyNDays ?? null,
                         // 防御取值：overview 是展示面，畸形定义也不能让它崩（zod 有默认值的字段仍按可选读）。
                         window: task.schedule.window ?? 'PT0S',
                         ui: task.schedule.ui ?? null,

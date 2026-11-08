@@ -257,7 +257,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
    * 计划格里一直显示**旧名字 / 旧归属**，直到下一次重新取数或换月。
    */
   const scheduleSig = useMemo(
-    () => rows.map(row => `${row.id}|${row.enabled}|${row.title}|${row.workspace}|${row.schedule.cron}|${row.schedule.once}|${row.schedule.start}|${row.schedule.everyNWeeks}|${row.schedule.timezone}`).join(';'),
+    () => rows.map(row => `${row.id}|${row.enabled}|${row.title}|${row.workspace}|${row.schedule.cron}|${row.schedule.once}|${row.schedule.start}|${row.schedule.everyNWeeks}|${row.schedule.everyNDays}|${row.schedule.timezone}`).join(';'),
     [rows],
   )
   const rowsRef = useRef(rows)

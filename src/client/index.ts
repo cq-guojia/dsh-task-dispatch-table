@@ -175,6 +175,7 @@ interface ClientContext {
 	/** 延迟等待服务就位后执行回调（服务名 = cordis 声明名）。 */
 	inject(deps: readonly string[], cb: (ctx: ClientContext) => void): void;
 	/** 组合内副作用：进入时 setup、离开时执行返回的清理函数。 */
+	// biome-ignore lint/suspicious/noConfusingVoidType: 这是宿主 ctx.effect 的原样签名（回调可以返回清理函数，也可以什么都不返回），换成 undefined 会拒掉返回 void 的回调。
 	effect(setup: () => (() => void) | void): void;
 	locale: {
 		register(
@@ -231,11 +232,6 @@ const hintStyle: Record<string, string | number> = {
 	color: "var(--dshpc-fg-2)",
 	fontSize: "var(--dshpc-font-sm)",
 	margin: "4px 0 8px",
-};
-const errorStyle: Record<string, string | number> = {
-	color: "var(--dshpc-danger)",
-	fontSize: "var(--dshpc-font-sm)",
-	margin: "4px 0 0",
 };
 const rowStyle: Record<string, string | number> = {
 	display: "flex",
@@ -337,12 +333,6 @@ const cellStyle: Record<string, string | number> = {
 	padding: "2px 6px",
 	textAlign: "left",
 	verticalAlign: "top",
-};
-const detailCellStyle: Record<string, string | number> = {
-	...cellStyle,
-	whiteSpace: "pre-wrap",
-	wordBreak: "break-all",
-	maxWidth: "480px",
 };
 // 带超时的 fetch 已抽到共用叶子模块 `./http`（2026-09-30 收敛：本文件与 session-view 共用一份；
 // 两条**需要持有 controller 句柄**的路径——任务列表轮询、附件上传——仍各自内联，理由见 `http.ts` 顶部）。
@@ -577,6 +567,8 @@ function rowPatchOf(
 			start: str(schedule.start),
 			everyNWeeks:
 				typeof schedule.everyNWeeks === "number" ? schedule.everyNWeeks : null,
+			everyNDays:
+				typeof schedule.everyNDays === "number" ? schedule.everyNDays : null,
 			window:
 				typeof schedule.window === "string" && schedule.window !== ""
 					? schedule.window
@@ -694,7 +686,8 @@ function TaskPage(props: {
 		 */
 		view: "view" | "edit";
 	} | null>(null);
-	const [editorSaving, setEditorSaving] = useState(false);
+	// 值无人读（只要状态变化触发重渲染）⇒ 只留 setter，别留一个死变量。
+	const [, setEditorSaving] = useState(false);
 	const [editorError, setEditorError] = useState<string | null>(null);
 	/**
 	 * 编辑分栏的控制器（用户 2026-11-06：分栏外壳也用核心控件）。

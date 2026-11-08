@@ -127,30 +127,38 @@ export function scheduledSlotsFor(task, from, to, cap = 20_000) {
     return filterSlotsBySchedule(task, raw);
 }
 /**
- * 周期任务的锚点 / 步长过滤（「开始时间」+「每 N 周」）：
- * - `start`：首跑下界（不早于此时）；也是「每 N 周」取模的参考周（start 所在周 = 第 0 周）。
+ * 周期任务的锚点 / 步长过滤（「开始时间」+「每 N 周」/「每 N 天」）：
+ * - `start`：首跑下界（不早于此时）；也是步长取模的参考（start 所在周 / 日 = 第 0 个）。
  * - `everyNWeeks`：每周档的重复步长。cron 没有「第几周」位 ⇒ 用「刻度与 start 的整周差 % N」
  *   过滤，天然覆盖用户诉求：开始时间设下周一、每 2 周 ⇒ 下周一跑、下下周跳过、再下一周跑。
+ * - `everyNDays`：每天档的重复步长。cron 的日位 `*&#47;N` 是「每月第 N 天」（月底会重数）⇒ 同样取模，
+ *   但按**日历日**差算（DST 那天不是 24h，用毫秒会把相位推歪）。
  */
 export function filterSlotsBySchedule(task, slots) {
     const startIso = task.schedule.start;
     const startAbs = startIso === undefined ? undefined : wallClockToAbsolute(startIso, task.schedule.timezone);
     const start = startAbs === null ? undefined : startAbs;
-    const nWeeks = task.schedule.everyNWeeks;
-    if (start === undefined && (nWeeks === undefined || nWeeks === null || nWeeks <= 1))
+    const nWeeks = task.schedule.everyNWeeks ?? 1;
+    const nDays = task.schedule.everyNDays ?? 1;
+    const weekly = nWeeks > 1;
+    // 无锚点（老数据 / 手写 JSON）⇒ 不算相位，按「每天」跑（不猜）。
+    const daily = start !== undefined && nDays > 1;
+    if (start === undefined && !weekly)
         return slots;
     const ref = start ?? slots[0];
     if (ref === undefined)
         return slots;
     const WEEK = 7 * 24 * 3600 * 1000;
+    const dayIndex = (date) => Date.parse(`${logicalDateOf(date, task.schedule.timezone)}T00:00:00Z`) / 86_400_000;
+    const refDay = dayIndex(ref);
+    const mod = (value, n) => ((value % n) + n) % n;
     return slots.filter(slot => {
         if (start !== undefined && slot.getTime() < start.getTime())
             return false;
-        if (nWeeks !== undefined && nWeeks !== null && nWeeks > 1) {
-            const weeks = Math.floor((slot.getTime() - ref.getTime()) / WEEK);
-            if (((weeks % nWeeks) + nWeeks) % nWeeks !== 0)
-                return false;
-        }
+        if (weekly && mod(Math.floor((slot.getTime() - ref.getTime()) / WEEK), nWeeks) !== 0)
+            return false;
+        if (daily && mod(dayIndex(slot) - refDay, nDays) !== 0)
+            return false;
         return true;
     });
 }

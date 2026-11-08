@@ -23,6 +23,7 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         once: z.ZodOptional<z.ZodString>;
         start: z.ZodOptional<z.ZodString>;
         everyNWeeks: z.ZodOptional<z.ZodNumber>;
+        everyNDays: z.ZodOptional<z.ZodNumber>;
         ui: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strip>;
     target: z.ZodObject<{

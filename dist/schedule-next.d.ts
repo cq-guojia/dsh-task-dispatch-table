@@ -8,6 +8,7 @@ export interface ScheduleNextSchedule {
     once?: string;
     start?: string;
     everyNWeeks?: number | null;
+    everyNDays?: number | null;
 }
 /** 最小任务形状：只要求带 `schedule`。 */
 export interface ScheduleNextTask {
@@ -26,10 +27,12 @@ export declare function logicalDateOf(date: Date, timeZone: string | undefined):
  */
 export declare function scheduledSlotsFor(task: ScheduleNextTask, from: Date, to: Date, cap?: number): Date[];
 /**
- * 周期任务的锚点 / 步长过滤（「开始时间」+「每 N 周」）：
- * - `start`：首跑下界（不早于此时）；也是「每 N 周」取模的参考周（start 所在周 = 第 0 周）。
+ * 周期任务的锚点 / 步长过滤（「开始时间」+「每 N 周」/「每 N 天」）：
+ * - `start`：首跑下界（不早于此时）；也是步长取模的参考（start 所在周 / 日 = 第 0 个）。
  * - `everyNWeeks`：每周档的重复步长。cron 没有「第几周」位 ⇒ 用「刻度与 start 的整周差 % N」
  *   过滤，天然覆盖用户诉求：开始时间设下周一、每 2 周 ⇒ 下周一跑、下下周跳过、再下一周跑。
+ * - `everyNDays`：每天档的重复步长。cron 的日位 `*&#47;N` 是「每月第 N 天」（月底会重数）⇒ 同样取模，
+ *   但按**日历日**差算（DST 那天不是 24h，用毫秒会把相位推歪）。
  */
 export declare function filterSlotsBySchedule(task: ScheduleNextTask, slots: Date[]): Date[];
 /** 给定时刻之后的下一个刻度（面板展示「下次执行」用）。 */

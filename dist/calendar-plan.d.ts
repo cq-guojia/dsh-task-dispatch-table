@@ -9,6 +9,7 @@ export interface CalendarTask {
         timezone: string | null;
         start: string | null;
         everyNWeeks: number | null;
+        everyNDays: number | null;
     };
 }
 /** 一条**未来计划**（尚未产生执行记录）。 */

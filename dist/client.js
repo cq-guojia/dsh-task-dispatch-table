@@ -58071,6 +58071,7 @@ window.__ModuleLoader__.load({
 			editorSchedDaily: "每天",
 			editorSchedWeekly: "每周",
 			editorSchedEveryNWeek: "每 {n} 周",
+			editorSchedEveryNDay: "每 {n} 天",
 			editorSchedQuarterly: "每季度第 {n} 个月",
 			editorSchedIntervalMin: "每 {n} 分钟执行一次",
 			editorSchedIntervalHour: "每 {n} 小时执行一次",
@@ -58086,6 +58087,7 @@ window.__ModuleLoader__.load({
 			unitMinutes: "分钟",
 			unitHours: "小时",
 			unitDays: "天",
+			unitWeeks: "周",
 			editorDeps: "添加前置任务",
 			editorDepsHint: "此任务必须等待『所有』前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。",
 			editorDepAdd: "添加",
@@ -58738,6 +58740,7 @@ window.__ModuleLoader__.load({
 			editorSchedDaily: "Every day",
 			editorSchedWeekly: "Weekly",
 			editorSchedEveryNWeek: "Every {n} weeks",
+			editorSchedEveryNDay: "Every {n} days",
 			editorSchedQuarterly: "Month {n} of each quarter",
 			editorSchedIntervalMin: "Runs every {n} minutes",
 			editorSchedIntervalHour: "Runs every {n} hours",
@@ -58753,6 +58756,7 @@ window.__ModuleLoader__.load({
 			unitMinutes: "minutes",
 			unitHours: "hours",
 			unitDays: "days",
+			unitWeeks: "weeks",
 			editorDeps: "Add prerequisite tasks",
 			editorDepsHint: "This task waits for ALL of its prerequisites to finish before it can start. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.",
 			editorDepAdd: "Add",
@@ -76531,25 +76535,32 @@ window.__ModuleLoader__.load({
 			return filterSlotsBySchedule(task, raw);
 		}
 		/**
-		* 周期任务的锚点 / 步长过滤（「开始时间」+「每 N 周」）：
-		* - `start`：首跑下界（不早于此时）；也是「每 N 周」取模的参考周（start 所在周 = 第 0 周）。
+		* 周期任务的锚点 / 步长过滤（「开始时间」+「每 N 周」/「每 N 天」）：
+		* - `start`：首跑下界（不早于此时）；也是步长取模的参考（start 所在周 / 日 = 第 0 个）。
 		* - `everyNWeeks`：每周档的重复步长。cron 没有「第几周」位 ⇒ 用「刻度与 start 的整周差 % N」
 		*   过滤，天然覆盖用户诉求：开始时间设下周一、每 2 周 ⇒ 下周一跑、下下周跳过、再下一周跑。
+		* - `everyNDays`：每天档的重复步长。cron 的日位 `*&#47;N` 是「每月第 N 天」（月底会重数）⇒ 同样取模，
+		*   但按**日历日**差算（DST 那天不是 24h，用毫秒会把相位推歪）。
 		*/
 		function filterSlotsBySchedule(task, slots) {
 			const startIso = task.schedule.start;
 			const startAbs = startIso === void 0 ? void 0 : wallClockToAbsolute(startIso, task.schedule.timezone);
 			const start = startAbs === null ? void 0 : startAbs;
-			const nWeeks = task.schedule.everyNWeeks;
-			if (start === void 0 && (nWeeks === void 0 || nWeeks === null || nWeeks <= 1)) return slots;
+			const nWeeks = task.schedule.everyNWeeks ?? 1;
+			const nDays = task.schedule.everyNDays ?? 1;
+			const weekly = nWeeks > 1;
+			const daily = start !== void 0 && nDays > 1;
+			if (start === void 0 && !weekly) return slots;
 			const ref = start ?? slots[0];
 			if (ref === void 0) return slots;
 			const WEEK = 6048e5;
+			const dayIndex = (date) => Date.parse(`${logicalDateOf(date, task.schedule.timezone)}T00:00:00Z`) / 864e5;
+			const refDay = dayIndex(ref);
+			const mod = (value, n) => (value % n + n) % n;
 			return slots.filter((slot) => {
 				if (start !== void 0 && slot.getTime() < start.getTime()) return false;
-				if (nWeeks !== void 0 && nWeeks !== null && nWeeks > 1) {
-					if ((Math.floor((slot.getTime() - ref.getTime()) / WEEK) % nWeeks + nWeeks) % nWeeks !== 0) return false;
-				}
+				if (weekly && mod(Math.floor((slot.getTime() - ref.getTime()) / WEEK), nWeeks) !== 0) return false;
+				if (daily && mod(dayIndex(slot) - refDay, nDays) !== 0) return false;
 				return true;
 			});
 		}
@@ -76629,6 +76640,7 @@ window.__ModuleLoader__.load({
 			freq: "daily",
 			weekdays: [],
 			weekStep: 1,
+			dayStep: 1,
 			monthDay: "1",
 			monthMode: "every",
 			quarterMonth: "1",
@@ -76643,11 +76655,13 @@ window.__ModuleLoader__.load({
 		function scheduleSpecFromDraft(draft) {
 			const step = Number.parseInt(draft.intervalStep, 10);
 			const wstep = Number.parseInt(draft.weekStep, 10);
+			const dstep = Number.parseInt(draft.dayStep, 10);
 			return {
 				kind: draft.scheduleKind === "interval" ? "interval" : draft.periodFreq === "once" ? "once" : "periodic",
 				freq: draft.periodFreq === "once" ? "daily" : draft.periodFreq,
 				weekdays: [...draft.weekdays],
 				weekStep: Number.isFinite(wstep) && wstep > 0 ? wstep : 1,
+				dayStep: Number.isFinite(dstep) && dstep > 0 ? dstep : 1,
 				monthDay: draft.monthDay,
 				monthMode: draft.monthMode,
 				quarterMonth: draft.quarterMonth,
@@ -76685,7 +76699,7 @@ window.__ModuleLoader__.load({
 		* （`task-editor.scheduleFromCron`）各写一份、严格度还不一致 ⇒ 同一个 cron 两处说法不一样，
 		* 修 bug 还得两边分别修。现在编辑器也只调这里。
 		*/
-		function scheduleSpecFromCron(cron, everyNWeeks) {
+		function scheduleSpecFromCron(cron, everyNWeeks, everyNDays = null) {
 			const base = {
 				...EMPTY_SPEC,
 				cron
@@ -76737,7 +76751,8 @@ window.__ModuleLoader__.load({
 					...base,
 					kind: "periodic",
 					freq: "daily",
-					time
+					time,
+					dayStep: everyNDays !== null && everyNDays > 1 ? everyNDays : 1
 				};
 				return {
 					...base,
@@ -76836,6 +76851,7 @@ window.__ModuleLoader__.load({
 					freq,
 					weekdays: days,
 					weekStep: kindNum(ui.weekStep, sched.everyNWeeks ?? 1),
+					dayStep: kindNum(ui.dayStep, sched.everyNDays ?? 1),
 					monthDay: str(ui.monthDay, "1"),
 					monthMode,
 					quarterMonth: str(ui.quarterMonth, "1"),
@@ -76847,7 +76863,7 @@ window.__ModuleLoader__.load({
 					cron
 				};
 			}
-			return scheduleSpecFromCron(cron, sched.everyNWeeks);
+			return scheduleSpecFromCron(cron, sched.everyNWeeks, sched.everyNDays);
 		}
 		/** 时间嵌在句子中间（每天 **09:00** 执行）：拆成「前 / 时间 / 后」三段，时间标 emphasis。 */
 		const withTime = (spec, head, tail) => [
@@ -76878,7 +76894,10 @@ window.__ModuleLoader__.load({
 				}];
 			}
 			switch (spec.freq) {
-				case "daily": return withTime(spec, `${t("editorSchedDaily")} `, ` ${t("editorSchedRun")}`);
+				case "daily": {
+					const head = spec.dayStep > 1 ? `${fmt(t("editorSchedEveryNDay"), { n: String(spec.dayStep) })} ` : `${t("editorSchedDaily")} `;
+					return withTime(spec, head, ` ${t("editorSchedRun")}`);
+				}
 				case "weekly": {
 					const wd = weekdayText(t, spec.weekdays);
 					const everyN = spec.weekStep > 1;
@@ -76958,21 +76977,27 @@ window.__ModuleLoader__.load({
 		* 草稿 → 下一次执行时刻的 ISO 串（推不出 / 停用 ⇒ `null`，调用方显示「无」，**不编造**）。
 		* ① **停用 ⇒ 不执行**（与卡片「预计执行」、服务端 `computeNext` 同口径）；
 		* ② once 任务给 `schedule.once`；周期任务给 cron（`scheduleCron` 推不出 ⇒ null）；
-		* ③ 时区缺省 = 本地（宿主与浏览器同机，与服务端缺省口径一致）。
+		* ③ 时区缺省 = 本地（宿主与浏览器同机，与服务端缺省口径一致）；
+		* ④ **「每 N 周 / 每 N 天」必须一起带上**：cron 表达不了步长，漏传就按每周 / 每天算（预览会与卡片对不上）。
 		*/
 		function nextSlotForDraft(draft, now = /* @__PURE__ */ new Date()) {
 			if (!draft.enabled) return null;
 			const start = draft.date !== "" && draft.time !== "" ? `${draft.date}T${draft.time}` : void 0;
+			const nWeeks = Number.parseInt(draft.weekStep, 10);
+			const nDays = Number.parseInt(draft.dayStep, 10);
 			const next = nextSlotAfter({ schedule: draft.periodFreq === "once" ? {
 				once: start,
 				timezone: void 0,
 				start
 			} : (() => {
 				const cron = scheduleCron(draft);
-				return cron === null ? {} : {
+				if (cron === null) return {};
+				return {
 					cron,
 					timezone: void 0,
-					start
+					start,
+					...draft.periodFreq === "weekly" && nWeeks > 1 ? { everyNWeeks: nWeeks } : {},
+					...draft.periodFreq === "daily" && nDays > 1 ? { everyNDays: nDays } : {}
 				};
 			})() }, now);
 			return next === void 0 ? null : next.toISOString();
@@ -77915,6 +77940,7 @@ window.__ModuleLoader__.load({
 				intervalUnit: "hour",
 				intervalStep: "1",
 				weekStep: "1",
+				dayStep: "1",
 				date: todayIso(),
 				time: "09:00",
 				window: "PT4H",
@@ -77938,7 +77964,8 @@ window.__ModuleLoader__.load({
 				yearMonth: draft.yearMonth,
 				intervalUnit: draft.intervalUnit,
 				intervalStep: draft.intervalStep,
-				weekStep: draft.weekStep
+				weekStep: draft.weekStep,
+				dayStep: draft.dayStep
 			};
 		}
 		/**
@@ -77961,6 +77988,8 @@ window.__ModuleLoader__.load({
 				schedule.start = `${draft.date}T${draft.time}`;
 				const step = Number.parseInt(draft.weekStep, 10);
 				if (draft.periodFreq === "weekly" && Number.isFinite(step) && step > 1) schedule.everyNWeeks = step;
+				const dayStep = Number.parseInt(draft.dayStep, 10);
+				if (draft.periodFreq === "daily" && Number.isFinite(dayStep) && dayStep > 1) schedule.everyNDays = dayStep;
 				schedule.ui = structuredOf(draft);
 			} else if (draft.scheduleKind === "interval") {
 				const cron = scheduleCron(draft);
@@ -78053,8 +78082,8 @@ window.__ModuleLoader__.load({
 		* （2026-09-30 抽象收敛：此前列表文案与编辑器**各写一份反解**、严格度还不一致 ⇒
 		* 同一个 cron 两处说法不一样，修 bug 还得两边分别修）。这里只做 spec → 表单字段的映射。
 		*/
-		function scheduleFromCron(cron, everyNWeeks) {
-			const spec = scheduleSpecFromCron(cron, everyNWeeks);
+		function scheduleFromCron(cron, everyNWeeks, everyNDays) {
+			const spec = scheduleSpecFromCron(cron, everyNWeeks, everyNDays);
 			if (spec.kind === "custom" || spec.kind === "once") return null;
 			const draft = spec.kind === "interval" ? {
 				scheduleKind: "interval",
@@ -78065,7 +78094,8 @@ window.__ModuleLoader__.load({
 				scheduleKind: "periodic",
 				periodFreq: spec.freq,
 				weekdays: spec.weekdays,
-				weekStep: String(spec.weekStep)
+				weekStep: String(spec.weekStep),
+				dayStep: String(spec.dayStep)
 			};
 			if (spec.kind === "periodic") {
 				if (spec.freq === "monthly") {
@@ -78149,16 +78179,20 @@ window.__ModuleLoader__.load({
 					if (ui.intervalUnit === "minute" || ui.intervalUnit === "hour") draft.intervalUnit = ui.intervalUnit;
 					if (typeof ui.intervalStep === "string") draft.intervalStep = ui.intervalStep;
 					if (typeof ui.weekStep === "string") draft.weekStep = ui.weekStep;
+					if (typeof ui.dayStep === "string") draft.dayStep = ui.dayStep;
 				} else {
 					const cron = typeof schedule.cron === "string" ? schedule.cron : "";
 					const nWeeks = typeof schedule.everyNWeeks === "number" ? schedule.everyNWeeks : null;
-					const parsed = cron === "" ? null : scheduleFromCron(cron, nWeeks);
+					const nDays = typeof schedule.everyNDays === "number" ? schedule.everyNDays : null;
+					const parsed = cron === "" ? null : scheduleFromCron(cron, nWeeks, nDays);
 					if (parsed !== null) Object.assign(draft, parsed);
 					else if (cron !== "") draft.customCron = cron;
 				}
 			}
 			const everyNWeeks = typeof schedule.everyNWeeks === "number" ? schedule.everyNWeeks : void 0;
 			if (everyNWeeks !== void 0 && everyNWeeks > 1) draft.weekStep = String(everyNWeeks);
+			const everyNDays = typeof schedule.everyNDays === "number" ? schedule.everyNDays : void 0;
+			if (everyNDays !== void 0 && everyNDays > 1) draft.dayStep = String(everyNDays);
 			return draft;
 		}
 		/**
@@ -78284,25 +78318,29 @@ window.__ModuleLoader__.load({
 					emptyLabel: t("editorNoOptions"),
 					ariaLabel: t("editorDayOfMonth")
 				}));
-				if (draft.periodFreq === "weekly") above.push((0, react$1.createElement)(SelectField, {
-					key: "week-step",
-					value: draft.weekStep,
-					options: [
-						1,
-						2,
-						3,
-						4
-					].map((n) => ({
-						value: String(n),
-						label: tt("editorEveryNWeeks", { n })
-					})),
+				if (draft.periodFreq === "daily") above.push((0, react$1.createElement)(NumberInput, {
+					key: "day-step",
+					size: "lg",
+					value: Number.parseInt(draft.dayStep, 10) || 1,
+					min: 1,
+					max: 999,
+					suffix: t("unitDays"),
+					label: tt("editorSchedEveryNDay", { n: 1 }),
 					onChange: (value) => {
-						patch({ weekStep: value });
-					},
-					placeholder: tt("editorEveryNWeeks", { n: 1 }),
-					emptyLabel: t("editorNoOptions"),
-					ariaLabel: tt("editorEveryNWeeks", { n: 1 }),
-					width: 120
+						patch({ dayStep: String(value) });
+					}
+				}));
+				if (draft.periodFreq === "weekly") above.push((0, react$1.createElement)(NumberInput, {
+					key: "week-step",
+					size: "lg",
+					value: Number.parseInt(draft.weekStep, 10) || 1,
+					min: 1,
+					max: 12,
+					suffix: t("unitWeeks"),
+					label: tt("editorEveryNWeeks", { n: 1 }),
+					onChange: (value) => {
+						patch({ weekStep: String(value) });
+					}
 				}));
 			}
 			return (0, react$1.createElement)("div", { style: {
@@ -80588,7 +80626,8 @@ window.__ModuleLoader__.load({
 				once: task.schedule.once ?? void 0,
 				timezone: task.schedule.timezone ?? void 0,
 				start: task.schedule.start ?? void 0,
-				everyNWeeks: task.schedule.everyNWeeks
+				everyNWeeks: task.schedule.everyNWeeks,
+				everyNDays: task.schedule.everyNDays
 			} };
 		}
 		/**
@@ -80845,7 +80884,7 @@ window.__ModuleLoader__.load({
 			* 2026-10-06 审计 🟡 —— 原来只有排期字段，改名 / 改工作区后排期没动 ⇒ 指纹不变 ⇒
 			* 计划格里一直显示**旧名字 / 旧归属**，直到下一次重新取数或换月。
 			*/
-			const scheduleSig = (0, react$1.useMemo)(() => rows.map((row) => `${row.id}|${row.enabled}|${row.title}|${row.workspace}|${row.schedule.cron}|${row.schedule.once}|${row.schedule.start}|${row.schedule.everyNWeeks}|${row.schedule.timezone}`).join(";"), [rows]);
+			const scheduleSig = (0, react$1.useMemo)(() => rows.map((row) => `${row.id}|${row.enabled}|${row.title}|${row.workspace}|${row.schedule.cron}|${row.schedule.once}|${row.schedule.start}|${row.schedule.everyNWeeks}|${row.schedule.everyNDays}|${row.schedule.timezone}`).join(";"), [rows]);
 			const rowsRef = (0, react$1.useRef)(rows);
 			rowsRef.current = rows;
 			const { y, m } = cursor;
@@ -82785,6 +82824,7 @@ window.__ModuleLoader__.load({
 					timezone: str(schedule.timezone),
 					start: str(schedule.start),
 					everyNWeeks: typeof schedule.everyNWeeks === "number" ? schedule.everyNWeeks : null,
+					everyNDays: typeof schedule.everyNDays === "number" ? schedule.everyNDays : null,
 					window: typeof schedule.window === "string" && schedule.window !== "" ? schedule.window : "PT0S",
 					ui: schedule.ui ?? null
 				}
@@ -82859,7 +82899,7 @@ window.__ModuleLoader__.load({
 				});
 			}, [invalidKey]);
 			const [editor, setEditor] = (0, react$1.useState)(null);
-			const [editorSaving, setEditorSaving] = (0, react$1.useState)(false);
+			const [, setEditorSaving] = (0, react$1.useState)(false);
 			const [editorError, setEditorError] = (0, react$1.useState)(null);
 			/**
 			* 编辑分栏的控制器（用户 2026-11-06：分栏外壳也用核心控件）。

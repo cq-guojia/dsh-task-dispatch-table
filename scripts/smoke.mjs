@@ -223,6 +223,40 @@ try {
 		),
 	);
 
+	// 1.2 开始时间 + 每 N 天（cron 日位 `*/N` 是「每月第 N 天」⇒ 引擎同「每 N 周」用锚点 + 日历日差取模）
+	console.log("\n[1.2] 开始时间 + 每 N 天");
+	const every3d = def({
+		id: "d3",
+		schedule: {
+			cron: "0 9 * * *",
+			timezone: "UTC",
+			window: "PT4H",
+			start: "2026-01-30T09:00",
+			everyNDays: 3,
+		},
+	});
+	// 跨 1 月 → 2 月：日位写 `*/3` 会在月底重数（…28 → 1 号），这里必须仍是整 3 天。
+	const d3Slots = scheduledSlotsFor(
+		every3d,
+		new Date("2026-01-29T00:00:00Z"),
+		new Date("2026-02-10T00:00:00Z"),
+	);
+	check(
+		"每 3 天：跨月不断档（相邻刻度恒 72h）",
+		d3Slots.length >= 4 &&
+			d3Slots.every(
+				(s, i) =>
+					i === 0 ||
+					s.getTime() - d3Slots[i - 1].getTime() === 3 * 24 * 3600 * 1000,
+			),
+		`实际 ${d3Slots.map((s) => s.toISOString().slice(0, 10)).join(",")}`,
+	);
+	check(
+		"每 3 天：首槽 = 锚点当日 09:00（锚点日 = 第 0 天）",
+		d3Slots[0]?.toISOString() === "2026-01-30T09:00:00.000Z",
+		`实际 ${d3Slots[0]?.toISOString()}`,
+	);
+
 	// ── 间隔型：刻度 = 锚点（任务开始时间）+ k×步长（用户 2026-09-30 拍板，不再整点对齐）──
 	const anchored = def({
 		id: "anchored",

@@ -20,6 +20,7 @@ export interface CalendarTask {
     timezone: string | null
     start: string | null
     everyNWeeks: number | null
+    everyNDays: number | null
   }
 }
 
@@ -52,6 +53,7 @@ function toScheduleNext(task: CalendarTask): ScheduleNextTask {
       timezone: task.schedule.timezone ?? undefined,
       start: task.schedule.start ?? undefined,
       everyNWeeks: task.schedule.everyNWeeks,
+      everyNDays: task.schedule.everyNDays,
     },
   }
 }

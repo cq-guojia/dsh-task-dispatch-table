@@ -331,8 +331,10 @@ export interface TaskEditorDraft {
 	yearMonth: string;
 	intervalUnit: IntervalUnit;
 	intervalStep: string;
-	/** 每周档重复步长（周）：1=每周，2=每两周……上限 4（用户 2026-09-29）。 */
+	/** 每周档重复步长（周）：1=每周，2=每两周……上限 12（2026-11-08 由 4 放宽）。 */
 	weekStep: string;
+	/** 每天档重复步长（天）：1=每天，3=每 3 天……上限 999（用户 2026-11-08）。 */
+	dayStep: string;
 	/** `YYYY-MM-DD`（单次运行时刻 / 周期锚点「开始时间」）。 */
 	date: string;
 	/** `HH:mm`。 */
@@ -430,6 +432,7 @@ export function emptyTaskDraft(): TaskEditorDraft {
 		intervalUnit: "hour",
 		intervalStep: "1",
 		weekStep: "1",
+		dayStep: "1",
 		date: todayIso(),
 		time: "09:00",
 		// 没有时区字段：**一律跟随宿主时区**（用户 2026-09-29：没人会去选标准时区，要算自己算）。
@@ -459,6 +462,7 @@ function structuredOf(draft: TaskEditorDraft): Record<string, unknown> {
 		intervalUnit: draft.intervalUnit,
 		intervalStep: draft.intervalStep,
 		weekStep: draft.weekStep,
+		dayStep: draft.dayStep,
 	};
 }
 
@@ -489,6 +493,9 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
 		const step = Number.parseInt(draft.weekStep, 10);
 		if (draft.periodFreq === "weekly" && Number.isFinite(step) && step > 1)
 			schedule.everyNWeeks = step;
+		const dayStep = Number.parseInt(draft.dayStep, 10);
+		if (draft.periodFreq === "daily" && Number.isFinite(dayStep) && dayStep > 1)
+			schedule.everyNDays = dayStep;
 		schedule.ui = structuredOf(draft);
 	} else if (draft.scheduleKind === "interval") {
 		// 间隔档：cron 必须由表单产出（`*/N * * * *` / `0 */N * * <dow>`），否则任务永不执行。
@@ -639,8 +646,9 @@ function newAttachmentId(): string {
 function scheduleFromCron(
 	cron: string,
 	everyNWeeks: number | null,
+	everyNDays: number | null,
 ): Partial<TaskEditorDraft> | null {
-	const spec = scheduleSpecFromCron(cron, everyNWeeks);
+	const spec = scheduleSpecFromCron(cron, everyNWeeks, everyNDays);
 	if (spec.kind === "custom" || spec.kind === "once") return null;
 	const draft: Partial<TaskEditorDraft> =
 		spec.kind === "interval"
@@ -655,6 +663,7 @@ function scheduleFromCron(
 					periodFreq: spec.freq,
 					weekdays: spec.weekdays,
 					weekStep: String(spec.weekStep),
+					dayStep: String(spec.dayStep),
 				};
 	if (spec.kind === "periodic") {
 		if (spec.freq === "monthly") {
@@ -811,11 +820,14 @@ export function definitionToDraft(
 			if (typeof ui.intervalStep === "string")
 				draft.intervalStep = ui.intervalStep;
 			if (typeof ui.weekStep === "string") draft.weekStep = ui.weekStep;
+			if (typeof ui.dayStep === "string") draft.dayStep = ui.dayStep;
 		} else {
 			const cron = typeof schedule.cron === "string" ? schedule.cron : "";
 			const nWeeks =
 				typeof schedule.everyNWeeks === "number" ? schedule.everyNWeeks : null;
-			const parsed = cron === "" ? null : scheduleFromCron(cron, nWeeks);
+			const nDays =
+				typeof schedule.everyNDays === "number" ? schedule.everyNDays : null;
+			const parsed = cron === "" ? null : scheduleFromCron(cron, nWeeks, nDays);
 			if (parsed !== null) Object.assign(draft, parsed);
 			else if (cron !== "") draft.customCron = cron;
 		}
@@ -824,6 +836,11 @@ export function definitionToDraft(
 		typeof schedule.everyNWeeks === "number" ? schedule.everyNWeeks : undefined;
 	if (everyNWeeks !== undefined && everyNWeeks > 1)
 		draft.weekStep = String(everyNWeeks);
+	// 定义里的 `everyNDays` 才是真值（`ui` 可能被手改坏）⇒ 与周档同口径以定义覆盖。
+	const everyNDays =
+		typeof schedule.everyNDays === "number" ? schedule.everyNDays : undefined;
+	if (everyNDays !== undefined && everyNDays > 1)
+		draft.dayStep = String(everyNDays);
 	return draft;
 }
 
@@ -999,23 +1016,38 @@ function PeriodControls(props: {
 				}),
 			);
 		}
-		// 每周档：每 N 周（1–4）与「每周」同排（用户 2026-09-29）。
+		// 每天档：每 N 天（步进框，1–999，用户 2026-11-08）。
+		if (draft.periodFreq === "daily") {
+			above.push(
+				h(NumberInput, {
+					key: "day-step",
+					// 核心默认 sm(24)，显式 lg(32) —— 与同排「频率」下拉同档。
+					size: "lg",
+					value: Number.parseInt(draft.dayStep, 10) || 1,
+					min: 1,
+					max: 999,
+					suffix: t("unitDays"),
+					label: tt("editorSchedEveryNDay", { n: 1 }),
+					onChange: (value) => {
+						patch({ dayStep: String(value) });
+					},
+				}),
+			);
+		}
+		// 每周档：每 N 周（步进框，1–12；原来 1–4 ⇒「每 5 周」设不出来，2026-11-08 放宽）。
 		if (draft.periodFreq === "weekly") {
 			above.push(
-				h(SelectField, {
+				h(NumberInput, {
 					key: "week-step",
-					value: draft.weekStep,
-					options: [1, 2, 3, 4].map((n) => ({
-						value: String(n),
-						label: tt("editorEveryNWeeks", { n }),
-					})),
+					size: "lg",
+					value: Number.parseInt(draft.weekStep, 10) || 1,
+					min: 1,
+					max: 12,
+					suffix: t("unitWeeks"),
+					label: tt("editorEveryNWeeks", { n: 1 }),
 					onChange: (value) => {
-						patch({ weekStep: value });
+						patch({ weekStep: String(value) });
 					},
-					placeholder: tt("editorEveryNWeeks", { n: 1 }),
-					emptyLabel: t("editorNoOptions"),
-					ariaLabel: tt("editorEveryNWeeks", { n: 1 }),
-					width: 120,
 				}),
 			);
 		}

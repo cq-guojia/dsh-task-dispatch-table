@@ -32,6 +32,8 @@ export interface ScheduleSpec {
   weekdays: number[]
   /** 每周档重复步长（周）：1 = 每周。 */
   weekStep: number
+  /** 每天档重复步长（天）：1 = 每天。 */
+  dayStep: number
   /** 每月 / 每年第几日。 */
   monthDay: string
   /** 每月档月份口径：`every` / `odd` / `even`。 */
@@ -80,6 +82,7 @@ export interface DraftScheduleInput {
   periodFreq: 'once' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
   weekdays: number[]
   weekStep: string
+  dayStep: string
   monthDay: string
   monthMode: string
   quarterMonth: string
@@ -96,12 +99,13 @@ export interface ScheduleRowInput {
   once: string | null
   start: string | null
   everyNWeeks: number | null
+  everyNDays: number | null
   /** 结构化排期（编辑态留档）；老任务没有 ⇒ 退回从 cron 反解。 */
   ui?: Record<string, unknown> | null
 }
 
 const EMPTY_SPEC: ScheduleSpec = {
-  kind: 'custom', freq: 'daily', weekdays: [], weekStep: 1, monthDay: '1',
+  kind: 'custom', freq: 'daily', weekdays: [], weekStep: 1, dayStep: 1, monthDay: '1',
   monthMode: 'every', quarterMonth: '1', yearMonth: '1',
   intervalUnit: 'minute', intervalStep: 0, time: '09:00', date: '', cron: '',
 }
@@ -110,6 +114,7 @@ const EMPTY_SPEC: ScheduleSpec = {
 export function scheduleSpecFromDraft(draft: DraftScheduleInput): ScheduleSpec {
   const step = Number.parseInt(draft.intervalStep, 10)
   const wstep = Number.parseInt(draft.weekStep, 10)
+  const dstep = Number.parseInt(draft.dayStep, 10)
   const kind: ScheduleSpecKind = draft.scheduleKind === 'interval'
     ? 'interval'
     : (draft.periodFreq === 'once' ? 'once' : 'periodic')
@@ -118,6 +123,7 @@ export function scheduleSpecFromDraft(draft: DraftScheduleInput): ScheduleSpec {
     freq: draft.periodFreq === 'once' ? 'daily' : draft.periodFreq,
     weekdays: [...draft.weekdays],
     weekStep: Number.isFinite(wstep) && wstep > 0 ? wstep : 1,
+    dayStep: Number.isFinite(dstep) && dstep > 0 ? dstep : 1,
     monthDay: draft.monthDay,
     monthMode: draft.monthMode,
     quarterMonth: draft.quarterMonth,
@@ -158,7 +164,7 @@ const weekdaysFromDow = (dow: string): number[] | null => {
  * （`task-editor.scheduleFromCron`）各写一份、严格度还不一致 ⇒ 同一个 cron 两处说法不一样，
  * 修 bug 还得两边分别修。现在编辑器也只调这里。
  */
-export function scheduleSpecFromCron(cron: string, everyNWeeks: number | null): ScheduleSpec {
+export function scheduleSpecFromCron(cron: string, everyNWeeks: number | null, everyNDays: number | null = null): ScheduleSpec {
   const base = { ...EMPTY_SPEC, cron }
   const parts = cron.trim().split(/\s+/)
   if (parts.length !== 5) return base
@@ -191,7 +197,9 @@ export function scheduleSpecFromCron(cron: string, everyNWeeks: number | null): 
     }
     // 每天 / 每周：分 + 小时都必须是**具体数字**，否则（如 `* 9 * * *`）表单表达不了 ⇒ 降级 custom。
     if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return base
-    if (dow === '*') return { ...base, kind: 'periodic', freq: 'daily', time }
+    if (dow === '*') {
+      return { ...base, kind: 'periodic', freq: 'daily', time, dayStep: everyNDays !== null && everyNDays > 1 ? everyNDays : 1 }
+    }
     return { ...base, kind: 'periodic', freq: 'weekly', time, weekdays: wd, weekStep: everyNWeeks !== null && everyNWeeks > 1 ? everyNWeeks : 1 }
   }
   if (dom !== '*' && dow === '*') {
@@ -264,6 +272,7 @@ export function scheduleSpecFromSchedule(sched: ScheduleRowInput): ScheduleSpec 
       freq,
       weekdays: days,
       weekStep: kindNum(ui.weekStep, sched.everyNWeeks ?? 1),
+      dayStep: kindNum(ui.dayStep, sched.everyNDays ?? 1),
       monthDay: str(ui.monthDay, '1'),
       monthMode,
       quarterMonth: str(ui.quarterMonth, '1'),
@@ -275,7 +284,7 @@ export function scheduleSpecFromSchedule(sched: ScheduleRowInput): ScheduleSpec 
       cron,
     }
   }
-  return scheduleSpecFromCron(cron, sched.everyNWeeks)
+  return scheduleSpecFromCron(cron, sched.everyNWeeks, sched.everyNDays)
 }
 
 // ── ② 出文字：spec → 文案（可带样式）────────────────────────────────────
@@ -310,8 +319,12 @@ export function scheduleSegments(spec: ScheduleSpec, t: T): ScheduleSegment[] {
   }
   // periodic
   switch (spec.freq) {
-    case 'daily':
-      return withTime(spec, `${t('editorSchedDaily')} `, ` ${t('editorSchedRun')}`)
+    case 'daily': {
+      const head = spec.dayStep > 1
+        ? `${fmt(t('editorSchedEveryNDay'), { n: String(spec.dayStep) })} `
+        : `${t('editorSchedDaily')} `
+      return withTime(spec, head, ` ${t('editorSchedRun')}`)
+    }
     case 'weekly': {
       const wd = weekdayText(t, spec.weekdays)
       const everyN = spec.weekStep > 1
@@ -436,22 +449,30 @@ export function scheduleCron(draft: ScheduleCronDraft): string | null {
 import { nextSlotAfter } from '../schedule-next.js'
 
 /** `nextSlotForDraft` 只吃草稿的这些字段（`TaskEditorDraft` 天然形状兼容）。 */
-export type NextSlotDraft = ScheduleCronDraft & { enabled: boolean; date: string }
+export type NextSlotDraft = ScheduleCronDraft & { enabled: boolean; date: string; weekStep: string; dayStep: string }
 
 /**
  * 草稿 → 下一次执行时刻的 ISO 串（推不出 / 停用 ⇒ `null`，调用方显示「无」，**不编造**）。
  * ① **停用 ⇒ 不执行**（与卡片「预计执行」、服务端 `computeNext` 同口径）；
  * ② once 任务给 `schedule.once`；周期任务给 cron（`scheduleCron` 推不出 ⇒ null）；
- * ③ 时区缺省 = 本地（宿主与浏览器同机，与服务端缺省口径一致）。
+ * ③ 时区缺省 = 本地（宿主与浏览器同机，与服务端缺省口径一致）；
+ * ④ **「每 N 周 / 每 N 天」必须一起带上**：cron 表达不了步长，漏传就按每周 / 每天算（预览会与卡片对不上）。
  */
 export function nextSlotForDraft(draft: NextSlotDraft, now: Date = new Date()): string | null {
   if (!draft.enabled) return null
   const start = draft.date !== '' && draft.time !== '' ? `${draft.date}T${draft.time}` : undefined
+  const nWeeks = Number.parseInt(draft.weekStep, 10)
+  const nDays = Number.parseInt(draft.dayStep, 10)
   const schedule = draft.periodFreq === 'once'
     ? { once: start, timezone: undefined, start }
     : (() => {
       const cron = scheduleCron(draft)
-      return cron === null ? {} : { cron, timezone: undefined, start }
+      if (cron === null) return {}
+      return {
+        cron, timezone: undefined, start,
+        ...(draft.periodFreq === 'weekly' && nWeeks > 1 ? { everyNWeeks: nWeeks } : {}),
+        ...(draft.periodFreq === 'daily' && nDays > 1 ? { everyNDays: nDays } : {}),
+      }
     })()
   const next = nextSlotAfter({ schedule }, now)
   return next === undefined ? null : next.toISOString()

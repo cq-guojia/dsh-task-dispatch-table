@@ -132,12 +132,12 @@ export type LocaleKey =
   | 'editorMonthTitle' | 'editorHour' | 'editorMinute' | 'editorNow' | 'editorConfirm'
   | 'editorWindow' | 'editorWindowHint'
   | 'editorSchedForecast' | 'editorSchedRun' | 'editorSchedEveryday'
-  | 'editorSchedDaily' | 'editorSchedWeekly' | 'editorSchedEveryNWeek'
+  | 'editorSchedDaily' | 'editorSchedWeekly' | 'editorSchedEveryNWeek' | 'editorSchedEveryNDay'
   | 'editorSchedQuarterly' | 'editorSchedIntervalMin' | 'editorSchedIntervalHour'
   | 'editorSchedOnce' | 'editorSchedInvalidStep' | 'editorSchedHourlyOnce' | 'editorSchedNoDaySuffix' | 'editorSchedWeeklyDayPrefix'
   | 'editorMonthMode_every' | 'editorMonthMode_odd' | 'editorMonthMode_even'
   | 'editorDiscardTitle' | 'editorDiscardDesc' | 'editorDiscardStay' | 'editorDiscardLeave'
-  | 'unitMinutes' | 'unitHours' | 'unitDays'
+  | 'unitMinutes' | 'unitHours' | 'unitDays' | 'unitWeeks'
   | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask'
   | 'editorDepTaskPh' | 'editorDepDisabledTag' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
   // 分组下拉里所有工作区都没有可选任务时的空态
@@ -650,6 +650,7 @@ export const zh: Record<LocaleKey, string> = {
   editorSchedDaily: '每天',
   editorSchedWeekly: '每周',
   editorSchedEveryNWeek: '每 {n} 周',
+  editorSchedEveryNDay: '每 {n} 天',
   editorSchedQuarterly: '每季度第 {n} 个月',
   editorSchedIntervalMin: '每 {n} 分钟执行一次',
   editorSchedIntervalHour: '每 {n} 小时执行一次',
@@ -665,6 +666,7 @@ export const zh: Record<LocaleKey, string> = {
   unitMinutes: '分钟',
   unitHours: '小时',
   unitDays: '天',
+  unitWeeks: '周',
   editorDeps: '添加前置任务',
   editorDepsHint: '此任务必须等待『所有』前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。',
   editorDepAdd: '添加',
@@ -1342,6 +1344,7 @@ export const en: Record<LocaleKey, string> = {
   editorSchedDaily: 'Every day',
   editorSchedWeekly: 'Weekly',
   editorSchedEveryNWeek: 'Every {n} weeks',
+  editorSchedEveryNDay: 'Every {n} days',
   editorSchedQuarterly: 'Month {n} of each quarter',
   editorSchedIntervalMin: 'Runs every {n} minutes',
   editorSchedIntervalHour: 'Runs every {n} hours',
@@ -1357,6 +1360,7 @@ export const en: Record<LocaleKey, string> = {
   unitMinutes: 'minutes',
   unitHours: 'hours',
   unitDays: 'days',
+  unitWeeks: 'weeks',
   editorDeps: 'Add prerequisite tasks',
   editorDepsHint: 'This task waits for ALL of its prerequisites to finish before it can start. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.',
   editorDepAdd: 'Add',
