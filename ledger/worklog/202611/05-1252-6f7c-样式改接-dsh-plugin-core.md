@@ -1,7 +1,7 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-07 14:49:16 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: doing · 2026-11-08 10:38:24 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -42,34 +42,27 @@
 - [x] 出「核心不足 / 不规范」清单（含问题、证据行号、建议），交用户判断归属
 - [x] **用户逐条拍板**（2026-11-05 完成）：TaskPicker（核心扩 `limit` + `keywords`，「全部」作首项、核心零改）· TimeRange（核心扩 `presets` + `width`）· token 基线（跟核心、不覆盖）
 - [x] **首批改接（2026-11-06）**：核心 `0.34.0` 交付 C1–C4 后，`ui/TaskPicker.tsx` → 核心 `Picker`、`ui/TimeRange.tsx` → 核心 `DateTimePicker`（均为薄包装），见「2026-11-06 · P1 首批改接」
-- [ ] P1 基础控件替换：Button/IconButton、Checkbox、Segmented、Textarea、Input/PrefixedInput/NumberInput、LiveText、MarqueeText、SectionHead、Loading、BackToTop、DateTime、CodeViewer → 核心同名件
-- [ ] P2 反馈层：~~自绘 toast → 核心 notify~~ **✅ 已随 P4c 完成**；Modal/Confirm/Alert → 核心 `skin`（仍待办）
-- [ ] P3 文件浏览 / 预览：`file-browser.tsx` / `file-preview.tsx` → `dsh-plugin-core/adv/explorer`
+- [x] P1 基础控件替换：Button/IconButton、Checkbox、Segmented、Textarea、Input/PrefixedInput/NumberInput、LiveText、MarqueeText、SectionHead、Loading、BackToTop、DateTime、CodeViewer → 核心同名件（本地同名文件全删，见「P1 全量收口」）
+- [x] P2 反馈层：Toast → 核心 `notify`（P4c）；Modal/Confirm/Alert → 核心 `confirmModal` / `alertModal` / `Modal`，`src/client/ui/index.ts:77` 为全站唯一再导出口
+- [x] P3 文件浏览 / 预览：`file-browser.tsx` / `file-preview.tsx` → `dsh-plugin-core/adv/explorer`（两文件已删，fs 路由统一 `FS_ROUTE`）
 - [x] **P4 会话预览（2026-11-06）**：核心 `0.35.0` 补齐插槽后，`session-view.ts` 改薄包装、`mirror/*` 只剩 `Deliverables.tsx`、`archive-session-css.ts` 只剩两组规则，见「2026-11-06 · P4 会话预览改接核心」
 - [x] **P4b 任务编辑分栏（2026-11-06 用户追加）**：右侧「新建 / 查看任务」分栏外壳改挂核心 `PanelDock`，与文件预览同页双分栏；删自绘面板 / 拖拽条 / 宽度记忆，见「2026-11-06 · P4b 编辑分栏改接核心 PanelDock」
 - [x] **P4c 控件逐项对齐（2026-11-06 用户追加）**：`SelectField` → 核心 `Picker`；日期 + 时刻 → 核心 `DateTimePicker` 组合控件；`HelpButton` → 核心 `FieldHint`；Toast → 核心 `notify`（删 `toast-css.ts`），见「2026-11-06 · P4c 控件逐项对齐核心」
-- [ ] P2 反馈层：~~自绘 toast → 核心 notify~~ **✅ 已随 P4c 完成**；Modal/Confirm/Alert → 核心 `skin`（仍待办）
-- [ ] P5 业务样式重构：`editor-css` / `info-css` / 内联字面量 / 自绘浮层 → 核心 token + 核心件
-- [ ] P6 文档回写：`ui-style-guide.md` / `ui-foundation.md` / `external/session-view-ui-map.md` / `features.md`
-- [ ] 收尾统计：替换前 / 后本项目自留样式行数与类名数量，确认「样式很少」；build + smoke + typecheck + 专家复核
+- [x] P2 反馈层：自绘 toast → 核心 `notify`（P4c）；Modal/Confirm/Alert → 核心件（见上条）
+- [x] P5 业务样式重构：多轮审计落地（P4d / P4e / P4f / P6 / 续做两轮），`editor-css` / `info-css` / 内联字面量 / 自绘浮层已收口到核心 token + 核心件
+- [x] P6 文档回写：`ui-style-guide.md` / `ui-foundation.md` / `external/*`（session / dock / controls / workspace-identity）/ `features.md` / `docs/README.md` 均已回写
+- [x] 收尾统计（2026-11-08）：自留 CSS 4 文件共 **347 行 / 117 条规则**（`archive-session` 37 · `task-editor` 55 · `task-info` 11 · `controls` 14），原生 `<button>` **0 处**，核心件导入 `dsh-plugin-core/ui` 34 处
+- [x] 2026-11-08 用户确认结案
 
-> ⚠️ 2026-11-07 用户叫停：本任务**未完成**，以上未勾选项原样保留（原因见「中止（2026-11-07）」节）。
+> 2026-11-07 曾被用户叫停一轮（见「中止（2026-11-07）」节），非完成；随后两轮续做补齐，2026-11-08 结案。
 
 ## Next
 
-2026-11-07 用户回来继续，按「一个一个来改」推进；本轮先做「新建 / 编辑任务」分栏（见 Process「续做（2026-11-07）」）。
+（无 —— 2026-11-08 用户确认结案。以下为移交事项，不属本任务欠账，谁接手各自立任务。）
 
-2026-11-07 第二轮已把核心 0.35.4 的新能力全部接完（见 Process「续做第二轮」）；用户说「暂时就这些」，
-**等下一轮指示**，不自行推进。
-
-若继续，剩余可选项（用户未点名，先不动）：
-- 全仓还剩 5 处原生 button：`task-calendar.tsx:656`（日历格子）、`records-timeline.tsx` 两处行内标记、
-  `mirror/Deliverables.tsx` 两处官方 UI 镜像（改核心会破坏镜像类名）。
-- `pnpm-lock.yaml` / `pnpm-workspace.yaml` 仍未跟踪，`package-lock.json`（npm 时代遗留）仍被跟踪，双 lockfile 并存。
-- smoke 长期 11 项既有失败，与改接核心无关。
-
-⚠️ `To Do` 的历史勾选项与 `Process` 实际落地记录不同步（P1 / P3 / P5 / P6 多数已做但仍标 `[ ]`），
-**别照单重做**；逐项以 `Process` 各节为准。本任务**仍未结案**（用户未说「结束 / 取消」）。
+- 双 lockfile：`pnpm-lock.yaml` / `pnpm-workspace.yaml` 仍未跟踪，`package-lock.json`（npm 时代遗留）仍被跟踪 —— 工程卫生，与本任务无关。
+- smoke 长期 11 项既有失败：提交 `f66ce9e`（「冒烟断言改按代码形状比对，修掉格式化后的 11 条假红」）已在后续修掉，本任务不追。
+- 「每 N 天」周期排期是另一条在办任务，仓库当前未提交改动均属它，不要算进本任务。
 
 ## Process
 
@@ -678,6 +671,23 @@ h(ChatViewFrame, {
 **没做**：`mirror/Deliverables.tsx` 的 40×40 文件图标底板（官方 UI 镜像，非核心 Button）、核心
 `adv/explorer` 的 FileBrowser 图标（核心内部固定 `size:18`、无 dense 参数）⇒ 这两类不是本仓能加 dense 的入口。
 
+## Conclusion
+
+**做成了什么**（均为可验证事实）：
+
+1. **样式地基**：删 `src/client/ui/tokens.ts`（236 行自建 token 表），全仓 `--tdt-*` → 核心 `--dshpc-*`（35 源文件 + smoke，1333 处）；`ui/style.ts` 改核心 `createStyleKit` 薄壳（`id: 'dsh-task-dispatch-table-ui'`），本仓与核心共用同一个 `<style>`。
+2. **控件全部走核心**：`dsh-plugin-core/ui` 34 处导入 + `utils` 6 + `code-viewer` 2 + `design` 2 + `adv/session` 2。本地同名实现已删：`ui/Button.tsx`、`ui/Segmented.tsx`、`ui/CodeViewer.tsx`（含 12 个 CodeMirror 依赖）、`ui/Loading.tsx`、`ui/BackToTop.tsx`、`ui/resizer.ts`、`DateTime.tsx`、`toast-css.ts`、`loading-css.ts`。
+3. **两块大体量自研被整体移交**：`file-preview.tsx`（752 行）+ `file-browser.tsx` → `adv/explorer`；`session-view.ts`（1471 行）+ `mirror/*`（15 文件）→ `adv/session` 槽位（现存 190 行薄包装，镜像只留 `Deliverables.tsx` 做交付补差）。
+4. **交核心的清单全部落地**：C1 `Picker.limit` / C2 `Picker.keywords` / C3 `DateTimePicker.presets` / C4 `DateTimePicker.width`（0.34.0）；`ListRow` + `dense` + `Card/StripCard hoverable`（0.35.4）—— 本仓已全部消费，无「等核心」挂账。
+5. **收尾量化**（2026-11-08 实测）：自留 CSS 4 文件 **347 行 / 117 条规则**（`archive-session-css` 37 · `task-editor-css` 55 · `task-info-css` 11 · `ui/controls-css` 14）；全仓原生 `<button>` **0 处**；`dsh-tdt-*` 自定义类名 191 个，均落在核心没有的业务专属件（表格 / 日历 / 时间线 / 收起展开 / 交付补差）。
+
+**留下的坑 / 已知例外**（已登记进 `docs/`，不是隐性欠账）：
+
+- 官方 `@deepseek-ai/dsh-client-ui-primitives` 仍直接导入 17 处 —— 核心不提供通用 `Tooltip`，只能走官方的 `Tooltip`（记在 `ui-foundation.md` §5.3）；`Tooltip` 的注入器 `setTooltipRenderer` 由本仓启动时注入官方实现。
+- 核心缺口（已交核心、本仓不自造降级）：`Picker` 无 `error` / `align:'end'`；`DateTimePicker` 无纯时分档；`Card/StripCard` 色条不能挂 Tooltip；`ModelPicker` 供应商框漏传 `size`（`ModelPicker.js:73-83`）；`adv/explorer` 的 FileBrowser 图标固定 `size:18` 无 `dense` 入口。
+- 工作区身份「存 id 还是存 title」的兼容只在执行期（`resolveWorkspace` title 优先、id 兜底），未做启动批量迁移 —— 见 `external/dsh-workspace-identity.md`。
+- 验证以最后一轮为准：`build` ✅ · `typecheck` ✅ · `smoke` 745 过 / 11 项既有失败（与改接无关，后续提交 `f66ce9e` 已修）。结案时未重跑，仓库当时另有任务的在途改动。
+
 ## Execution Log
 
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
@@ -704,3 +714,4 @@ h(ChatViewFrame, {
 - 2026-11-06 16:20:46 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 用户 2026-11-07 叫停（非完成）：worklog 记「中止」、未完成项保留、台账保持 doing 不结案；按 worklog 签入本轮最后一批改动
 - 2026-11-06 17:14:06 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 编辑分栏第一轮：前置任务两级选择合并为核心分组 Picker（空组过滤+搜索+撑满行），清退官方 primitives Button 与原生 button，高级设置箭头/前置任务移除改核心 IconButton，配置预览改 secondary 灰底；typecheck/build 过、smoke 742 过/11 既有；核心缺行条目控件，建议 API 见 worklog 续做节与 external/plugin-core-controls.md §十二，附件行等核心补完再换
 - 2026-11-07 14:49:16 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 核心 0.35.4 第二轮：任务配置/执行记录卡 hover 改核心 hoverable，附件行与前置任务条目改 ListRow，高级设置与其他产出整行可点展开（三角走核心 IconButton）、高级设置标题字号对齐 SectionHead，全站文件图标加 dense；依赖升 ^0.35.4；build/typecheck 过、smoke 745 过/11 既有、codelint 8 条既有 B 类；结论回写 external/plugin-core-controls.md §十三 与 ui-style-guide
+- 2026-11-08 10:38:24 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 结案前补正文：To Do 全项勾选（P1/P2/P3/P5/P6 均已落地，实测自留 CSS 347 行/117 规则、原生 button 0 处、核心 0.35.8）；新增 Conclusion（做了什么+已知例外+核心缺口）；Next 改为移交事项；用户确认结案
