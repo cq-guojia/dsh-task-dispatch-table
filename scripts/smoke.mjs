@@ -3865,13 +3865,11 @@ check(
 		tlSrc10.indexOf("}, t('viewSession'))") > 0,
 );
 check(
-	"第十一轮：色条宽度归核心 StripCard，本仓不再自算（--rec-bar-w / dsh-tdt-rec-bar 均已删）",
+	"第十一轮：色条宽度归核心 StripCard，本仓不再自算；展开区线下间距 --dshpc-space-4、不加左右 / 下内距",
 	!tlSrc10.includes("--rec-bar-w") &&
 		!tlSrc10.includes("dsh-tdt-rec-bar") &&
 		/\.dsh-tdt-rec-main\{[^}]*padding:0;/.test(tlSrc10) &&
-		/\.dsh-tdt-rec-exp\{[^}]*padding:var\(--dshpc-space-4\) 0 0/.test(
-			tlSrc10,
-		) &&
+		/\.dsh-tdt-rec-exp\{[^}]*padding:var\(--dshpc-space-4\) 0 0/.test(tlSrc10) &&
 		!/\.dsh-tdt-rec-exp\{[^}]*margin-top/.test(tlSrc10),
 );
 check(
@@ -3908,7 +3906,7 @@ check(
 		locSrc10.includes("trLastMonth: '上月'"),
 );
 check(
-	"第十轮：展开时头部高亮**紧贴**分隔线（块根不设 gap ⇒ 头部底边直接接展开区的分隔线）",
+	"第十轮：展开区自绘分隔线紧贴头部区下沿（块根不设 gap ⇒ 头部底边直接接线）",
 	!/\.dsh-tdt-rec-item\{[^}]*gap:/.test(tlSrc10) &&
 		/\.dsh-tdt-rec-exp\{[^}]*border-top:1px solid/.test(tlSrc10),
 );
