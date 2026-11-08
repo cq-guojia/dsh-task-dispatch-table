@@ -18,9 +18,9 @@ import {
   moveAttachmentsIn, purgeTmp, readSnapshot, readVersion, removeAttachmentFiles, saveSnapshot, saveVersion,
   type AssetPaths, type AttachmentRef,
 } from './task-assets.js'
-import * as fs from 'fs'
-import path from 'path'
-import { randomBytes } from 'crypto'
+import * as fs from 'node:fs'
+import path from 'node:path'
+import { randomBytes } from 'node:crypto'
 import { createReconciler } from './reconcile.js'
 import type { ReconcileOptions } from './reconcile.js'
 import { createScheduler } from './scheduler.js'
@@ -161,6 +161,21 @@ const SSE_HEARTBEAT_MS = 20_000
  * 超了直接 503 —— 客户端会按统一重连策略稍后重试，不会把页面打死。
  */
 const SSE_MAX_CONNECTIONS = 32
+
+/**
+ * 推送连接最长寿命（毫秒）：到期由服务端主动 `end()`，浏览器 EventSource 自动重连。
+ *
+ * ⚠️ 这是**唯一不依赖对端信号**的回收手段（2026-11-08 事故）：反代（宿主 manager 的 http-proxy）
+ * 在浏览器刷新/关页时若不销毁上游请求，本插件的 `res` 既不会触发 `close`、也不会变 `destroyed`、
+ * `write` 还照常返回 true ⇒ 任何"状态位检测"都发现不了它，只有到期主动收尾才能把名额还回登记表。
+ *
+ * ⚠️ 收尾只 `end()`（走 `cleanup`），**不要**改成 `res.destroy()`：那会发 RST ⇒ 反代侧变 ECONNRESET，
+ * 而宿主 manager 的裸 Socket 没有 `error` 兜底（2026-11-08 那次容器重启就是这条链）。
+ */
+const SSE_MAX_LIFETIME_MS = 5 * 60_000
+
+/** 寿命抖动上限：多标签同时到期时错峰重连，避免同一秒涌入撞 32 上限。 */
+const SSE_LIFETIME_JITTER_MS = 30_000
 
 /**
  * 推送连接的登记表：每打开一条 SSE 连接登记一个幂等清理函数。
@@ -559,7 +574,7 @@ const makeDispatchRoutes = (
         return writeJson(res, 413, { ok: false, error: 'payload-too-large' })
       }
       if (buffer.length === 0) return writeJson(res, 400, { ok: false, error: 'empty-file' })
-      const stored = `${sanitizeBase(originalName)}-${randomBytes(3).toString('hex')}${ext === '' ? '' : '.' + ext}`
+      const stored = `${sanitizeBase(originalName)}-${randomBytes(3).toString('hex')}${ext === '' ? '' : '.'}${ext}`
       try {
         // 同步式落盘：本仓库 @types/node 的 fs 命名空间只有回调式重载（promise 版在 fs/promises），
         // 附件上传是低频操作，mkdirSync/writeFileSync 足够。
@@ -596,7 +611,7 @@ const makeDispatchRoutes = (
       const table = url.searchParams.get('table') ?? ''
       const nRaw = Number(url.searchParams.get('n') ?? '100')
       const n = Number.isFinite(nRaw) && nRaw > 0 ? Math.min(Math.floor(nRaw), 500) : 100
-      let filters: TableFilter[] = []
+      const filters: TableFilter[] = []
       const filterRaw = url.searchParams.get('filter')
       if (filterRaw !== null && filterRaw !== '') {
         try {
@@ -1299,14 +1314,19 @@ const makeDispatchRoutes = (
       // （2026-10-06 审计 🟡）。类型用 `HEARTBEAT_TYPE`（不在事件目录里）⇒ 前端 `byType` 查不到、
       // 直接丢弃，不会当成业务事件。
       const heartbeat = setInterval(() => {
+        // 逐帧判活：`write` 对**半开**连接不抛错（数据进缓冲区、照常返回 true），只能看状态位。
+        // ⚠️ 对「反代黑洞」无效（它不销毁上游请求 ⇒ 状态位全是好的）；那种由下面的寿命兜底负责。
+        const state = res as { destroyed?: boolean; writableEnded?: boolean }
+        if (state.destroyed === true || state.writableEnded === true) return onWriteFailed()
         try { write.call(res, `data: ${JSON.stringify({ type: HEARTBEAT_TYPE })}\n\n`) } catch { onWriteFailed() }
       }, SSE_HEARTBEAT_MS)
-      /** 幂等清理（`cleanup` 可被 close / 写失败 / dispose 三路重入）。 */
+      /** 幂等清理（`cleanup` 可被 close / 寿命到期 / 写失败 / dispose 四路重入）。 */
       let cleaned = false
       function cleanup(): void {
         if (cleaned) return
         cleaned = true
         clearInterval(heartbeat)
+        clearTimeout(expire)
         unsubscribe()
         streams.delete(cleanup)
         // 主动收尾响应：让 socket 该关就关（2026-10-06 审计）。
@@ -1315,8 +1335,17 @@ const makeDispatchRoutes = (
         try { (res as { end?: () => unknown }).end?.() } catch { /* 已断开时 end 会抛，忽略 */ }
       }
       /**
+       * 正常回收并**留痕**（2026-11-08 事故）：原来「正常断开不记」，于是泄漏只能从
+       * `stream_open` 只涨不落反推；现在起点 / 终点成对出现，连接数一眼可查。
+       */
+      function closeWith(reason: string): void {
+        const wasOpen = !cleaned
+        cleanup()
+        if (wasOpen) noticeStore?.()?.logInfo('stream_close', `[事件推送] 连接已回收（${reason}，当前 ${streams.size} 条）`)
+      }
+      /**
        * 写出失败专用清理：**多留一条痕**（2026-10-07 可观测性审计 —— SSE 整条生命周期原先零日志，
-       * 「页面悄悄不刷新」时开发者手里没有任何信号）。对端正常断开走 `cleanup`，不打日志（那是应有之义）。
+       * 「页面悄悄不刷新」时开发者手里没有任何信号）。
        */
       function onWriteFailed(): void {
         const already = cleaned
@@ -1327,6 +1356,10 @@ const makeDispatchRoutes = (
           pushNotice('stream_write_failed', text)
         }
       }
+      // 寿命兜底（2026-11-08 事故）：见 SSE_MAX_LIFETIME_MS 注释。到期主动收尾，
+      // 浏览器 EventSource 自动重连、`onopen` 里会全量 resync ⇒ 不需要额外的补数据逻辑。
+      const lifetime = SSE_MAX_LIFETIME_MS + Math.floor(Math.random() * SSE_LIFETIME_JITTER_MS)
+      const expire = setTimeout(() => { closeWith('expired') }, lifetime)
       streams.add(cleanup)
       // 连接建立记一条 info（生命周期起点）：进 plugin_log、**不进调试页 warns**（正常连接不算异常，
       // 不该在「诊断/告警」区刷屏）；事后能从库里看出「多少客户端在订阅推送」「建立的节奏」。
@@ -1338,7 +1371,7 @@ const makeDispatchRoutes = (
       // 实证：`req.resume()` 变体下 `CLEANUP via req.close` 立即打印、客户端连接被终止。
       // SSE 断连的唯一可靠信号是 `res` 的 `close`。
       const on = (res as { on?: (event: string, handler: () => void) => unknown }).on
-      if (typeof on === 'function') on.call(res, 'close', cleanup)
+      if (typeof on === 'function') on.call(res, 'close', () => closeWith('client'))
       try { write.call(res, ': connected\n\n') } catch { onWriteFailed() }
     },
   },
@@ -1539,8 +1572,6 @@ export function apply(ctx: HostContext, config: unknown): void {
   let storedConfig: Partial<PluginConfig> = {}
   /** 把当前配置**生效到运行态**的执行器（settings inject 里赋值；宿主变更与手写回共用）。 */
   let applyConfigLive: (() => void) | null = null
-  /** settings inject 就绪后捕获的官方/降级作用域（只作宿主基线的读源，不再用它写回）。 */
-  let scopeRef: SettingsScope<PluginConfig> | null = null
   /** 设置页写回插件配置（**写自有状态库**，返回是否落盘）。
    *
    * ⚠️ **与系统默认值相同的字段一律不落库**（2026-10-08 用户拍板：「避免重复存储」）：
@@ -1595,7 +1626,16 @@ export function apply(ctx: HostContext, config: unknown): void {
     }
     for (const route of makeDispatchRoutes(
       runtime, persistTasksInline,
-      () => storeRef, () => ctx.workspaceRegistry, () => ctx.get('llm'),
+      () => storeRef,
+      // ⚠️ 必须 try：ctx 失活（宿主重载 / 作用域切换）时取必需服务会**直接抛**
+      // `cannot get required service "workspaceRegistry" in inactive context`，而这是**每个请求**
+      // 都要走的路径（2026-11-08 事故）。取不到 ⇒ null，各路由已按「工作区下拉为空 / 503」降级。
+      () => {
+        try { return ctx.workspaceRegistry } catch { return null }
+      },
+      () => {
+        try { return ctx.get('llm') } catch { return undefined }
+      },
       (msg) => { ctx.logger.info(msg) },
       // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。
       () => attachmentsDirRef,
@@ -1630,17 +1670,25 @@ export function apply(ctx: HostContext, config: unknown): void {
               pushNotice('slow_request', line)
             }
           }
+          // 同步抛错 / async rejection 都必须**结束响应**：只写日志不写 res ⇒ 请求永久悬挂，
+          // 客户端只能等到 8s 超时（2026-11-08 事故：inactive context 那 9 次全挂在这里）。
+          const fail = (error: unknown): void => {
+            const line = `[路由异常] ${route.path}：${error instanceof Error ? error.message : String(error)}`
+            wctx.logger.info(line)
+            pushNotice('route_error', line, 'error')
+            const state = res as { headersSent?: boolean; writableEnded?: boolean }
+            if (state.headersSent === true || state.writableEnded === true) return
+            try { writeJson(res, 500, { ok: false, error: 'internal-error' }) } catch { /* 连接已不可写 */ }
+          }
           // 同步 handler（不返回 Promise）也要算到，故用 res 的 finish/close 兜底收尾。
           try {
             const out = inner(req, res) as unknown
             if (out !== undefined && typeof (out as { then?: unknown }).then === 'function') {
-              void (out as Promise<unknown>).then(done, done)
+              void (out as Promise<unknown>).then(done, (error: unknown) => { fail(error); done() })
               return
             }
           } catch (error) {
-            const line = `[路由异常] ${route.path}：${error instanceof Error ? error.message : String(error)}`
-            wctx.logger.info(line)
-            pushNotice('route_error', line, 'error')
+            fail(error)
           }
           done()
         } })

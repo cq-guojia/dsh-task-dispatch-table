@@ -7192,7 +7192,17 @@ console.log("\n[14] runtime-index");
 		check(
 			"SSE 清理只绑 res.close（req.close 在请求流被消费时会建连即触发 ⇒ 当场退订）",
 			!idxSrc20.includes("for (const target of [req, res])") &&
-				/on\.call\(res, 'close', cleanup\)/.test(idxSrc20),
+				/on\.call\(res, 'close', \(\) => closeWith\('client'\)\)/.test(idxSrc20),
+		);
+		check(
+			"SSE 有**寿命兜底**（反代不销毁上游请求时 res 既不 close 也不 destroyed ⇒ 只有到期主动收尾能回收）",
+			idxSrc20.includes("SSE_MAX_LIFETIME_MS") &&
+				idxSrc20.includes("closeWith('expired')") &&
+				idxSrc20.includes("SSE_LIFETIME_JITTER_MS"),
+		);
+		check(
+			"路由异常必须**结束响应**（只记日志不写 res ⇒ 请求永久悬挂，客户端等到 8s 超时）",
+			idxSrc20.includes("writeJson(res, 500, { ok: false, error: 'internal-error' })"),
 		);
 		check(
 			"SSE 心跳是**真实 data 帧**（注释帧前端看不见 ⇒ 半死连接永远发现不了）",
