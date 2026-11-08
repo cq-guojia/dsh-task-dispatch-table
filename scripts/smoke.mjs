@@ -88,6 +88,19 @@ function check(name, ok, extra = "") {
 	}
 }
 
+/**
+ * 源码字面量断言（2026-11-08）：本文件大量断言是「读 src 文本、断言里面出现某段代码」，用来钉住
+ * 当年拍板过的实现。源码一旦统一格式化（单引号→双引号、长行折行），原样字面量比对就会集体假红
+ * （2026-11-08 一次红 11 条全是这个原因）。这里只放宽两件**与语义无关**的东西，断言意图不变：
+ *   ① 引号：' 与 " 等价；② 空白：任意位置的空白 / 折行都当成 `\s*`。
+ * 要钉「写法本身」（例如「不许出现 X」）时仍写 includes / 正则，别套这层。
+ */
+function hasCode(src, needle) {
+	// 两边同样「压平」：引号统一成双引号、去掉所有空白与换行、去掉分号（ASI 等价）⇒ 只比代码形状。
+	const squash = (text) => text.replace(/'/g, "\"").replace(/[;\s]+/g, "");
+	return squash(src).includes(squash(needle));
+}
+
 /** 一个最小可用的任务定义（schema 必填项：enabled / schedule / target）。 */
 function def(overrides) {
 	return {
@@ -3125,7 +3138,7 @@ try {
 		);
 		check(
 			"records 分支排在 data === undefined 门槛之前（HTTP 页不被调试快照挡住）",
-			/tab === 'records'\n\s*\? h\(RecordsTimelineView/.test(idxSrc) &&
+			/tab === ["']records["']\s*\?\s*h\(RecordsTimelineView/.test(idxSrc) &&
 				idxSrc.indexOf("h(RecordsTimelineView") <
 					idxSrc.indexOf(": data === undefined"),
 		);
@@ -5883,9 +5896,9 @@ console.log("\n[14] runtime-index");
 		// 只有下拉才定宽（按最宽那一档定 96），标签缩短为「开始时间」。
 		check(
 			"排期底部行：开始时间走核心 DateTimePicker 组合控件（日期+时间一个框）；延迟下拉按最宽档定宽 96，标签 nowrap",
-			edSrc.includes("flexWrap: 'wrap'") &&
+			hasCode(edSrc, "flexWrap: 'wrap'") &&
 				edSrc.includes("width: 96") &&
-				edSrc.includes("flex: 'none', whiteSpace: 'nowrap'") &&
+				hasCode(edSrc, "flex: 'none', whiteSpace: 'nowrap'") &&
 				edSrc.includes("h(MomentField, {") &&
 				!edSrc.includes("width: 108") &&
 				!edSrc.includes("width: 78"),
@@ -6594,7 +6607,7 @@ console.log("\n[14] runtime-index");
 		);
 		check(
 			"Office 预览：dotted 注入 remote.officeToPdf（只注 remote 会永久探测失败，2026-09-28 同款根因）",
-			cliIdxSrc.includes("ctx.inject(['remote', 'remote.officeToPdf']"),
+			hasCode(cliIdxSrc, "ctx.inject(['remote', 'remote.officeToPdf']"),
 		);
 		const locSrc11 = readFileSync(
 			join(process.cwd(), "src", "client", "locales.ts"),
@@ -6657,32 +6670,28 @@ console.log("\n[14] runtime-index");
 
 		check(
 			"底栏最左恒显「查看 / 编辑」两档切换（Segmented；切档不重开分栏、不丢草稿）",
-			te.includes("id: 'dsh-tdt-ed-viewtab'") &&
-				te.includes("{ value: 'view', label: t('editorTabView') }") &&
-				te.includes("{ value: 'edit', label: t('editorTabEdit') }") &&
+			hasCode(te, "id: 'dsh-tdt-ed-viewtab'") &&
+				hasCode(te, "{ value: 'view', label: t('editorTabView') }") &&
+				hasCode(te, "{ value: 'edit', label: t('editorTabEdit') }") &&
 				te.includes("setViewTab(") &&
-				/viewTab === 'view'[\s\S]{0,120}h\(TaskViewPanel/.test(te),
+				/viewTab === ["']view["'][\s\S]{0,120}h\(TaskViewPanel/.test(te),
 		);
 
 		check(
 			"查看档只读：底部删除 / 重置 / 取消 / 保存不渲染（只留切换 + ✕）；头部隐藏可写的启用开关",
-			/viewTab === 'view'\s*\?\s*h\('span', \{ style: \{ flex: '1 1 auto' \} \}\)/.test(
-				te,
-			) &&
-				/viewTab === 'view'\s*\?\s*null\s*:\s*h\('span', \{ className: 'dsh-tdt-ed-enable/.test(
-					te,
-				) &&
+			hasCode(te, "viewTab === 'view' ? h('span', { style: { flex: '1 1 auto' } })") &&
+				hasCode(te, "viewTab === 'view' ? null : h('span', { className: 'dsh-tdt-ed-enable") &&
 				// 头部标题 = 任务名；草稿标记 r12 挪进查看档正文（「任务配置」标题旁，文案精简正式），头部不再挂。
-				te.includes("t('editorViewUntitled')") &&
-				tv.includes("t('editorViewDraftTag')") &&
-				tv.includes("t('editorViewNewTag')") &&
+				hasCode(te, "t('editorViewUntitled')") &&
+				hasCode(tv, "t('editorViewDraftTag')") &&
+				hasCode(tv, "t('editorViewNewTag')") &&
 				!te.includes("editorViewSavedTag") &&
 				!te.includes("dsh-tdt-ed-viewtag"),
 		);
 
 		check(
 			"左列表拨片 → 右抽屉联动（2026-10-05）：抽屉订阅共享 store 的 enabled，store 与脏基线不一致时才把草稿 + 基线一并同步（不误标脏、不冲掉自己拨的乐观值）；调用点传 overview + syncTaskId",
-			te.includes("overview.rows.find(r => r.id === syncTaskId)") &&
+			/overview\.rows\.find\(\(?\s*r\)?\s*=>\s*r\.id === syncTaskId\)/.test(te) &&
 				te.includes("initialDraftRef.current.enabled") &&
 				te.includes("patch({ enabled: row.enabled })") &&
 				ixSrc.includes("syncTaskId: editor.id") &&
@@ -6841,11 +6850,11 @@ console.log("\n[14] runtime-index");
 		check(
 			"未保存拦截覆盖「＋ 新建任务」入口：openCreate 在脏时也走 pendingEdit（空串标记新建目标），confirmPendingEdit 据 id 分流 openCreateNow / openEditorNow",
 			ixSrc.includes("const openCreate = (") &&
-				ixSrc.includes("onClick: () => { openCreate() }") &&
+				hasCode(ixSrc, "onClick: () => { openCreate() }") &&
 				ixSrc.includes("openCreateNow") &&
 				/if \(editor !== null && editorDirtyRef\.current\)/.test(ixSrc) &&
-				ixSrc.includes("setPendingEdit({ id: '' })") &&
-				ixSrc.includes("if (target.id === '") &&
+				hasCode(ixSrc, "setPendingEdit({ id: '' })") &&
+				hasCode(ixSrc, "if (target.id === '") &&
 				ixSrc.includes("openCreateNow()"),
 		);
 
@@ -6853,20 +6862,18 @@ console.log("\n[14] runtime-index");
 			"r13 附件可点：查看档按 kind+name 配对 overview 的服务端解析（绝对路径 + 锚点），配不上保持纯展示",
 			tv.includes(`resolvedByKey.get(\`\${item.kind}:\${item.name}\`)`) &&
 				tv.includes("resolvedAttachments") &&
-				ixSrc.includes(
-					"overview.rows.find(item => item.id === editor.id)?.attachments",
-				),
+				/overview\.rows\.find\(\(?\s*item\)?\s*=>\s*item\.id === editor\.id\)\?\.attachments/.test(ixSrc),
 		);
 
 		check(
 			"默认档映射：新建 / 卡片「编辑」= 编辑档；卡片前置任务名点进来 = 查看档；同任务只切档不重建草稿",
-			ixSrc.includes("view: 'edit'") &&
-				ixSrc.includes("view: 'view'") &&
+			hasCode(ixSrc, "view: 'edit'") &&
+				hasCode(ixSrc, "view: 'view'") &&
 				ixSrc.includes("const findDefinition = (id: string)") &&
 				ixSrc.includes("onViewTask: openViewer") &&
 				ixSrc.includes("setEditor({ ...editor, view:") &&
 				// 抽屉接线：查看档里「任务会话 / 产出物」可点（未就位时降级不可点）。
-				ixSrc.includes("onOpenSession: viewSession !== null") &&
+				hasCode(ixSrc, "onOpenSession: viewSession !== null") &&
 				ixSrc.includes("onOpenFile: canPreview ? openFile : undefined"),
 		);
 
@@ -7185,8 +7192,8 @@ console.log("\n[14] runtime-index");
 			ciSrc20.includes(
 				"useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH]",
 			) &&
-				ciSrc20.includes("refresh: () => { void poll() }") &&
-				ciSrc20.includes("if (pending) { pending = false; void poll() }"),
+				hasCode(ciSrc20, "refresh: () => { void poll() }") &&
+				hasCode(ciSrc20, "if (pending) { pending = false; void poll() }"),
 		);
 		check(
 			"查看档「上次执行」也随事件更新（原来只在挂载 / 换任务时取一次）",
@@ -7738,7 +7745,8 @@ console.log("\n[14] runtime-index");
 			S("client/task-list.tsx").includes(
 				"if (event.payload?.taskId !== row.id) return",
 			) &&
-				S("client/index.ts").includes(
+				hasCode(
+					S("client/index.ts"),
 					"useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => { scope.refresh?.() })",
 				) &&
 				S("client/config-panel.tsx").includes("t('settingsIntro')") &&
