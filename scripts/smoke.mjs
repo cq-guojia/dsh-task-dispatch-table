@@ -2806,6 +2806,12 @@ try {
 			"过程文件也算「有内容」（执行记录展开箭头与展开区不再只看主文件）",
 			srcOf("records-timeline.tsx").includes("hasProcess"),
 		);
+		// 2026-11-08 用户拍板：记录标题只认派发快照（当时叫什么就是什么），不查实时任务定义。
+		check(
+			"【执行记录】任务名只取派发快照（任务改名/删除不改写历史，不回查实时定义）",
+			srcOf("records-timeline.tsx").includes("snapshotTitleOf(row) || row.task_id") &&
+				!srcOf("records-timeline.tsx").includes("titleById.get(row.task_id)"),
+		);
 	}
 	check(
 		"官方类发现扩 ui-deliverables 前缀（PresentRow / Deliverables 模块可命中）",

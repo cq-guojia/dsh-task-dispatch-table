@@ -890,6 +890,21 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
 
   const titleById = useMemo(() => new Map(tasks.map(o => [o.id, o.label])), [tasks])
   /**
+   * 记录标题**只认派发快照**（用户 2026-11-08 拍板）：这次执行时任务叫什么，就显示什么。
+   * 不查实时任务定义 —— 任务改名 / 删掉都不该回头改写历史；快照缺失（早期老行）才退原始 task_id。
+   * 零成本：`SELECT *` 早把 snapshot 整包带回来了，这里只是解析。
+   */
+  const snapshotTitleOf = (row: { snapshot?: string | null }): string => {
+    const raw = row.snapshot
+    if (typeof raw !== 'string' || raw === '') return ''
+    try {
+      const title = (JSON.parse(raw) as { title?: unknown }).title
+      return typeof title === 'string' ? title.trim() : ''
+    } catch {
+      return ''
+    }
+  }
+  /**
    * 任务 id → 任务名（查不到退短 id 8 位，**绝不编造**）—— 前置圈码与前置清单用。
    * 与父级 `upstreamOf`（index.ts）同口径；`useCallback` 保证 memo 条目不被无谓重渲。
    */
@@ -1151,7 +1166,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
                 day.items.map(row => h(RecordItem, {
                   key: row.id,
                   row,
-                  label: titleById.get(row.task_id) ?? row.task_id,
+                  label: snapshotTitleOf(row) || row.task_id,
                   // 展示当前标题（定义里存 id）；查不到的工作区（历史执行）原样显示路径末段。
                   workspace: workspaceLabelOf(workspaces, workspaceOf(row)),
                   t,

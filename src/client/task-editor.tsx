@@ -2515,10 +2515,23 @@ export function TaskEditorDrawer(props: {
 	 *      （宿主要的只是「某个有效会话」，与服务端 `attachmentsWithPaths` 的兜底同款）。
 	 * 算不出锚点 ⇒ 返回 null ⇒ 该行不可点：**没有会话的工作区宿主列不出文件，不给假入口**。
 	 */
+	/**
+	 * 取某个工作区的锚点会话。键有两套口径：草稿里存的是工作区 **id**（2026-11-06 改），
+	 * 而核心 `pickWorkspaceFile` 回传的 `workspace` 是工作区 **显示名**（`PickedPath.workspace`
+	 * = title）⇒ 名字也要认，否则刚选进来的附件算不出锚点、整行点不动（2026-11-08 用户报的）。
+	 */
+	const anchorOfWorkspace = (key: string): string | undefined => {
+		const anchors = workspaceAnchors ?? {};
+		if (key === "") return undefined;
+		const byId = anchors[key];
+		if (byId !== undefined && byId !== "") return byId;
+		const byTitle = workspaces.find((item) => item.label === key)?.value ?? "";
+		const hit = byTitle === "" ? undefined : anchors[byTitle];
+		return hit === undefined || hit === "" ? undefined : hit;
+	};
 	const previewTargetOf = (
 		att: Attachment,
 	): { path: string; anchorSessionId: string } | null => {
-		const anchors = workspaceAnchors ?? {};
 		const hit = resolvedAttachments?.find(
 			(r) =>
 				r.name === att.name &&
@@ -2536,14 +2549,14 @@ export function TaskEditorDrawer(props: {
 				att.workspace !== undefined && att.workspace !== ""
 					? att.workspace
 					: draft.workspace;
-			const anchor = anchors[source];
-			return anchor === undefined || anchor === ""
+			const anchor = anchorOfWorkspace(source);
+			return anchor === undefined
 				? null
 				: { path: att.ref, anchorSessionId: anchor };
 		}
 		const abs = uploadPaths[att.id];
 		if (abs === undefined || abs === "") return null;
-		const anyAnchor = Object.values(anchors).find(
+		const anyAnchor = Object.values(workspaceAnchors ?? {}).find(
 			(item) => typeof item === "string" && item !== "",
 		);
 		return anyAnchor === undefined

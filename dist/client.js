@@ -60638,6 +60638,21 @@ window.__ModuleLoader__.load({
 			], [t]);
 			const titleById = (0, react$1.useMemo)(() => new Map(tasks.map((o) => [o.id, o.label])), [tasks]);
 			/**
+			* 记录标题**只认派发快照**（用户 2026-11-08 拍板）：这次执行时任务叫什么，就显示什么。
+			* 不查实时任务定义 —— 任务改名 / 删掉都不该回头改写历史；快照缺失（早期老行）才退原始 task_id。
+			* 零成本：`SELECT *` 早把 snapshot 整包带回来了，这里只是解析。
+			*/
+			const snapshotTitleOf = (row) => {
+				const raw = row.snapshot;
+				if (typeof raw !== "string" || raw === "") return "";
+				try {
+					const title = JSON.parse(raw).title;
+					return typeof title === "string" ? title.trim() : "";
+				} catch {
+					return "";
+				}
+			};
+			/**
 			* 任务 id → 任务名（查不到退短 id 8 位，**绝不编造**）—— 前置圈码与前置清单用。
 			* 与父级 `upstreamOf`（index.ts）同口径；`useCallback` 保证 memo 条目不被无谓重渲。
 			*/
@@ -60857,7 +60872,7 @@ window.__ModuleLoader__.load({
 			}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-dayrow" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 }), (0, react$1.createElement)("span", { className: "dsh-tdt-rec-daylabel" }, dayLabelOf(day.key, dayFormatter)), (0, react$1.createElement)("span", { className: "dsh-tdt-rec-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-rec-daylabel" }, weekdayOf(day.key, weekdayFormatter)), (0, react$1.createElement)("span", { className: "dsh-tdt-rec-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-rec-daycount" }, tt("recordsDayCount", { n: day.items.length }))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-items" }, day.items.map((row) => (0, react$1.createElement)(RecordItem, {
 				key: row.id,
 				row,
-				label: titleById.get(row.task_id) ?? row.task_id,
+				label: snapshotTitleOf(row) || row.task_id,
 				workspace: workspaceLabelOf(workspaces, workspaceOf(row)),
 				t,
 				tt,
@@ -79632,23 +79647,37 @@ window.__ModuleLoader__.load({
 			*      （宿主要的只是「某个有效会话」，与服务端 `attachmentsWithPaths` 的兜底同款）。
 			* 算不出锚点 ⇒ 返回 null ⇒ 该行不可点：**没有会话的工作区宿主列不出文件，不给假入口**。
 			*/
-			const previewTargetOf = (att) => {
+			/**
+			* 取某个工作区的锚点会话。键有两套口径：草稿里存的是工作区 **id**（2026-11-06 改），
+			* 而核心 `pickWorkspaceFile` 回传的 `workspace` 是工作区 **显示名**（`PickedPath.workspace`
+			* = title）⇒ 名字也要认，否则刚选进来的附件算不出锚点、整行点不动（2026-11-08 用户报的）。
+			*/
+			const anchorOfWorkspace = (key) => {
 				const anchors = workspaceAnchors ?? {};
+				if (key === "") return void 0;
+				const byId = anchors[key];
+				if (byId !== void 0 && byId !== "") return byId;
+				const byTitle = workspaces.find((item) => item.label === key)?.value ?? "";
+				const hit = byTitle === "" ? void 0 : anchors[byTitle];
+				return hit === void 0 || hit === "" ? void 0 : hit;
+			};
+			const previewTargetOf = (att) => {
 				const hit = resolvedAttachments?.find((r) => r.name === att.name && r.kind === att.kind && r.path !== void 0 && r.anchorSessionId !== void 0);
 				if (hit !== void 0) return {
 					path: hit.path,
 					anchorSessionId: hit.anchorSessionId
 				};
 				if (att.kind === "link") {
-					const anchor = anchors[att.workspace !== void 0 && att.workspace !== "" ? att.workspace : draft.workspace];
-					return anchor === void 0 || anchor === "" ? null : {
+					const source = att.workspace !== void 0 && att.workspace !== "" ? att.workspace : draft.workspace;
+					const anchor = anchorOfWorkspace(source);
+					return anchor === void 0 ? null : {
 						path: att.ref,
 						anchorSessionId: anchor
 					};
 				}
 				const abs = uploadPaths[att.id];
 				if (abs === void 0 || abs === "") return null;
-				const anyAnchor = Object.values(anchors).find((item) => typeof item === "string" && item !== "");
+				const anyAnchor = Object.values(workspaceAnchors ?? {}).find((item) => typeof item === "string" && item !== "");
 				return anyAnchor === void 0 ? null : {
 					path: abs,
 					anchorSessionId: anyAnchor
