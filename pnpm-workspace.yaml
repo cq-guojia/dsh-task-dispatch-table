@@ -1,2 +1,2 @@
 minimumReleaseAgeExclude:
-  - dsh-plugin-core@0.35.1 || 0.35.4 || 0.35.6 || 0.35.7
+  - dsh-plugin-core@0.35.1 || 0.35.4 || 0.35.6 || 0.35.7 || 0.35.8
