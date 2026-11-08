@@ -397,10 +397,9 @@ const panelScrollFillStyle: Record<string, string | number> = {
   flex: '1 1 auto', minHeight: 0, overflowY: 'auto',
 }
 const panelWrapStyle: Record<string, string | number> = {
-  // 左右 / 底部内距全归核心 Card.__panel（左右 margin 各 14px、padding-bottom 14px）。
-  // 本仓再补一遍会二次内缩 ⇒ 虚线与右侧滚动条不对齐、底部留白翻倍（2026-11-08 用户点名）。
-  // 上间距同理归核心；这里只留消费端自绘的那条虚线 + 线下的内容间距。
-  borderTop: `1px dashed var(--dshpc-border)`, paddingTop: '10px',
+  // 左右 / 下内距全由核心 __panel 算：本仓不再补，也不改 bar.inset（改了左轴会被归零）。
+  // 上内距：核心给的是「头部 → 虚线」那段；虚线到内容这 14px 是本仓的（去掉就贴字）。
+  borderTop: `1px dashed var(--dshpc-border)`, paddingTop: '14px',
 }
 const panelBarStyle: Record<string, string | number> = {
   // 2026-11-08 用户点名删掉底栏上方那条 1px dashed（截图里「其他产出」正下方那条 border）：
@@ -1081,10 +1080,11 @@ function TaskCard(props: {
   return h('div', { ref: refOf, style: { display: 'block', width: '100%', marginBottom: '10px' } },
     // 外框 = 核心 `Card`（框式：surface-1 底 + 1px 边框 + 12 圆角）。
     // 状态色条由卡片内的 `StatusRail` 表达（它有 tooltip 与运行脉冲），这里把核心卡片的左色条收成 0。
-    // 四轴内距不覆盖、全交核心；主行另有自己的 `12px 14px`（用户 2026-10-03）。
+    // 不传 style.padding，四轴交核心。⚠️ 也别传 bar.inset：inset 参与左轴内距 ⇒ 传 0 会把左边距吃掉。
+    // 左色条隐藏只需 `size:0` + `gap:0`。
     h(Card, {
       accent: 'neutral',
-      bar: { size: 0, inset: 0, gap: 0 },
+      bar: { size: 0, gap: 0 },
       // 2026-11-08 核心 0.35.6：hoverScope 'head' = 只有头部区变色，展开区完全不变。
       // 前提是展开内容必须放进 `panel`（放 children 会被塞进 __body，hover 会蔓延到整块）。
       hoverable: true,
@@ -1094,11 +1094,11 @@ function TaskCard(props: {
     },
       // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
       // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
-      // 主行另有自己的 `12px 14px`；hover 高亮由核心 `__body` 边到边铺满这一溜任务基本信息；
+      // hover 高亮由核心 `__body` 边到边铺满这一溜任务基本信息；
       // 展开区是它的兄弟节点、**不在**这个 div 里 ⇒ hover 蓝不会蔓延到下面的设置 / 记录 / 日志（用户 2026-10-03）。
       h('div', {
       className: 'dsh-tdt-card-row',
-      style: { display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '12px 14px' },
+      style: { display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' },
       onClick: () => {
         // 拖选文字时**不要**误展开（选区非空 ⇒ 用户在复制，不是要点开卡片）。
         const sel = typeof window === 'undefined' ? null : window.getSelection()

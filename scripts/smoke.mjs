@@ -631,7 +631,6 @@ try {
 			target: { workspace: "T", prompt: "c" },
 		},
 	]);
-	const rBad = ensureIdsInInlineJson(badId);
 	check(
 		"id 格式不对（数字）⇒ 整批拒绝保存（决策 30 修订：非 UUID 报错，不静默重生成）",
 		(() => {
@@ -815,7 +814,7 @@ try {
 		"dumpTable：meta 导出含已写行且列齐全",
 		dump.count === 1 &&
 			dump.columns.includes("key") &&
-			dump.rows[0]["value"] === "[]",
+			dump.rows[0].value === "[]",
 	);
 	check(
 		"dumpTable：instances 导出形状合法（列齐全、count=rows、无截断）",
@@ -3824,7 +3823,7 @@ check(
 		/text: statusTextOf\(row\.status, t\)/.test(tlSrc10) &&
 		tlSrc10.includes("h(Chip, {") &&
 			tlSrc10.includes("tone: statusTag.tone === 'bad' ? 'danger'") &&
-			!tlSrc10.includes("dsh-tdt-rec-tag--${statusTag.tone}") &&
+			!tlSrc10.includes(`dsh-tdt-rec-tag--\${statusTag.tone}`) &&
 		tlSrc10.indexOf("h(Chip, {") <
 			tlSrc10.indexOf("}, t('viewSession'))") &&
 		!/recTag(Failed|Skipped|Running|Unknown)/.test(tlSrc10) &&
@@ -6137,7 +6136,7 @@ console.log("\n[14] runtime-index");
 		);
 		check(
 			"计划执行年份改**四位**（2026-09-30 15:10）",
-			fmt.includes("${d.getFullYear()}-") &&
+			fmt.includes(`\${d.getFullYear()}-`) &&
 				!fmt.includes("getFullYear() % 100"),
 		);
 		check(
@@ -6287,7 +6286,7 @@ console.log("\n[14] runtime-index");
 			!barBlock.includes("borderTop") && !barBlock.includes("marginTop") && barBlock.includes("paddingTop: '10px'"),
 		);
 		check(
-			"2026-11-08：展开区左右 / 下内距全交核心 Card.__panel，本仓不再二次缩进（虚线与滚动条同宽、底部不双倍留白）",
+			"2026-11-08：展开区左右 / 下内距不重复加，只由核心 Card.__panel 算（本仓 panelWrapStyle 不再出现 padding / margin）",
 			(() => {
 				const wrapBlock = /const panelWrapStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? "";
 				return wrapBlock.includes("borderTop") &&
@@ -6490,7 +6489,7 @@ console.log("\n[14] runtime-index");
 		const idxSrc = readFileSync(join(process.cwd(), "src", "index.ts"), "utf8");
 		check(
 			"接口层：新增 POST /tasks/run，业务性拒绝回 200 + ok:false（原因交前端 Toast）",
-			idxSrc.includes("${DISPATCH_API_PREFIX}/tasks/run") &&
+			idxSrc.includes(`\${DISPATCH_API_PREFIX}/tasks/run`) &&
 				idxSrc.includes("scheduler.runNow(id)"),
 		);
 		check(
@@ -6852,7 +6851,7 @@ console.log("\n[14] runtime-index");
 
 		check(
 			"r13 附件可点：查看档按 kind+name 配对 overview 的服务端解析（绝对路径 + 锚点），配不上保持纯展示",
-			tv.includes("resolvedByKey.get(`${item.kind}:${item.name}`)") &&
+			tv.includes(`resolvedByKey.get(\`\${item.kind}:\${item.name}\`)`) &&
 				tv.includes("resolvedAttachments") &&
 				ixSrc.includes(
 					"overview.rows.find(item => item.id === editor.id)?.attachments",
@@ -7313,7 +7312,7 @@ console.log("\n[14] runtime-index");
 		);
 		check(
 			"【新鲜度】overview 的 rev 是**复合版本**（内容 rev + 附件解析 rev）",
-			idxSrc20.includes("const version = `${rev}.${getAttachRev()}`") &&
+			idxSrc20.includes(`const version = \`\${rev}.\${getAttachRev()}\``) &&
 				idxSrc20.includes("getAttachRev: () => number"),
 		);
 		check(

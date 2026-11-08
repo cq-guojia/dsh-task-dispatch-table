@@ -201,6 +201,10 @@ const RECORDS_CSS = `
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
 .dsh-tdt-rec-expouts{display:flex;flex-wrap:wrap;gap:2px 10px;min-width:0;}
+/* 2026-11-08 用户点名：日志块紧贴上面那块、几乎没间距。
+   ⇒ 「执行日志」只要**前面还有块**（产出 / 其他产出 / 前置任务，任意组合）就补 16px；
+   它是第一块时（既没产出也没其他产出）不补 —— 上间距由 .dsh-tdt-rec-exp 的 padding-top 给，避免叠加。 */
+.dsh-tdt-rec-ev:not(:first-child){margin-top:var(--dshpc-space-4);}
 /* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
 .dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--dshpc-font-xs);font-weight:500;color:var(--dshpc-fg-3);}
 /* 前置任务（展开区**第二排**）：**一排两个**（用户 2026-10-04），每格「左列两行 + 右列按钮」——

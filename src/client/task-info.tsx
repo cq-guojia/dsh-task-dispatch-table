@@ -187,9 +187,8 @@ export function taskInfoBaseFields(props: {
       label: t('listSectionAttachments'),
       children: view.attachments.length === 0
         ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, t('listNone'))
-        // 控件行同样要回正 3px：值格的「上 9 / 下 3」光学内边距是为**字形**准备的，24px 的核心按钮
-        // 没有字形、会被这层不对称内边距整体压低（用户 2026-11-06 实测：离上缝远、离下缝近）。
-        : h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 10px', marginTop: '-3px' } },
+        // 控件行不再做 ±3px 回正：值格已是 flex `align-items:center`（2026-11-08），按钮与文字由布局居中。
+        : h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 10px' } },
           view.attachments.map(item => {
             const absPath = item.path
             const anchor = item.anchorSessionId
@@ -222,7 +221,7 @@ export function taskInfoBaseFields(props: {
         ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, t('listNone'))
         // 每个前置任务前面带 **1、2、3 序号**（用户 2026-10-03：不然像两段莫名其妙的话摆在这儿）。
         // 名字可点（用户 2026-10-05）⇒ 右侧栏以**查看档**打开它（入口见 `onViewTask`）。
-        : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '-3px' } },
+        : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
           view.depends.map((dep, index) => {
             const seq = h(Chip, { size: 'xs', minWidth: 18 }, String(index + 1))
             const label = `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`
@@ -300,12 +299,11 @@ export function lastRunFields(props: {
   const sessionChip = sid === null || sessionName === ''
     ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, '—')
     : h('div', {
-      // 块级 flex + 最小行高：24px 的核心图标钮被行高（--dshpc-line-md）居中，不会把整行撑高。
-      // ⚠️ 字段格是「上 9 / 下 3」的光学内边距（为了让字形落回视觉中心）⇒ 内容整体比行心低 3px；
-      // 图标钮必须**反向拉回 3px**，否则它离上缝远、离下缝近（用户 2026-11-06 二次点名）。
+      // 块级 flex + 最小行高：24px 的核心图标钮与文字由 `align-items:center` 共同居中；
+      // 值格本身也是 flex 居中（2026-11-08），这里不再做 -3px 回正。
       style: {
         display: 'flex', alignItems: 'center', gap: '2px', minWidth: 0,
-        minHeight: 'var(--dshpc-line-md)', marginTop: '-3px',
+        minHeight: 'var(--dshpc-line-md)',
       },
     },
       sessionButton,

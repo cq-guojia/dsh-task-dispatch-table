@@ -59537,7 +59537,7 @@ window.__ModuleLoader__.load({
 		const TASK_INFO_DOMAIN = "domain:task-info";
 		const TASK_INFO_CSS = [
 			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
-			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 9px 0 3px; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }",
+			".dsh-tdt-info-label, .dsh-tdt-info-value { display: flex; flex-wrap: wrap; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }",
 			".dsh-tdt-info-label { padding-right: 12px; }",
 			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }",
 			".dsh-tdt-rec-ic-ok { color: var(--dshpc-success); }",
@@ -59778,6 +59778,10 @@ window.__ModuleLoader__.load({
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
 .dsh-tdt-rec-expouts{display:flex;flex-wrap:wrap;gap:2px 10px;min-width:0;}
+/* 2026-11-08 用户点名：日志块紧贴上面那块、几乎没间距。
+   ⇒ 「执行日志」只要**前面还有块**（产出 / 其他产出 / 前置任务，任意组合）就补 16px；
+   它是第一块时（既没产出也没其他产出）不补 —— 上间距由 .dsh-tdt-rec-exp 的 padding-top 给，避免叠加。 */
+.dsh-tdt-rec-ev:not(:first-child){margin-top:var(--dshpc-space-4);}
 /* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
 .dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--dshpc-font-xs);font-weight:500;color:var(--dshpc-fg-3);}
 /* 前置任务（展开区**第二排**）：**一排两个**（用户 2026-10-04），每格「左列两行 + 右列按钮」——
@@ -77388,8 +77392,7 @@ window.__ModuleLoader__.load({
 					display: "flex",
 					flexWrap: "wrap",
 					alignItems: "center",
-					gap: "2px 10px",
-					marginTop: "-3px"
+					gap: "2px 10px"
 				} }, view.attachments.map((item) => {
 					const absPath = item.path;
 					const anchor = item.anchorSessionId;
@@ -77427,8 +77430,7 @@ window.__ModuleLoader__.load({
 				children: view.depends.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
 					display: "flex",
 					flexDirection: "column",
-					gap: "4px",
-					marginTop: "-3px"
+					gap: "4px"
 				} }, view.depends.map((dep, index) => {
 					const seq = (0, react$1.createElement)(Chip, {
 						size: "xs",
@@ -77525,8 +77527,7 @@ window.__ModuleLoader__.load({
 				alignItems: "center",
 				gap: "2px",
 				minWidth: 0,
-				minHeight: "var(--dshpc-line-md)",
-				marginTop: "-3px"
+				minHeight: "var(--dshpc-line-md)"
 			} }, sessionButton, canOpenSession ? (0, react$1.createElement)(Button$1, {
 				variant: "link",
 				size: "sm",
@@ -81570,7 +81571,7 @@ window.__ModuleLoader__.load({
 		};
 		const panelWrapStyle = {
 			borderTop: `1px dashed var(--dshpc-border)`,
-			paddingTop: "10px"
+			paddingTop: "14px"
 		};
 		const panelBarStyle = {
 			paddingTop: "10px",
@@ -82257,7 +82258,6 @@ window.__ModuleLoader__.load({
 				accent: "neutral",
 				bar: {
 					size: 0,
-					inset: 0,
 					gap: 0
 				},
 				hoverable: true,
@@ -82284,8 +82284,7 @@ window.__ModuleLoader__.load({
 					display: "flex",
 					alignItems: "center",
 					gap: "12px",
-					cursor: "pointer",
-					padding: "12px 14px"
+					cursor: "pointer"
 				},
 				onClick: () => {
 					const sel = typeof window === "undefined" ? null : window.getSelection();

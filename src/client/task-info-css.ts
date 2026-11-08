@@ -27,10 +27,10 @@ const TASK_INFO_CSS = [
   // ⚠️ **行高必须两格同一个**（用户 2026-10-03 反馈「字全贴上面那条线」）：grid 是 `align-items: stretch`，
   // 格子高度由行内最高的那格决定 ⇒ label 若继承宿主行高（与 value 的 `--dshpc-line-md` 不等），矮的那格内容
   // 会被顶对齐、看着贴上边线。统一成 `--dshpc-line-md` 后：单行 = 上下居中；值多行时标签与值第一行齐平。
-  // ⚠️ **光学居中**（用户 2026-11-06 二次反馈「每行数据离上缝近、离下缝远」）：宿主字体的字形在行盒里偏上，
-  // 只靠上下等内边距看着仍贴上缝 ⇒ 把总内边距 12px 拆成上 9 / 下 3，字形整体下移 3px 落回视觉中心，
-  // 行高不变（仍是 12px 内边距 + `--dshpc-line-md` 行盒）。
-  '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 9px 0 3px; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }',
+  // **垂直居中一律走 flex `align-items:center`**（用户 2026-11-08：不许拿上下内距去压视觉）。
+  // label 与值都是 flex 容器 ⇒ 单行文字 / 图标 / Chip 混排都在各自格子的高度里居中，不受行盒基线影响。
+  // 行高来自对称的 6 + 6 内距 + 行盒（内距只定高，不参与对齐）。
+  '.dsh-tdt-info-label, .dsh-tdt-info-value { display: flex; flex-wrap: wrap; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--dshpc-border-faint); line-height: var(--dshpc-line-md); }',
   '.dsh-tdt-info-label { padding-right: 12px; }',
   // 每栏**最底下那一条线**去掉（用户 2026-10-03 二次修订）：判据不是写死某一行（如 Token），而是由
   // DOM 实际决定 —— 左栏最后一块就是字段区；右栏**有产出物时最后一块是产出物区** ⇒ 字段区末行
