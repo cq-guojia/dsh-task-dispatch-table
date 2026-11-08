@@ -1,8 +1,9 @@
 # 20261105-1252-6f7c-样式改接-dsh-plugin-core: 样式改接 dsh-plugin-core
 
 - **Tags**: 样式, 组件复用, 插件核心, DSH
-- **Status**: doing · 2026-11-08 10:38:24 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: done · 2026-11-08 10:38:34 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-05 12:52:17 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Sealed**: 2026-11-08 10:38:34 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
      The `- **Tags**: …` line is inserted at the top by new --tags; omitted when there are no tags
@@ -715,3 +716,4 @@ h(ChatViewFrame, {
 - 2026-11-06 17:14:06 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 编辑分栏第一轮：前置任务两级选择合并为核心分组 Picker（空组过滤+搜索+撑满行），清退官方 primitives Button 与原生 button，高级设置箭头/前置任务移除改核心 IconButton，配置预览改 secondary 灰底；typecheck/build 过、smoke 742 过/11 既有；核心缺行条目控件，建议 API 见 worklog 续做节与 external/plugin-core-controls.md §十二，附件行等核心补完再换
 - 2026-11-07 14:49:16 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 核心 0.35.4 第二轮：任务配置/执行记录卡 hover 改核心 hoverable，附件行与前置任务条目改 ListRow，高级设置与其他产出整行可点展开（三角走核心 IconButton）、高级设置标题字号对齐 SectionHead，全站文件图标加 dense；依赖升 ^0.35.4；build/typecheck 过、smoke 745 过/11 既有、codelint 8 条既有 B 类；结论回写 external/plugin-core-controls.md §十三 与 ui-style-guide
 - 2026-11-08 10:38:24 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 结案前补正文：To Do 全项勾选（P1/P2/P3/P5/P6 均已落地，实测自留 CSS 347 行/117 规则、原生 button 0 处、核心 0.35.8）；新增 Conclusion（做了什么+已知例外+核心缺口）；Next 改为移交事项；用户确认结案
+- 2026-11-08 10:38:34 · close · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · sealed: 样式改接 dsh-plugin-core 完成：删自建 token 表（236 行）与全部本地控件实现，文件预览（752 行）/会话预览（1471 行）整体移交核心 adv/explorer 与 adv/session；交核心清单 C1-C4 + ListRow/dense/hoverable 全部落地（核心 0.33.3→0.35.8）；自留 CSS 收至 347 行/117 规则、原生 button 0 处；build/typecheck 通过，smoke 745 过/11 项既有失败（后续 f66ce9e 已修）
