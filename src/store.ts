@@ -389,7 +389,7 @@ export interface InstanceEventRow {
 /**
  * **插件整体日志的语义枚举**（`plugin_log.kind`）—— 2026-10-07。
  *
- * ⚠️ **新增 / 改名必须同步** `docs/design/data-model.md` §二 的表注释，否则文档与代码不一致
+ * ⚠️ **新增 / 改名必须同步** `docs/data/model.md` §二 的表注释，否则文档与代码不一致
  * （本仓已发生过：文档 §二 漏掉 `task_audit`，直到本次排查才发现）。
  *
  * 选用哪一类，按「**这件事挂不挂得上某个任务**」判断：

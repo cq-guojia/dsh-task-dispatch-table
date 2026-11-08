@@ -1,6 +1,6 @@
 /**
  * 官方「自动化任务」入口的开关（宿主 0.2.2-rc.1 源码核实，结论见
- * `docs/design/external/official-schedule-toggle.md`）。
+ * `docs/dependencies/official-schedule-toggle.md`）。
  *
  * 为什么必须借道宿主的插件管理器：官方 slots 没有「隐藏他人条目」的接口，唯一的正路是把
  * `@deepseek-ai/dsh-client-ui-schedule` 这条组合行停用（写 profile 的 `disabled` 覆盖项）。

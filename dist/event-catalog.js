@@ -6,7 +6,7 @@
 //  · 事件是「**失效信号**」——**不承载数据、不写库**，订阅方收到后自行重读真源（任务表 / 实例表）。
 //
 // ⚠️ 本文件必须**纯常量、无 Node 依赖**：它会被 tsdown 内联进单文件客户端产物 `dist/client.js`
-//    （见 design/event-push.md 与 docs/design/external/host-webserver-streaming.md）。
+//    （见 design/event-push.md 与 docs/dependencies/host-webserver-streaming.md）。
 /** 事件类型目录（前后端唯一真源；新增类型只在这里加）。 */
 export const EventType = {
     /** 任务定义增删改（含开关 / 整批替换 / 版本删除 / 附件文件变更；这些写路径都汇聚到 onDefinitionsChanged）。 */

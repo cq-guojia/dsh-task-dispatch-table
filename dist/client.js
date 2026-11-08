@@ -57453,7 +57453,7 @@ window.__ModuleLoader__.load({
 		/**
 		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
 		*
-		* 规矩（docs/design/ui-style-guide.md §三）：
+		* 规矩（docs/development/ui-style-guide.md §三）：
 		*  - **只消费 `var(--dshpc-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
 		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达。
 		*

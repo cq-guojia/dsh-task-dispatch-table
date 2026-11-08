@@ -13,7 +13,7 @@
 // 倒计时照跳」的根因）。抖动改由**服务端**根治：`runtime-index.overview` 给「刻度过期」的前移加了
 // **「这一槽处理了吗」闸门** —— 未处理且仍在 `window` 内就**冻结不前移**，于是「到点还没跑」的行
 // `nextSlotAt` 本身就是**过去时刻**，在本文件「按下次执行升序」里**自然排最前**，不需要任何哨兵。
-// （详见 `docs/design/decisions.md` 决策 54、`docs/worklog/main-panel.md` §15。）
+// （详见 `docs/decisions.md` 决策 54、`docs/worklog/main-panel.md` §15。）
 
 /** 排序只需要这几个字段（`TaskOverviewRow` 结构兼容）。 */
 export interface SortableRow {

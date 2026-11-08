@@ -1,7 +1,7 @@
 /**
  * UI 基础层对外的**唯一出口**（L2/L1 → L3）。
  *
- * 规矩（docs/design/ui-style-guide.md）：业务文件（task-list / task-editor / index / config-panel / file-* …）
+ * 规矩（docs/development/ui-style-guide.md）：业务文件（task-list / task-editor / index / config-panel / file-* …）
  * **只许 import 本文件导出的东西**，不许绕过它直接摸 `ui/` 里的具体文件 —— 否则「一类控件唯一实现」
  * 这条就守不住了。
  *

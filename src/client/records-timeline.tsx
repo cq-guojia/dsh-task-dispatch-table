@@ -1,7 +1,7 @@
 // records-timeline.tsx — 执行记录总查询页（流水账）
 //
 // 形态：查**全部任务**的执行流水账（`task_instances` 全表），按天分组、整体倒序。
-// 规格 = docs/design/features/execution-timeline.md；过程 = docs/worklog/execution-timeline.md。
+// 规格 = docs/features/execution-timeline.md；过程 = docs/worklog/execution-timeline.md。
 //
 // ⚠️ 与「卡片展开区的单任务执行记录面板」是两个功能（流水账 vs 表格、全量 vs 单任务），别混。
 //
