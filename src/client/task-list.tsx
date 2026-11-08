@@ -866,8 +866,6 @@ function TaskExpandPanel(props: {
                           variant: 'plain', size: 'md', dense: true,
                           icon: output.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: output, size: 16 }),
                           label: baseNameOf(output),
-                          // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
-                          title: '',
                           style: { cursor: canOpenFile ? 'pointer' : 'default' },
                           onClick: (event) => {
                             event.stopPropagation()
@@ -1082,12 +1080,11 @@ function TaskCard(props: {
 
   return h('div', { ref: refOf, style: { display: 'block', width: '100%', marginBottom: '10px' } },
     // 外框 = 核心 `Card`（框式：surface-1 底 + 1px 边框 + 12 圆角）。
-    // 状态色条由卡片内的 `StatusRail` 表达（它有 tooltip 与运行脉冲），这里把核心卡片的左色条收成 0，
-    // 内距也归零、交给主行自己的 `12px 14px` ⇒ hover 高亮仍能边到边（用户 2026-10-03）。
+    // 状态色条由卡片内的 `StatusRail` 表达（它有 tooltip 与运行脉冲），这里把核心卡片的左色条收成 0。
+    // 四轴内距不覆盖、全交核心；主行另有自己的 `12px 14px`（用户 2026-10-03）。
     h(Card, {
       accent: 'neutral',
       bar: { size: 0, inset: 0, gap: 0 },
-      style: { padding: 0 },
       // 2026-11-08 核心 0.35.6：hoverScope 'head' = 只有头部区变色，展开区完全不变。
       // 前提是展开内容必须放进 `panel`（放 children 会被塞进 __body，hover 会蔓延到整块）。
       hoverable: true,
@@ -1097,7 +1094,7 @@ function TaskCard(props: {
     },
       // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
       // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
-      // 主行自带卡片的 padding（卡片本身不再统一留白）⇒ hover 高亮能**边到边**铺满这一溜任务基本信息；
+      // 主行另有自己的 `12px 14px`；hover 高亮由核心 `__body` 边到边铺满这一溜任务基本信息；
       // 展开区是它的兄弟节点、**不在**这个 div 里 ⇒ hover 蓝不会蔓延到下面的设置 / 记录 / 日志（用户 2026-10-03）。
       h('div', {
       className: 'dsh-tdt-card-row',
@@ -1166,8 +1163,6 @@ function TaskCard(props: {
             // 事件时间线」），语义完全对不上——卡片展开的是**本任务的设置**，不是某次执行的事件时间线，
             // 悬停冒出一句驴唇不对马嘴的提示（用户 2026-09-30 真机点名）。图标本身自明，只留无障碍名。
             label: t('listExpandHint'),
-            // `title: ''` 压掉 IconButton 默认的原生 title（2026-11-06：全站原生 title 清退）。
-            title: '',
             onClick: onToggleOpen,
             'aria-expanded': open,
             style: { transform: open ? 'rotate(180deg)' : 'none' },

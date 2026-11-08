@@ -594,8 +594,6 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               dense: true,
               icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
               label: baseNameOf(path),
-              // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
-              title: '',
               disabled: !canOpenFile,
               onClick: (event) => {
                 event.stopPropagation()
@@ -637,8 +635,6 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               size: 'sm',
               icon: h(IconChevronDownOutlineRegular, { size: 14 }),
               label: t('listExpandHint'),
-              // 气泡不是必要信息（箭头自明）⇒ 连同 IconButton 默认的原生 title 一起压掉（2026-11-06）。
-              title: '',
               onClick: () => { onToggle(row.id) },
               'aria-expanded': open,
               style: { transform: open ? 'rotate(180deg)' : 'none' },
@@ -721,8 +717,6 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                           dense: true,
                           icon: path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 }),
                           label: baseNameOf(path),
-                          // 气泡交给上面的核心 Tooltip；压掉 IconButton 默认的原生 title。
-                          title: '',
                           disabled: !depCanOpen,
                           onClick: (event) => {
                             event.stopPropagation()

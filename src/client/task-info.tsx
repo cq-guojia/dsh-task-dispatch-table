@@ -281,7 +281,7 @@ export function lastRunFields(props: {
   const sessionButton = h(IconButton, {
     variant: 'plain', size: 'sm',
     icon: h(IconSearchOutlineRegular, { size: 12 }),
-    label: t('infoSession'), title: '',
+    label: t('infoSession'),
     background: 'var(--dshpc-chip-bg)', color: 'var(--dshpc-fg-2)',
     disabled: !canOpenSession,
     onClick: sid !== null && onOpenSession !== undefined ? () => { onOpenSession(sid) } : undefined,

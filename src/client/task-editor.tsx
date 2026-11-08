@@ -1703,7 +1703,6 @@ function PromptEditorModal(props: {
 																					size: 12,
 																				}),
 																				label: t("editorDeleteVersion"),
-																					title: "",
 																				onClick: () => {
 																					askDeleteVersion(v.file);
 																				},
@@ -2588,8 +2587,6 @@ export function TaskEditorDrawer(props: {
 										size: "sm",
 										icon: h(IconCloseOutlineRegular, { size: 14 }),
 										label: t("editorAttachmentRemove"),
-										// 气泡不是必要信息（叉号自明）⇒ 连同默认原生 title 一起压掉。
-										title: "",
 										onClick: (event: { stopPropagation: () => void }) => {
 											event.stopPropagation();
 											patch({
@@ -3074,7 +3071,6 @@ export function TaskEditorDrawer(props: {
 												size: "sm",
 												icon: h(IconCloseOutlineRegular, { size: 14 }),
 												label: t("editorDepRemove"),
-												title: "",
 												onClick: () => {
 													patch({
 														deps: draft.deps.filter((d) => d.task !== dep.task),
@@ -3210,8 +3206,6 @@ export function TaskEditorDrawer(props: {
 					}),
 					label: t("editorAdvanced"),
 					"aria-expanded": advancedOpen,
-					// 核心 IconButton 默认把 label 写成原生 title（全站已清退原生 title）。
-					title: "",
 				}),
 			),
 			advancedOpen
@@ -3462,7 +3456,6 @@ export function TaskEditorDrawer(props: {
 									size: "md",
 									icon: h(IconCloseOutlineRegular, { size: 16 }),
 									label: t("editorClose"),
-									title: "",
 									onClick: requestClose,
 								}),
 							),

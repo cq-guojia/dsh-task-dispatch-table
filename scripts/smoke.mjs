@@ -6421,7 +6421,8 @@ console.log("\n[14] runtime-index");
 				ti.includes("label: t('infoSession')") &&
 				ti.includes("background: 'var(--dshpc-chip-bg)'") &&
 				ti.includes("color: 'var(--dshpc-fg-2)'") &&
-				ti.includes("title: ''") &&
+				// 2026-11-08 核心 0.35.8 取消默认 title ⇒ 本仓不再用空 title 压制（用户点名删补丁）。
+				!ti.includes("title: ''") &&
 				ti.includes("icon: h(IconSearchOutlineRegular, { size: 12 })") &&
 				!ti.includes("dsh-tdt-info-session-icon") &&
 				!tic.includes("width: 18px; height: 18px") &&

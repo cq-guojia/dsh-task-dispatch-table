@@ -59447,8 +59447,7 @@ window.__ModuleLoader__.load({
 				size: "sm",
 				icon: open ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 12 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 }),
 				label: t("procFilesTitle", { count: list.length }),
-				"aria-expanded": open,
-				title: ""
+				"aria-expanded": open
 			})), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-proc-list" }, list.map((path) => (0, react$1.createElement)(Button$1, {
 				key: path,
 				variant: "ghost",
@@ -60071,7 +60070,6 @@ window.__ModuleLoader__.load({
 					size: 16
 				}),
 				label: baseNameOf(path),
-				title: "",
 				disabled: !canOpenFile,
 				onClick: (event) => {
 					event.stopPropagation();
@@ -60101,7 +60099,6 @@ window.__ModuleLoader__.load({
 				size: "sm",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
 				label: t("listExpandHint"),
-				title: "",
 				onClick: () => {
 					onToggle(row.id);
 				},
@@ -60163,7 +60160,6 @@ window.__ModuleLoader__.load({
 							size: 16
 						}),
 						label: baseNameOf(path),
-						title: "",
 						disabled: !depCanOpen,
 						onClick: (event) => {
 							event.stopPropagation();
@@ -77496,7 +77492,6 @@ window.__ModuleLoader__.load({
 				size: "sm",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 12 }),
 				label: t("infoSession"),
-				title: "",
 				background: "var(--dshpc-chip-bg)",
 				color: "var(--dshpc-fg-2)",
 				disabled: !canOpenSession,
@@ -78727,7 +78722,6 @@ window.__ModuleLoader__.load({
 				size: "sm",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 12 }),
 				label: t("editorDeleteVersion"),
-				title: "",
 				onClick: () => {
 					askDeleteVersion(v.file);
 				}
@@ -79314,7 +79308,6 @@ window.__ModuleLoader__.load({
 						size: "sm",
 						icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
 						label: t("editorAttachmentRemove"),
-						title: "",
 						onClick: (event) => {
 							event.stopPropagation();
 							patch({ attachments: draft.attachments.filter((a) => a.id !== att.id) });
@@ -79625,7 +79618,6 @@ window.__ModuleLoader__.load({
 						size: "sm",
 						icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
 						label: t("editorDepRemove"),
-						title: "",
 						onClick: () => {
 							patch({ deps: draft.deps.filter((d) => d.task !== dep.task) });
 						}
@@ -79726,8 +79718,7 @@ window.__ModuleLoader__.load({
 					className: advancedOpen ? "dsh-tdt-ed-advchevron-open" : "dsh-tdt-ed-advchevron"
 				}),
 				label: t("editorAdvanced"),
-				"aria-expanded": advancedOpen,
-				title: ""
+				"aria-expanded": advancedOpen
 			})), advancedOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advbody" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react$1.createElement)("span", { style: FIELD_LABEL_STYLE }, t("editorRetry")), (0, react$1.createElement)(Segmented, {
 				id: "dsh-tdt-ed-retry",
 				value: draft.maxAttempts,
@@ -79821,7 +79812,6 @@ window.__ModuleLoader__.load({
 				size: "md",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 }),
 				label: t("editorClose"),
-				title: "",
 				onClick: requestClose
 			})))), (0, react$1.createElement)("div", {
 				className: "dsh-tdt-ed-body dshpc-scroll-thin",
@@ -81180,7 +81170,6 @@ window.__ModuleLoader__.load({
 				variant: "plain",
 				size: "md",
 				label: calLabels.prevYear,
-				title: "",
 				icon: (0, react$1.createElement)("span", { style: {
 					display: "inline-flex",
 					alignItems: "center"
@@ -81198,7 +81187,6 @@ window.__ModuleLoader__.load({
 				variant: "plain",
 				size: "md",
 				label: calLabels.prevMonth,
-				title: "",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 }),
 				onClick: () => {
 					stepMonth(-1);
@@ -81210,7 +81198,6 @@ window.__ModuleLoader__.load({
 				variant: "plain",
 				size: "md",
 				label: calLabels.nextMonth,
-				title: "",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }),
 				onClick: () => {
 					stepMonth(1);
@@ -81222,7 +81209,6 @@ window.__ModuleLoader__.load({
 				variant: "plain",
 				size: "md",
 				label: calLabels.nextYear,
-				title: "",
 				icon: (0, react$1.createElement)("span", { style: {
 					display: "inline-flex",
 					alignItems: "center"
@@ -82100,7 +82086,6 @@ window.__ModuleLoader__.load({
 									size: 16
 								}),
 								label: baseNameOf(output),
-								title: "",
 								style: { cursor: canOpenFile ? "pointer" : "default" },
 								onClick: (event) => {
 									event.stopPropagation();
@@ -82277,7 +82262,6 @@ window.__ModuleLoader__.load({
 					inset: 0,
 					gap: 0
 				},
-				style: { padding: 0 },
 				hoverable: true,
 				hoverScope: "head",
 				expanded: open,
@@ -82385,7 +82369,6 @@ window.__ModuleLoader__.load({
 				size: "sm",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
 				label: t("listExpandHint"),
-				title: "",
 				onClick: onToggleOpen,
 				"aria-expanded": open,
 				style: { transform: open ? "rotate(180deg)" : "none" }

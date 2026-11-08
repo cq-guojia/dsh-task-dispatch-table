@@ -58,7 +58,6 @@ export function ProcessFiles(props: {
         icon: open ? h(IconChevronUpOutlineRegular, { size: 12 }) : h(IconChevronDownOutlineRegular, { size: 12 }),
         label: t('procFilesTitle', { count: list.length }),
         'aria-expanded': open,
-        title: '',
       }),
     ),
     open

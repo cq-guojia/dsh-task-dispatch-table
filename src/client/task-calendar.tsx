@@ -570,7 +570,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       h('div', { className: 'dsh-tdt-cal-nav' },
         // 双箭头（两个并排 chevron）= 走一年；左/右各一个。
         h(Tooltip, { label: calLabels.prevYear, side: 'top' }, h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.prevYear, title: '',
+          variant: 'plain', size: 'md', label: calLabels.prevYear,
           icon: h('span', { style: { display: 'inline-flex', alignItems: 'center' } },
             h('span', { style: { display: 'inline-flex' } }, h(IconChevronLeftOutlineRegular, { size: 15 })),
             h('span', { style: { display: 'inline-flex', marginLeft: -9 } }, h(IconChevronLeftOutlineRegular, { size: 15 }))),
@@ -578,18 +578,18 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
         })),
         // 单箭头 = 走一个月。
         h(Tooltip, { label: calLabels.prevMonth, side: 'top' }, h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.prevMonth, title: '',
+          variant: 'plain', size: 'md', label: calLabels.prevMonth,
           icon: h(IconChevronLeftOutlineRegular, { size: 16 }),
           onClick: () => { stepMonth(-1) },
         })),
         h('span', { className: 'dsh-tdt-cal-title' }, calLabels.monthTitle(y, m)),
         h(Tooltip, { label: calLabels.nextMonth, side: 'top' }, h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.nextMonth, title: '',
+          variant: 'plain', size: 'md', label: calLabels.nextMonth,
           icon: h(IconChevronRightOutlineRegular, { size: 16 }),
           onClick: () => { stepMonth(1) },
         })),
         h(Tooltip, { label: calLabels.nextYear, side: 'top' }, h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.nextYear, title: '',
+          variant: 'plain', size: 'md', label: calLabels.nextYear,
           icon: h('span', { style: { display: 'inline-flex', alignItems: 'center' } },
             h('span', { style: { display: 'inline-flex' } }, h(IconChevronRightOutlineRegular, { size: 15 })),
             h('span', { style: { display: 'inline-flex', marginLeft: -9 } }, h(IconChevronRightOutlineRegular, { size: 15 }))),
