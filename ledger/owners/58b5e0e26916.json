@@ -1,7 +1,6 @@
 {
   "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
   "tasks": {
-    "20261013-0934-任务配置展开后-上次执行-下拉遮住-其他产出-文件-需重排露出-a15a": {"category": "建设", "created": "2026-10-13 09:34:51", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-08 12:38:56", "status": "doing", "tags": ["上次执行", "产出", "任务"], "title": "任务配置展开后「上次执行」下拉遮住「其他产出」文件，需重排露出", "updated": "2026-11-08 12:38:56", "worklog": "worklog/202610/13-0934-任务配置展开后-上次执行-下拉遮住-其他产出-文件-需重排露出-a15a.md"}
   },
   "version": "20261022000000"
 }
