@@ -7782,10 +7782,11 @@ console.log("\n[14] runtime-index");
 				);
 			})(),
 		);
-		// 2026-10-08：详情页配置面板剥成纯说明文字（表单随用户拍板移除），事件驱动条款只剩
-		// index.ts 的 scope.refresh；config-panel 换成「无表单」反断言，防止表单悄悄长回来。
+		// 2026-11-08：详情页配置面板重新长回表单（用户拍板：显示名 / 入口位置 / 屏蔽官方自动化 +
+		// 保存与两个链接），旧的「无表单」反断言随之作废；新断言盯住三件事——表单三字段都在、
+		// 官方开关走宿主插件管理器、默认值仍是「更多 + 不屏蔽」。
 		check(
-			"【页面覆盖】展开面板行级已被事件驱动；详情页配置面板已剥成纯说明（无表单 / 无输入框）",
+			"【页面覆盖】展开面板行级已被事件驱动；详情页配置面板是设置表单（三字段 + 保存 + 两个链接）",
 			S("client/task-list.tsx").includes(
 				"if (event.payload?.taskId !== row.id) return",
 			) &&
@@ -7793,9 +7794,19 @@ console.log("\n[14] runtime-index");
 					S("client/index.ts"),
 					"useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => { scope.refresh?.() })",
 				) &&
-				S("client/config-panel.tsx").includes("t('settingsIntro')") &&
-				!S("client/config-panel.tsx").includes("onSave") &&
-				!S("client/config-panel.tsx").includes("NumberInput"),
+				S("client/config-panel.tsx").includes("configNameLabel") &&
+				S("client/config-panel.tsx").includes("configEntryMore") &&
+				S("client/config-panel.tsx").includes("configHideOfficialLabel") &&
+				S("client/config-panel.tsx").includes("PROJECT_URL") &&
+				S("client/config-panel.tsx").includes("COMPONENTS_URL"),
+		);
+		check(
+			"【官方自动化】开关走宿主 pluginManager（启动对账 + 卸载回滚），默认「一级菜单 + 不屏蔽」",
+			S("index.ts").includes("syncOfficialSchedule(sctx, sctx.logger, configRef.hideOfficialSchedule)") &&
+				S("index.ts").includes("releaseOfficialSchedule(sctx.logger)") &&
+				S("official-schedule.ts").includes("setPluginEnabled") &&
+				S("config.ts").includes("entryMode: 'first'") &&
+				S("config.ts").includes("hideOfficialSchedule: false"),
 		);
 
 		// ── 25. 设置页重构守卫（2026-10-08：默认值单源 / 不重复存储 / 表单换算 / 可诊断）──

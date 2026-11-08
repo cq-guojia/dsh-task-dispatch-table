@@ -14,7 +14,7 @@
 | 运行逻辑 | `docs/design/architecture.md`（总览）；系统机制规格另见 `docs/design/event-push.md`、`docs/design/client-refresh.md`、`docs/design/client-refresh-disposition.md` |
 | 功能总索引 | `docs/design/features.md` |
 | 各功能 | `docs/design/features/`（一功能一文件，清单见功能总索引） |
-| 外部事实 | `docs/design/external/`：`dsh-capabilities.md`、`dsh-workspace-identity.md`、`session-view-ui-map.md`、`host-webserver-streaming.md`、`plugin-core-explorer.md`、`plugin-core-session.md`、`plugin-core-dock.md`、`plugin-core-controls.md` |
+| 外部事实 | `docs/design/external/`：`dsh-capabilities.md`、`dsh-workspace-identity.md`、`session-view-ui-map.md`、`host-webserver-streaming.md`、`official-schedule-toggle.md`、`plugin-core-explorer.md`、`plugin-core-session.md`、`plugin-core-dock.md`、`plugin-core-controls.md` |
 | 数据库说明 | `docs/design/data-model.md` |
 | 样式规范 | `docs/design/ui-foundation.md`（方案 = 抽象清单）+ `docs/design/ui-style-guide.md`（手册 = 使用规范） |
 | 方法规范 | `docs/design/code-conventions.md` |

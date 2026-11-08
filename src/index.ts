@@ -4,9 +4,10 @@
 import type {
   HostContext, HostLlm, HostLogger, HostSettings, HostWorkspaceRegistry, SettingsScope, z_any,
 } from './host.js'
-import { CONFIG_DEFAULTS, Config, readConfigField, resolveStatePath } from './config.js'
+import { CONFIG_DEFAULTS, Config, ENTRY_MODES, readConfigField, resolveStatePath } from './config.js'
 import { isSafeAttachmentRef } from './attachment-allowlist.js'
-import type { PluginConfig } from './config.js'
+import type { EntryMode, PluginConfig } from './config.js'
+import { releaseOfficialSchedule, syncOfficialSchedule } from './official-schedule.js'
 import type { TaskDefinition, TaskDefinitionInput } from './tasks.js'
 import {
   ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, sessionTitleOf, setEnabledDefinitionInline, setWorkspaceDefinitionInline, taskDefinitionSchema, titleOf,
@@ -236,7 +237,7 @@ const DISPATCH_BODY_LIMIT = 1024 * 1024
 // 类型 + 范围校验后，经 updateScopeConfig **写进自有状态库**（meta 表）并即时生效。
 // ⚠️ 不含 statePath / tasksDir：它们是「插件装到哪儿」的问题，界面上不给改（用户 2026-10-08），
 //   而且 statePath 决定状态库路径本身 ⇒ 必须来自启动配置，不能由库里自己改自己。
-const CONFIG_EDITABLE_FIELDS: Record<string, { type: 'number' | 'string'; min?: number; max?: number }> = {
+const CONFIG_EDITABLE_FIELDS: Record<string, { type: 'number' | 'string' | 'boolean'; min?: number; max?: number }> = {
   tickMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
   dispatchGraceMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
   leaseMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
@@ -245,6 +246,10 @@ const CONFIG_EDITABLE_FIELDS: Record<string, { type: 'number' | 'string'; min?: 
   defaultModel: { type: 'string' },
   logRetentionDays: { type: 'number', min: 1, max: 3650 },
   attachmentTmpRetentionDays: { type: 'number', min: 1, max: 3650 },
+  // 设置区三个字段（2026-11-08）：详情页表单写、客户端侧栏与宿主侧官方开关读。
+  displayName: { type: 'string' },
+  entryMode: { type: 'string' },
+  hideOfficialSchedule: { type: 'boolean' },
 }
 
 /**
@@ -267,12 +272,12 @@ const CONFIG_META_KEY = 'pluginConfig'
  * - `defaults` = `CONFIG_DEFAULTS` 的白名单子集。⚠️ **必须投影**：`CONFIG_DEFAULTS` 还含
  *   `tasksInline`（整份任务表 JSON）与 `debugSnapshot`（宿主调试数据），不能整份吐给浏览器。
  */
-export function configView(config: PluginConfig): { config: Record<string, string | number>; defaults: Record<string, string | number> } {
-  const pick = (source: Record<string, unknown>): Record<string, string | number> => {
-    const out: Record<string, string | number> = {}
+export function configView(config: PluginConfig): { config: Record<string, string | number | boolean>; defaults: Record<string, string | number | boolean> } {
+  const pick = (source: Record<string, unknown>): Record<string, string | number | boolean> => {
+    const out: Record<string, string | number | boolean> = {}
     for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
       const v = source[key]
-      if (typeof v === 'string' || typeof v === 'number') out[key] = v
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') out[key] = v
     }
     return out
   }
@@ -1099,7 +1104,7 @@ const makeDispatchRoutes = (
       // POST = 写回（仅白名单字段；类型 + 范围校验后经 updateScopeConfig → scope.update 落盘并即时生效）。
       try {
         const body = JSON.parse(await readDispatchBody(req)) as Record<string, unknown>
-        const patch: Record<string, string | number> = {}
+        const patch: Record<string, string | number | boolean> = {}
         for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
           const raw = body[key]
           if (raw === undefined) continue
@@ -1108,10 +1113,16 @@ const makeDispatchRoutes = (
             if (typeof raw !== 'number' || !Number.isFinite(raw)) { writeJson(res, 400, { ok: false, error: `invalid-${key}` }); return }
             if (def.min !== undefined && raw < def.min) { writeJson(res, 400, { ok: false, error: `too-small-${key}` }); return }
             if (def.max !== undefined && raw > def.max) { writeJson(res, 400, { ok: false, error: `too-large-${key}` }); return }
+          } else if (def.type === 'boolean') {
+            if (typeof raw !== 'boolean') { writeJson(res, 400, { ok: false, error: `invalid-${key}` }); return }
           } else if (typeof raw !== 'string') {
             writeJson(res, 400, { ok: false, error: `invalid-${key}` }); return
           }
-          patch[key] = raw
+          // entryMode 只认两档（枚举白名单）；写别的等于把侧栏入口弄没。
+          if (key === 'entryMode' && !ENTRY_MODES.includes(raw as EntryMode)) {
+            writeJson(res, 400, { ok: false, error: 'invalid-entryMode' }); return
+          }
+          patch[key] = raw as string | number | boolean
         }
         if (Object.keys(patch).length === 0) {
           writeJson(res, 400, { ok: false, error: 'empty-patch' })
@@ -1475,6 +1486,9 @@ export function apply(ctx: HostContext, config: unknown): void {
     defaultModel: typeof raw.defaultModel === 'string' ? raw.defaultModel : '',
     logRetentionDays: readConfigField(raw.logRetentionDays, CONFIG_DEFAULTS.logRetentionDays),
     attachmentTmpRetentionDays: readConfigField(raw.attachmentTmpRetentionDays, CONFIG_DEFAULTS.attachmentTmpRetentionDays),
+    displayName: typeof raw.displayName === 'string' ? raw.displayName : CONFIG_DEFAULTS.displayName,
+    entryMode: ENTRY_MODES.includes(raw.entryMode as EntryMode) ? raw.entryMode as EntryMode : CONFIG_DEFAULTS.entryMode,
+    hideOfficialSchedule: readConfigField(raw.hideOfficialSchedule, CONFIG_DEFAULTS.hideOfficialSchedule),
   }
   // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
   // 用户文档层 live 覆盖（packages/settings/settings/src/index.ts:49-59）。
@@ -1931,6 +1945,11 @@ export function apply(ctx: HostContext, config: unknown): void {
       if (JSON.stringify(next) !== JSON.stringify(prev)) {
         eventBus.emit({ type: EventType.CONFIG_CHANGED })
       }
+      // 屏蔽官方自动化：只在值真的翻转时打一次宿主接口（幂等接口也不想每次 tick 都问一遍）。
+      if (next.hideOfficialSchedule !== prev.hideOfficialSchedule) {
+        void syncOfficialSchedule(sctx, sctx.logger, next.hideOfficialSchedule)
+          .catch((error: unknown) => sctx.logger.warn(`[官方自动化] 同步失败：${error instanceof Error ? error.message : String(error)}`))
+      }
       if (next.tickMs === prev.tickMs) return
       stopInterval()
       stopInterval = sctx.interval(safeTick, next.tickMs)
@@ -1974,6 +1993,10 @@ export function apply(ctx: HostContext, config: unknown): void {
       eventBus.emit({ type: EventType.TASKS_CHANGED })
     }
     safeTick()
+    // 启动对账一次：设置里是「屏蔽」但上次没落地（改完没重启、或写到一半失败）⇒ 这里补上。
+    // configRef 此刻已是「宿主基线 + 自有库」的合并值。
+    void syncOfficialSchedule(sctx, sctx.logger, configRef.hideOfficialSchedule)
+      .catch((error: unknown) => sctx.logger.warn(`[官方自动化] 启动对账失败：${error instanceof Error ? error.message : String(error)}`))
     // 主界面运行态**启动初始化一次**：一条聚合 SQL 取每任务最近执行 + 在飞行扫描 + 逐任务算下一刻度。
     // 之后全靠事件增量维护（Loop A 落库 / Loop B 收口），轮询不再查库。
     runtimeIndex.rebuild([...taskMap.values()], store)
@@ -2000,6 +2023,8 @@ export function apply(ctx: HostContext, config: unknown): void {
 
     sctx.on('dispose', () => {
       disposed = true
+      // 卸载回滚：屏蔽过官方自动化就把它放出来（延后执行，见 releaseOfficialSchedule 的锁说明）。
+      if (configRef.hideOfficialSchedule) releaseOfficialSchedule(sctx.logger)
       // 停止也记一条：与 `startup` 配对 ⇒ 事后能数出「重启过几次、每次活了多久」。
       storeRef?.logInfo('shutdown', '插件已停止（dispose）')
       // 主动摘掉配置 watcher（此前只把退订函数丢掉 ⇒ 宿主若晚一步才释放作用域，

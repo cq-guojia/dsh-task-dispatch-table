@@ -57283,35 +57283,6 @@ window.__ModuleLoader__.load({
 		* 客户端由 `connectFs({ path })` 建 HTTP face。路径与插件路由同前缀，避免与其他插件撞车。
 		*/
 		const FS_ROUTE = "/api/task-dispatch-table/fs";
-		// src/client/config-panel.tsx
-		function ConfigPanel(props) {
-			const { t, view } = props;
-			if (view !== void 0 && view !== "page") return null;
-			return (0, react$1.createElement)("div", { style: {
-				padding: "4px 2px",
-				maxWidth: "640px"
-			} }, (0, react$1.createElement)("p", { style: {
-				fontSize: "var(--dshpc-font-md)",
-				color: "var(--dshpc-fg,#1f2328)",
-				lineHeight: 1.6,
-				margin: 0,
-				whiteSpace: "pre-wrap"
-			} }, t("settingsIntro")));
-		}
-		// src/client/error-text.ts
-		/**
-		* 把宿主返回的机器码错误翻成人话（保底用：客户端校验已拦掉绝大多数必填问题，这里只兜底漏网的）。
-		* 命中已知 zod 片段就翻译，否则原样返回（前缀「任务定义不合法（…）」尽量保留上下文）。
-		*/
-		function humanizeTaskError(raw) {
-			if (raw.includes("target.workspace") && raw.toLowerCase().includes("too small")) return "工作区不能为空，请先选择工作区";
-			if (raw.includes("target.prompt") && raw.toLowerCase().includes("too small")) return "提示词不能为空，请先填写提示词";
-			if (raw.includes("title") && raw.toLowerCase().includes("too small")) return "任务名称不能为空";
-			if (raw.includes("ISO 8601") || raw.includes("schedule.window")) return "「允许延迟」的时长不合法——请从下拉里重选一个（如 4 小时）。";
-			if (raw.includes("schedule.cron")) return "执行排期不合法——请重新选一次执行频率。";
-			if (raw.includes("附件 ref 非法") || raw.includes("attachments") && raw.includes("ref")) return "附加文件的引用路径不合法——必须是工作区内的相对路径。请删掉那个附件、重新选择一次。";
-			return raw;
-		}
 		// src/client/http.ts
 		const DEFAULT_TIMEOUT_MS = 8e3;
 		/** 带超时的 fetch：超时即 `controller.abort()`（调用方按「本次请求失败」处理，保持上一份数据）。 */
@@ -57441,6 +57412,748 @@ window.__ModuleLoader__.load({
 			const body = await unwrap(await fetchWithTimeout(`${API_PREFIX}/tasks/events?instanceId=${encodeURIComponent(instanceId)}`), "事件读取失败");
 			if (!Array.isArray(body.events)) throw new Error("事件读取失败：events 形状不符");
 			return body.events;
+		}
+		// src/client/ui/style.ts
+		/**
+		* 样式注入器（薄壳）：实现全部交给 `dsh-plugin-core` 的 style kit。
+		*
+		* 保留本文件只为两件事：
+		*  ① 固定本插件的 `<style>` id（多插件同页互不覆盖）；
+		*  ② 给历史调用点（`ensureXxxStyle()` / `applyStyle`）一个过渡入口。
+		* 注入机制、域排序、token 表都不再在本仓实现 —— 真源是
+		* `dsh-plugin-core/design`（`createStyleKit` + `tokens.css`）。
+		*
+		* 规矩：全站仍然只有**一处**注入器（kit 的标签），业务文件不许自己
+		* `document.createElement('style')`，也不许再定义 `--dshpc-*`。
+		*/
+		/** 本插件的样式标签 id（改名 = 大范围回归，不要动）。 */
+		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
+		/** token 域固定名（kit 内 `tokens` 恒排最前）。 */
+		const TOKENS_DOMAIN = "tokens";
+		setStyleKit(createStyleKit({ id: UI_STYLE_ID }));
+		const active = getStyleKit();
+		/** 登记一个域的样式（同名重复登记 = 覆盖）。 */
+		function registerStyle(domain, css) {
+			active.registerStyle(domain, css);
+		}
+		/** 确保标签已挂载且内容最新（幂等）。 */
+		function ensureUiStyles() {
+			active.ensureStyles();
+		}
+		/** 登记 + 立刻确保挂载。 */
+		function applyStyle(domain, css) {
+			active.applyStyle(domain, css);
+		}
+		/** 登记核心 token 层并确保样式已注入（幂等）。 */
+		function ensureUiBase() {
+			registerStyle(TOKENS_DOMAIN, active.tokensCss);
+			ensureUiStyles();
+		}
+		// src/client/ui/controls-css.ts
+		/**
+		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
+		*
+		* 规矩（docs/design/ui-style-guide.md §三）：
+		*  - **只消费 `var(--dshpc-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
+		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达。
+		*
+		* 2026-11-06：分段 / 按钮 / 输入 / 数字步进 / 多行文本 / 跑马灯 / 下拉 / 日期时间 / 小问号
+		* 已全部改接核心 `dsh-plugin-core/ui`，对应本地皮肤整段删除。
+		* 本文件只剩**核心没有**的业务件：产出物 chip、开关选色，「过程文件」块。
+		*/
+		/** 产出物图标 chip 的皮肤规则。 */
+		const BUTTON_CSS = `
+/* ── 产出物「图标 chip」：28×28 方角小底板 + 官方文件类型图标 ──────────────
+   用途：产出物列表里**只给图标**的小按钮（卡片「执行记录」面板、执行记录总查询页、展开区都挂它）。
+   ⚠️ 底板**必须走 class**——inline background 会盖掉 :hover（用户 2026-10-03 踩过）。
+   hover 用「--dshpc-chip-bg-hover」：浅色更深、暗色更亮（两端都是「更明显」）；不许拿
+   「--dshpc-plate-hover」顶——暗色下反而更淡，鼠标移上去底板就消失了。 */
+.dsh-tdt-chip{appearance:none;-webkit-appearance:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);padding:0;border:none;border-radius:var(--dshpc-radius-sm);
+  background:transparent;color:var(--dshpc-fg-2);font-family:inherit;line-height:0;cursor:pointer;
+  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
+.dsh-tdt-chip:hover:not(:disabled){background:var(--dshpc-chip-bg-hover);}
+.dsh-tdt-chip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
+.dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
+.dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
+
+/* 文件行（图标 + 文件名）统一走核心 **Button ghost**（2026-11-06 用户拍板：
+   「一个图标后面跟着文字」——产出物 / 其他产出 / 过程文件 / 执行记录展开区 / 附件全站同一套皮肤，
+   圆角、hover、内边距全归核心按钮；本仓不再保留第二份文件行皮肤。 */
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-chip{transition:none;}}
+`;
+		/** 开关 / 拖拽分隔条的皮肤规则（核心没有的宿主件）。 */
+		const FIELD_CSS = `
+/* 官方 Switch 包装统一：选中 = success 绿。 */
+.dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
+
+/* 拖拽分隔条已随两条分栏一起归核心 PanelDock（2026-11-06），本仓不再自绘命中条。 */
+`;
+		/** 下拉的皮肤规则（核心 `Picker` 暂缺 `error` 档，这里只补一条描红）。 */
+		const SELECT_CSS = `
+/* 核心 Picker 的校验描红（className 挂在 .dshpc-picker 根上）。 */
+.dsh-tdt-picker--error .dshpc-picker__trigger{border-color:var(--dshpc-danger);box-shadow:0 0 0 1px var(--dshpc-danger);}
+/* 整行下拉：核心 Picker 根是 inline-block，要显式撑满父宽。 */
+.dsh-tdt-picker--block{display:block;width:100%;}
+
+/* 省略号三件套（ui-style-guide §三「待抽象 #1」的收敛点）：**新代码一律挂这个类**，不再各写一遍。 */
+.dsh-tdt-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+`;
+		/** 「过程文件」块的皮肤规则（2026-10-10：回执过程文件桶的次级展示件）。 */
+		const PROCESS_FILES_CSS = `
+/* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
+   （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
+   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行 = 核心 Button ghost（图标 + 文字，全站同一套）。 */
+.dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
+.dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
+
+`;
+		/** 细滚动条只认核心的 `.dshpc-scroll-thin`（3px，design/tokens 域全局注入、挂类即生效）。
+		*  2026-11-08 用户点名删掉本仓自绘的 1px 版：本插件**不再定义任何 ::-webkit-scrollbar 规则**。
+		*  该类只作用于挂它的那个容器（外加其 .cm-scroller 后代），所以每个 `overflow:auto` 的容器
+		*  都要自己挂 `dshpc-scroll-thin`，见各组件。 */
+		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
+		const CONTROLS_DOMAIN = "controls";
+		/**
+		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
+		*/
+		function ensureControlsStyle() {
+			applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS);
+		}
+		// src/client/ui/Field.tsx
+		/**
+		* 下拉选择 —— 核心 `Picker` 的薄包装（2026-11-06）。
+		*
+		* 触发器 / 弹层 / 分组 / 搜索 / 空态 / 跑马灯 / 键盘与明暗全部归核心；
+		* 本仓只补核心 `Picker` 尚未提供的一点：
+		*  - `error` 校验描红：外层 `className` + 一条皮肤规则（`.dsh-tdt-picker--error`）。
+		* 悬停提示**不在这里**（2026-11-06：全站原生 title 清退；需要的调用方在真 DOM 外套官方 `Tooltip`）。
+		* 空列表 ⇒ 禁用并显示业务空态文案（不塞假值）。
+		*/
+		/**
+		* 下拉选择：核心 `Picker`（portal 到 body，选中项自动带对勾，内容超长走跑马灯）。
+		* 空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
+		*/
+		function SelectField(props) {
+			ensureControlsStyle();
+			const size = props.size ?? "lg";
+			const groups = props.groups;
+			const empty = groups === void 0 ? (props.options ?? []).length === 0 : groups.every((group) => group.options.length === 0);
+			const usable = !empty && props.disabled !== true;
+			const width = props.width ?? (props.block === true ? "100%" : void 0);
+			const cls = [props.block === true ? "dsh-tdt-picker--block" : "", props.error === true ? "dsh-tdt-picker--error" : ""].filter(Boolean).join(" ");
+			return (0, react$1.createElement)(Picker, {
+				...groups === void 0 ? { options: props.options ?? [] } : { groups },
+				value: props.value,
+				onChange: (next) => {
+					if (typeof next === "string") props.onChange(next);
+				},
+				placeholder: empty ? props.emptyLabel : props.placeholder,
+				disabled: !usable,
+				size,
+				icon: props.icon,
+				className: cls === "" ? void 0 : cls,
+				width,
+				...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
+				ariaLabel: props.ariaLabel,
+				...props.searchable === true ? { searchable: true } : {}
+			});
+		}
+		// src/client/ui/TaskPicker.tsx
+		/**
+		* 任务选择器 —— **核心 `Picker` 的薄包装**（2026-11-06 起）。
+		*
+		* 本文件只做四件业务事，其余（浮层、搜索、分页、空态、键盘、明暗）全交给 `dsh-plugin-core/ui`：
+		*  ① 按 `scope`（工作区）与 `excludeIds` 过滤候选；
+		*  ② 「全部任务」作为**第一个普通选项**（`value: ''`）传进去（用户 2026-11-05 拍板，核心零改动）；
+		*  ③ 停用任务照常可选，只在 `label` 尾部拼 `disabledTag`（不加字段）；
+		*  ④ 已选项掉出作用域 ⇒ 仍留在列表里 + 触发器前置 `!` 告警（官方 `Tooltip` 给说明），不静默清空。
+		*
+		* 搜索：核心按 `label` + `keywords` 子串匹配；这里把任务 UUID 放进 `keywords`（只搜不显示）。
+		*/
+		/** 带搜索的任务选择器。 */
+		function TaskPicker(props) {
+			const scope = props.scope ?? "";
+			const excludes = props.excludeIds ?? [];
+			const current = props.options.find((o) => o.id === props.value);
+			const candidates = (0, react$1.useMemo)(() => props.options.filter((o) => (scope === "" || o.workspace === scope) && !excludes.includes(o.id)), [
+				props.options,
+				scope,
+				excludes
+			]);
+			const labelOf = (o) => o.enabled ? o.label : `${o.label}${props.disabledTag ?? ""}`;
+			const list = [];
+			if (props.allOption !== void 0) list.push({
+				value: props.allOption.value,
+				label: props.allOption.label
+			});
+			for (const o of candidates) list.push({
+				value: o.id,
+				label: labelOf(o),
+				keywords: o.id
+			});
+			const outOfScope = current !== void 0 && props.value !== "" && scope !== "" && current.workspace !== scope;
+			if (outOfScope && current !== void 0) list.splice(props.allOption === void 0 ? 0 : 1, 0, {
+				value: current.id,
+				label: labelOf(current),
+				keywords: current.id
+			});
+			return (0, react$1.createElement)(Picker, {
+				options: list,
+				value: props.value,
+				onChange: (next) => {
+					const id = Array.isArray(next) ? next[0] ?? "" : next;
+					props.onChange(id);
+				},
+				searchable: true,
+				limit: props.recentLimit ?? 10,
+				placeholder: props.placeholder,
+				size: props.size,
+				width: props.width,
+				disabled: props.disabled,
+				ariaLabel: props.ariaLabel,
+				icon: outOfScope ? props.outOfScopeHint === void 0 ? (0, react$1.createElement)("span", { style: {
+					color: "var(--dshpc-warning)",
+					fontWeight: 600
+				} }, "!") : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					label: props.outOfScopeHint,
+					side: "bottom"
+				}, (0, react$1.createElement)("span", { style: {
+					color: "var(--dshpc-warning)",
+					fontWeight: 600
+				} }, "!")) : void 0,
+				translate: (key, vars) => {
+					if (key === "pickerSearch") return props.searchPlaceholder;
+					if (key === "pickerEmpty" || key === "pickerNoMatch") return props.emptyLabel;
+					if (key === "pickerMore" && props.moreLabel !== void 0) return props.moreLabel;
+					return t$1(key, vars);
+				}
+			});
+		}
+		// src/client/ui/time-range.ts
+		/** 全部预设档（缺省显示顺序）。 */
+		const ALL_TIME_PRESETS = [
+			"today",
+			"yesterday",
+			"thisWeek",
+			"lastWeek",
+			"thisMonth",
+			"lastMonth"
+		];
+		/** 值串 → 年月日时分；不合法返回 null。 */
+		function parseValue(value) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(value);
+			if (match === null) return null;
+			return {
+				y: Number(match[1]),
+				m: Number(match[2]),
+				d: Number(match[3]),
+				hh: match[4] === void 0 ? 0 : Number(match[4]),
+				mm: match[5] === void 0 ? 0 : Number(match[5])
+			};
+		}
+		/**
+		* 受控值 → 查询用**半开区间** `[from, to)`：
+		* - day：from = 当日 00:00，to = 结束日的**次日 00:00**；
+		* - minute：from = 当时分 :00，to = 结束分的**下一分钟 :00**。
+		* 空串 / 不合法 ⇒ 该端 undefined（不过滤）。
+		*/
+		function rangeToQuery(value, precision) {
+			const fromParsed = value.from === "" ? null : parseValue(value.from);
+			const toParsed = value.to === "" ? null : parseValue(value.to);
+			let fromTs;
+			if (fromParsed !== null) {
+				const d = precision === "minute" ? new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, fromParsed.hh, fromParsed.mm, 0, 0) : new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, 0, 0, 0, 0);
+				fromTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
+			}
+			let toTs;
+			if (toParsed !== null) {
+				const d = precision === "minute" ? new Date(toParsed.y, toParsed.m - 1, toParsed.d, toParsed.hh, toParsed.mm + 1, 0, 0) : new Date(toParsed.y, toParsed.m - 1, toParsed.d + 1, 0, 0, 0, 0);
+				toTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
+			}
+			return {
+				fromTs,
+				toTs
+			};
+		}
+		// src/client/ui/TimeRange.tsx
+		/**
+		* 时间范围筛选 —— **核心 `DateTimePicker` 的薄包装**（2026-11-06 起）。
+		*
+		* 分工：
+		*  - 核心负责：触发器、两块日历、预设档竖列、「确定 / 取消 / 清除」、键盘与明暗；
+		*  - 本仓负责：值串 ⇄ 核心 ISO 的换算 + 预设档文案（`presets` 的 expr 由核心展开）。
+		*
+		* 值形态不变（`TimeRangeValue`：`YYYY-MM-DD` / `YYYY-MM-DD HH:mm`，空串 = 不过滤），
+		* 查询边界仍由 `rangeToQuery`（`time-range.ts`）统一算，控件不碰边界。
+		*/
+		/** 预设档 → 核心的 date-math 算式（整档取齐：`/d` `/w` `/M`；周一为周首，与核心一致）。 */
+		const PRESET_EXPR = {
+			today: "now/d",
+			yesterday: "now-1d/d",
+			thisWeek: "now/w",
+			lastWeek: "now-1w/w",
+			thisMonth: "now/M",
+			lastMonth: "now-1M/M"
+		};
+		/** 值串 → 核心 ISO（本端 floor 到 00:00:00.000，对端 ceil 到 23:59:59.999）。 */
+		function toIso(value, end, precision) {
+			const minute = precision === "minute";
+			const date = value.slice(0, 10);
+			const time = minute ? value.length >= 16 ? value.slice(11, 16) : end ? "23:59" : "00:00" : "00:00";
+			return minute ? `${date}T${time}:${end ? "59.999" : "00.000"}` : `${date}T${end ? "23:59:59.999" : "00:00:00.000"}`;
+		}
+		/** 本仓值 → 核心受控值；任一端为空 ⇒ 交给核心显示「未选」（核心的 range 需要两端齐全才提交）。 */
+		function toCoreValue(value, precision) {
+			if (value.from === "" || value.to === "") return null;
+			return [toIso(value.from, false, precision), toIso(value.to, true, precision)];
+		}
+		/** 核心受控值 → 本仓值：day 取日期，minute 取到分钟（与 `TimeRangeValue` 的口径一致）。 */
+		function fromCoreValue(out, precision) {
+			if (out === null || Array.isArray(out) === false) return {
+				from: "",
+				to: ""
+			};
+			const fmt = (iso) => precision === "minute" ? `${iso.slice(0, 10)} ${iso.slice(11, 16)}` : iso.slice(0, 10);
+			return {
+				from: fmt(out[0]),
+				to: fmt(out[1])
+			};
+		}
+		function TimeRange(props) {
+			const precision = props.precision ?? "day";
+			const presetIds = props.presets ?? ALL_TIME_PRESETS;
+			const presets = [{
+				label: props.labels.all,
+				expr: null
+			}, ...presetIds.map((id) => ({
+				label: props.labels.presets[id],
+				expr: PRESET_EXPR[id]
+			}))];
+			return (0, react$1.createElement)(DateTimePicker, {
+				mode: "range",
+				precision,
+				value: toCoreValue(props.value, precision),
+				onChange: (next) => {
+					props.onChange(fromCoreValue(next, precision));
+				},
+				presets,
+				size: props.size ?? "md",
+				disabled: props.disabled
+			});
+		}
+		// src/client/ui/ticker.ts
+		const tickerListeners = /* @__PURE__ */ new Set();
+		let tickerTimer = null;
+		/**
+		* `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
+		* 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
+		* 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
+		*/
+		const onVisibilityChange = () => {
+			for (const l of [...tickerListeners]) l();
+		};
+		let visibilityBound = false;
+		/** 订阅全局秒级心跳；返回退订。**第一个订阅者才起 interval，最后一个退订即停**。 */
+		function subscribeTicker(cb) {
+			tickerListeners.add(cb);
+			if (tickerTimer === null) {
+				tickerTimer = window.setInterval(() => {
+					for (const l of [...tickerListeners]) l();
+				}, 1e3);
+				if (!visibilityBound && typeof document !== "undefined") {
+					document.addEventListener("visibilitychange", onVisibilityChange);
+					visibilityBound = true;
+				}
+			}
+			return () => {
+				tickerListeners.delete(cb);
+				if (tickerListeners.size === 0 && tickerTimer !== null) {
+					window.clearInterval(tickerTimer);
+					tickerTimer = null;
+				}
+			};
+		}
+		/**
+		* 每秒拿到「现在」（需要**时间值本身**时用，如悬浮文案）；与 `LiveText` 共用同一条心跳。
+		* 不适合整列表用（每次 tick 会 setState 一次）——只在真正需要时间的小块里调。
+		*/
+		function useNowMs() {
+			const [nowMs, setNowMs] = (0, react$1.useState)(() => Date.now());
+			(0, react$1.useEffect)(() => subscribeTicker(() => setNowMs(Date.now())), []);
+			return nowMs;
+		}
+		// src/client/ui/running.ts
+		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
+		const RUNNING_TONE = "var(--dshpc-business)";
+		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
+		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
+		const RUNNING_CSS = `
+@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--dshpc-dur-run) var(--dshpc-ease) infinite; }
+@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
+`;
+		let ensured = false;
+		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
+		const ensureRunningStyle = () => {
+			if (ensured) return;
+			ensured = true;
+			applyStyle("domain:running", RUNNING_CSS);
+		};
+		// src/client/ui/index.ts
+		/**
+		* 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
+		* 同时它是基础层 `Loading` 的锚点契约（`Loading` 默认 `anchorId = PANEL_CONTENT_ID`）——
+		* 所以**新页面也必须用同一个 id**，否则浮动 loading 找不到锚点、贴不到内容右缘。
+		*/
+		const PANEL_CONTENT_ID = "dsh-tdt-main";
+		/** 内容列几何（居中限宽 760 / 1120）。 */
+		const PANEL_CONTENT_STYLE = {
+			width: "100%",
+			maxWidth: "1120px",
+			minWidth: "760px",
+			boxSizing: "border-box"
+		};
+		// src/client/sidebar-entry.ts
+		/**
+		* 侧栏入口的「显示名 + 位置」：按插件设置把入口挂到一级菜单（`sidebar.panellist`）或
+		* 「更多」菜单（`sidebar.panellist.actions`），并在设置变化后重挂。
+		*
+		* 做法照抄兄弟仓 `dsh-task-ledger` 的同款模块（2026-11-08 用户要求「跟它几乎一模一样」）：
+		* 两个 slot 的 owner 到达顺序、以及设置与 slots 两块注入谁先到都没有保证 ⇒ 每次都用
+		* **模块级当前值**重挂一遍；重复调用无害。
+		*/
+		/** 主面板 id：`main` 槽的 key 与 `sidebar.panellist` 条目的 id 必须一致，选中才对得上。 */
+		const PANEL_ID = "dsh-task-dispatch-table";
+		let entryMode = "first";
+		/** 自定义显示名；空串 = 用词典默认名。 */
+		let customName = "";
+		let slotsRef = null;
+		let iconFace = null;
+		let localeNs = PANEL_ID;
+		let defaultLabel = () => PANEL_ID;
+		/** 「更多」那一行点击后切到本面板（布局服务由 index 注入）。 */
+		let navigate = () => {};
+		let injected = null;
+		let disposeEntry = null;
+		/** 侧栏行标题：自定义名优先，空则回落词典默认名。 */
+		function entryLabel() {
+			return customName === "" ? defaultLabel() : customName;
+		}
+		/** 「更多」菜单里的一行（官方 menu 行样式，点完先关菜单再切页面）。 */
+		function MoreEntry(props) {
+			const icon = iconFace;
+			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MenuItemButton, {
+				...icon === null ? {} : { icon: (0, react$1.createElement)(icon, { size: 16 }) },
+				onSelect: () => {
+					props.onDismiss?.();
+					navigate(PANEL_ID);
+				},
+				children: entryLabel()
+			});
+		}
+		/** 按当前 `entryMode` 重挂入口：先摘旧的 factory 与旧条目，再按现值注册。 */
+		function applyEntry() {
+			const slots = slotsRef;
+			if (slots === null || iconFace === null) return;
+			injected?.();
+			disposeEntry?.();
+			injected = null;
+			disposeEntry = null;
+			if (entryMode === "more") {
+				injected = slots.inject("sidebar.panellist.actions", () => {
+					disposeEntry = slots.register({
+						name: "sidebar.panellist.actions",
+						id: `${PANEL_ID}-more`,
+						order: 30,
+						locale: localeNs
+					}, MoreEntry);
+					return disposeEntry;
+				});
+				return;
+			}
+			const icon = iconFace;
+			injected = slots.inject("sidebar.panellist", () => {
+				disposeEntry = slots.register({
+					name: "sidebar.panellist",
+					id: PANEL_ID,
+					order: 30,
+					label: entryLabel,
+					locale: localeNs
+				}, (props) => (0, react$1.createElement)(icon, { size: props.size ?? 18 }));
+				return disposeEntry;
+			});
+		}
+		/**
+		* 接上 slots 并挂入口（每次 slots 注入都会重跑一遍，幂等）。
+		* @param options - slots 面、行图标、词典默认名与命名空间。
+		*/
+		function initSidebarEntry(options) {
+			slotsRef = options.slots;
+			iconFace = options.icon;
+			localeNs = options.locale;
+			defaultLabel = options.defaultLabel;
+			applyEntry();
+		}
+		/** 布局服务就位后注入：点「更多」那一行才能切到本面板。 */
+		function setSidebarNavigator(fn) {
+			navigate = fn;
+		}
+		/**
+		* 从 `GET /config` 取「显示名 / 入口位置」并重挂入口。
+		* 读不到就维持当前外观（侧栏不能因为配置读失败而消失）。
+		*/
+		async function refreshAppearance() {
+			try {
+				const body = await (await fetchWithTimeout(`${API_PREFIX}/config`, { cache: "no-store" })).json();
+				if (body.ok !== true) return;
+				const name = body.config?.displayName;
+				customName = typeof name === "string" ? name.trim() : "";
+				entryMode = body.config?.entryMode === "first" ? "first" : "more";
+				applyEntry();
+			} catch {}
+		}
+		// src/client/config-panel.tsx
+		/** 本仓库地址（设置区的第一个链接）。 */
+		const PROJECT_URL = "https://github.com/cq-guojia/dsh-task-dispatch-table";
+		/** 友情链接：组件库（UI 基础控件包）。 */
+		const COMPONENTS_URL = "https://github.com/cq-guojia/dsh-plugin-core";
+		/** 设置区三个字段的默认值（与 host 侧 `CONFIG_DEFAULTS` 同值；用来看「是否改过」）。 */
+		const DEFAULTS = {
+			displayName: "",
+			entryMode: "first",
+			hideOfficialSchedule: false
+		};
+		/**
+		* 详情页与面板页的 URL 目录不同：先按相对路径打，失败再按根路径打一次。
+		* 403/404 时 `res.ok` 为假 / 返回非 JSON，都会落到下一次尝试。
+		*/
+		async function requestConfig(init) {
+			let last = null;
+			for (const base of [API_PREFIX, `/${API_PREFIX}`]) try {
+				const res = await fetchWithTimeout(`${base}/config`, {
+					cache: "no-store",
+					...init
+				});
+				const body = await res.json();
+				if (body.ok !== true) throw new Error(`config ${res.status}`);
+				const config = body.config ?? {};
+				return {
+					displayName: typeof config.displayName === "string" ? config.displayName : DEFAULTS.displayName,
+					entryMode: config.entryMode === "first" ? "first" : "more",
+					hideOfficialSchedule: config.hideOfficialSchedule === true
+				};
+			} catch (error) {
+				last = error;
+			}
+			throw last instanceof Error ? last : /* @__PURE__ */ new Error("config unavailable");
+		}
+		const CONFIG_CSS = `
+.tdt-config__pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;
+  border-top:1px solid var(--dshpc-border);}
+.tdt-config__field{display:flex;flex-direction:column;gap:6px;padding:24px 0 12px;}
+.tdt-config__head{display:flex;align-items:center;gap:8px;}
+.tdt-config__label{flex:1;min-width:0;font-size:var(--dshpc-font-md);font-weight:500;
+  line-height:var(--dshpc-line-md);color:var(--dshpc-fg);}
+.tdt-config__hint{margin:0;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);
+  color:var(--dshpc-fg-3);}
+.tdt-config__row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:24px;padding:0 0 32px;border-bottom:1px solid var(--dshpc-border);}
+.tdt-config__failed{margin:0;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);
+  color:var(--dshpc-danger);}
+.tdt-config__note{margin:0;font-size:var(--dshpc-font-sm);line-height:var(--dshpc-line-sm);
+  color:var(--dshpc-fg-3);}
+`;
+		/** 一个字段：标签行（标签 + 改过徽标 + 恢复默认）→ 控件 → 说明。 */
+		function configField(props) {
+			return (0, react$1.createElement)("div", { className: "tdt-config__field" }, (0, react$1.createElement)("div", { className: "tdt-config__head" }, (0, react$1.createElement)("span", {
+				className: "tdt-config__label",
+				id: props.id
+			}, props.label), props.overridden ? (0, react$1.createElement)(Chip, {
+				tone: "neutral",
+				size: "xs"
+			}, props.overriddenLabel) : null, props.overridden ? (0, react$1.createElement)(Button$1, {
+				variant: "link",
+				size: "sm",
+				onClick: props.onReset
+			}, props.resetLabel) : null), props.control, (0, react$1.createElement)("p", { className: "tdt-config__hint" }, props.hint));
+		}
+		/** 一个小外链按钮（图标 + 文案，核心 Button，尺寸与兄弟仓一致）。 */
+		const linkButton = (label, url) => (0, react$1.createElement)(Button$1, {
+			size: "lg",
+			variant: "outline",
+			icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconLinkOutlineRegular, { size: 16 }),
+			onClick: () => {
+				window.open(url, "_blank", "noopener");
+			}
+		}, label);
+		function ConfigPanel(props) {
+			const { t, view } = props;
+			const [loaded, setLoaded] = (0, react$1.useState)(null);
+			const [draft, setDraft] = (0, react$1.useState)(null);
+			const [saving, setSaving] = (0, react$1.useState)(false);
+			const [failed, setFailed] = (0, react$1.useState)(false);
+			(0, react$1.useEffect)(() => {
+				applyStyle("domain:config-panel", CONFIG_CSS);
+			}, []);
+			const load = (0, react$1.useCallback)(async () => {
+				try {
+					const next = await requestConfig();
+					setLoaded(next);
+					setDraft(next);
+					setFailed(false);
+				} catch {
+					setLoaded(DEFAULTS);
+					setDraft(DEFAULTS);
+					setFailed(true);
+				}
+			}, []);
+			(0, react$1.useEffect)(() => {
+				load();
+			}, [load]);
+			if (view !== void 0 && view !== "page") return null;
+			if (draft === null || loaded === null) return (0, react$1.createElement)("p", {
+				className: "tdt-config__note",
+				role: "status"
+			}, t("configUnavailable"));
+			const dirty = JSON.stringify(draft) !== JSON.stringify(loaded);
+			const mode = draft.entryMode === "more" ? "more" : "first";
+			const save = () => {
+				setSaving(true);
+				setFailed(false);
+				(async () => {
+					try {
+						await requestConfig({
+							method: "POST",
+							headers: { "content-type": "application/json" },
+							body: JSON.stringify(draft)
+						});
+						setLoaded(draft);
+						refreshAppearance();
+					} catch {
+						setFailed(true);
+					} finally {
+						setSaving(false);
+					}
+				})();
+			};
+			return (0, react$1.createElement)("div", null, (0, react$1.createElement)("div", { className: "tdt-config__pair" }, configField({
+				id: "tdt-config-name",
+				label: t("configNameLabel"),
+				hint: t("configNameHint"),
+				overridden: draft.displayName.trim() !== DEFAULTS.displayName,
+				overriddenLabel: t("configOverridden"),
+				resetLabel: t("configReset"),
+				onReset: () => {
+					setDraft({
+						...draft,
+						displayName: DEFAULTS.displayName
+					});
+				},
+				control: (0, react$1.createElement)(Input, {
+					value: draft.displayName,
+					onChange: (text) => {
+						setDraft({
+							...draft,
+							displayName: text
+						});
+					},
+					placeholder: t("panelTitle"),
+					size: "lg",
+					"aria-label": t("configNameLabel")
+				})
+			}), configField({
+				id: "tdt-config-entry",
+				label: t("configEntryLabel"),
+				hint: t("configEntryHint"),
+				overridden: mode !== DEFAULTS.entryMode,
+				overriddenLabel: t("configOverridden"),
+				resetLabel: t("configReset"),
+				onReset: () => {
+					setDraft({
+						...draft,
+						entryMode: DEFAULTS.entryMode
+					});
+				},
+				control: (0, react$1.createElement)(Picker, {
+					value: mode,
+					options: [{
+						value: "first",
+						label: t("configEntryFirst")
+					}, {
+						value: "more",
+						label: t("configEntryMore")
+					}],
+					mode: "single",
+					size: "lg",
+					width: "100%",
+					ariaLabel: t("configEntryLabel"),
+					onChange: (next) => {
+						const picked = String(next);
+						if (picked !== mode) setDraft({
+							...draft,
+							entryMode: picked === "more" ? "more" : "first"
+						});
+					}
+				})
+			}), configField({
+				id: "tdt-config-hide-official",
+				label: t("configHideOfficialLabel"),
+				hint: t("configHideOfficialHint"),
+				overridden: draft.hideOfficialSchedule !== DEFAULTS.hideOfficialSchedule,
+				overriddenLabel: t("configOverridden"),
+				resetLabel: t("configReset"),
+				onReset: () => {
+					setDraft({
+						...draft,
+						hideOfficialSchedule: DEFAULTS.hideOfficialSchedule
+					});
+				},
+				control: (0, react$1.createElement)(Picker, {
+					value: draft.hideOfficialSchedule ? "hide" : "show",
+					options: [{
+						value: "show",
+						label: t("configHideOff")
+					}, {
+						value: "hide",
+						label: t("configHideOn")
+					}],
+					mode: "single",
+					size: "lg",
+					width: "100%",
+					ariaLabel: t("configHideOfficialLabel"),
+					onChange: (next) => {
+						const picked = String(next) === "hide";
+						if (picked !== draft.hideOfficialSchedule) setDraft({
+							...draft,
+							hideOfficialSchedule: picked
+						});
+					}
+				})
+			})), (0, react$1.createElement)("div", { className: "tdt-config__row" }, (0, react$1.createElement)(Button$1, {
+				variant: "primary",
+				size: "lg",
+				disabled: !dirty || saving,
+				onClick: save
+			}, saving ? t("configSaving") : t("configSave")), linkButton(t("configGithub"), PROJECT_URL), linkButton(t("configComponents"), COMPONENTS_URL), failed ? (0, react$1.createElement)("p", {
+				className: "tdt-config__failed",
+				role: "status"
+			}, t("configSaveFailed")) : null));
+		}
+		// src/client/error-text.ts
+		/**
+		* 把宿主返回的机器码错误翻成人话（保底用：客户端校验已拦掉绝大多数必填问题，这里只兜底漏网的）。
+		* 命中已知 zod 片段就翻译，否则原样返回（前缀「任务定义不合法（…）」尽量保留上下文）。
+		*/
+		function humanizeTaskError(raw) {
+			if (raw.includes("target.workspace") && raw.toLowerCase().includes("too small")) return "工作区不能为空，请先选择工作区";
+			if (raw.includes("target.prompt") && raw.toLowerCase().includes("too small")) return "提示词不能为空，请先填写提示词";
+			if (raw.includes("title") && raw.toLowerCase().includes("too small")) return "任务名称不能为空";
+			if (raw.includes("ISO 8601") || raw.includes("schedule.window")) return "「允许延迟」的时长不合法——请从下拉里重选一个（如 4 小时）。";
+			if (raw.includes("schedule.cron")) return "执行排期不合法——请重新选一次执行频率。";
+			if (raw.includes("附件 ref 非法") || raw.includes("attachments") && raw.includes("ref")) return "附加文件的引用路径不合法——必须是工作区内的相对路径。请删掉那个附件、重新选择一次。";
+			return raw;
 		}
 		// src/client/event-subscribe.ts
 		/** 事件流地址：前缀取自唯一真源 `query.ts`（M9；不 import index 以免成环）。 */
@@ -58332,6 +59045,24 @@ window.__ModuleLoader__.load({
 			settingsFilterValue: "值",
 			settingsFilterRemove: "移除筛选",
 			settingsIntro: "本插件无需在此页面配置：任务与全部设置都在插件主界面（侧栏「定时任务调度器」面板）内完成。",
+			configNameLabel: "显示名称",
+			configNameHint: "留空即用默认名「定时任务调度器」；填成与默认名相同则不保存这一项。",
+			configEntryLabel: "入口位置",
+			configEntryHint: "放在左侧栏一级，或收进侧栏底部的「更多」菜单。",
+			configEntryFirst: "一级菜单",
+			configEntryMore: "更多",
+			configHideOfficialLabel: "屏蔽官方「自动化任务」",
+			configHideOfficialHint: "关闭官方自动化任务入口。卸载本插件会自动恢复；切换后重启宿主或等热更新生效。",
+			configHideOff: "不屏蔽",
+			configHideOn: "屏蔽",
+			configGithub: "访问 GitHub",
+			configComponents: "蓝鲸组件库",
+			configOverridden: "自定义",
+			configReset: "恢复默认",
+			configSave: "保存",
+			configSaving: "保存中…",
+			configSaveFailed: "保存失败，请重试",
+			configUnavailable: "读不到当前设置（配置通道未就绪），稍后重新打开本页试试。",
 			vTitleRequired: "还没填任务名称——任务列表里靠它认任务，请给任务起个名字。",
 			vWorkspaceRequired: "还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。",
 			vWorkspaceUnknown: "选中的工作区已经不存在了（可能被重命名或删除）——请在上方下拉里重新选择当前的工作区。",
@@ -59001,6 +59732,24 @@ window.__ModuleLoader__.load({
 			settingsFilterValue: "Value",
 			settingsFilterRemove: "Remove filter",
 			settingsIntro: "Nothing to configure here — tasks and all settings live inside the plugin panel (sidebar \"Scheduled task dispatcher\").",
+			configNameLabel: "Display name",
+			configNameHint: "Leave it empty to use the default name (Scheduled task dispatcher); saving the default itself stores nothing.",
+			configEntryLabel: "Entry point",
+			configEntryHint: "Show it as a sidebar item, or tuck it into the More menu at the sidebar foot.",
+			configEntryFirst: "Sidebar",
+			configEntryMore: "More menu",
+			configHideOfficialLabel: "Hide the official Automation tasks",
+			configHideOfficialHint: "Hides the official automation entry shipped with dsh. Uninstalling this plugin restores it; a restart or hot update applies the change.",
+			configHideOff: "Show",
+			configHideOn: "Hide",
+			configGithub: "Visit GitHub",
+			configComponents: "dsh-plugin-core",
+			configOverridden: "Custom",
+			configReset: "Restore default",
+			configSave: "Save",
+			configSaving: "Saving…",
+			configSaveFailed: "Save failed, please retry",
+			configUnavailable: "Cannot read the current settings (config channel not ready yet) — reopen this page later.",
 			vTitleRequired: "Task name is missing — the list identifies tasks by name. Please give it one.",
 			vWorkspaceRequired: "No workspace selected — a task must belong to a workspace to run. Pick one above.",
 			vWorkspaceUnknown: "The selected workspace no longer exists (it may have been renamed or deleted). Pick a current workspace above.",
@@ -59008,408 +59757,6 @@ window.__ModuleLoader__.load({
 			vIntervalInvalid: "Invalid interval — N in \"every N minutes/hours\" must be an integer greater than 0.",
 			vWeekdayRequired: "Weekly schedule with no weekday selected — pick at least one, or the task never runs.",
 			vAttachmentInvalid: "Attachment \"{name}\" has an invalid ref — it must be a workspace-relative path. Remove and re-pick it."
-		};
-		// src/client/ui/style.ts
-		/**
-		* 样式注入器（薄壳）：实现全部交给 `dsh-plugin-core` 的 style kit。
-		*
-		* 保留本文件只为两件事：
-		*  ① 固定本插件的 `<style>` id（多插件同页互不覆盖）；
-		*  ② 给历史调用点（`ensureXxxStyle()` / `applyStyle`）一个过渡入口。
-		* 注入机制、域排序、token 表都不再在本仓实现 —— 真源是
-		* `dsh-plugin-core/design`（`createStyleKit` + `tokens.css`）。
-		*
-		* 规矩：全站仍然只有**一处**注入器（kit 的标签），业务文件不许自己
-		* `document.createElement('style')`，也不许再定义 `--dshpc-*`。
-		*/
-		/** 本插件的样式标签 id（改名 = 大范围回归，不要动）。 */
-		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
-		/** token 域固定名（kit 内 `tokens` 恒排最前）。 */
-		const TOKENS_DOMAIN = "tokens";
-		setStyleKit(createStyleKit({ id: UI_STYLE_ID }));
-		const active = getStyleKit();
-		/** 登记一个域的样式（同名重复登记 = 覆盖）。 */
-		function registerStyle(domain, css) {
-			active.registerStyle(domain, css);
-		}
-		/** 确保标签已挂载且内容最新（幂等）。 */
-		function ensureUiStyles() {
-			active.ensureStyles();
-		}
-		/** 登记 + 立刻确保挂载。 */
-		function applyStyle(domain, css) {
-			active.applyStyle(domain, css);
-		}
-		/** 登记核心 token 层并确保样式已注入（幂等）。 */
-		function ensureUiBase() {
-			registerStyle(TOKENS_DOMAIN, active.tokensCss);
-			ensureUiStyles();
-		}
-		// src/client/ui/controls-css.ts
-		/**
-		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
-		*
-		* 规矩（docs/design/ui-style-guide.md §三）：
-		*  - **只消费 `var(--dshpc-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
-		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达。
-		*
-		* 2026-11-06：分段 / 按钮 / 输入 / 数字步进 / 多行文本 / 跑马灯 / 下拉 / 日期时间 / 小问号
-		* 已全部改接核心 `dsh-plugin-core/ui`，对应本地皮肤整段删除。
-		* 本文件只剩**核心没有**的业务件：产出物 chip、开关选色，「过程文件」块。
-		*/
-		/** 产出物图标 chip 的皮肤规则。 */
-		const BUTTON_CSS = `
-/* ── 产出物「图标 chip」：28×28 方角小底板 + 官方文件类型图标 ──────────────
-   用途：产出物列表里**只给图标**的小按钮（卡片「执行记录」面板、执行记录总查询页、展开区都挂它）。
-   ⚠️ 底板**必须走 class**——inline background 会盖掉 :hover（用户 2026-10-03 踩过）。
-   hover 用「--dshpc-chip-bg-hover」：浅色更深、暗色更亮（两端都是「更明显」）；不许拿
-   「--dshpc-plate-hover」顶——暗色下反而更淡，鼠标移上去底板就消失了。 */
-.dsh-tdt-chip{appearance:none;-webkit-appearance:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
-  width:var(--dshpc-control-h-md);height:var(--dshpc-control-h-md);padding:0;border:none;border-radius:var(--dshpc-radius-sm);
-  background:transparent;color:var(--dshpc-fg-2);font-family:inherit;line-height:0;cursor:pointer;
-  transition:background-color var(--dshpc-dur) var(--dshpc-ease),color var(--dshpc-dur) var(--dshpc-ease);}
-.dsh-tdt-chip:hover:not(:disabled){background:var(--dshpc-chip-bg-hover);}
-.dsh-tdt-chip:focus-visible{outline:2px solid var(--dshpc-focus);outline-offset:1px;}
-.dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--dshpc-fg-3);}
-.dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--dshpc-font-md);line-height:var(--dshpc-line-md);}
-
-/* 文件行（图标 + 文件名）统一走核心 **Button ghost**（2026-11-06 用户拍板：
-   「一个图标后面跟着文字」——产出物 / 其他产出 / 过程文件 / 执行记录展开区 / 附件全站同一套皮肤，
-   圆角、hover、内边距全归核心按钮；本仓不再保留第二份文件行皮肤。 */
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-chip{transition:none;}}
-`;
-		/** 开关 / 拖拽分隔条的皮肤规则（核心没有的宿主件）。 */
-		const FIELD_CSS = `
-/* 官方 Switch 包装统一：选中 = success 绿。 */
-.dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--dshpc-success);}
-
-/* 拖拽分隔条已随两条分栏一起归核心 PanelDock（2026-11-06），本仓不再自绘命中条。 */
-`;
-		/** 下拉的皮肤规则（核心 `Picker` 暂缺 `error` 档，这里只补一条描红）。 */
-		const SELECT_CSS = `
-/* 核心 Picker 的校验描红（className 挂在 .dshpc-picker 根上）。 */
-.dsh-tdt-picker--error .dshpc-picker__trigger{border-color:var(--dshpc-danger);box-shadow:0 0 0 1px var(--dshpc-danger);}
-/* 整行下拉：核心 Picker 根是 inline-block，要显式撑满父宽。 */
-.dsh-tdt-picker--block{display:block;width:100%;}
-
-/* 省略号三件套（ui-style-guide §三「待抽象 #1」的收敛点）：**新代码一律挂这个类**，不再各写一遍。 */
-.dsh-tdt-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-`;
-		/** 「过程文件」块的皮肤规则（2026-10-10：回执过程文件桶的次级展示件）。 */
-		const PROCESS_FILES_CSS = `
-/* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
-   （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
-   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行 = 核心 Button ghost（图标 + 文字，全站同一套）。 */
-.dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
-.dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
-
-`;
-		/** 细滚动条只认核心的 `.dshpc-scroll-thin`（3px，design/tokens 域全局注入、挂类即生效）。
-		*  2026-11-08 用户点名删掉本仓自绘的 1px 版：本插件**不再定义任何 ::-webkit-scrollbar 规则**。
-		*  该类只作用于挂它的那个容器（外加其 .cm-scroller 后代），所以每个 `overflow:auto` 的容器
-		*  都要自己挂 `dshpc-scroll-thin`，见各组件。 */
-		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
-		const CONTROLS_DOMAIN = "controls";
-		/**
-		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
-		*/
-		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, BUTTON_CSS + FIELD_CSS + SELECT_CSS + PROCESS_FILES_CSS);
-		}
-		// src/client/ui/Field.tsx
-		/**
-		* 下拉选择 —— 核心 `Picker` 的薄包装（2026-11-06）。
-		*
-		* 触发器 / 弹层 / 分组 / 搜索 / 空态 / 跑马灯 / 键盘与明暗全部归核心；
-		* 本仓只补核心 `Picker` 尚未提供的一点：
-		*  - `error` 校验描红：外层 `className` + 一条皮肤规则（`.dsh-tdt-picker--error`）。
-		* 悬停提示**不在这里**（2026-11-06：全站原生 title 清退；需要的调用方在真 DOM 外套官方 `Tooltip`）。
-		* 空列表 ⇒ 禁用并显示业务空态文案（不塞假值）。
-		*/
-		/**
-		* 下拉选择：核心 `Picker`（portal 到 body，选中项自动带对勾，内容超长走跑马灯）。
-		* 空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
-		*/
-		function SelectField(props) {
-			ensureControlsStyle();
-			const size = props.size ?? "lg";
-			const groups = props.groups;
-			const empty = groups === void 0 ? (props.options ?? []).length === 0 : groups.every((group) => group.options.length === 0);
-			const usable = !empty && props.disabled !== true;
-			const width = props.width ?? (props.block === true ? "100%" : void 0);
-			const cls = [props.block === true ? "dsh-tdt-picker--block" : "", props.error === true ? "dsh-tdt-picker--error" : ""].filter(Boolean).join(" ");
-			return (0, react$1.createElement)(Picker, {
-				...groups === void 0 ? { options: props.options ?? [] } : { groups },
-				value: props.value,
-				onChange: (next) => {
-					if (typeof next === "string") props.onChange(next);
-				},
-				placeholder: empty ? props.emptyLabel : props.placeholder,
-				disabled: !usable,
-				size,
-				icon: props.icon,
-				className: cls === "" ? void 0 : cls,
-				width,
-				...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
-				ariaLabel: props.ariaLabel,
-				...props.searchable === true ? { searchable: true } : {}
-			});
-		}
-		// src/client/ui/TaskPicker.tsx
-		/**
-		* 任务选择器 —— **核心 `Picker` 的薄包装**（2026-11-06 起）。
-		*
-		* 本文件只做四件业务事，其余（浮层、搜索、分页、空态、键盘、明暗）全交给 `dsh-plugin-core/ui`：
-		*  ① 按 `scope`（工作区）与 `excludeIds` 过滤候选；
-		*  ② 「全部任务」作为**第一个普通选项**（`value: ''`）传进去（用户 2026-11-05 拍板，核心零改动）；
-		*  ③ 停用任务照常可选，只在 `label` 尾部拼 `disabledTag`（不加字段）；
-		*  ④ 已选项掉出作用域 ⇒ 仍留在列表里 + 触发器前置 `!` 告警（官方 `Tooltip` 给说明），不静默清空。
-		*
-		* 搜索：核心按 `label` + `keywords` 子串匹配；这里把任务 UUID 放进 `keywords`（只搜不显示）。
-		*/
-		/** 带搜索的任务选择器。 */
-		function TaskPicker(props) {
-			const scope = props.scope ?? "";
-			const excludes = props.excludeIds ?? [];
-			const current = props.options.find((o) => o.id === props.value);
-			const candidates = (0, react$1.useMemo)(() => props.options.filter((o) => (scope === "" || o.workspace === scope) && !excludes.includes(o.id)), [
-				props.options,
-				scope,
-				excludes
-			]);
-			const labelOf = (o) => o.enabled ? o.label : `${o.label}${props.disabledTag ?? ""}`;
-			const list = [];
-			if (props.allOption !== void 0) list.push({
-				value: props.allOption.value,
-				label: props.allOption.label
-			});
-			for (const o of candidates) list.push({
-				value: o.id,
-				label: labelOf(o),
-				keywords: o.id
-			});
-			const outOfScope = current !== void 0 && props.value !== "" && scope !== "" && current.workspace !== scope;
-			if (outOfScope && current !== void 0) list.splice(props.allOption === void 0 ? 0 : 1, 0, {
-				value: current.id,
-				label: labelOf(current),
-				keywords: current.id
-			});
-			return (0, react$1.createElement)(Picker, {
-				options: list,
-				value: props.value,
-				onChange: (next) => {
-					const id = Array.isArray(next) ? next[0] ?? "" : next;
-					props.onChange(id);
-				},
-				searchable: true,
-				limit: props.recentLimit ?? 10,
-				placeholder: props.placeholder,
-				size: props.size,
-				width: props.width,
-				disabled: props.disabled,
-				ariaLabel: props.ariaLabel,
-				icon: outOfScope ? props.outOfScopeHint === void 0 ? (0, react$1.createElement)("span", { style: {
-					color: "var(--dshpc-warning)",
-					fontWeight: 600
-				} }, "!") : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-					label: props.outOfScopeHint,
-					side: "bottom"
-				}, (0, react$1.createElement)("span", { style: {
-					color: "var(--dshpc-warning)",
-					fontWeight: 600
-				} }, "!")) : void 0,
-				translate: (key, vars) => {
-					if (key === "pickerSearch") return props.searchPlaceholder;
-					if (key === "pickerEmpty" || key === "pickerNoMatch") return props.emptyLabel;
-					if (key === "pickerMore" && props.moreLabel !== void 0) return props.moreLabel;
-					return t$1(key, vars);
-				}
-			});
-		}
-		// src/client/ui/time-range.ts
-		/** 全部预设档（缺省显示顺序）。 */
-		const ALL_TIME_PRESETS = [
-			"today",
-			"yesterday",
-			"thisWeek",
-			"lastWeek",
-			"thisMonth",
-			"lastMonth"
-		];
-		/** 值串 → 年月日时分；不合法返回 null。 */
-		function parseValue(value) {
-			const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(value);
-			if (match === null) return null;
-			return {
-				y: Number(match[1]),
-				m: Number(match[2]),
-				d: Number(match[3]),
-				hh: match[4] === void 0 ? 0 : Number(match[4]),
-				mm: match[5] === void 0 ? 0 : Number(match[5])
-			};
-		}
-		/**
-		* 受控值 → 查询用**半开区间** `[from, to)`：
-		* - day：from = 当日 00:00，to = 结束日的**次日 00:00**；
-		* - minute：from = 当时分 :00，to = 结束分的**下一分钟 :00**。
-		* 空串 / 不合法 ⇒ 该端 undefined（不过滤）。
-		*/
-		function rangeToQuery(value, precision) {
-			const fromParsed = value.from === "" ? null : parseValue(value.from);
-			const toParsed = value.to === "" ? null : parseValue(value.to);
-			let fromTs;
-			if (fromParsed !== null) {
-				const d = precision === "minute" ? new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, fromParsed.hh, fromParsed.mm, 0, 0) : new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, 0, 0, 0, 0);
-				fromTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
-			}
-			let toTs;
-			if (toParsed !== null) {
-				const d = precision === "minute" ? new Date(toParsed.y, toParsed.m - 1, toParsed.d, toParsed.hh, toParsed.mm + 1, 0, 0) : new Date(toParsed.y, toParsed.m - 1, toParsed.d + 1, 0, 0, 0, 0);
-				toTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
-			}
-			return {
-				fromTs,
-				toTs
-			};
-		}
-		// src/client/ui/TimeRange.tsx
-		/**
-		* 时间范围筛选 —— **核心 `DateTimePicker` 的薄包装**（2026-11-06 起）。
-		*
-		* 分工：
-		*  - 核心负责：触发器、两块日历、预设档竖列、「确定 / 取消 / 清除」、键盘与明暗；
-		*  - 本仓负责：值串 ⇄ 核心 ISO 的换算 + 预设档文案（`presets` 的 expr 由核心展开）。
-		*
-		* 值形态不变（`TimeRangeValue`：`YYYY-MM-DD` / `YYYY-MM-DD HH:mm`，空串 = 不过滤），
-		* 查询边界仍由 `rangeToQuery`（`time-range.ts`）统一算，控件不碰边界。
-		*/
-		/** 预设档 → 核心的 date-math 算式（整档取齐：`/d` `/w` `/M`；周一为周首，与核心一致）。 */
-		const PRESET_EXPR = {
-			today: "now/d",
-			yesterday: "now-1d/d",
-			thisWeek: "now/w",
-			lastWeek: "now-1w/w",
-			thisMonth: "now/M",
-			lastMonth: "now-1M/M"
-		};
-		/** 值串 → 核心 ISO（本端 floor 到 00:00:00.000，对端 ceil 到 23:59:59.999）。 */
-		function toIso(value, end, precision) {
-			const minute = precision === "minute";
-			const date = value.slice(0, 10);
-			const time = minute ? value.length >= 16 ? value.slice(11, 16) : end ? "23:59" : "00:00" : "00:00";
-			return minute ? `${date}T${time}:${end ? "59.999" : "00.000"}` : `${date}T${end ? "23:59:59.999" : "00:00:00.000"}`;
-		}
-		/** 本仓值 → 核心受控值；任一端为空 ⇒ 交给核心显示「未选」（核心的 range 需要两端齐全才提交）。 */
-		function toCoreValue(value, precision) {
-			if (value.from === "" || value.to === "") return null;
-			return [toIso(value.from, false, precision), toIso(value.to, true, precision)];
-		}
-		/** 核心受控值 → 本仓值：day 取日期，minute 取到分钟（与 `TimeRangeValue` 的口径一致）。 */
-		function fromCoreValue(out, precision) {
-			if (out === null || Array.isArray(out) === false) return {
-				from: "",
-				to: ""
-			};
-			const fmt = (iso) => precision === "minute" ? `${iso.slice(0, 10)} ${iso.slice(11, 16)}` : iso.slice(0, 10);
-			return {
-				from: fmt(out[0]),
-				to: fmt(out[1])
-			};
-		}
-		function TimeRange(props) {
-			const precision = props.precision ?? "day";
-			const presetIds = props.presets ?? ALL_TIME_PRESETS;
-			const presets = [{
-				label: props.labels.all,
-				expr: null
-			}, ...presetIds.map((id) => ({
-				label: props.labels.presets[id],
-				expr: PRESET_EXPR[id]
-			}))];
-			return (0, react$1.createElement)(DateTimePicker, {
-				mode: "range",
-				precision,
-				value: toCoreValue(props.value, precision),
-				onChange: (next) => {
-					props.onChange(fromCoreValue(next, precision));
-				},
-				presets,
-				size: props.size ?? "md",
-				disabled: props.disabled
-			});
-		}
-		// src/client/ui/ticker.ts
-		const tickerListeners = /* @__PURE__ */ new Set();
-		let tickerTimer = null;
-		/**
-		* `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
-		* 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
-		* 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
-		*/
-		const onVisibilityChange = () => {
-			for (const l of [...tickerListeners]) l();
-		};
-		let visibilityBound = false;
-		/** 订阅全局秒级心跳；返回退订。**第一个订阅者才起 interval，最后一个退订即停**。 */
-		function subscribeTicker(cb) {
-			tickerListeners.add(cb);
-			if (tickerTimer === null) {
-				tickerTimer = window.setInterval(() => {
-					for (const l of [...tickerListeners]) l();
-				}, 1e3);
-				if (!visibilityBound && typeof document !== "undefined") {
-					document.addEventListener("visibilitychange", onVisibilityChange);
-					visibilityBound = true;
-				}
-			}
-			return () => {
-				tickerListeners.delete(cb);
-				if (tickerListeners.size === 0 && tickerTimer !== null) {
-					window.clearInterval(tickerTimer);
-					tickerTimer = null;
-				}
-			};
-		}
-		/**
-		* 每秒拿到「现在」（需要**时间值本身**时用，如悬浮文案）；与 `LiveText` 共用同一条心跳。
-		* 不适合整列表用（每次 tick 会 setState 一次）——只在真正需要时间的小块里调。
-		*/
-		function useNowMs() {
-			const [nowMs, setNowMs] = (0, react$1.useState)(() => Date.now());
-			(0, react$1.useEffect)(() => subscribeTicker(() => setNowMs(Date.now())), []);
-			return nowMs;
-		}
-		// src/client/ui/running.ts
-		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
-		const RUNNING_TONE = "var(--dshpc-business)";
-		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
-		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
-		const RUNNING_CSS = `
-@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
-.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--dshpc-dur-run) var(--dshpc-ease) infinite; }
-@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
-`;
-		let ensured = false;
-		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
-		const ensureRunningStyle = () => {
-			if (ensured) return;
-			ensured = true;
-			applyStyle("domain:running", RUNNING_CSS);
-		};
-		// src/client/ui/index.ts
-		/**
-		* 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
-		* 同时它是基础层 `Loading` 的锚点契约（`Loading` 默认 `anchorId = PANEL_CONTENT_ID`）——
-		* 所以**新页面也必须用同一个 id**，否则浮动 loading 找不到锚点、贴不到内容右缘。
-		*/
-		const PANEL_CONTENT_ID = "dsh-tdt-main";
-		/** 内容列几何（居中限宽 760 / 1120）。 */
-		const PANEL_CONTENT_STYLE = {
-			width: "100%",
-			maxWidth: "1120px",
-			minWidth: "760px",
-			boxSizing: "border-box"
 		};
 		// src/client/process-files.tsx
 		/** 目录以尾斜杠表达（与 `normalizeOutputs` / `baseNameOf` 同一约定）。 */
@@ -82595,8 +82942,6 @@ window.__ModuleLoader__.load({
 		const SETTINGS_NS = "dsh-task-dispatch-table";
 		/** 字典命名空间（locale 注册表独立于 settings 命名空间，取同名便于对应）。 */
 		const LOCALE_NS = SETTINGS_NS;
-		/** 主面板 id：`main` 槽的 key 与 `sidebar.panellist` 条目的 id 必须一致，选中才对得上。 */
-		const PANEL_ID = SETTINGS_NS;
 		/** 编辑分栏在核心 PanelDock 里的组名（预览 dock 是另一条、另一个控制器，同名也不冲突）。 */
 		const EDITOR_PANEL_ID = "task-editor";
 		/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
@@ -83914,6 +84259,7 @@ window.__ModuleLoader__.load({
 		function apply(ctx) {
 			connectFs({ path: FS_ROUTE });
 			connectHost(ctx);
+			refreshAppearance();
 			setTooltipRenderer((props) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: props.label,
 				side: props.side ?? "top",
@@ -83969,6 +84315,9 @@ window.__ModuleLoader__.load({
 				if (layout !== void 0) selectPanel = (id) => {
 					layout.selectPanel(id);
 				};
+				setSidebarNavigator((id) => {
+					selectPanel(id);
+				});
 			});
 			let cardRegistered = false;
 			const registerCard = (sub) => {
@@ -84019,13 +84368,12 @@ window.__ModuleLoader__.load({
 				}, ConfigPanel));
 			});
 			ctx.inject(["slots"], (sub) => {
-				sub.slots.inject("sidebar.panellist", () => sub.slots.register({
-					name: "sidebar.panellist",
-					id: PANEL_ID,
-					order: 30,
-					label: () => runtimeT("panelTitle"),
-					locale: LOCALE_NS
-				}, TaskPanelIcon));
+				initSidebarEntry({
+					slots: sub.slots,
+					icon: TaskPanelIcon,
+					locale: LOCALE_NS,
+					defaultLabel: () => runtimeT("panelTitle")
+				});
 				sub.slots.inject("main", () => sub.slots.register({
 					name: "main",
 					key: PANEL_ID,

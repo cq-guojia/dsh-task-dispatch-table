@@ -54,6 +54,13 @@ import { en, type LocaleKey, zh } from "./locales";
 // API 前缀唯一真源（M9）：本页与设置页通道都从这里引，不再各写一份字面量。
 // 会话弹窗的唯一取数入口：按会话 id 取实例行（快照 / 产出）——**所有入口只传会话 id**。
 import { API_PREFIX, fetchInstanceBySession } from "./query";
+// 侧栏入口：显示名 + 位置（一级 / 「更多」），按插件设置重挂。
+import {
+	initSidebarEntry,
+	PANEL_ID,
+	refreshAppearance,
+	setSidebarNavigator,
+} from "./sidebar-entry";
 import { RecordsTimelineView } from "./records-timeline";
 import {
 	openSessionView,
@@ -109,8 +116,6 @@ import {
 const SETTINGS_NS = "dsh-task-dispatch-table";
 /** 字典命名空间（locale 注册表独立于 settings 命名空间，取同名便于对应）。 */
 const LOCALE_NS = SETTINGS_NS;
-/** 主面板 id：`main` 槽的 key 与 `sidebar.panellist` 条目的 id 必须一致，选中才对得上。 */
-const PANEL_ID = SETTINGS_NS;
 /** 旧「任务配置」界面（JSON 逃生口 + 只读参数）开关：主界面重建后关闭，待面板收尾时连状态一起清。 */
 const LEGACY_CONFIG_VIEW = false;
 /** 编辑分栏在核心 PanelDock 里的组名（预览 dock 是另一条、另一个控制器，同名也不冲突）。 */
@@ -2480,6 +2485,8 @@ export function apply(ctx: ClientContext): void {
 	// 文件浏览 / 预览改接核心 `adv/explorer`：接上宿主 fs 面 + 官方工作区快照源。
 	connectFs({ path: FS_ROUTE });
 	connectHost(ctx as unknown as Parameters<typeof connectHost>[0]);
+	// 先按设置把入口摆好（默认「更多」菜单）：读不到配置就保持默认外观，不阻塞启动。
+	void refreshAppearance();
 	// 核心 `FieldHint` 的气泡本体就是官方 `Tooltip`：插件启动时必须注入一次 renderer，
 	// 否则问号只有图标、悬停无气泡（core 不自绘兜底）。`portal` 让气泡逃出分栏的 overflow 裁剪。
 	setTooltipRenderer((props) =>
@@ -2594,6 +2601,10 @@ export function apply(ctx: ClientContext): void {
 			selectPanel = (id) => {
 				layout.selectPanel(id);
 			};
+		// 「更多」菜单那一行点击也要能切到本面板（sidebar-entry 不直接依赖布局服务）。
+		setSidebarNavigator((id) => {
+			selectPanel(id);
+		});
 	});
 
 	// 设置页卡片：两套契约各尝试一次，谁先就位谁生效（registerCard 保证只注册一条）。
@@ -2679,18 +2690,13 @@ export function apply(ctx: ClientContext): void {
 	// ⚠️ 必须只依赖 `slots`、自成一块：一旦嵌进 settings 注入块，settings 服务改名/缺席
 	// 就会让入口无声消失且不报错（2026-09-24 真机教训）。
 	ctx.inject(["slots"], (sub) => {
-		sub.slots.inject("sidebar.panellist", () =>
-			sub.slots.register(
-				{
-					name: "sidebar.panellist",
-					id: PANEL_ID,
-					order: 30,
-					label: () => runtimeT("panelTitle"),
-					locale: LOCALE_NS,
-				},
-				TaskPanelIcon,
-			),
-		);
+		// 侧栏入口的位置与显示名由插件设置决定（默认进「更多」菜单），重挂逻辑在 sidebar-entry.ts。
+		initSidebarEntry({
+			slots: sub.slots,
+			icon: TaskPanelIcon,
+			locale: LOCALE_NS,
+			defaultLabel: () => runtimeT("panelTitle"),
+		});
 		sub.slots.inject("main", () =>
 			sub.slots.register(
 				{ name: "main", key: PANEL_ID, locale: LOCALE_NS },

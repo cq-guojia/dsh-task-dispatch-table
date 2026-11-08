@@ -28,7 +28,17 @@ export interface PluginConfig {
      */
     /** 上传临时区保留期（天）：到期文件由 tick 内清道夫删除（默认 7）。 */
     attachmentTmpRetentionDays: number;
+    /** 侧栏显示名；空串 = 用词典默认名（`panelTitle`）。 */
+    displayName: string;
+    /** 侧栏入口位置：`first` = 一级菜单（默认）；`more` = 收进「更多」菜单。 */
+    entryMode: EntryMode;
+    /** 屏蔽官方「自动化任务」入口（`@deepseek-ai/dsh-client-ui-schedule`）；false = 不屏蔽（默认）。 */
+    hideOfficialSchedule: boolean;
 }
+/** 侧栏入口的两档位置（设置区下拉的取值，别用自由字符串）。 */
+export type EntryMode = 'first' | 'more';
+/** `entryMode` 的合法取值（服务端校验 + 前端下拉共用，防两处漂移）。 */
+export declare const ENTRY_MODES: readonly EntryMode[];
 /**
  * **系统默认值**（全量，含字符串路径类）—— `Config` schema 与设置页「用户没设时显示什么」的唯一真源。
  *
@@ -50,6 +60,9 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     defaultModel: z<string, string, "defined">;
     logRetentionDays: z<number, number, "defined">;
     attachmentTmpRetentionDays: z<number, number, "defined">;
+    displayName: z<string, string, "defined">;
+    entryMode: z<string, string, "defined">;
+    hideOfficialSchedule: z<boolean, boolean, "defined">;
 }>>, Schemastery.ObjectT<NoInfer<{
     statePath: z<string, string, "defined">;
     tickMs: z<number, number, "defined">;
@@ -63,6 +76,9 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     defaultModel: z<string, string, "defined">;
     logRetentionDays: z<number, number, "defined">;
     attachmentTmpRetentionDays: z<number, number, "defined">;
+    displayName: z<string, string, "defined">;
+    entryMode: z<string, string, "defined">;
+    hideOfficialSchedule: z<boolean, boolean, "defined">;
 }>>, "plain">;
 /**
  * rc.1 volatile 字段的解析结果是**带 get() 的引用**（非纯值）；读取时解包（与参考插件

@@ -17,8 +17,8 @@ export type { PluginConfig };
  *   `tasksInline`（整份任务表 JSON）与 `debugSnapshot`（宿主调试数据），不能整份吐给浏览器。
  */
 export declare function configView(config: PluginConfig): {
-    config: Record<string, string | number>;
-    defaults: Record<string, string | number>;
+    config: Record<string, string | number | boolean>;
+    defaults: Record<string, string | number | boolean>;
 };
 /** 附件约束（白名单/上限/扩展名解析）与浏览器端预检**共用同一份**，防两处漂移。 */
 export { ATTACHMENT_MAX_BYTES, ALLOWED_ATTACHMENT_EXT, extOf } from './attachment-allowlist.js';

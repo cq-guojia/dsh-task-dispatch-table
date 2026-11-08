@@ -34,7 +34,19 @@ export interface PluginConfig {
    */
   /** 上传临时区保留期（天）：到期文件由 tick 内清道夫删除（默认 7）。 */
   attachmentTmpRetentionDays: number
+  /** 侧栏显示名；空串 = 用词典默认名（`panelTitle`）。 */
+  displayName: string
+  /** 侧栏入口位置：`first` = 一级菜单（默认）；`more` = 收进「更多」菜单。 */
+  entryMode: EntryMode
+  /** 屏蔽官方「自动化任务」入口（`@deepseek-ai/dsh-client-ui-schedule`）；false = 不屏蔽（默认）。 */
+  hideOfficialSchedule: boolean
 }
+
+/** 侧栏入口的两档位置（设置区下拉的取值，别用自由字符串）。 */
+export type EntryMode = 'first' | 'more'
+
+/** `entryMode` 的合法取值（服务端校验 + 前端下拉共用，防两处漂移）。 */
+export const ENTRY_MODES: readonly EntryMode[] = ['first', 'more']
 
 /**
  * **系统默认值**（全量，含字符串路径类）—— `Config` schema 与设置页「用户没设时显示什么」的唯一真源。
@@ -56,6 +68,9 @@ export const CONFIG_DEFAULTS: PluginConfig = {
   unknownGraceMs: 5 * 60_000,
   logRetentionDays: 30,
   attachmentTmpRetentionDays: 7,
+  displayName: '',
+  entryMode: 'first',
+  hideOfficialSchedule: false,
 }
 
 
@@ -83,6 +98,13 @@ export const Config = z.object({
   logRetentionDays: z.number().min(1).default(CONFIG_DEFAULTS.logRetentionDays),
 
   attachmentTmpRetentionDays: z.number().min(1).default(CONFIG_DEFAULTS.attachmentTmpRetentionDays),
+
+  // ── 设置区（插件详情页）三个字段：显示名 / 入口位置 / 屏蔽官方自动化 ──
+  // entryMode 用 string 而非字面量联合：schemastery 的 union 在宿主界面上没好处，
+  // 合法性由服务端白名单（ENTRY_MODES）与前端下拉共同保证。
+  displayName: z.string().default(CONFIG_DEFAULTS.displayName),
+  entryMode: z.string().default(CONFIG_DEFAULTS.entryMode),
+  hideOfficialSchedule: z.boolean().default(CONFIG_DEFAULTS.hideOfficialSchedule),
 })
 
 /**
@@ -106,7 +128,7 @@ export function readConfigField<T>(field: unknown, fallback: T): T {
  */
 export function resolveStatePath(statePath: string): string {
   if (statePath.trim().length > 0) return resolve(statePath)
-  const raw = process.env['DSH_HOME']
+  const raw = process.env.DSH_HOME
   const selected = raw !== undefined && raw.trim().length > 0 ? raw : join(homedir(), '.dsh')
   const home = selected === '~' || selected.startsWith('~/')
     ? join(homedir(), selected.slice(selected.length === 1 ? 1 : 2))

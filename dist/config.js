@@ -4,6 +4,8 @@
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import z from '@deepseek-ai/schemastery';
+/** `entryMode` 的合法取值（服务端校验 + 前端下拉共用，防两处漂移）。 */
+export const ENTRY_MODES = ['first', 'more'];
 /**
  * **系统默认值**（全量，含字符串路径类）—— `Config` schema 与设置页「用户没设时显示什么」的唯一真源。
  *
@@ -24,6 +26,9 @@ export const CONFIG_DEFAULTS = {
     unknownGraceMs: 5 * 60_000,
     logRetentionDays: 30,
     attachmentTmpRetentionDays: 7,
+    displayName: '',
+    entryMode: 'first',
+    hideOfficialSchedule: false,
 };
 // ⚠️ rc.1（0.1.7-rc.1）约束：宿主插件配置字段**不能标 .volatile()**。
 // 实测根因（set717/lib/index.js:417 + types/index.js:368-380）：configForms 的读写都要求字段
@@ -48,6 +53,12 @@ export const Config = z.object({
     defaultModel: z.string().default(CONFIG_DEFAULTS.defaultModel),
     logRetentionDays: z.number().min(1).default(CONFIG_DEFAULTS.logRetentionDays),
     attachmentTmpRetentionDays: z.number().min(1).default(CONFIG_DEFAULTS.attachmentTmpRetentionDays),
+    // ── 设置区（插件详情页）三个字段：显示名 / 入口位置 / 屏蔽官方自动化 ──
+    // entryMode 用 string 而非字面量联合：schemastery 的 union 在宿主界面上没好处，
+    // 合法性由服务端白名单（ENTRY_MODES）与前端下拉共同保证。
+    displayName: z.string().default(CONFIG_DEFAULTS.displayName),
+    entryMode: z.string().default(CONFIG_DEFAULTS.entryMode),
+    hideOfficialSchedule: z.boolean().default(CONFIG_DEFAULTS.hideOfficialSchedule),
 });
 /**
  * rc.1 volatile 字段的解析结果是**带 get() 的引用**（非纯值）；读取时解包（与参考插件
@@ -71,7 +82,7 @@ export function readConfigField(field, fallback) {
 export function resolveStatePath(statePath) {
     if (statePath.trim().length > 0)
         return resolve(statePath);
-    const raw = process.env['DSH_HOME'];
+    const raw = process.env.DSH_HOME;
     const selected = raw !== undefined && raw.trim().length > 0 ? raw : join(homedir(), '.dsh');
     const home = selected === '~' || selected.startsWith('~/')
         ? join(homedir(), selected.slice(selected.length === 1 ? 1 : 2))

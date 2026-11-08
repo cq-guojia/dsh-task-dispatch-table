@@ -223,6 +223,13 @@ export type LocaleKey =
   | 'settingsDefaultValue'
   // —— 2026-10-08 插件详情页剥成纯说明（用户拍板：配置都在主界面完成，此处无表单）——
   | 'settingsIntro'
+  // —— 2026-11-08 插件详情页设置区（显示名 / 入口位置 / 屏蔽官方自动化 + 保存与两个链接）——
+  | 'configNameLabel' | 'configNameHint'
+  | 'configEntryLabel' | 'configEntryHint' | 'configEntryFirst' | 'configEntryMore'
+  | 'configHideOfficialLabel' | 'configHideOfficialHint' | 'configHideOff' | 'configHideOn'
+  | 'configGithub' | 'configComponents'
+  | 'configOverridden' | 'configReset' | 'configSave' | 'configSaving' | 'configSaveFailed'
+  | 'configUnavailable'
   | 'vTitleRequired' | 'vWorkspaceRequired' | 'vWorkspaceUnknown' | 'vPromptRequired'
   | 'vIntervalInvalid' | 'vWeekdayRequired' | 'vAttachmentInvalid'
 /**
@@ -925,6 +932,24 @@ export const zh: Record<LocaleKey, string> = {
   settingsFilterValue: '值',
   settingsFilterRemove: '移除筛选',
   settingsIntro: '本插件无需在此页面配置：任务与全部设置都在插件主界面（侧栏「定时任务调度器」面板）内完成。',
+  configNameLabel: '显示名称',
+  configNameHint: '留空即用默认名「定时任务调度器」；填成与默认名相同则不保存这一项。',
+  configEntryLabel: '入口位置',
+  configEntryHint: '放在左侧栏一级，或收进侧栏底部的「更多」菜单。',
+  configEntryFirst: '一级菜单',
+  configEntryMore: '更多',
+  configHideOfficialLabel: '屏蔽官方「自动化任务」',
+  configHideOfficialHint: '关闭官方自动化任务入口。卸载本插件会自动恢复；切换后重启宿主或等热更新生效。',
+  configHideOff: '不屏蔽',
+  configHideOn: '屏蔽',
+  configGithub: '访问 GitHub',
+  configComponents: '蓝鲸组件库',
+  configOverridden: '自定义',
+  configReset: '恢复默认',
+  configSave: '保存',
+  configSaving: '保存中…',
+  configSaveFailed: '保存失败，请重试',
+  configUnavailable: '读不到当前设置（配置通道未就绪），稍后重新打开本页试试。',
 
 
   vTitleRequired: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。',
@@ -1616,6 +1641,24 @@ export const en: Record<LocaleKey, string> = {
   settingsFilterValue: 'Value',
   settingsFilterRemove: 'Remove filter',
   settingsIntro: 'Nothing to configure here — tasks and all settings live inside the plugin panel (sidebar "Scheduled task dispatcher").',
+  configNameLabel: 'Display name',
+  configNameHint: 'Leave it empty to use the default name (Scheduled task dispatcher); saving the default itself stores nothing.',
+  configEntryLabel: 'Entry point',
+  configEntryHint: 'Show it as a sidebar item, or tuck it into the More menu at the sidebar foot.',
+  configEntryFirst: 'Sidebar',
+  configEntryMore: 'More menu',
+  configHideOfficialLabel: 'Hide the official Automation tasks',
+  configHideOfficialHint: 'Hides the official automation entry shipped with dsh. Uninstalling this plugin restores it; a restart or hot update applies the change.',
+  configHideOff: 'Show',
+  configHideOn: 'Hide',
+  configGithub: 'Visit GitHub',
+  configComponents: 'dsh-plugin-core',
+  configOverridden: 'Custom',
+  configReset: 'Restore default',
+  configSave: 'Save',
+  configSaving: 'Saving…',
+  configSaveFailed: 'Save failed, please retry',
+  configUnavailable: 'Cannot read the current settings (config channel not ready yet) — reopen this page later.',
 
 
   vTitleRequired: 'Task name is missing — the list identifies tasks by name. Please give it one.',
