@@ -843,7 +843,7 @@ function TaskExpandPanel(props: {
                     // ⑤ 消耗 token：总量 K/M 格式，hover 看输入/输出/缓存明细（官方 Tooltip）。
                     tokens: instance.token_in === null && instance.token_out === null
                       ? h('span', { style: { color: 'var(--dshpc-fg-3)' } }, '-')
-                      : h(Tooltip, { label: formatTokenDetail(instance), side: 'top' },
+                      : h(Tooltip, { label: formatTokenDetail(instance, t), side: 'top' },
                         h('span', null, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))),
                       ),
                     // ⑥ 备注：错误 / 未执行的原因。超长省略号，hover 看全文（官方 Tooltip）；走最浅的灰。

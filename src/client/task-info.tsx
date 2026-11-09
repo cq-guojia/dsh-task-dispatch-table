@@ -338,7 +338,7 @@ export function lastRunFields(props: {
       dur === null
         ? (tokens === null
           ? null
-          : InfoField({ label: t('colTokens'), children: h(Tooltip, { label: formatTokenDetail(instance), side: 'top' }, h('span', null, tokens)) }))
+          : InfoField({ label: t('colTokens'), children: h(Tooltip, { label: formatTokenDetail(instance, t), side: 'top' }, h('span', null, tokens)) }))
         : (tokens === null
           ? InfoField({ label: t('infoDuration'), children: formatDurationHms(dur) })
           : InfoField({
@@ -346,7 +346,7 @@ export function lastRunFields(props: {
             children: h('span', null,
               formatDurationHms(dur),
               h('span', { style: { color: 'var(--dshpc-fg-3)', margin: '0 6px' } }, '·'),
-              h(Tooltip, { label: formatTokenDetail(instance), side: 'top' },
+              h(Tooltip, { label: formatTokenDetail(instance, t), side: 'top' },
                 h('span', null, `${t('colTokens')} ${tokens}`)),
             ),
           })),

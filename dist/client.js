@@ -58292,89 +58292,6 @@ window.__ModuleLoader__.load({
 				};
 			}, []);
 		}
-		// src/client/format.ts
-		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
-		function pad2(value) {
-			return String(value).padStart(2, "0");
-		}
-		/**
-		* 路径取末段（产出物行 / 文件名显示用）。**单源**：`/` 与 `\` 都认（M5）。
-		* ⚠️ **必须先剔尾斜杠**（2026-10-06 审计 🔴）：本仓「目录」用尾斜杠表达（产出示例 `["a.md","b/"]`，
-		* 见 `query.ts` / `task-file-context.tsx` 的 displayName）；不剔的话 `baseNameOf('b/')` 返回**空串**
-		* ⇒ 目录产出物在卡片/记录页渲染成**空标签、空 Tooltip**。
-		*/
-		function baseNameOf(path) {
-			const trimmed = path.replace(/[\\/]+$/, "");
-			if (trimmed === "") return path;
-			const cut = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
-			return cut < 0 ? trimmed : trimmed.slice(cut + 1);
-		}
-		/**
-		* ISO → `YYYY-MM-DD HH:mm`（`seconds: true` 时补 `:ss`）。
-		* 解析失败 ⇒ `fallback`（缺省返回**原串**，不编造时间；要占位符就显式传，如 `fallback: '—'`）。
-		*/
-		function formatDateTime(iso, opts) {
-			const ms = Date.parse(iso);
-			if (Number.isNaN(ms)) return opts?.fallback ?? iso;
-			const d = new Date(ms);
-			const base = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-			return opts?.seconds === true ? `${base}:${pad2(d.getSeconds())}` : base;
-		}
-		/**
-		* 四位年日期（用户 2026-10-03：卡片标题后的创建时间标签 `[2026-10-03 创建]`）：`YYYY-MM-DD`。
-		* 与 `formatShortStamp` 的差别就是**带年份**——创建时间要能跨年看，缺年份会认错。
-		*/
-		function formatYmd(iso) {
-			const ms = Date.parse(iso);
-			if (Number.isNaN(ms)) return "—";
-			const d = new Date(ms);
-			return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-		}
-		/** 计划执行列（用户 2026-10-02 改**四位年**：形如 `2026-09-30 15:10`）：`YYYY-MM-DD HH:mm`。 */
-		function formatPlanStamp(iso) {
-			const ms = Date.parse(iso);
-			if (Number.isNaN(ms)) return "-";
-			const d = new Date(ms);
-			return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-		}
-		/** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */
-		function formatClock(iso) {
-			if (iso === null) return "-";
-			const ms = Date.parse(iso);
-			if (Number.isNaN(ms)) return "-";
-			const d = new Date(ms);
-			return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-		}
-		/**
-		* 执行时长列（用户 2026-10-02 第四轮）：有小时 ⇒ `H:MM:SS`（如 `1:15:30`）；
-		* 不足 1 小时 ⇒ `MM:SS`（**分、秒一律两位补零**，如 `05:30` / `00:30`）。NaN / 负 ⇒ `-`。
-		*/
-		function formatDurationHms(ms) {
-			if (!Number.isFinite(ms) || ms < 0) return "-";
-			const totalSec = Math.round(ms / 1e3);
-			const h = Math.floor(totalSec / 3600);
-			const m = Math.floor(totalSec % 3600 / 60);
-			const s = totalSec % 60;
-			return h > 0 ? `${h}:${pad2(m)}:${pad2(s)}` : `${pad2(m)}:${pad2(s)}`;
-		}
-		/** token / 计数的大众格式（用户 2026-10-02：别写上千的数字）：≥1K 用 K、≥1M 用 M（1234→1.2K、12345→12.3K、123456→123K）。 */
-		function formatTokenCount(n) {
-			if (!Number.isFinite(n)) return "—";
-			const trim = (v) => Math.abs(v) >= 100 ? String(Math.round(v)) : v.toFixed(1).replace(/\.0$/, "");
-			if (Math.abs(n) >= 1e6) return `${trim(n / 1e6)}M`;
-			if (Math.abs(n) >= 1e3) return `${trim(n / 1e3)}K`;
-			return String(n);
-		}
-		/**
-		* token 明细：`输入 / 输出 / 缓存`（缺失档给 `—`）—— 挂在总量标签的 `title` 上，悬停看明细。
-		*
-		* ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里（改名 `formatTokenDetail`）：卡片「执行记录」面板与
-		* **执行记录总查询页**共用一份，避免同一串格式两处各写。
-		*/
-		function formatTokenDetail(row) {
-			const part = (v) => v === null ? "—" : formatTokenCount(v);
-			return `${part(row.token_in)} / ${part(row.token_out)} / ${part(row.token_in_cache)}`;
-		}
 		// src/client/locales.ts
 		/** 把宿主给的无参 t 包成带占位符替换的 t（官方模板一律 `{name}`）。 */
 		function interpolateTranslate(base) {
@@ -58832,7 +58749,7 @@ window.__ModuleLoader__.load({
 			recTokenHint: "token 消耗",
 			recordsDepTip: "前置任务 {n}：{task}",
 			recordsDepFrom: "执行于 {time}",
-			recTokenDetail: "输入 {input} / 输出 {output} / 缓存 {cache}",
+			recTokenDetail: "输入（含缓存）{input} / 输出 {output} / 其中缓存读取 {cache}",
 			editorAdvanced: "高级设置",
 			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
 			editorRetry: "重试次数",
@@ -59519,7 +59436,7 @@ window.__ModuleLoader__.load({
 			recTokenHint: "Token usage",
 			recordsDepTip: "Prerequisite {n}: {task}",
 			recordsDepFrom: "ran at {time}",
-			recTokenDetail: "input {input} / output {output} / cache {cache}",
+			recTokenDetail: "input (incl. cache) {input} / output {output} / of which cached read {cache}",
 			editorAdvanced: "Advanced settings",
 			editorAdvancedHelp: "This is the advanced configuration area. Read each item’s description before changing it; default values are recommended for routine tasks.",
 			editorRetry: "Retry attempts",
@@ -59758,6 +59675,95 @@ window.__ModuleLoader__.load({
 			vWeekdayRequired: "Weekly schedule with no weekday selected — pick at least one, or the task never runs.",
 			vAttachmentInvalid: "Attachment \"{name}\" has an invalid ref — it must be a workspace-relative path. Remove and re-pick it."
 		};
+		// src/client/format.ts
+		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
+		function pad2(value) {
+			return String(value).padStart(2, "0");
+		}
+		/**
+		* 路径取末段（产出物行 / 文件名显示用）。**单源**：`/` 与 `\` 都认（M5）。
+		* ⚠️ **必须先剔尾斜杠**（2026-10-06 审计 🔴）：本仓「目录」用尾斜杠表达（产出示例 `["a.md","b/"]`，
+		* 见 `query.ts` / `task-file-context.tsx` 的 displayName）；不剔的话 `baseNameOf('b/')` 返回**空串**
+		* ⇒ 目录产出物在卡片/记录页渲染成**空标签、空 Tooltip**。
+		*/
+		function baseNameOf(path) {
+			const trimmed = path.replace(/[\\/]+$/, "");
+			if (trimmed === "") return path;
+			const cut = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+			return cut < 0 ? trimmed : trimmed.slice(cut + 1);
+		}
+		/**
+		* ISO → `YYYY-MM-DD HH:mm`（`seconds: true` 时补 `:ss`）。
+		* 解析失败 ⇒ `fallback`（缺省返回**原串**，不编造时间；要占位符就显式传，如 `fallback: '—'`）。
+		*/
+		function formatDateTime(iso, opts) {
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return opts?.fallback ?? iso;
+			const d = new Date(ms);
+			const base = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+			return opts?.seconds === true ? `${base}:${pad2(d.getSeconds())}` : base;
+		}
+		/**
+		* 四位年日期（用户 2026-10-03：卡片标题后的创建时间标签 `[2026-10-03 创建]`）：`YYYY-MM-DD`。
+		* 与 `formatShortStamp` 的差别就是**带年份**——创建时间要能跨年看，缺年份会认错。
+		*/
+		function formatYmd(iso) {
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return "—";
+			const d = new Date(ms);
+			return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+		}
+		/** 计划执行列（用户 2026-10-02 改**四位年**：形如 `2026-09-30 15:10`）：`YYYY-MM-DD HH:mm`。 */
+		function formatPlanStamp(iso) {
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return "-";
+			const d = new Date(ms);
+			return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+		}
+		/** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */
+		function formatClock(iso) {
+			if (iso === null) return "-";
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return "-";
+			const d = new Date(ms);
+			return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+		}
+		/**
+		* 执行时长列（用户 2026-10-02 第四轮）：有小时 ⇒ `H:MM:SS`（如 `1:15:30`）；
+		* 不足 1 小时 ⇒ `MM:SS`（**分、秒一律两位补零**，如 `05:30` / `00:30`）。NaN / 负 ⇒ `-`。
+		*/
+		function formatDurationHms(ms) {
+			if (!Number.isFinite(ms) || ms < 0) return "-";
+			const totalSec = Math.round(ms / 1e3);
+			const h = Math.floor(totalSec / 3600);
+			const m = Math.floor(totalSec % 3600 / 60);
+			const s = totalSec % 60;
+			return h > 0 ? `${h}:${pad2(m)}:${pad2(s)}` : `${pad2(m)}:${pad2(s)}`;
+		}
+		/** token / 计数的大众格式（用户 2026-10-02：别写上千的数字）：≥1K 用 K、≥1M 用 M（1234→1.2K、12345→12.3K、123456→123K）。 */
+		function formatTokenCount(n) {
+			if (!Number.isFinite(n)) return "—";
+			const trim = (v) => Math.abs(v) >= 100 ? String(Math.round(v)) : v.toFixed(1).replace(/\.0$/, "");
+			if (Math.abs(n) >= 1e6) return `${trim(n / 1e6)}M`;
+			if (Math.abs(n) >= 1e3) return `${trim(n / 1e3)}K`;
+			return String(n);
+		}
+		/**
+		* token 明细：带说明的「输入 / 输出 / 缓存」三段（缺失档给 `—`）—— 挂在总量标签的 Tooltip 上。
+		*
+		* ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里（改名 `formatTokenDetail`）：卡片「执行记录」面板与
+		* **执行记录总查询页**共用一份，避免同一串格式两处各写。
+		* ⚠️ 2026-11-09：三段必须各带说明（三个裸数值没人看得懂）⇒ 复用 locales 的 `recTokenDetail` 文案，
+		* 与执行记录总查询页同一份，中英文都跟着宿主语言走。
+		*/
+		function formatTokenDetail(row, t) {
+			const part = (v) => v === null ? "—" : formatTokenCount(v);
+			return interpolateTranslate(t)("recTokenDetail", {
+				input: part(row.token_in),
+				output: part(row.token_out),
+				cache: part(row.token_in_cache)
+			});
+		}
 		// src/client/process-files.tsx
 		/** 目录以尾斜杠表达（与 `normalizeOutputs` / `baseNameOf` 同一约定）。 */
 		const isDirPath$1 = (path) => path.endsWith("/");
@@ -77947,7 +77953,7 @@ window.__ModuleLoader__.load({
 			}), dur === null ? tokens === null ? null : InfoField({
 				label: t("colTokens"),
 				children: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-					label: formatTokenDetail(instance),
+					label: formatTokenDetail(instance, t),
 					side: "top"
 				}, (0, react$1.createElement)("span", null, tokens))
 			}) : tokens === null ? InfoField({
@@ -77959,7 +77965,7 @@ window.__ModuleLoader__.load({
 					color: "var(--dshpc-fg-3)",
 					margin: "0 6px"
 				} }, "·"), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-					label: formatTokenDetail(instance),
+					label: formatTokenDetail(instance, t),
 					side: "top"
 				}, (0, react$1.createElement)("span", null, `${t("colTokens")} ${tokens}`)))
 			}), note === "" ? null : InfoField({
@@ -82473,7 +82479,7 @@ window.__ModuleLoader__.load({
 							}, (0, react$1.createElement)("span", null, formatClock(instance.dispatched_at))),
 							duration: formatDurationHms(durMs),
 							tokens: instance.token_in === null && instance.token_out === null ? (0, react$1.createElement)("span", { style: { color: "var(--dshpc-fg-3)" } }, "-") : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-								label: formatTokenDetail(instance),
+								label: formatTokenDetail(instance, t),
 								side: "top"
 							}, (0, react$1.createElement)("span", null, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
 							note: instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
@@ -83038,6 +83044,18 @@ window.__ModuleLoader__.load({
 			fontWeight: 600,
 			color: "var(--dshpc-fg)"
 		};
+		/** 标题后的版本 + 构建编码：与 dsh-task-ledger 同款 10px 弱化小字，一眼确认宿主跑的是不是刚 build 的。 */
+		const buildTagStyle = {
+			marginLeft: "var(--dshpc-space-2)",
+			fontSize: "10px",
+			lineHeight: "1",
+			fontWeight: 400,
+			color: "var(--dshpc-fg-dim)",
+			fontVariantNumeric: "tabular-nums",
+			whiteSpace: "nowrap"
+		};
+		/** 主页面与占位态共用同一抬头标题，保证两处版本标记一致。 */
+		const renderPanelTitle = (t) => (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"), (0, react$1.createElement)("span", { style: buildTagStyle }, `v0.1.15 261109-130628-741`));
 		const preStyle = {
 			fontFamily: monoFont,
 			fontSize: "var(--dshpc-font-sm)",
@@ -83848,7 +83866,7 @@ window.__ModuleLoader__.load({
 				variant: "outline",
 				size: "md",
 				onClick: onBack
-			}, `← ${t("backToConversation")}`), (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react$1.createElement)("div", { style: headerRightStyle }, (0, react$1.createElement)(Segmented, {
+			}, `← ${t("backToConversation")}`), renderPanelTitle(t)), (0, react$1.createElement)("div", { style: headerRightStyle }, (0, react$1.createElement)(Segmented, {
 				value: tab,
 				size: "md",
 				bordered: false,
@@ -84268,7 +84286,7 @@ window.__ModuleLoader__.load({
 				variant: "outline",
 				size: "sm",
 				onClick: onBack
-			}, `← ${t("backToConversation")}`), (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react$1.createElement)("p", { style: hintStyle }, t("unavailable")));
+			}, `← ${t("backToConversation")}`), renderPanelTitle(t)), (0, react$1.createElement)("p", { style: hintStyle }, t("unavailable")));
 			return (0, react$1.createElement)(TaskPage, {
 				t,
 				scope,

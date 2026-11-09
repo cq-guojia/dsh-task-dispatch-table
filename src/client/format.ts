@@ -5,7 +5,7 @@
 // 有无秒、解析失败回退 `'—'` 还是原串）。收敛到这一处，改口径只改这里。
 //
 // ⚠️ 全部走**本机时区**（与原三处一致）；解析失败不抛错、按调用方给的兜底返回。
-import type { LocaleKey } from './locales'
+import { interpolateTranslate, type Translate } from './locales'
 
 /** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
 export function pad2(value: number | string): string {
@@ -109,14 +109,20 @@ export function formatTokenCount(n: number): string {
 }
 
 /**
- * token 明细：`输入 / 输出 / 缓存`（缺失档给 `—`）—— 挂在总量标签的 `title` 上，悬停看明细。
+ * token 明细：带说明的「输入 / 输出 / 缓存」三段（缺失档给 `—`）—— 挂在总量标签的 Tooltip 上。
  *
  * ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里（改名 `formatTokenDetail`）：卡片「执行记录」面板与
  * **执行记录总查询页**共用一份，避免同一串格式两处各写。
+ * ⚠️ 2026-11-09：三段必须各带说明（三个裸数值没人看得懂）⇒ 复用 locales 的 `recTokenDetail` 文案，
+ * 与执行记录总查询页同一份，中英文都跟着宿主语言走。
  */
-export function formatTokenDetail(row: { token_in: number | null; token_out: number | null; token_in_cache: number | null }): string {
+export function formatTokenDetail(row: { token_in: number | null; token_out: number | null; token_in_cache: number | null }, t: Translate): string {
   const part = (v: number | null): string => (v === null ? '—' : formatTokenCount(v))
-  return `${part(row.token_in)} / ${part(row.token_out)} / ${part(row.token_in_cache)}`
+  return interpolateTranslate(t)('recTokenDetail', {
+    input: part(row.token_in),
+    output: part(row.token_out),
+    cache: part(row.token_in_cache),
+  })
 }
 
 

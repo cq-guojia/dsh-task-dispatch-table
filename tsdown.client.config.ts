@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { isBuiltin } from 'node:module'
 import { defineConfig } from 'tsdown'
 
@@ -30,6 +31,17 @@ const PLATFORM_MODULES = new Set([
 
 const PACKAGE_NAME = 'dsh-task-dispatch-table'
 
+/** 版本号 + 构建编码：构建期烤进 bundle（与 dsh-task-ledger 同口径），判「宿主里跑的是不是刚 build 的」不用猜。
+ *  编码用编译时刻的本地时间戳（非随机数）：年月日-时分秒-毫秒。 */
+const PLUGIN_VERSION = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+).version as string
+const BUILD_STAMP = (() => {
+  const d = new Date()
+  const p = (n: number, w = 2) => String(n).padStart(w, '0')
+  return `${p(d.getFullYear() % 100)}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${p(d.getMilliseconds(), 3)}`
+})()
+
 const isExternal = (specifier: string): boolean => PLATFORM_MODULES.has(specifier)
 
 export default defineConfig({
@@ -46,7 +58,11 @@ export default defineConfig({
   // 浏览器里没有 Node 的 process。核心 UI（DateTimePicker / Picker）经 @floating-ui
   // 带来 `process.env.NODE_ENV` 的模块级判断，不替换会在 import 阶段直接抛
   // 「process is not defined」，整个 client entry 激活失败。
-  define: { 'process.env.NODE_ENV': '"production"' },
+  define: {
+    'process.env.NODE_ENV': '"production"',
+    __PLUGIN_VERSION__: JSON.stringify(PLUGIN_VERSION),
+    __BUILD_STAMP__: JSON.stringify(BUILD_STAMP),
+  },
   deps: {
     // 模块表请求保留为 require；其余全部内联 —— 模块表回答不了的
     // require() 在运行时必然抛。

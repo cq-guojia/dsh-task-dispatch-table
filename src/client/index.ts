@@ -305,11 +305,33 @@ const headerRightStyle: Record<string, string | number> = {
 	alignItems: "center",
 	gap: "8px",
 };
+// 构建期由 tsdown.client.config.ts 的 define 注入（版本读 package.json，编码是编译时刻时间戳）。
+declare const __PLUGIN_VERSION__: string;
+declare const __BUILD_STAMP__: string;
+
 const panelTitleStyle: Record<string, string | number> = {
 	fontSize: "var(--dshpc-font-xl)",
 	fontWeight: 600,
 	color: "var(--dshpc-fg)",
 };
+/** 标题后的版本 + 构建编码：与 dsh-task-ledger 同款 10px 弱化小字，一眼确认宿主跑的是不是刚 build 的。 */
+const buildTagStyle: Record<string, string | number> = {
+	marginLeft: "var(--dshpc-space-2)",
+	fontSize: "10px",
+	lineHeight: "1",
+	fontWeight: 400,
+	color: "var(--dshpc-fg-dim)",
+	fontVariantNumeric: "tabular-nums",
+	whiteSpace: "nowrap",
+};
+/** 主页面与占位态共用同一抬头标题，保证两处版本标记一致。 */
+const renderPanelTitle = (t: Translate) =>
+	h(
+		"div",
+		{ style: panelTitleStyle },
+		t("panelTitle"),
+		h("span", { style: buildTagStyle }, `v${__PLUGIN_VERSION__} ${__BUILD_STAMP__}`),
+	);
 const sectionTitleStyle: Record<string, string | number> = {
 	margin: "12px 0 4px",
 	fontSize: "var(--dshpc-font-md)",
@@ -1572,7 +1594,7 @@ function TaskPage(props: {
 								},
 								`← ${t("backToConversation")}`,
 							),
-							h("div", { style: panelTitleStyle }, t("panelTitle")),
+							renderPanelTitle(t),
 						),
 						h(
 							"div",
@@ -2457,7 +2479,7 @@ function TaskPageHost(props: {
 					},
 					`← ${t("backToConversation")}`,
 				),
-				h("div", { style: panelTitleStyle }, t("panelTitle")),
+				renderPanelTitle(t),
 			),
 			h("p", { style: hintStyle }, t("unavailable")),
 		);

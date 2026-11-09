@@ -1966,6 +1966,32 @@ try {
 				"utf8",
 			).includes("'process.env.NODE_ENV'"),
 	);
+	// 抬头的「v版本 + 编译戳」由 define 烤进产物（YYMMDD-HHMMSS-mmm），判宿主跑的是不是刚 build 的。
+	const tdtPkgVersion = JSON.parse(
+		readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8"),
+	).version;
+	const tdtBuildTag = clientJs.match(
+		/v([0-9]+\.[0-9]+\.[0-9]+) ([0-9]{6}-[0-9]{6}-[0-9]{3})/,
+	);
+	check(
+		"抬头含构建期版本号 + 编译戳（YYMMDD-HHMMSS-mmm）",
+		tdtBuildTag !== null &&
+			tdtBuildTag[1] === tdtPkgVersion &&
+			readFileSync(
+				join(import.meta.dirname, "..", "tsdown.client.config.ts"),
+				"utf8",
+			).includes("__BUILD_STAMP__"),
+	);
+	// token 悬停三段必须各带说明（用户 2026-11-09：三个裸数值没人看得懂）⇒ 复用 recTokenDetail 文案。
+	const tdtFormatSrc = readFileSync(
+		join(import.meta.dirname, "..", "src", "client", "format.ts"),
+		"utf8",
+	);
+	check(
+		"token 悬停三段各带说明（复用 recTokenDetail，不再是三个裸数值）",
+		tdtFormatSrc.includes("interpolateTranslate(t)('recTokenDetail'") &&
+			clientJs.includes("recTokenDetail"),
+	);
 	check(
 		"SessionViewModal 组件已打进 bundle",
 		clientJs.includes("SessionViewModal"),
@@ -3468,7 +3494,7 @@ try {
 				!/\.dsh-tdt-rec-dep\{[^}]*gap:2px/.test(tlSrc),
 		);
 		check(
-			"第六轮：Token 悬停写详细 —— 总数 + **带标签**的三段明细（输入 / 输出 / 缓存）",
+			"第六轮：Token 悬停写详细 —— 总数 + **带标签**的三段明细（输入含缓存 / 输出 / 其中缓存读取）",
 			/tt\('recTokenDetail', \{/.test(tlSrc) &&
 				/input: tokenPart\(row\.token_in\), output: tokenPart\(row\.token_out\), cache: tokenPart\(row\.token_in_cache\)/.test(
 					tlSrc,
@@ -3476,7 +3502,7 @@ try {
 				locSrc.includes("recordsDepTip: '前置任务 {n}：{task}'") &&
 				locSrc.includes("recordsDepFrom: '执行于 {time}'") &&
 				locSrc.includes(
-					"recTokenDetail: '输入 {input} / 输出 {output} / 缓存 {cache}'",
+					"recTokenDetail: '输入（含缓存）{input} / 输出 {output} / 其中缓存读取 {cache}'",
 				),
 		);
 		check(
