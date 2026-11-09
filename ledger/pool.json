@@ -1,7 +1,8 @@
 {
   "tasks": {
     "20261010-0000-回执产出拆双桶-主文件-其他产出-270e": {"category": "建设", "created": "2026-10-10 00:00:00", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": null, "owner_name": null, "started": "2026-10-10 00:00:00", "status": "open", "tags": ["主文件", "回执", "产出", "任务"], "title": "回执产出拆双桶（主文件 / 其他产出）", "updated": "2026-10-26 08:55:46", "worklog": "worklog/202610/10-0000-回执产出拆双桶-主文件-其他产出-270e.md"},
-    "20261013-0934-全局任务通知-浮窗提示-未读通知页-已读机制-b835": {"category": "运维", "created": "2026-10-13 09:34:51", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": null, "owner_name": null, "started": null, "status": "open", "tags": ["浮窗提示", "任务", "浮窗", "通知", "提示"], "title": "全局任务通知（浮窗提示 + 未读通知页 + 已读机制）", "updated": "2026-10-13 09:34:51", "worklog": "worklog/202610/13-0934-全局任务通知-浮窗提示-未读通知页-已读机制-b835.md"}
+    "20261013-0934-全局任务通知-浮窗提示-未读通知页-已读机制-b835": {"category": "运维", "created": "2026-10-13 09:34:51", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": null, "owner_name": null, "started": null, "status": "open", "tags": ["浮窗提示", "任务", "浮窗", "通知", "提示"], "title": "全局任务通知（浮窗提示 + 未读通知页 + 已读机制）", "updated": "2026-10-13 09:34:51", "worklog": "worklog/202610/13-0934-全局任务通知-浮窗提示-未读通知页-已读机制-b835.md"},
+    "20261109-0752-1ae7-修复卡片-padding-点不中": {"category": "缺陷修复", "created": "2026-11-09 07:52:10", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": null, "owner_name": null, "started": null, "status": "open", "tags": ["点击区域", "卡片组件", "核心依赖"], "title": "修复卡片 padding 点不中", "updated": "2026-11-09 07:52:10", "worklog": "worklog/202611/09-0752-1ae7-修复卡片-padding-点不中.md"}
   },
   "version": "20261022000000"
 }
