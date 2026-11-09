@@ -360,18 +360,14 @@
 }
 ```
 
-## 二、回执（决策 19：直写插件状态库，无契约文件）
+## 二、回执（决策 19 + 24：插件注册工具直写状态库，无契约文件）
 
-agent 干完活后执行**调度器拼好、随派发消息下发**的命令，把回执直写插件状态库（`state.db` 的 `task_events` 表）：
+真源见 [数据模型](../data/model.md) §一「回执机制 / 产出双桶」，此处只留摘要，不复制正文。
 
-```bash
-node <插件dist>/submit.js --db <state.db> \
-  --task image-upgrade-daily --date 2026-09-23 --session <sessionId> \
-  --status ok --outputs "artifacts/image-upgrade-daily/2026-09-23.md"
-```
-
-调度器对账**只查库不读文件**，三查：**派发之后有 receipt 事件 + `status` ∈ validStatuses + outputs 逐一存在且 mtime 晚于本次派发**（防旧产物冒充）。
-跑完没交回执 → 宽限期后插件对原会话追问（重发命令，≤2 次）→ 仍无按失败处理。
+- 派发时插件给该会话注册专属工具 `task_dispatch_table_receipt`；agent 在本轮回复结束前调一次，`execute` 在**插件进程内**写 `task_events`（`kind='receipt'`）。`submit.js` 只是手动 / 排查备用通道。
+- 参数 `{ status, outputs?, processOutputs?, note? }`：`outputs` 是主文件、`processOutputs` 是其他产出；路径相对工作区根，目录以 `/` 结尾，各最多 10 项。专为本任务新建的目录整目录报，不拆文件。
+- 对账**只查库不读文件**：派发之后有 receipt 事件 + `status ∈ validStatuses` + 两桶路径在工作区内且确实存在（⚠️ mtime 新鲜度闸已于 2026-10-03 按用户拍板删除）。
+- 跑完没交回执 → 宽限期后插件对原会话追问（≤2 次）→ 仍无按失败处理。
 
 ## 三、任务手册 `manuals/image-upgrade-daily.md`
 

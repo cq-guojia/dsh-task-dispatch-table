@@ -22,6 +22,12 @@ export interface ReceiptToolDeps {
     logger: HostLogger;
     /** 闭包注入的 turnBoundary 投影读取面：取 `deliverables/presented` 事件所需的 turn。 */
     sessionProjections?: unknown;
+    /**
+     * 派发时冻结的目标工作区绝对路径：`deliverables/presented` 的 `files[].path` 基准。
+     * 与 `reconcile.ts:checkReceipt` 的存在性校验基准、`dispatch.ts` 下游注入基准三者同值；
+     * 库里仍存相对路径，只在写交付事件这一边界绝对化。
+     */
+    workspacePath: string;
 }
 /**
  * 把回执工具注册进该 agent 的作用域（**只在 setup 里调**——发布前生效，见文件头）。

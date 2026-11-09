@@ -6,6 +6,7 @@ import type {
 } from './host.js'
 import { CONFIG_DEFAULTS, Config, ENTRY_MODES, readConfigField, resolveStatePath } from './config.js'
 import { isSafeAttachmentRef } from './attachment-allowlist.js'
+import { absWorkspacePath } from './workspace-path.js'
 import type { EntryMode, PluginConfig } from './config.js'
 import { releaseOfficialSchedule, syncOfficialSchedule } from './official-schedule.js'
 import type { TaskDefinition, TaskDefinitionInput } from './tasks.js'
@@ -444,7 +445,7 @@ function attachmentsWithPaths(
       const anchorSessionId = anchorOf(source) ?? anyAnchor
       const absPath = item.kind === 'upload'
         ? (assets === null ? null : attachmentAbsPath(assets, task.id, item.ref))
-        : (source === undefined ? null : path.join(source.path, item.ref))
+        : (source === undefined ? null : absWorkspacePath(source.path, item.ref))
       return anchorSessionId === undefined || absPath === null
         ? { name: item.name, kind: item.kind, isDir: item.isDir }
         : { name: item.name, kind: item.kind, path: absPath, anchorSessionId, isDir: item.isDir }
@@ -1235,7 +1236,7 @@ const makeDispatchRoutes = (
               : workspaces.find(workspace => workspace.title === source)?.path
                 ?? workspaces.find(workspace => workspace.id === source)?.path
                 ?? null
-            return { ref: item.ref, path: base === null ? null : path.join(base, item.ref) }
+            return { ref: item.ref, path: absWorkspacePath(base, item.ref) }
           }),
         }
       })

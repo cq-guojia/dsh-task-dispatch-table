@@ -263,9 +263,9 @@ export function lastRunFields(props: {
   const sid = instance.session_id
   const canOpenSession = sid !== null && onOpenSession !== undefined
   const canOpenFile = sid !== null && onOpenFile !== undefined
-  const outputs = outputsOf(instance.outputs)
+  const outputs = outputsOf(instance, 'outputs')
   // 过程文件桶（2026-10-10）：主文件清单**下面**另起一块，次级 + 默认收起（共用件见 process-files.tsx）。
-  const processOutputs = outputsOf(instance.process_outputs)
+  const processOutputs = outputsOf(instance, 'process_outputs')
   const dur = durationMsOf(instance)
   const tokens = instance.token_in === null && instance.token_out === null
     ? null

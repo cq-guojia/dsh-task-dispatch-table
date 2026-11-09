@@ -810,7 +810,7 @@ function TaskExpandPanel(props: {
               ] as TableColumn[],
               rows: records.flatMap((instance): TableRow[] => {
                 const open = openInstance === instance.id
-                const outputs = outputsOf(instance.outputs)
+                const outputs = outputsOf(instance, 'outputs')
                 const sid = instance.session_id
                 const openFile = onOpenFile
                 const openSession = onOpenSession

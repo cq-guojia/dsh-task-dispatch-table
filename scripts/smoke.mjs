@@ -24,6 +24,16 @@ import {
 } from "../dist/calendar-plan.js";
 import { attachmentFileBlocks, buildMessage } from "../dist/dispatch.js";
 import {
+	NUDGE_NOTICE,
+	outputRules,
+	UNATTENDED_RULE,
+} from "../dist/instructions.js";
+import {
+	absWorkspacePath,
+	isSafeWorkspaceRel,
+	workspacePathOf,
+} from "../dist/workspace-path.js";
+import {
 	RECEIPT_TOOL_NAME,
 	receiptInstruction,
 	registerReceiptTool,
@@ -1136,6 +1146,19 @@ try {
 			checkReceipt(probeDir, ["ok"], mk({ outputs: ["report.md"] })).ok ===
 				true,
 		);
+		// 安全闸（第二道，对账侧）：覆盖历史回执与绕过工具入口的情形。
+		check(
+			"对账安全闸：.. / 绝对路径一律判 output-unsafe（resolve 折叠前先拦）",
+			checkReceipt(probeDir, ["ok"], mk({ outputs: ["../outside.md"] })).reason ===
+				"output-unsafe" &&
+				checkReceipt(probeDir, ["ok"], mk({ outputs: ["/etc/passwd"] })).reason ===
+					"output-unsafe" &&
+				checkReceipt(
+					probeDir,
+					["ok"],
+					mk({ outputs: ["report.md"], processOutputs: ["../outside.md"] }),
+				).reason === "output-unsafe",
+		);
 
 		// 工具本体：真跑一次 execute（store / session 用最小替身，不碰状态库）
 		const events = [];
@@ -1168,8 +1191,9 @@ try {
 				validStatuses: ["ok"],
 				logger: { info: () => {}, warn: () => {}, error: () => {} },
 				sessionProjections: { stateOf: () => ({ lastTurn: 3 }) },
-			},
-		);
+				workspacePath: probeDir,
+				},
+				);
 		const definition = registered[0];
 		check(
 			"回执工具参数：新增 processOutputs 桶（两桶各 maxItems=10）",
@@ -1212,11 +1236,12 @@ try {
 				first.message.includes("其他产出 1 项"),
 		);
 		check(
-			"交付事件只写主文件：过程文件不进 deliverables/presented（不会变成官方交付卡）",
+			"交付事件只写主文件，且路径按工作区基准**绝对化**（修掉交付卡 ENOENT）",
 			appended.length === 1 &&
 				appended[0].type === "deliverables/presented" &&
 				appended[0].data.files.length === 1 &&
-				appended[0].data.files[0].path === "report.md",
+				appended[0].data.files[0].path === join(probeDir, "report.md") &&
+				detail.outputs[0] === "report.md", // 库列 / 回执事件仍存相对（零数据迁移）
 		);
 		// 超限：**截断**而非拒绝重报（无人值守链路里多一轮对话就是多烧一轮 token）
 		const many = await definition.execute(
@@ -1231,16 +1256,34 @@ try {
 			JSON.parse(events.at(-1).detail).outputs.length === 10 &&
 				many.message.includes("上限"),
 		);
+		// 安全闸（第一道，回执入口）：越界路径不写库、不进交付卡，且如实告知模型。
+		const unsafe = await definition.execute(
+			{ status: "ok", outputs: ["../outside.md", "/etc/passwd", "report.md"] },
+			exec,
+		);
+		const unsafeDetail = JSON.parse(events.at(-1).detail);
 		check(
-			"回执工具描述含两桶判断口径 + 10 项上限（提示词是唯一的分桶依据）",
-			definition.description.includes("主文件") &&
-				definition.description.includes("其他产出") &&
-				definition.description.includes("10 项"),
+			"回执入口安全闸：.. / 绝对路径被拒，合法项照收，并在返回文案如实告知",
+			unsafe.ok === true &&
+				JSON.stringify(unsafeDetail.outputs) === JSON.stringify(["report.md"]) &&
+				unsafe.message.includes("越界"),
+		);
+		// 2026-11-09：断言钉「引用了同一份常量」而非钉原话 —— 文案改写不会再打掉断言，
+		// 且任何一处擅自另写一份规则都会立刻红（P1 的结构性防回归）。
+		const RULES = outputRules(10, RECEIPT_TOOL_NAME);
+		check(
+			"回执两处指令面逐字同源：工具描述与末段权威段都引用同一份 outputRules",
+			definition.description.includes(RULES) &&
+				receiptInstruction(["ok"]).includes(RULES) &&
+				definition.description.includes("主文件") &&
+				receiptInstruction(["ok"]).includes("processOutputs"),
 		);
 		check(
-			"派发消息的回执段含双桶指令（outputs=主文件 / processOutputs=其他产出）",
-			receiptInstruction(["ok"]).includes("processOutputs") &&
-				receiptInstruction(["ok"]).includes("主文件"),
+			"产出规则含①→②→③判定顺序 + 正反例 + 目录算 1 项（不再只有一句压缩句）",
+			["①", "②", "③", "正例", "反例", "一个目录只算 1 项", "专为本任务新建", "共用目录", "含纳关系合法"]
+				.every((s) => RULES.includes(s)) &&
+				RULES.includes("processOutputs") &&
+				RULES.includes("一并带上"),
 		);
 		// 下游只拿主文件：resolvedOf 读的就是 outputs 列（主桶），过程文件在 process_outputs 列、不进消息。
 		// ⚠️ 判据要**去掉注释**再比：scheduler 的注释里提到了 process_outputs 这个列名（解释为什么不用改）。
@@ -1256,6 +1299,100 @@ try {
 				!schedCode.includes("process_outputs"),
 		);
 		rmSync(probeDir, { recursive: true, force: true });
+	}
+
+	// ── 5b-3b. 指令真源 + 工作区路径唯一实现（2026-11-09 收口） ──
+	// 断言钉「引用了同一份常量」，不钉文案原话：以后改文案不会打掉断言，
+	// 但任何人再另写一份规则 / 另写一份 resolve 都会立刻红。
+	{
+		const dispatchJs = readFileSync(
+			join(process.cwd(), "dist", "dispatch.js"),
+			"utf8",
+		);
+		const reconcileJs = readFileSync(
+			join(process.cwd(), "dist", "reconcile.js"),
+			"utf8",
+		);
+		const receiptJs = readFileSync(
+			join(process.cwd(), "dist", "receipt.js"),
+			"utf8",
+		);
+		const instJs = readFileSync(
+			join(process.cwd(), "dist", "instructions.js"),
+			"utf8",
+		);
+		const wsJs = readFileSync(
+			join(process.cwd(), "dist", "workspace-path.js"),
+			"utf8",
+		);
+		check(
+			"无人值守约束三个指令面同源：派发段 / goal objective / 追问轮都引 UNATTENDED_RULE",
+			stripComments(dispatchJs).match(/UNATTENDED_RULE/g)?.length >= 2 &&
+				stripComments(reconcileJs).includes("UNATTENDED_RULE") &&
+				stripComments(reconcileJs).includes("NUDGE_NOTICE") &&
+				instJs.includes("不得向用户提问") &&
+				NUDGE_NOTICE.includes("不是用户回复"),
+		);
+		check(
+			"指令真源只有一个文件：产出规则与无人值守约束都不在 receipt.js / dispatch.js 里另写一份",
+			!stripComments(receiptJs).includes("产出分两桶报") &&
+				!stripComments(dispatchJs).includes("不得向用户提问") &&
+				stripComments(receiptJs).includes("outputRules") &&
+				instJs.includes("① 先找"),
+		);
+		check(
+			"工作区路径唯一实现：安全判据 / 绝对化 / 快照取基准都在 workspace-path.js",
+			["isSafeWorkspaceRel", "absWorkspacePath", "workspacePathOf"].every(
+				(s) => wsJs.includes(s),
+			) &&
+				!readFileSync(
+					join(process.cwd(), "src", "client", "task-file-context.tsx"),
+					"utf8",
+				).includes("function upstreamAbsPath") &&
+				!readFileSync(
+					join(process.cwd(), "src", "client", "index.ts"),
+					"utf8",
+				).includes("function parseOutputs"),
+		);
+		check(
+			"absWorkspacePath：相对拼基准 / 已绝对幂等 / 无基准返回 null / .. 被拒",
+			absWorkspacePath("/ws/a", "out/report.md") === "/ws/a/out/report.md" &&
+				absWorkspacePath("/ws/a", "/abs/report.md") === "/abs/report.md" &&
+				absWorkspacePath("/ws/a/", "report.md") === "/ws/a/report.md" &&
+				absWorkspacePath(null, "report.md") === null &&
+				absWorkspacePath("", "report.md") === null &&
+				absWorkspacePath("/ws/a", "../escape.md") === null &&
+				absWorkspacePath("/ws/a", "a\\b.md") === null,
+		);
+		check(
+			"isSafeWorkspaceRel / workspacePathOf：目录项合法、越界与非法快照如实降级",
+			isSafeWorkspaceRel("logs/") === true &&
+				isSafeWorkspaceRel("a/b.md") === true &&
+				isSafeWorkspaceRel("") === false &&
+				isSafeWorkspaceRel("../x") === false &&
+				isSafeWorkspaceRel("/etc/passwd") === false &&
+				isSafeWorkspaceRel("a\\b") === false &&
+				workspacePathOf(JSON.stringify({ workspacePath: "/ws/a" })) === "/ws/a" &&
+				workspacePathOf("not json") === null &&
+				workspacePathOf(null) === null,
+		);
+		// 派发消息真的带上了无人值守约束 + 同源产出规则（不是只在源码里 import 了常量）。
+		const msgNow = buildMessage(
+			{
+				title: "T",
+				prompt: "p",
+				manual: null,
+				validStatuses: ["ok"],
+			},
+			"/ws/a",
+			"2026-11-09",
+		);
+		const msgNowText = msgNow.content[0].text;
+		check(
+			"派发消息实际含无人值守约束 + 同一份产出规则（运行时验证，不只查源码）",
+			msgNowText.includes(UNATTENDED_RULE) &&
+				msgNowText.includes(outputRules(10, RECEIPT_TOOL_NAME)),
+		);
 	}
 
 	// ── 5b-4. 裁决时机（2026-10-03 用户拍板：等会话**真正空闲**，不是 turn/end） ──
@@ -1284,11 +1421,15 @@ try {
 			join(process.cwd(), "dist", "receipt.js"),
 			"utf8",
 		);
+		const instructionsJs = readFileSync(
+			join(process.cwd(), "dist", "instructions.js"),
+			"utf8",
+		);
 		check(
-			"回执提示词：**以最后一次提交为准** + 再次提交须带上先前的产出（工具描述与末段指令各一处）",
-			receiptJs.includes("以最后一次提交为准") &&
-				receiptJs.includes("一并带上") &&
-				(receiptJs.match(/以最后一次提交为准/g) ?? []).length >= 2,
+			"回执提示词：**以最后一次提交为准** + 回带先前产出（两个指令面各引用一次同一份规则）",
+			instructionsJs.includes("以最后一次提交为准") &&
+				instructionsJs.includes("一并带上") &&
+				(receiptJs.match(/outputRules\(/g) ?? []).length >= 2,
 		);
 	}
 	// 决策 41：派发快照随行固化——Loop B 发动 / 裁决只读快照，与任务设置解耦
@@ -2773,14 +2914,36 @@ try {
 	);
 	check(
 		"回执提示词含粒度判断规则（专为本任务新建的目录→整目录报；散落共用目录→逐个报文件）",
-		readFileSync(
-			join(import.meta.dirname, "..", "dist", "receipt.js"),
-			"utf8",
-		).includes("专为本任务新建") &&
+		outputRules(10, RECEIPT_TOOL_NAME).includes("专为本任务新建") &&
+			outputRules(10, RECEIPT_TOOL_NAME).includes("共用目录") &&
+			// 同一份常量必须同时进工具描述与末段权威段（否则又出现强弱差）
 			readFileSync(
 				join(import.meta.dirname, "..", "dist", "receipt.js"),
 				"utf8",
-			).includes("共用目录"),
+			).match(/outputRules\(/g)?.length >= 2,
+	);
+	// 2026-11-09 客户端路径收口：产出解析只有一份，交付卡与补差卡共用同一去重键。
+	check(
+		"客户端产出解析单一真源：parseOutputs / upstreamAbsPath 已删，四处都走 outputsOf",
+		// ⚠️ 去注释再断言：新写的注释里会提到这两个**已删除**的旧符号名，
+		// 不清掉就会把「只剩注释」误判成「还剩实现」。
+		stripComments(clientJs).includes("outputsOf") &&
+			!stripComments(clientJs).includes("parseOutputs") &&
+			!stripComments(clientJs).includes("upstreamAbsPath") &&
+			clientJs.includes("absWorkspacePath") &&
+			["index.ts", "records-timeline.tsx", "task-list.tsx", "task-info.tsx"]
+				.every((f) =>
+					readFileSync(join(process.cwd(), "src", "client", f), "utf8").includes(
+						"outputsOf",
+					),
+				),
+	);
+	check(
+		"交付卡去重键 = 快照路径与补差卡共用 canonicalPath（一绝对一相对不再重复出卡）",
+		readFileSync(join(process.cwd(), "src", "client", "session-view.ts"), "utf8")
+			.includes("canonicalPath") &&
+			readFileSync(join(process.cwd(), "src", "client", "session-view.ts"), "utf8")
+				.match(/canonicalPath\(/g)?.length >= 3,
 	);
 	// 过程文件桶（2026-10-10）：三处共用一个展示件，主文件照旧醒目、过程文件次级且默认收起。
 	{
@@ -2817,9 +2980,9 @@ try {
 		check(
 			"过程文件桶走同一解析器（process_outputs 复用 outputsOf，不另写一份）",
 			srcOf("records-timeline.tsx").includes(
-				"outputsOf(row.process_outputs)",
+				"outputsOf(row, 'process_outputs')",
 			) &&
-				srcOf("task-info.tsx").includes("outputsOf(instance.process_outputs)"),
+				srcOf("task-info.tsx").includes("outputsOf(instance, 'process_outputs')"),
 		);
 		// 2026-11-06：会话弹窗改核心（bodyFooter 槽位），过程文件桶挂在会话最底端（交付卡网格之后）。
 		check(
@@ -3112,7 +3275,7 @@ try {
 				tlSrc.includes("t('colDuration')") &&
 				tlSrc.includes("t('viewSession')") &&
 				tlSrc.includes("dsh-tdt-rec-note") &&
-				/outputsOf\(row\.outputs\)/.test(tlSrc) &&
+				/outputsOf\(row, ['"]outputs['"]\)/.test(tlSrc) &&
 				tlSrc.includes("FileTypeIcon"),
 		);
 		check(
@@ -6442,7 +6605,7 @@ console.log("\n[14] runtime-index");
 			sv.includes("attachmentsWithPaths") &&
 				sv.includes("anchorSessionId") &&
 				sv.includes("attachmentAbsPath(assets, task.id, item.ref)") &&
-				sv.includes("path.join(source.path, item.ref)") &&
+				sv.includes("absWorkspacePath(source.path, item.ref)") &&
 				sv.includes("anyAnchor"),
 		);
 		check(

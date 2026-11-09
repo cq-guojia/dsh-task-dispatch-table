@@ -33,6 +33,7 @@ import { ProcessFiles } from './process-files'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03）。
 import { TaskFileContextPanel, type AttachedFileView, type UpstreamInputView } from './task-file-context'
+import { absWorkspacePath } from '../workspace-path.js'
 
 export type { SessionsFace, SessionViewTarget, UiConversationFace }
 
@@ -59,10 +60,21 @@ function normalizePath(p: string): string {
 }
 
 /**
+ * 去重键：两侧都按**本实例工作区基准**归一成绝对路径再比。
+ * 2026-11-09 收口：交付事件（`deliverables/presented`）此前存相对路径、新写的改绝对，
+ * 而补差卡的 outputs 走 `query.ts:outputsOf` 也是绝对 ⇒ 若各按各的字符串比，历史快照与新
+ * 输出会重复出卡。同一函数两侧共用：绝对值幂等、历史相对值按快照基准补前缀、无基准如实降级。
+ */
+function canonicalPath(p: string, workspacePath: string | null): string {
+  const rel = normalizePath(p)
+  return absWorkspacePath(workspacePath, rel) ?? rel
+}
+
+/**
  * 快照里已经画过的交付文件路径集合（会话 turn 级 `deliverables.presented`）。
  * ⚠️ 官方 `turn.data` 是 **Map**（不是普通对象）——对象式访问必为 undefined；两种形态都兼容。
  */
-function presentedPathsOf(turns: unknown): ReadonlySet<string> {
+function presentedPathsOf(turns: unknown, workspacePath: string | null): ReadonlySet<string> {
   const out = new Set<string>()
   if (turns === null || turns === undefined) return out
   const map = turns as ReadonlyMap<unknown, unknown>
@@ -76,7 +88,7 @@ function presentedPathsOf(turns: unknown): ReadonlySet<string> {
     if (!Array.isArray(presented)) return
     for (const file of presented) {
       const path = (file as { path?: unknown } | null)?.path
-      if (typeof path === 'string' && path.trim() !== '') out.add(normalizePath(path))
+      if (typeof path === 'string' && path.trim() !== '') out.add(canonicalPath(path, workspacePath))
     }
   })
   return out
@@ -137,18 +149,22 @@ export function SessionViewModal(props: {
   const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
   const getSnapshot = useMemo(() => (): ChatViewFace | undefined => view.target.getSnapshot(), [view])
   const chat = useSyncExternalStore(subscribe, getSnapshot)
-  const snapshotPaths = useMemo(() => presentedPathsOf(chat?.timeline?.turns), [chat])
+  const base = workspacePath ?? null
+  const snapshotPaths = useMemo(
+    () => presentedPathsOf(chat?.timeline?.turns, base),
+    [chat, base],
+  )
   const extraOutputs = useMemo<readonly DeliveredFileFace[]>(() => {
     const seen = new Set<string>()
     const out: DeliveredFileFace[] = []
     for (const path of (outputs ?? [])) {
-      const key = normalizePath(path)
+      const key = canonicalPath(path, base)
       if (key === '' || snapshotPaths.has(key) || seen.has(key)) continue
       seen.add(key)
       out.push({ path })
     }
     return out
-  }, [outputs, snapshotPaths])
+  }, [outputs, snapshotPaths, base])
 
   // 标题行：任务名可点（r12 用户：全站任务名都连查看档）——拆开渲染 ⇒ 只有任务名那一段是按钮
   //（hover 变蓝），时刻仍是纯文本；降级（拿不到任务 / 回调未就位）= 整串纯文本。

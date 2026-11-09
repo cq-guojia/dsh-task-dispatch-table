@@ -7,6 +7,7 @@
 // 真实取数纪律（仓库硬规则）：本模块只做传输与形状校验，不造任何兜底假值——
 // 接口失败就让调用方显示错误态，返回什么渲染什么。
 import { fetchWithTimeout } from './http'
+import { absWorkspacePath, workspacePathOf } from '../workspace-path.js'
 
 /**
  * 本插件 webServer 路由的 API 前缀（**全仓唯一**：本文件 / 宿主页 / 事件流 / 设置页都从这里引，
@@ -70,23 +71,60 @@ export interface LogRow {
   message: string
 }
 
+/** 产出解析所需的最小行形状（`InstanceRow` 结构兼容，不必完整）。 */
+export interface OutputSourceRow {
+  outputs?: string | null
+  process_outputs?: string | null
+  snapshot?: string | null
+}
+
+/** 两桶产出的列口径（与 `task_instances` 列名逐字一致，不另起别名）。 */
+export type OutputBucket = 'outputs' | 'process_outputs'
+
 /**
- * 解析实例的产出清单（`task_instances.outputs` 是 JSON 字符串数组，决策 32③）。
+ * 解析一列产出清单：`task_instances` 存的是 JSON 字符串数组，但兼容旧行的逗号串与直接数组。
  * 形状不对的条目丢弃、解析失败返回空数组 —— **不猜兜底值**。
+ */
+function parseOutputList(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+  }
+  if (typeof raw !== 'string' || raw.trim() === '') return []
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+    }
+  } catch {
+    /* 非 JSON ⇒ 按逗号串兜底（旧行） */
+  }
+  return raw.split(',').map(part => part.trim()).filter(part => part !== '')
+}
+
+/**
+ * 一条实例的某桶产出 → **可点开的绝对路径清单**（全客户端唯一解析 / 唯一绝对化入口）。
  *
  * ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里：卡片「执行记录」面板与**执行记录总查询页**都要用，
  * 同一解析写两遍就是违规（本仓规矩：一类东西一个实现）。
  *
- * ⚠️ 2026-10-10：`process_outputs`（过程文件桶）**同一个形状**，因此继续用它解析，不另写一份。
+ * ⚠️ 2026-10-10：两桶同形状，共用这一个函数。
+ *
+ * ⚠️ 2026-11-09 收口两处历史分裂：
+ * ① `index.ts:parseOutputs` 是另一份解析（多兼容逗号串）⇒ 合进来，本函数是唯一解析；
+ * ② 产出路径此前以**工作区相对路径**透传给核心 `openFilePreview`，核心要挑工作区锚点补前缀，
+ *    锚点选错就 ENOENT。现在按该行**派发快照**冻结的 `workspacePath` 在此绝对化（与回执写
+ *    `deliverables/presented` 时同一个 `absWorkspacePath`）；库列与回执事件仍存相对，零数据迁移。
+ *    快照解析不出（旧库实例无快照列）⇒ 如实**保留相对路径**，不拿当前工作区猜。
  */
-export function outputsOf(raw: string | null | undefined): string[] {
-  if (raw === null || raw === undefined || raw === '') return []
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
-  } catch {
-    return []
-  }
+export function outputsOf(row: OutputSourceRow, bucket: OutputBucket): string[] {
+  const paths = parseOutputList(bucket === 'outputs' ? row.outputs : row.process_outputs)
+  const base = workspacePathOf(row.snapshot ?? null)
+  if (base === null) return paths
+  return paths.flatMap((path) => {
+    const abs = absWorkspacePath(base, path)
+    // 已绝对 ⇒ 原样；不安全（`..` / 反斜杠）⇒ 不渲染，绝不把越界路径交给预览面。
+    return abs === null ? [] : [abs]
+  })
 }
 
 /** 一条实例事件（task_events 行，执行记录下钻用；seq 升序 = 旧→新）。 */

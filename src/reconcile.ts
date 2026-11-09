@@ -10,6 +10,8 @@ import { stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { HostContext, HostLogger, HostSession } from './host.js'
+import { NUDGE_NOTICE, UNATTENDED_RULE } from './instructions.js'
+import { absWorkspacePath, isSafeWorkspaceRel } from './workspace-path.js'
 import type { TaskDefinition } from './tasks.js'
 import { displayNameOf, durationMs, sessionTitleOf } from './tasks.js'
 import {
@@ -22,7 +24,6 @@ import { parseInstanceSnapshot } from './store.js'
 import type { RuntimeIndex } from './runtime-index.js'
 import { EventType, type PushEvent } from './event-catalog.js'
 import type { PluginConfig } from './config.js'
-import { join } from 'node:path'
 import { attachmentAbsPath, type AssetPaths } from './task-assets.js'
 
 /**
@@ -35,6 +36,7 @@ export function missingSnapshotAttachments(ctx: HostContext, taskId: string, sna
   if (list === undefined || list.length === 0) return []
   const out: string[] = []
   for (const item of list) {
+    if (!isSafeWorkspaceRel(item.ref)) continue
     let abs: string | null = null
     if (item.kind === 'upload') {
       abs = assets === null ? null : attachmentAbsPath(assets, taskId, item.ref)
@@ -42,12 +44,13 @@ export function missingSnapshotAttachments(ctx: HostContext, taskId: string, sna
       // link 型按附件来源工作区解析（item.workspace 随快照冻结）；来源解析不出 ⇒ 不判，绝不猜。
       const source = item.workspace !== undefined && item.workspace.trim() !== '' ? item.workspace : null
       try {
-        abs = source === null ? join(snap.workspacePath, item.ref) : join(resolveWorkspace(ctx, source).path, item.ref)
+        const base = source === null ? snap.workspacePath : resolveWorkspace(ctx, source).path
+        abs = absWorkspacePath(base, item.ref)
       } catch {
         abs = null
       }
     }
-    if (abs === null || abs.includes('..')) continue
+    if (abs === null) continue
     if (!existsSync(abs)) out.push(item.name)
   }
   return out
@@ -147,6 +150,9 @@ export function checkReceipt(
     }
   }
   // 两桶同一道闸（2026-10-10）：主文件与过程文件都按「确实存在」校验，防幽灵路径进界面与下游消息。
+  // 2026-11-09 补安全闸（第二道，覆盖历史回执与绕过工具入口的情形）：`..` / 绝对路径 /
+  // 反斜杠一律判失败——此前 `resolve` 会先折叠 `..`，工作区外存在的文件照样能通过并进交付卡。
+  // 判据与回执入口、附件 ref 共用 `workspace-path.ts` 唯一实现。
   // ⚠️ 取舍：过程文件路径写错同样会让整次回执判失败并走重试（与主桶今天的行为一致）；
   //    若真机上因此频繁误失败，可降级为「只校验主桶」——改这一处即可。
   const buckets: Array<{ bucket: string; list: string[] }> = [
@@ -155,6 +161,9 @@ export function checkReceipt(
   ]
   for (const { bucket, list } of buckets) {
     for (const output of list) {
+      if (!isSafeWorkspaceRel(output)) {
+        return { ok: false, reason: 'output-unsafe', detail: { output, bucket } }
+      }
       const outputPath = resolve(workspacePath, output)
       if (!existsSync(outputPath)) return { ok: false, reason: 'output-missing', detail: { output, bucket } }
     }
@@ -410,9 +419,12 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
       return
     }
     try {
+      // `userNotice` 生成 `role:'user'` 消息：模型会以为有人回复了、可以开口提问。
+      // 显式声明自动追问身份 + 逐字复述无人值守约束（与派发段 / goal objective 同一真源）。
       handle.agent.send(
         userNotice(
-          `任务实例 ${instance.id} 已结束但尚未收到回执。请立即按下面说明调用工具提交回执：\n`
+          `${NUDGE_NOTICE}\n${UNATTENDED_RULE}\n\n`
+          + `任务实例 ${instance.id} 已结束但尚未收到回执。请立即按下面说明调用工具提交回执：\n`
           + receiptInstruction(snap.validStatuses),
           `[TASK] 回执追问 ${snap.title} · ${instance.logical_date}`,
         ),
@@ -487,18 +499,23 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
       // stat 失败 ⇒ 按文件处理：缺失项已被上面的 missingSnapshotAttachments 拦掉，这里不该失败，
       // 标错也只退化成旧文案，绝不阻断派发。
       const attachments: DispatchAttachment[] = await Promise.all((snap.attachments ?? []).map(async item => {
+        // 2026-11-09 收口：安全判据与相对→绝对都走 `workspace-path.ts` 唯一实现。
+        // 此前这里另写 `join` + `path.includes('..')`（第五份判据），既漂移又会 lint 报 optional chain。
+        if (!isSafeWorkspaceRel(item.ref)) {
+          return { name: item.name, kind: item.kind, ref: item.ref, path: null, isDir: undefined }
+        }
         let path: string | null = null
         if (item.kind === 'upload') {
           path = assets === null ? null : attachmentAbsPath(assets, instance.task_id, item.ref)
         } else {
           const source = item.workspace !== undefined && item.workspace.trim() !== '' ? item.workspace : null
           try {
-            path = source === null ? join(snap.workspacePath, item.ref) : join(resolveWorkspace(ctx, source).path, item.ref)
+            const base = source === null ? snap.workspacePath : resolveWorkspace(ctx, source).path
+            path = absWorkspacePath(base, item.ref)
           } catch {
             path = null
           }
         }
-        if (path !== null && path.includes('..')) path = null
         const isDir = path === null ? undefined : await stat(path).then(info => info.isDirectory()).catch(() => undefined)
         return { name: item.name, kind: item.kind, ref: item.ref, path, isDir }
       }))

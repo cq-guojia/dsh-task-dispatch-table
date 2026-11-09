@@ -107,17 +107,28 @@
 
 ### 实施清单（按顺序，逐项验证）
 
-1. `src/receipt.ts`：execute 改签 `(args, exec)`；成功后取 `exec.agent.session` + `exec.callId` + turn → `session.append('deliverables/presented', { turn, callId, files })`；**files = 已校验过的 outputs**（存在 + mtime 新鲜，`reconcile.ts` 的 checkReceipt 同模）。
+1. `src/receipt.ts`：execute 改签 `(args, exec)`；成功后取 `exec.agent.session` + `exec.callId` + turn → `session.append('deliverables/presented', { turn, callId, files })`；**files = 已归一 / 安全闸过滤后的 outputs**（⚠️ mtime 新鲜度闸已于 2026-10-03 按用户拍板去掉，见 `docs/data/model.md` §一）。
 2. turn 获取：注册时从 agentCtx 闭包注入 `sessionProjections`（present 包 inject 同名服务）；执行时 `stateOf(session,'turnBoundary')?.lastTurn`；**取不到即跳过**（不猜 turn —— 猜错会把卡挂到别的轮次或直接不显示）。
 3. 兜底与可观测：整段 try/catch，失败只 `logger.warn`（原因 + 实例 id），**绝不抛给模型**（回执必须照常成功）；成功 log 一行「交付已登记 N 个文件」。
-4. C 兜底：`receiptInstruction` / 派发提示词补一句「若本次产出是独立文件，请调用 present 交付最关键的 1–2 个」；与 B 共存安全（官方按 path Map 后写覆盖）。
-5. 质量门：typecheck + build + 冒烟新增断言（回执流式 append 事件 / 失败只记日志不影响回执结果 / files 取校验后的 outputs / present 提示词文案）；真机跑一轮任务验证：宿主会话视图出官方交付卡 + 我方弹窗出卡 → 说「提交」再 commit+push。
+4. ~~C 兜底：补一句「请调用 present」~~ **已废止**：插件代写 `deliverables/presented`，派发提示词明确「不要调用 present，交付卡片由插件按主文件（outputs）统一生成」（`src/receipt.ts:receiptInstruction`）。此条是历史方案，与当前代码相反。
+5. 质量门：typecheck + build + 冒烟新增断言（回执流式 append 事件 / 失败只记日志不影响回执结果 / files 取校验后的 outputs）；真机跑一轮任务验证：宿主会话视图出官方交付卡 + 我方弹窗出卡。
+
+### 2026-11-09 更正：`files[].path` 必须是绝对路径
+
+适用版本：宿主 `@deepseek-ai/dsh-client-ui-chat@0.2.0-rc.2`、核心 `dsh-plugin-core@0.34.0`（版本真源见 [`dsh-capabilities.md`](../dependencies/dsh-capabilities.md) / [`plugin-core-explorer.md`](../dependencies/plugin-core-explorer.md) 头部）；复核日期 2026-11-09；状态 ✅ 已落码；来源：本轮真机 ENOENT + 上述两包源码级事实清单。
+
+| 项 | 结论 |
+|---|---|
+| 现象 | 交付卡点开报 `ENOENT`，路径被拼成 `<工作区>/_Manuals/…/task-outputs/…/report.md`，真实文件在 `<工作区>/task-outputs/…/report.md` |
+| 根因 | `files[].path` 此前是**工作区相对路径**；官方 `fileAddressFor` 对非绝对路径「直接当相对路径、按会话 cwd 解析」，核心 `openFilePreview` 还要挑工作区锚点补前缀 ⇒ 锚点选错就多出一段 |
+| 修法 | 只在两个边界绝对化，共用 `src/workspace-path.ts:absWorkspacePath`：① 回执写交付事件时，基准 = 派发冻结的 `workspacePath`；② 客户端 `query.ts:outputsOf` 读实例行时，基准 = 行快照 `workspacePath`。**库列与回执事件仍存相对**，零数据迁移；快照取不到基准 ⇒ 如实保留相对、不猜 |
+| 配套 | 交付卡与弹窗补差卡的去重键共用 `canonicalPath`（两侧都按同一基准归一），避免「一绝对一相对」重复出卡 |
 
 ### 三条明确代价（用户已接受）
 
 1. `callId` 是回执调用的 id ⇒ 卡片「用系统应用打开」按钮可能失效（容器无桌面本就不可用）；预览走路径，不受影响。
 2. 拿不到 session / append 失败 ⇒ 静默跳过、只记日志，任务成败不受影响。
-3. 文件清单取**校验后**的 outputs，不取模型原样填值 ⇒ 不会交付不存在的文件。
+3. 文件清单取**归一 / 安全闸过滤后**的 outputs，不取模型原样填值 ⇒ 不会交付不存在或越界的文件。
 
 ---
 

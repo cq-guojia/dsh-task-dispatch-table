@@ -57300,6 +57300,61 @@ window.__ModuleLoader__.load({
 				window.clearTimeout(timer);
 			}
 		}
+		// src/workspace-path.ts
+		/**
+		* 工作区相对路径的**唯一实现**（host / client 共用）。
+		*
+		* 纯字符串实现、刻意不引 `node:path`：客户端产物是单文件 bundle，Node 内置模块不可用
+		* （`attachment-allowlist.ts` 头注释记录过同一约束）。
+		*
+		* 收口了此前分散的四份路径逻辑，各写一份必然漂移：
+		*   · `attachment-allowlist.ts:isSafeAttachmentRef` —— 附件 ref 安全判据；
+		*   · `client/task-file-context.tsx:upstreamAbsPath` —— 上游产出的相对→绝对；
+		*   · `index.ts` 附件按来源工作区绝对化、`dispatch.ts` 下游依赖注入绝对化。
+		*
+		* 契约：存储层（`task_events` / `task_instances.outputs`）**始终存工作区相对路径**；
+		* 只在两个边界转成绝对 —— 回执写 `deliverables/presented` 时、客户端读实例行展示时。
+		* 这样零数据迁移，历史实例由展示侧按同一函数兜住。
+		*/
+		/** 绝对路径的字面判据：POSIX `/` 或 Windows 盘符（`C:\` / `C:/`）。 */
+		function isAbsolutePath(path) {
+			return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path);
+		}
+		/**
+		* 工作区相对引用是否安全：非空、不含 `..`、非绝对、不含反斜杠。
+		* 回执归一已把 `\` 统一成 `/`，故仍含反斜杠一律视为异常输入。
+		* 目录项（以 `/` 结尾）合法。
+		*/
+		const isSafeWorkspaceRel = (ref) => ref !== "" && !ref.includes("..") && !isAbsolutePath(ref) && !ref.includes("\\");
+		/**
+		* 相对路径 → 绝对路径（基准 = 该实例的工作区 path）。
+		*
+		* - 已绝对 ⇒ **原样返回**（幂等，可对同一路径重复调用）；
+		* - 基准缺失、或相对引用不安全 ⇒ `null`，调用方按「如实降级」处理，
+		*   **不拿当前工作区猜**（与 `task-file-context.tsx` 旧 `upstreamAbsPath` 同口径）。
+		*/
+		function absWorkspacePath(base, rel) {
+			if (base === null || base === void 0 || base === "") return null;
+			if (isAbsolutePath(rel)) return rel;
+			if (!isSafeWorkspaceRel(rel)) return null;
+			const trimmed = rel.replace(/^\.\//, "");
+			return base.endsWith("/") || base.endsWith("\\") ? `${base}${trimmed}` : `${base}/${trimmed}`;
+		}
+		/**
+		* 实例快照 → 本任务工作区 path。
+		* 不强求整份快照合法：解析不出 / 字段缺失 ⇒ `null`（调用方按「未知」降级，不猜）。
+		*/
+		function workspacePathOf(snapshot) {
+			if (snapshot === null || snapshot === void 0 || snapshot === "") return null;
+			try {
+				const parsed = JSON.parse(snapshot);
+				if (typeof parsed !== "object" || parsed === null) return null;
+				const path = parsed.workspacePath;
+				return typeof path === "string" && path !== "" ? path : null;
+			} catch {
+				return null;
+			}
+		}
 		// src/client/query.ts
 		/**
 		* 本插件 webServer 路由的 API 前缀（**全仓唯一**：本文件 / 宿主页 / 事件流 / 设置页都从这里引，
@@ -57307,22 +57362,41 @@ window.__ModuleLoader__.load({
 		*/
 		const API_PREFIX = "api/task-dispatch-table";
 		/**
-		* 解析实例的产出清单（`task_instances.outputs` 是 JSON 字符串数组，决策 32③）。
+		* 解析一列产出清单：`task_instances` 存的是 JSON 字符串数组，但兼容旧行的逗号串与直接数组。
 		* 形状不对的条目丢弃、解析失败返回空数组 —— **不猜兜底值**。
+		*/
+		function parseOutputList(raw) {
+			if (Array.isArray(raw)) return raw.filter((item) => typeof item === "string" && item.trim() !== "");
+			if (typeof raw !== "string" || raw.trim() === "") return [];
+			try {
+				const parsed = JSON.parse(raw);
+				if (Array.isArray(parsed)) return parsed.filter((item) => typeof item === "string" && item.trim() !== "");
+			} catch {}
+			return raw.split(",").map((part) => part.trim()).filter((part) => part !== "");
+		}
+		/**
+		* 一条实例的某桶产出 → **可点开的绝对路径清单**（全客户端唯一解析 / 唯一绝对化入口）。
 		*
 		* ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里：卡片「执行记录」面板与**执行记录总查询页**都要用，
 		* 同一解析写两遍就是违规（本仓规矩：一类东西一个实现）。
 		*
-		* ⚠️ 2026-10-10：`process_outputs`（过程文件桶）**同一个形状**，因此继续用它解析，不另写一份。
+		* ⚠️ 2026-10-10：两桶同形状，共用这一个函数。
+		*
+		* ⚠️ 2026-11-09 收口两处历史分裂：
+		* ① `index.ts:parseOutputs` 是另一份解析（多兼容逗号串）⇒ 合进来，本函数是唯一解析；
+		* ② 产出路径此前以**工作区相对路径**透传给核心 `openFilePreview`，核心要挑工作区锚点补前缀，
+		*    锚点选错就 ENOENT。现在按该行**派发快照**冻结的 `workspacePath` 在此绝对化（与回执写
+		*    `deliverables/presented` 时同一个 `absWorkspacePath`）；库列与回执事件仍存相对，零数据迁移。
+		*    快照解析不出（旧库实例无快照列）⇒ 如实**保留相对路径**，不拿当前工作区猜。
 		*/
-		function outputsOf(raw) {
-			if (raw === null || raw === void 0 || raw === "") return [];
-			try {
-				const parsed = JSON.parse(raw);
-				return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
-			} catch {
-				return [];
-			}
+		function outputsOf(row, bucket) {
+			const paths = parseOutputList(bucket === "outputs" ? row.outputs : row.process_outputs);
+			const base = workspacePathOf(row.snapshot ?? null);
+			if (base === null) return paths;
+			return paths.flatMap((path) => {
+				const abs = absWorkspacePath(base, path);
+				return abs === null ? [] : [abs];
+			});
 		}
 		/** 查询参数 → query string（undefined / 空串跳过；数组逗号合并；cursor 走标准 URL 编码）。 */
 		function qsOf(params) {
@@ -60293,8 +60367,8 @@ window.__ModuleLoader__.load({
 				gap: "4px",
 				minWidth: 0
 			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), renderNextExec(row.scheduled_at, t))) : null;
-			const outputs = outputsOf(row.outputs);
-			const processOutputs = outputsOf(row.process_outputs);
+			const outputs = outputsOf(row, "outputs");
+			const processOutputs = outputsOf(row, "process_outputs");
 			const sid = row.session_id;
 			const canOpenSession = sid !== null && sid !== "";
 			const canOpenFile = canOpenSession && openFile !== void 0;
@@ -67653,30 +67727,9 @@ window.__ModuleLoader__.load({
 			}, (0, react$1.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
 		}
 		// src/client/task-file-context.tsx
-		/**
-		* 实例快照 → 本任务工作区 path（判上游目录是否跨区用）。
-		* 与 `attachmentsOf` 同款：**不强求整份快照合法**，取不到 ⇒ null（调用方按「未知」处理）。
-		*/
-		function workspacePathOf(snapshot) {
-			if (snapshot === null || snapshot === "") return null;
-			try {
-				const parsed = JSON.parse(snapshot);
-				if (typeof parsed !== "object" || parsed === null) return null;
-				const path = parsed.workspacePath;
-				return typeof path === "string" && path !== "" ? path : null;
-			} catch {
-				return null;
-			}
-		}
 		/** 目录标记：产出按**尾斜杠**表示目录（回执归一 `receipt.ts` normalizeOutputs 的约定）。 */
 		function isDirPath(path) {
 			return path.endsWith("/");
-		}
-		/** 相对路径 → 绝对路径（基准 = 上游工作区；无基准 ⇒ null，如实降级为不可点，不拿当前工作区猜）。 */
-		function upstreamAbsPath(base, rel) {
-			if (base === null || base === "") return null;
-			const trimmed = rel.replace(/^\.\//, "");
-			return base.endsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
 		}
 		/** 文件/目录的显示名（去掉尾斜杠取最后一段）。 */
 		function displayName(path) {
@@ -67793,7 +67846,7 @@ window.__ModuleLoader__.load({
 				children: (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-tasks" }, shown.map((item, index) => {
 					const crossWorkspace = workspacePath === null || item.workspacePath === null || !inWorkspace(item.workspacePath, workspacePath);
 					const all = item.outputs.map((path) => {
-						const abs = upstreamAbsPath(item.workspacePath, path);
+						const abs = absWorkspacePath(item.workspacePath, path);
 						const name = displayName(path);
 						const dir = isDirPath(path);
 						const blocked = abs === null || dir && crossWorkspace;
@@ -67890,10 +67943,20 @@ window.__ModuleLoader__.load({
 			return s;
 		}
 		/**
+		* 去重键：两侧都按**本实例工作区基准**归一成绝对路径再比。
+		* 2026-11-09 收口：交付事件（`deliverables/presented`）此前存相对路径、新写的改绝对，
+		* 而补差卡的 outputs 走 `query.ts:outputsOf` 也是绝对 ⇒ 若各按各的字符串比，历史快照与新
+		* 输出会重复出卡。同一函数两侧共用：绝对值幂等、历史相对值按快照基准补前缀、无基准如实降级。
+		*/
+		function canonicalPath(p, workspacePath) {
+			const rel = normalizePath(p);
+			return absWorkspacePath(workspacePath, rel) ?? rel;
+		}
+		/**
 		* 快照里已经画过的交付文件路径集合（会话 turn 级 `deliverables.presented`）。
 		* ⚠️ 官方 `turn.data` 是 **Map**（不是普通对象）——对象式访问必为 undefined；两种形态都兼容。
 		*/
-		function presentedPathsOf(turns) {
+		function presentedPathsOf(turns, workspacePath) {
 			const out = /* @__PURE__ */ new Set();
 			if (turns === null || turns === void 0) return out;
 			const map = turns;
@@ -67904,7 +67967,7 @@ window.__ModuleLoader__.load({
 				if (!Array.isArray(presented)) return;
 				for (const file of presented) {
 					const path = file?.path;
-					if (typeof path === "string" && path.trim() !== "") out.add(normalizePath(path));
+					if (typeof path === "string" && path.trim() !== "") out.add(canonicalPath(path, workspacePath));
 				}
 			});
 			return out;
@@ -67921,18 +67984,23 @@ window.__ModuleLoader__.load({
 			const subscribe = (0, react$1.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
 			const getSnapshot = (0, react$1.useMemo)(() => () => view.target.getSnapshot(), [view]);
 			const chat = (0, react$1.useSyncExternalStore)(subscribe, getSnapshot);
-			const snapshotPaths = (0, react$1.useMemo)(() => presentedPathsOf(chat?.timeline?.turns), [chat]);
+			const base = workspacePath ?? null;
+			const snapshotPaths = (0, react$1.useMemo)(() => presentedPathsOf(chat?.timeline?.turns, base), [chat, base]);
 			const extraOutputs = (0, react$1.useMemo)(() => {
 				const seen = /* @__PURE__ */ new Set();
 				const out = [];
 				for (const path of outputs ?? []) {
-					const key = normalizePath(path);
+					const key = canonicalPath(path, base);
 					if (key === "" || snapshotPaths.has(key) || seen.has(key)) continue;
 					seen.add(key);
 					out.push({ path });
 				}
 				return out;
-			}, [outputs, snapshotPaths]);
+			}, [
+				outputs,
+				snapshotPaths,
+				base
+			]);
 			const title = (0, react$1.createElement)(react$1.Fragment, null, tt("sessionViewerTitle"), " · ", taskId !== void 0 && onOpenTask !== void 0 && headingTask !== void 0 ? (0, react$1.createElement)(Button$1, {
 				variant: "link",
 				size: "sm",
@@ -68125,17 +68193,6 @@ window.__ModuleLoader__.load({
 			const dot = base.lastIndexOf(".");
 			return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
 		};
-		/**
-		* 附件 `ref` 是否**安全**（可以拼进路径）：非空、不含 `..`（相对路径上跳）、
-		* 不以 `/` 或 `\` 开头（绝对路径）、不含 `\`（Windows 分隔符）。
-		*
-		* **唯一实现**（2026-09-30 抽象收敛）：此前同一规则写了 **4 份**且各有出入——
-		* 宿主 zod（`tasks.ts`：拒绝 `..`/绝对/反斜杠）、客户端保存前校验（`task-editor`：多查了开头 `\`）、
-		* 真删前防御（`task-assets.removeAttachmentFiles`：没查开头 `\`）、上传定位
-		* （`task-assets.locateUploaded`：连反斜杠都没查）。各写一份必然漂移——
-		* 「选工作区文件报 422 附件 ref 非法」那类 bug 的温床就在这。
-		*/
-		const isSafeAttachmentRef = (ref) => ref !== "" && !ref.includes("..") && !ref.startsWith("/") && !ref.startsWith("\\") && !ref.includes("\\");
 		// src/client/editor-fields.tsx
 		/**
 		* 日历文案**单源**（决策 55）：任务日历页共用这一份，
@@ -77870,8 +77927,8 @@ window.__ModuleLoader__.load({
 			const sid = instance.session_id;
 			const canOpenSession = sid !== null && onOpenSession !== void 0;
 			const canOpenFile = sid !== null && onOpenFile !== void 0;
-			const outputs = outputsOf(instance.outputs);
-			const processOutputs = outputsOf(instance.process_outputs);
+			const outputs = outputsOf(instance, "outputs");
+			const processOutputs = outputsOf(instance, "process_outputs");
 			const dur = durationMsOf(instance);
 			const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
 			const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
@@ -78432,7 +78489,7 @@ window.__ModuleLoader__.load({
 				field: "schedule",
 				message: t("vWeekdayRequired")
 			});
-			const badAttachment = draft.attachments.find((att) => !isSafeAttachmentRef(att.ref));
+			const badAttachment = draft.attachments.find((att) => !isSafeWorkspaceRel(att.ref));
 			if (badAttachment !== void 0) problems.push({
 				field: "attachments",
 				message: t("vAttachmentInvalid", { name: badAttachment.name })
@@ -82453,7 +82510,7 @@ window.__ModuleLoader__.load({
 				],
 				rows: records.flatMap((instance) => {
 					const open = openInstance === instance.id;
-					const outputs = outputsOf(instance.outputs);
+					const outputs = outputsOf(instance, "outputs");
 					const sid = instance.session_id;
 					const openFile = onOpenFile;
 					const openSession = onOpenSession;
@@ -83055,7 +83112,7 @@ window.__ModuleLoader__.load({
 			whiteSpace: "nowrap"
 		};
 		/** 主页面与占位态共用同一抬头标题，保证两处版本标记一致。 */
-		const renderPanelTitle = (t) => (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"), (0, react$1.createElement)("span", { style: buildTagStyle }, `v0.1.15 261109-130628-741`));
+		const renderPanelTitle = (t) => (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"), (0, react$1.createElement)("span", { style: buildTagStyle }, `v0.1.15 261109-152927-509`));
 		const preStyle = {
 			fontFamily: monoFont,
 			fontSize: "var(--dshpc-font-sm)",
@@ -83174,21 +83231,6 @@ window.__ModuleLoader__.load({
 		};
 		/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
 		const encodeModelValue = (provider, id) => `${provider}/${id}`;
-		/**
-		* 实例行的产出物（决策 32③写回的列：JSON 数组，兼容逗号串）。
-		* 2026-10-10 起 `outputs`（主文件）与 `process_outputs`（过程文件）**同一形状**，共用这一个解析器。
-		*/
-		function parseOutputs(raw) {
-			if (typeof raw === "string" && raw.trim() !== "") {
-				try {
-					const parsed = JSON.parse(raw);
-					if (Array.isArray(parsed)) return parsed.filter((item) => typeof item === "string" && item.trim() !== "");
-				} catch {}
-				return raw.split(",").map((part) => part.trim()).filter((part) => part !== "");
-			}
-			if (Array.isArray(raw)) return raw.filter((item) => typeof item === "string" && item.trim() !== "");
-			return [];
-		}
 		/**
 		* 从**刚提交的任务定义**里取卡片可见字段做一次乐观补丁（用户 2026-09-30：改完要**立刻**看到，
 		* 不等服务端那 ~1 秒的落盘 + 重拉）。
@@ -83805,8 +83847,8 @@ window.__ModuleLoader__.load({
 					headingRest: row === null ? void 0 : ` · ${formatPlanStamp(row.scheduled_at)}`,
 					view: target,
 					didUnarchive,
-					outputs: row === null ? void 0 : parseOutputs(row.outputs),
-					processOutputs: row === null ? void 0 : parseOutputs(row.process_outputs),
+					outputs: row === null ? void 0 : outputsOf(row, "outputs"),
+					processOutputs: row === null ? void 0 : outputsOf(row, "process_outputs"),
 					upstream: upstreamOf(row?.snapshot ?? null),
 					attached: row === null ? [] : attachmentsOf(row.snapshot ?? null, row.attachmentPaths),
 					workspacePath: workspacePathOf(row?.snapshot ?? null)

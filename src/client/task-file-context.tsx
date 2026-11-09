@@ -23,6 +23,7 @@ import { FileTypeIcon, IconFolderCloseRegular } from '@deepseek-ai/dsh-client-ui
 import { Button, MarqueeText } from './ui'
 import { formatDateTime } from './format'
 import type { ResolvedDependency } from '../deps.js'
+import { absWorkspacePath } from '../workspace-path.js'
 import type { Translate } from './locales'
 
 /** 一条上游输入的视图模型（任务名由调用方按 id 反查，查不到 ⇒ 短 id）。 */
@@ -38,33 +39,13 @@ export interface AttachedFileView {
   path: string | null
 }
 
-/**
- * 实例快照 → 本任务工作区 path（判上游目录是否跨区用）。
- * 与 `attachmentsOf` 同款：**不强求整份快照合法**，取不到 ⇒ null（调用方按「未知」处理）。
- */
-export function workspacePathOf(snapshot: string | null): string | null {
-  if (snapshot === null || snapshot === '') return null
-  try {
-    const parsed: unknown = JSON.parse(snapshot)
-    if (typeof parsed !== 'object' || parsed === null) return null
-    const path = (parsed as { workspacePath?: unknown }).workspacePath
-    return typeof path === 'string' && path !== '' ? path : null
-  } catch {
-    return null
-  }
-}
-
 /** 目录标记：产出按**尾斜杠**表示目录（回执归一 `receipt.ts` normalizeOutputs 的约定）。 */
 function isDirPath(path: string): boolean {
   return path.endsWith('/')
 }
 
-/** 相对路径 → 绝对路径（基准 = 上游工作区；无基准 ⇒ null，如实降级为不可点，不拿当前工作区猜）。 */
-function upstreamAbsPath(base: string | null, rel: string): string | null {
-  if (base === null || base === '') return null
-  const trimmed = rel.replace(/^\.\//, '')
-  return base.endsWith('/') ? `${base}${trimmed}` : `${base}/${trimmed}`
-}
+// 2026-11-09 收口：`workspacePathOf` / `upstreamAbsPath` 两份本地实现上提到
+// `../workspace-path.ts`（host / client 共用同一份安全判据与绝对化），此处不再各写一份。
 
 /** 文件/目录的显示名（去掉尾斜杠取最后一段）。 */
 function displayName(path: string): string {
@@ -215,7 +196,7 @@ function ReceivedGroup(props: {
           || item.workspacePath === null
           || !inWorkspace(item.workspacePath, workspacePath)
         const all = item.outputs.map(path => {
-          const abs = upstreamAbsPath(item.workspacePath, path)
+          const abs = absWorkspacePath(item.workspacePath, path)
           const name = displayName(path)
           const dir = isDirPath(path)
           // 跨工作区：**目录**列不出来（工作区文件浏览以会话为锚、限该工作区）⇒ 不可点；

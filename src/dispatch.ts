@@ -5,12 +5,14 @@
 // 不要预建 ctx.sessions.create——会撞 store 的 'session "…" already exists'（真机教训 2026-09-23）。
 import { randomUUID } from 'node:crypto'
 import { readFile, stat } from 'node:fs/promises'
-import { basename, resolve } from 'node:path'
+import { basename } from 'node:path'
 import type {
   HostAgentDefaultModel, HostAgentPresets, HostAttachments, HostContext, HostLogger, HostLlm,
   HostWorkspace, UserFileContent, UserMessage,
 } from './host.js'
 import type { PluginConfig } from './config.js'
+import { UNATTENDED_RULE } from './instructions.js'
+import { absWorkspacePath } from './workspace-path.js'
 import { receiptInstruction, registerReceiptTool } from './receipt.js'
 import type { InstanceSnapshot, PermissionMode, TaskStore } from './store.js'
 
@@ -256,7 +258,9 @@ function dependencyLines(snapshot: InstanceSnapshot): string[] {
     }
     lines.push(`${head}，产出：`)
     for (const output of dep.outputs) {
-      lines.push(`  - ${dep.workspacePath === null ? `${output}（基准工作区未知，相对路径）` : resolve(dep.workspacePath, output)}`)
+      // 下游注入与交付卡、附件、预览用同一份绝对化（工作区基准 + 安全闸），不再各写一份 resolve。
+      const abs = absWorkspacePath(dep.workspacePath, output)
+      lines.push(`  - ${abs ?? `${output}（基准工作区未知或路径不安全，相对路径）`}`)
     }
   }
   return lines
@@ -271,7 +275,7 @@ function dependencyLines(snapshot: InstanceSnapshot): string[] {
 function permissionInstruction(mode: PermissionMode): string | null {
   if (mode === 'readOnly') return '权限：本次仅可查看。只读工作区内容，禁止写入、修改或删除任何文件，禁止执行会产生副作用的命令。'
   if (mode === 'workspace') return `权限：仅可在目标工作区（${WORKSPACE_PLACEHOLDER}）内修改文件，禁止改动工作区之外的任何内容。`
-  if (mode === 'full') return '权限：完全权限，按任务需要执行（工作目录仍为目标工作区）。'
+  if (mode === 'full') return '权限：完全权限，按任务需要执行（工作目录仍为目标工作区）；这**不意味着**可以申请额外权限，仍受下方【执行约束】限制。'
   return null
 }
 /** 权限指令里的工作区占位符：拼装时替换成真实工作区绝对路径（文案不写死路径）。 */
@@ -312,9 +316,7 @@ export function buildMessage(
     '',
     `任务实例：${snapshot.title} · ${logicalDate}（目标工作区：${workspacePath}）`,
     '',
-    '【执行约束】本任务是定时自动派发、无人值守运行的：执行期间没有人会回复你。'
-      + '因此：① 不得向用户提问或等待答复——信息不足就基于现有上下文自行决策并继续，必要时在回执 note 中如实记录；'
-      + '② 不得申请、索取或等待任何额外权限或授权——严格在已授予的权限范围内执行，超范围的操作跳过并在回执中说明，不要停下来要许可。',
+    UNATTENDED_RULE,
   ]
   // 执行时间两条（用户 2026-10-05 拍板，U4 收口）：模型对「现在几点」未必可靠（真机 once8 产出
   // 文件日期差过一天）⇒ 把**原定时刻**与**实际派发时刻**原样下发（ISO 8601 / UTC，精确到秒），
@@ -540,6 +542,7 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
           validStatuses: snapshot.validStatuses,
           logger,
           sessionProjections: (ctx as { sessionProjections?: unknown }).sessionProjections,
+          workspacePath: workspace.path,
         })) {
           throw new DispatchPreconditionError(
             'receipt-tool-unavailable',
@@ -606,11 +609,13 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     } else {
       try {
         // ⚠️ goal 是**另一个指令入口**（宿主持久目标 + 自动续跑轮）：真机"首轮只回一句问候、不交回执"
-        // 与它高度吻合（那一轮模型可能只看到 objective，而它原先**不含任何回执要求**）。补一句指针做
-        // 零风险对冲 —— 完整说明仍在派发消息最末段。
+        // 与它高度吻合（那一轮模型可能只看到 objective，而它原先**不含任何回执要求**）。补回执指针 +
+        // 无人值守约束真源：续跑轮若只看 objective，仍不得向人提问或索取授权。
+        // 不整段复刻派发消息（那是第二份正文，会漂移），只放指针 + 那条不可稀释的硬约束。
         await goals.create(handle.agent, {
           objective: `${snapshot.title}：${snapshot.prompt}\n\n`
-            + '【回执】本轮回复结束前必须按派发消息里的说明提交回执（不提交等于失败；没有产出也要交）。',
+            + '【回执】本轮回复结束前必须按派发消息里的说明提交回执（不提交等于失败；没有产出也要交）。\n'
+            + UNATTENDED_RULE,
         })
       } catch (error) {
         logger.warn(`[dispatch] goal-create-failed 实例 ${instanceId}：${String(error)}`)

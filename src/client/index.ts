@@ -53,7 +53,7 @@ import { fetchWithTimeout } from "./http";
 import { en, type LocaleKey, zh } from "./locales";
 // API 前缀唯一真源（M9）：本页与设置页通道都从这里引，不再各写一份字面量。
 // 会话弹窗的唯一取数入口：按会话 id 取实例行（快照 / 产出）——**所有入口只传会话 id**。
-import { API_PREFIX, fetchInstanceBySession } from "./query";
+import { API_PREFIX, fetchInstanceBySession, outputsOf } from "./query";
 // 侧栏入口：显示名 + 位置（一级 / 「更多」），按插件设置重挂。
 import {
 	initSidebarEntry,
@@ -88,8 +88,8 @@ import {
 	type AttachedFileView,
 	attachmentsOf,
 	type UpstreamInputView,
-	workspacePathOf,
 } from "./task-file-context";
+import { workspacePathOf } from "../workspace-path.js";
 import { TaskListView } from "./task-list";
 // 取数层（2026-10-06 从 task-list.tsx 归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
 import {
@@ -531,34 +531,6 @@ const encodeModelValue = (provider: string, id: string): string =>
 	`${provider}/${id}`;
 
 // ── U11 页面级预览 dock（弹窗与整页共用同一个预览面） ──
-
-/**
- * 实例行的产出物（决策 32③写回的列：JSON 数组，兼容逗号串）。
- * 2026-10-10 起 `outputs`（主文件）与 `process_outputs`（过程文件）**同一形状**，共用这一个解析器。
- */
-function parseOutputs(raw: unknown): string[] {
-	if (typeof raw === "string" && raw.trim() !== "") {
-		try {
-			const parsed: unknown = JSON.parse(raw);
-			if (Array.isArray(parsed))
-				return parsed.filter(
-					(item): item is string =>
-						typeof item === "string" && item.trim() !== "",
-				);
-		} catch {
-			/* 非 JSON ⇒ 按逗号串兜底 */
-		}
-		return raw
-			.split(",")
-			.map((part) => part.trim())
-			.filter((part) => part !== "");
-	}
-	if (Array.isArray(raw))
-		return raw.filter(
-			(item): item is string => typeof item === "string" && item.trim() !== "",
-		);
-	return [];
-}
 
 /**
  * 从**刚提交的任务定义**里取卡片可见字段做一次乐观补丁（用户 2026-09-30：改完要**立刻**看到，
@@ -1483,9 +1455,9 @@ function TaskPage(props: {
 				row === null ? undefined : ` · ${formatPlanStamp(row.scheduled_at)}`,
 			view: target,
 			didUnarchive,
-			outputs: row === null ? undefined : parseOutputs(row.outputs),
+			outputs: row === null ? undefined : outputsOf(row, 'outputs'),
 			processOutputs:
-				row === null ? undefined : parseOutputs(row.process_outputs),
+				row === null ? undefined : outputsOf(row, 'process_outputs'),
 			upstream: upstreamOf(row?.snapshot ?? null),
 			attached:
 				row === null

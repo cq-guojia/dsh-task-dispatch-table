@@ -37,10 +37,8 @@ export const extOf = (name: string): string => {
  * 真删前防御（`task-assets.removeAttachmentFiles`：没查开头 `\`）、上传定位
  * （`task-assets.locateUploaded`：连反斜杠都没查）。各写一份必然漂移——
  * 「选工作区文件报 422 附件 ref 非法」那类 bug 的温床就在这。
+ *
+ * 2026-11-09：判据本体上提到 `workspace-path.ts`（回执产出路径也要用同一道闸），
+ * 这里保留**别名导出**，四处既有调用零改动。
  */
-export const isSafeAttachmentRef = (ref: string): boolean =>
-  ref !== ''
-  && !ref.includes('..')
-  && !ref.startsWith('/')
-  && !ref.startsWith('\\')
-  && !ref.includes('\\')
+export { isSafeWorkspaceRel as isSafeAttachmentRef } from './workspace-path.js'

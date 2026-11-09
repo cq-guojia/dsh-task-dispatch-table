@@ -416,8 +416,8 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
       ))
     : null
   // 两桶产出（2026-10-10）：主文件照旧（折叠态图标行 / 展开区第一排），过程文件是次级折叠块。
-  const outputs = outputsOf(row.outputs)
-  const processOutputs = outputsOf(row.process_outputs)
+  const outputs = outputsOf(row, 'outputs')
+  const processOutputs = outputsOf(row, 'process_outputs')
   const sid = row.session_id
   const canOpenSession = sid !== null && sid !== ''
   const canOpenFile = canOpenSession && openFile !== undefined

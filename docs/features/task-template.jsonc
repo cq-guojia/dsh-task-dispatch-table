@@ -82,17 +82,19 @@
     // ─────────────────────── 完成判定：调度器只认回执，不信 agent 自报 ───────────────────────
     // 整段可省略（省略 = validStatuses 默认 ["ok"]）。
     "contract": {
-      // 回执机制（决策 19）：没有契约文件。agent 干完活后执行调度器在派发消息里
-      // 【拼好的现成命令】，把回执直写插件状态库（state.db 的 task_events 表）：
-      //   node <插件dist>/submit.js --db <state.db> --task <id> --date <logical_date>
-      //        --session <sessionId> --status ok [--outputs 产出文件,逗号分隔] [--note 备注]
-      // 命令行参数（--db/--task/--date/--session）调度器已填好，agent 只补
-      // --status 与 --outputs（实际产出文件，相对工作区路径；无产出可省略整个参数）。
+      // 回执机制（决策 19 + 24）：没有契约文件。派发时插件给该会话注册专属工具
+      // task_dispatch_table_receipt，agent 在本轮回复结束前调一次，
+      // 由插件进程直写状态库（state.db 的 task_events 表，kind='receipt'）：
+      //   task_dispatch_table_receipt({ status, outputs?, processOutputs?, note? })
+      // outputs = 主文件（最终交付物），processOutputs = 其他产出（日志 / 中间产物 / 工作目录）；
+      // 都是相对工作区根的路径数组，目录以 "/" 结尾，各最多 10 项、一个目录算 1 项。
+      // 专为本任务新建的目录 ⇒ 整目录报，报了目录就不要把里面的文件逐个列出来。
+      // submit.js 只保留为手动 / 排查备用通道，调度器不再让 agent 执行命令行。
       //
-      // 回执三查，全部通过才算成功：
+      // 回执校验（全部通过才算成功）：
       //   1. 存在【本次派发之后】提交的回执事件（防上一轮重试的旧回执冒充）
       //   2. 回执的 status ∈ validStatuses
-      //   3. outputs 逐一存在且文件 mtime 晚于本次派发时刻（防旧产物冒充）
+      //   3. 两桶路径都在目标工作区内且确实存在（mtime 新鲜度闸已于 2026-10-03 删除）
       // 跑完没交回执：宽限期后插件对原会话追问（重发回执命令，最多 2 次），
       // 仍无回执 = 失败 → 进 retry → 用尽 failed → 窗口耗尽 skipped。
       //
