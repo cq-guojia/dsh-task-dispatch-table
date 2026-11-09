@@ -1,7 +1,7 @@
 {
   "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
   "tasks": {
-    "20261109-0549-fb18-回执指令与产出路径收口": {"category": "缺陷修复", "created": "2026-11-09 05:49:43", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-09 05:49:43", "status": "doing", "tags": ["回执", "产出物", "提示词", "路径", "无人值守"], "title": "回执指令与产出路径收口", "updated": "2026-11-09 05:52:10", "worklog": "worklog/202611/09-0549-fb18-回执指令与产出路径收口.md"}
+    "20261109-0549-fb18-回执指令与产出路径收口": {"category": "缺陷修复", "created": "2026-11-09 05:49:43", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-09 05:49:43", "status": "doing", "tags": ["回执", "产出物", "提示词", "路径", "无人值守"], "title": "回执指令与产出路径收口", "updated": "2026-11-09 06:12:49", "worklog": "worklog/202611/09-0549-fb18-回执指令与产出路径收口.md"}
   },
   "version": "20261022000000"
 }
