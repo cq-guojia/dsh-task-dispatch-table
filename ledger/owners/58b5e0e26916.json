@@ -1,6 +1,7 @@
 {
   "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
   "tasks": {
+    "20261109-0421-70e8-标题加编译版本号": {"category": "功能增强", "created": "2026-11-09 04:21:44", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-09 04:21:44", "status": "doing", "tags": ["版本号", "编译戳", "UI抬头"], "title": "标题加编译版本号", "updated": "2026-11-09 04:21:44", "worklog": "worklog/202611/09-0421-70e8-标题加编译版本号.md"}
   },
   "version": "20261022000000"
 }
