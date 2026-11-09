@@ -45,7 +45,7 @@ import { sortRows } from '../task-sort.js'
 // 取数层（2026-10-06 从本页面文件归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
 import { debugLogOrder, dueLoadingMs, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 import { ensureTaskEditorStyle } from './task-editor-css'
-// 工作区展示名（定义里存 id，卡片显示当前标题）。
+// 工作区展示名（定义里存 path，卡片显示当前标题）。
 import { workspaceLabelOf } from './workspace-options'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
 import { applyStyle, Button, Card, Chip, confirmModal, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, Surface, Table, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TableColumn, type TableRow, type TimeRangeLabels, type TimeRangeValue } from './ui'

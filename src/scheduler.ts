@@ -131,7 +131,8 @@ export function judgeDependencies(
   store: TaskStore,
   task: TaskDefinition,
   logicalDate: string,
-  scheduledAt: string,
+  // 有意保留的位置参数：依赖判定只看 logical_date / 实例时间，不用刻度时间。
+  _scheduledAt: string,
   /**
    * 上游任务定义表（可选）：给了就能区分「上游还没成功 / 上游已删除」两种阻塞，
    * 日志里不再混成一句 dep_blocked（2026-09-30 评审 P4；2026-10-06 起**不看 enabled**）。
@@ -357,7 +358,8 @@ export function recordExpiredOnce(
 export function missingAttachments(
   ctx: HostContext,
   task: TaskDefinition,
-  workspacePath: string,
+  // 有意保留的位置参数：link 型按附件自己的来源工作区（item.workspace）解析，不用任务目标工作区。
+  _workspacePath: string,
   assets: AssetPaths | null,
 ): string[] {
   const list = task.attachments
@@ -424,8 +426,8 @@ function dispatchNewSlots(
   runtime: RuntimeIndex | null,
   /** 本进程启动时刻（决策 54）：补记「未执行」只补**启动之后**的槽 ⇒ 停机期间漏的不补。 */
   startedAtMs: number,
-  /** 老任务存工作区标题：按标题解析成功后把 id 写回定义（用户 2026-11-06 向下兼容自愈）。 */
-  healWorkspaceId: ((taskId: string, workspaceId: string) => void) | undefined,
+  /** 老任务存 title / id：解析成功后把 path 写回定义（向下兼容自愈，无迁移脚本）。 */
+  healWorkspacePath: ((taskId: string, workspacePath: string) => void) | undefined,
 ): void {
   const nowMs = Date.now()
   for (const task of tasks) {
@@ -520,10 +522,10 @@ function dispatchNewSlots(
       runtime?.markBlocked(task.id, workspaceMissing)
       continue
     }
-    // 老任务存的是标题 ⇒ 解析成功后**就地改存 id**（用户 2026-11-06：改名后才不会再失联）。
-    if (task.target.workspace !== workspace.id) {
-      healWorkspaceId?.(task.id, workspace.id)
-      task.target.workspace = workspace.id
+    // 老任务存的是标题 ⇒ 解析成功后**就地改存 path**（用户 2026-11-06：改名后才不会再失联）。
+    if (task.target.workspace !== workspace.path) {
+      healWorkspacePath?.(task.id, workspace.path)
+      task.target.workspace = workspace.path
     }
     // 附加文件校验（2026-09-30）：缺失 ⇒ **不建行、不执行**，只记 error。
     // 与「预条件不过不建行」同源；且不判 failed——重试也不会自己长出来，白耗重试额度。
@@ -572,12 +574,12 @@ export function createScheduler(opts: {
   /** 主界面运行态内存索引（2026-09-30）；未装配则跳过（不影响调度）。 */
   runtime?: RuntimeIndex
   /**
-   * 老任务存的工作区是**标题**（用户 2026-11-06）：按标题解析成功后就地改存 id 并落盘。
+   * 老任务存的是 title / id：解析成功后就地改存 path 并落盘（无迁移脚本）。
    * 未传 ⇒ 只解析不改写（目录模式 / 测试）。
    */
-  healWorkspaceId?: (taskId: string, workspaceId: string) => void
+  healWorkspacePath?: (taskId: string, workspacePath: string) => void
 }): Scheduler {
-  const { ctx, logger, store, reconciler, config, assets, runtime, healWorkspaceId } = opts
+  const { ctx, logger, store, reconciler, config, assets, runtime, healWorkspacePath } = opts
   const verdictLog = new Map<string, string>()
   let taskMap = new Map<string, TaskDefinition>()
   /** 进程启动时刻（决策 54）：补记「未执行」的门禁 —— 停机期间漏掉的槽**不补**。 */
@@ -596,7 +598,7 @@ export function createScheduler(opts: {
       // 故这里把全量写进 taskMap，让前端前置列表能选到停用任务。
       taskMap = new Map(allTasks.map((t) => [t.id, t]))
       // Loop A：先处理新刻度（懒建行 + 不回看 + 不补跑 + 落库即止，决策 41）
-      dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets(), runtime ?? null, startedAtMs, healWorkspaceId)
+      dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets(), runtime ?? null, startedAtMs, healWorkspacePath)
       // Loop B：再收口全部执行记录（发动本 tick 新落库的行 + 追问 / 重试 / 租约——
       // 只读执行记录 + 快照，决策 41）。放在 Loop A 之后 = 新行当 tick 即被发动，时延不退化。
       reconciler.sweep()
@@ -645,10 +647,10 @@ export function createScheduler(opts: {
       } catch {
         return { ok: false, error: 'workspace-missing', detail: task.target.workspace }
       }
-      // 与 Loop A 同口径：老任务存标题 ⇒ 解析成功后就地改存 id（用户 2026-11-06）。
-      if (task.target.workspace !== workspace.id) {
-        healWorkspaceId?.(task.id, workspace.id)
-        task.target.workspace = workspace.id
+      // 与 Loop A 同口径：老任务存标题 ⇒ 解析成功后就地改存 path（用户 2026-11-06）。
+      if (task.target.workspace !== workspace.path) {
+        healWorkspacePath?.(task.id, workspace.path)
+        task.target.workspace = workspace.path
       }
       const missing = missingAttachments(ctx, task, workspace.path, assets === undefined ? null : assets())
       if (missing.length > 0) return { ok: false, error: 'attachment-missing', detail: missing.join('、') }

@@ -55,7 +55,6 @@ export {
   type InputProps,
   type PrefixedInputProps,
   type NumberInputProps,
-  type EditorOption,
   type FieldSize,
   type LoadingProps,
   type TextareaProps,
@@ -64,6 +63,8 @@ export {
   type SurfaceProps,
   type DayCell,
 } from 'dsh-plugin-core/ui'
+/** 本仓扩展：核心 EditorOption 只有 value/label；工作区另需历史别名席位（见 workspace-options.ts）。 */
+export type { EditorOption } from './Field'
 export type { DayCell as CalendarCell } from 'dsh-plugin-core/ui'
 export { CodeViewer } from 'dsh-plugin-core/ui/code-viewer'
 import type { SegmentedProps } from 'dsh-plugin-core/ui'

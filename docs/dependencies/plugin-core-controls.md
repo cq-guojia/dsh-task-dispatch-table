@@ -1,4 +1,5 @@
 # 核心控件 `Picker` / `DateTimePicker` / `FieldHint` / `notify`（源码级事实）
+
 - 用途：记录该外部依赖在本项目里实际用到的行为与边界（宿主升级后据此复核）。
 - 版本真源：包名与版本见上「适用版本」；每条结论的 `文件:行号` 就在正文各节。
 - 复核日期：2026-11-08（迁移当日未重新核实，结论沿用各节标注的版本）
@@ -123,7 +124,7 @@
 | 值口径 | `workspaceId`（单选 `string`；`mode:'multiple'` 时 `string[]`） |
 | `allowDefault` | 默认提供「所有工作区」项（只在单选出现）；选中发 `''` |
 | `searchable` | **默认关**（要就显式 `true`） |
-| 未采用原因 | 本仓任务定义**已改存 workspaceId**（2026-11-06，见 [`dsh-workspace-identity.md`](dsh-workspace-identity.md)），但编辑器除 `id` / `title` 外还依赖 `path` 与 `anchorSessionId`（选择工作区文件时的会话锚点，见 [`dsh-capabilities.md`](dsh-capabilities.md) §workspaceFiles）⇒ 核心控件不下发这两个字段，仍用自有 `Picker`（`searchable:true`）承载。**若核心将来允许调用方附带自定义字段，应改接它** |
+| 未采用原因 | 本仓任务定义**已改存 workspace.path**（2026-11-09，见 [`dsh-workspace-identity.md`](dsh-workspace-identity.md)），但编辑器除 `id` / `title` 外还依赖 `path` 与 `anchorSessionId`（选择工作区文件时的会话锚点，见 [`dsh-capabilities.md`](dsh-capabilities.md) §workspaceFiles）⇒ 核心控件不下发这两个字段，仍用自有 `Picker`（`searchable:true`）承载。**若核心将来允许调用方附带自定义字段，应改接它** |
 
 ## 九、`InputGroup` / `PrefixedInput`（两种「名字 + 输入框」形态的区别）
 

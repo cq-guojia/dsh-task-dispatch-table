@@ -27,6 +27,7 @@ import { createReconciler } from './reconcile.js'
 import type { ReconcileOptions } from './reconcile.js'
 import { createScheduler } from './scheduler.js'
 import type { Scheduler } from './scheduler.js'
+import { findWorkspace, workspaceValueSet } from './dispatch.js'
 import { createRuntimeIndex } from './runtime-index.js'
 import type { RuntimeIndex, TaskOverviewRow } from './runtime-index.js'
 import { createEventBus } from './event-bus.js'
@@ -427,9 +428,13 @@ function attachmentsWithPaths(
   if (registry === null) return [...rows]
   const byId = new Map(tasks.map(task => [task.id, task]))
   const workspaces = registry.list()
-  // 新任务存 id；link 附件的来源工作区也随迁移改存 id ⇒ 两种键都认。
+  // 任务定义与 link 附件的工作区标识统一存 path；老数据可能是 title / id ⇒ 三种键都认。
   const byKey = new Map<string, (typeof workspaces)[number]>()
-  for (const workspace of workspaces) { byKey.set(workspace.id, workspace); byKey.set(workspace.title, workspace) }
+  for (const workspace of workspaces) {
+    byKey.set(workspace.path, workspace)
+    byKey.set(workspace.id, workspace)
+    byKey.set(workspace.title, workspace)
+  }
   const anchorOf = (workspace: (typeof workspaces)[number] | undefined): string | undefined => {
     const sessions = workspace?.sessionIds
     return sessions !== undefined && sessions.length > 0 ? sessions[sessions.length - 1] : undefined
@@ -476,19 +481,20 @@ function checkTasksInlineShape(raw: string): string | null {
 }
 
 /**
- * 整批 `tasksInline` 的**工作区存在性校验**（用户 2026-11-06）：整批 JSON 编辑同样不许把
- * 「已经不存在的工作区」存进去（**只认 id**；老任务由执行期自愈，不在这里翻译）。
+ * 整批 `tasksInline` 的**工作区存在性校验**：整批 JSON 编辑同样不许把「已经不存在的工作区」存进去。
+ * registry 未就绪 / 列表为空 ⇒ 跳过（不能把「拿不到列表」当成「工作区不存在」而误杀）。
+ * 非空时 path / title / id 三种都认（老任务不被拦），命中即由归一函数就地改存 path。
  * 返回 null = 全部可解析；否则返回第一条人话错误（含任务名，便于用户定位）。
  */
 function checkTasksInlineWorkspaces(raw: string, registry: HostWorkspaceRegistry | null): string | null {
-  if (registry === null) return null
+  const workspaces = registry?.list() ?? []
+  if (workspaces.length === 0) return null
+  const known = workspaceValueSet(workspaces)
   const text = raw.trim()
   if (text === '') return null
   let data: unknown
   try { data = JSON.parse(text) } catch { return null } // 形状闸门已先跑，这里不重复报
   if (!Array.isArray(data)) return null
-  // 只认 id：整批保存同样不做标题→id 翻译（老任务由执行期解析成功后写回）。
-  const known = new Set(registry.list().map(workspace => workspace.id))
   for (const item of data) {
     const task = item as { id?: unknown; title?: unknown; target?: unknown }
     const target = task.target
@@ -498,9 +504,31 @@ function checkTasksInlineWorkspaces(raw: string, registry: HostWorkspaceRegistry
     const name = typeof task.title === 'string' && task.title !== ''
       ? task.title
       : (typeof task.id === 'string' ? task.id : '未命名任务')
-    return `任务「${name}」选中的工作区已不存在（可能被重命名或删除）：${workspace}`
+    return `任务「${name}」选中的工作区已不存在（可能被删除或移动了目录）：${workspace}`
   }
   return null
+}
+
+/** 整批保存时把老 title / id 就地改存 path（无迁移脚本；registry 未就绪时原样返回）。 */
+function normalizeTasksInlineWorkspaces(raw: string, registry: HostWorkspaceRegistry | null): string {
+  const workspaces = registry?.list() ?? []
+  if (workspaces.length === 0) return raw
+  let data: unknown
+  try { data = JSON.parse(raw.trim()) } catch { return raw }
+  if (!Array.isArray(data)) return raw
+  let changed = false
+  for (const item of data) {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) continue
+    const target = (item as Record<string, unknown>).target
+    if (target === null || typeof target !== 'object' || Array.isArray(target)) continue
+    const targetObj = target as Record<string, unknown>
+    if (typeof targetObj.workspace !== 'string' || targetObj.workspace === '') continue
+    const hit = findWorkspace(workspaces, targetObj.workspace)
+    if (hit === undefined || hit.path === targetObj.workspace) continue
+    targetObj.workspace = hit.path
+    changed = true
+  }
+  return changed ? JSON.stringify(data, null, 2) : raw
 }
 
 /**
@@ -692,10 +720,13 @@ const makeDispatchRoutes = (
           // 它们此前会「保存成功」并落盘 ⇒ 运行时整表解析失败 ⇒ 任务表消失且**已持久化**（2026-10-07 审计）。
           const shape = checkTasksInlineShape(parsed.tasksInline)
           if (shape !== null) return writeJson(res, 422, { ok: false, error: shape })
-          // 工作区是核心：整批保存也要验「真实存在」，不能有值就放行（用户 2026-11-06）。
-          const workspaceProblem = checkTasksInlineWorkspaces(parsed.tasksInline, getRegistry())
+          // 工作区是核心：整批保存先归一（老 title / id → path），再验「真实存在」。
+          // registry 未就绪 ⇒ 归一原样返回、校验跳过（不把降级误判成「工作区不存在」）。
+          const registryForBatch = getRegistry()
+          const batchJson = normalizeTasksInlineWorkspaces(parsed.tasksInline, registryForBatch)
+          const workspaceProblem = checkTasksInlineWorkspaces(batchJson, registryForBatch)
           if (workspaceProblem !== null) return writeJson(res, 422, { ok: false, error: workspaceProblem })
-          const { json, changed, assigned, error } = ensureIdsInInlineJson(parsed.tasksInline, existingUuidIds(runtimeRef.tasksInline))
+          const { json, changed, assigned, error } = ensureIdsInInlineJson(batchJson, existingUuidIds(runtimeRef.tasksInline))
           if (error !== null) return writeJson(res, 422, { ok: false, error })
           runtimeRef.tasksInline = json
           await persistTasksInline(json)
@@ -722,14 +753,16 @@ const makeDispatchRoutes = (
         }
         const def = checked.data as TaskDefinitionInput
         const existing = existingUuidIds(runtimeRef.tasksInline)
-        // 工作区存在性（用户 2026-11-06）：保存只认 **id**；不在真实列表里就直接 422，
-        // 让用户回下拉重选（不在这里做标题→id 的兼容翻译）。
-        const registryForSave = getRegistry()
-        const knownWorkspaces = registryForSave === null
+        // 工作区存在性：列表为空 = 宿主未就绪 ⇒ 跳过校验（不误杀）；非空时 path/title/id 三种都认。
+        const workspacesForSave = getRegistry()?.list() ?? []
+        const knownWorkspaces = workspacesForSave.length === 0
           ? undefined
-          : new Set(registryForSave.list().map(workspace => workspace.id))
+          : workspaceValueSet(workspacesForSave)
         const validation = validateDefinitionForSave(def, existing, knownWorkspaces)
         if (validation.ok !== true) return writeJson(res, 422, { ok: false, error: validation.error })
+        // 保存即归一：命中真实工作区后把定义里的值统一改存 path（老 title / id 当场收敛）。
+        const workspaceHit = findWorkspace(workspacesForSave, def.target.workspace)
+        if (workspaceHit !== undefined) def.target.workspace = workspaceHit.path
 
         // ② 身份：带 UUID 且命中现有表 ⇒ 修改；否则**一律服务端生成新 id**——
         //    客户端给的 id 不采纳，闸门「UUID 不能凭空引入」不被表单通道旁路（评审 P2#10）。
@@ -976,8 +1009,8 @@ const makeDispatchRoutes = (
       const llm = getLlm()
       const workspaces = registry === null
         ? []
-        // value 用 **id**（用户 2026-11-06：改名不失效）；`resolveWorkspace` 仍按 title 匹配、id 兜底，
-        // 所以老任务存标题照样能执行。title 只作显示名与搜索用。
+        // value 用 **path**（宿主派发即用此值，重启 / 重建 id 都不变）；title 只作显示名与搜索用。
+        // 客户端另把 title / id 作为历史别名，保证老任务的显示、校验与附件锚点不断。
         // anchorSessionId = 该工作区最近一个会话（entity.sessionIds 末位，官方 0.2.0-rc.1 已核实；
         // 含归档会话槽位 ⇒ scope 解析无需激活 agent）——客户端「选择工作区文件」的浏览锚点。
         // 没有会话的工作区不下发该字段（客户端显示「无历史会话」空态，不造假会话）。
@@ -1878,14 +1911,14 @@ export function apply(ctx: HostContext, config: unknown): void {
       config: pluginConfig,
       // 附加文件存在性校验（Loop A）：资产根随 statePath 定格，未就绪 ⇒ 跳过 upload 型校验。
       assets: () => assetsRef,
-      // 老任务存工作区标题 ⇒ 执行时按标题解析成功后就地改存 id 并落盘（用户 2026-11-06 向下兼容）。
-      healWorkspaceId: (taskId, workspaceId) => {
-        const healed = setWorkspaceDefinitionInline(runtime.tasksInline, taskId, workspaceId)
+      // 老任务存 title / id ⇒ 执行时解析成功后就地改存 path 并落盘（无迁移脚本）。
+      healWorkspacePath: (taskId, workspacePath) => {
+        const healed = setWorkspaceDefinitionInline(runtime.tasksInline, taskId, workspacePath)
         if (healed.error !== null || !healed.changed) return
         runtime.tasksInline = healed.json
         void persistTasksInline(healed.json)
         resyncTaskMap?.()
-        teeLogger.info(`任务 ${taskId} 的工作区已由标题改存 id（${workspaceId}）`)
+        teeLogger.info(`任务 ${taskId} 的工作区已收敛为 path（${workspacePath}）`)
       },
     })
     schedulerRef = scheduler

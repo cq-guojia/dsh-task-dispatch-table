@@ -53,7 +53,7 @@ export function TaskViewPanel(props: {
   taskId: string
   /** 任务表（真数据）：把前置任务的 id 反查成人读名字。 */
   tasks: EditorTaskOption[]
-  /** 工作区展示名（定义里存 id，界面要显示当前标题）；不给 ⇒ 原样显示。 */
+  /** 工作区展示名（定义里存 path，界面要显示当前标题）；不给 ⇒ 原样显示。 */
   workspaceLabel?: ((value: string) => string) | undefined
   /** 点「任务会话」打开归档会话（不给 ⇒ 该行不可点）。 */
   onOpenSession?: ((sessionId: string) => void) | undefined

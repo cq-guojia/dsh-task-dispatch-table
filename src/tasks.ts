@@ -62,8 +62,8 @@ export const taskDefinitionSchema = z.object({
     ui: z.record(z.string(), z.unknown()).optional(),
   }),
   target: z.object({
-    // 工作区（非工作目录，决策 22）：存 workspace id（宿主创建时的随机 UUID，重命名不变）；
-    // 老任务存的是 title，执行 / 保存时按标题解析成功后**就地改存 id**（用户 2026-11-06 向下兼容）。
+    // 工作区（决策 22）：存宿主的 workspace.path（绝对路径，宿主派发即用此值）。
+    // 老任务曾存 title / id ⇒ 解析、保存、执行时都由 findWorkspace 认三种，命中后就地改存 path。
     workspace: z.string().min(1),
     /** 派发模型（决策 22 漏斗第①层）：provider 与 model 成对；都留空则漏到插件配置 / 宿主默认。 */
     provider: z.string().optional(),
@@ -287,7 +287,7 @@ export function validateDefinitionForSave(def: TaskDefinitionInput, existingIds:
   // 表单里留着的旧值」照样保存成功，等到执行时才报「工作区未找到」。registry 未就绪（降级）时
   // 不传该集合 = 跳过（不能拿「拿不到列表」当成「工作区不存在」）。
   if (knownWorkspaces !== undefined && !knownWorkspaces.has(workspace)) {
-    return { ok: false, error: `工作区不存在或已被重命名 / 删除：「${workspace}」，请重新选择工作区` }
+    return { ok: false, error: `工作区不存在或目录已变更 / 被删除：「${workspace}」，请重新选择工作区` }
   }
   const cron = typeof def.schedule?.cron === 'string' && def.schedule.cron.trim() !== '' ? def.schedule.cron.trim() : undefined
   const once = typeof def.schedule?.once === 'string' && def.schedule.once.trim() !== '' ? def.schedule.once.trim() : undefined
@@ -417,8 +417,8 @@ export function setEnabledDefinitionInline(raw: string, id: string, enabled: boo
 export interface SetWorkspaceResult { json: string; changed: boolean; error: string | null }
 
 /**
- * 把一条任务的 `target.workspace` 从「工作区标题」改存为「工作区 id」（用户 2026-11-06：
- * 向下兼容自愈 —— 老任务存标题，执行时按标题解析成功后就地写成 id，下次改名不再失联）。
+ * 把一条任务的 `target.workspace` 统一改存为宿主 `workspace.path`（2026-11-09）：
+ * 向下兼容自愈 —— 老任务存 title / id，解析成功后就地写成 path，重启 / 重建 id 都不再失联。
  * 定义不存在 / 表非法 / 值没变 ⇒ 原样返回（不落库）。
  */
 export function setWorkspaceDefinitionInline(raw: string, id: string, workspace: string): SetWorkspaceResult {

@@ -10,17 +10,20 @@ export declare class DispatchPreconditionError extends Error {
     constructor(reason: string, message: string);
 }
 /**
- * 工作区标识 → 工作区实体（决策 22：target.workspace 语义是**工作区**，不是工作目录；
- * 目录由实体 path 派生）。**新任务存 id**（宿主随机 UUID，改名不变）；老任务存 title，
- * 所以先按 title 精确匹配、再按 id 兜底（用户 2026-11-06 向下兼容）。
- * registry 无按 name 查询 API，只能遍历 list()。匹配不到即抛错 ⇒ 任务判失败，
- * 绝不落到「未分组」或随便找个目录跑。（Loop A 落库前的前置检查用；Loop B 发动走
- * resolveWorkspaceByPath——快照里存的是 path。）
+ * 工作区标识 → 工作区实体（**唯一真源**，决策 22）。
+ * `target.workspace` 存宿主的 `workspace.path`（绝对路径）：宿主派发用的本来就是它
+ * （`meta.cwd`），工作区改名 / 宿主重启 / 注册表重建 id 都不影响；移动目录才需要重选。
+ * 老任务可能存 title 或 id，三种都认，解析成功后由调用方就地改存 path（无迁移脚本）。
+ * 顺序：path 精确 → title 精确 → id 精确。registry 无按名查询 API，只能遍历 list()。
+ * 匹配不到即抛错 ⇒ 任务判失败，绝不落到「未分组」或随便找个目录跑。
  */
-export declare function resolveWorkspace(ctx: HostContext, name: string): HostWorkspace;
+export declare function findWorkspace(workspaces: readonly HostWorkspace[], raw: string): HostWorkspace | undefined;
+/** 保存 / 下拉校验用的已知标识集合：path + title + id（老值不误杀，新值统一 path）。 */
+export declare function workspaceValueSet(workspaces: readonly HostWorkspace[]): ReadonlySet<string>;
+export declare function resolveWorkspace(ctx: HostContext, raw: string): HostWorkspace;
 /**
- * 工作区 path → 工作区实体（决策 41：Loop B 发动只读快照的 workspacePath）。
- * 快照里的 path 是落库时从实体原样取的，精确比对即可；找不到 = 工作区被删/重建，
+ * Loop B 发动只读快照的 workspacePath（决策 41）：快照里的 path 落库时从实体原样取的，
+ * 严格按 path 比对（不许 title / id 兜底）；找不到 = 工作区被删或目录变动，
  * 行保留走重试判定（失败原因落事件）。
  */
 export declare function resolveWorkspaceByPath(ctx: HostContext, path: string): HostWorkspace;

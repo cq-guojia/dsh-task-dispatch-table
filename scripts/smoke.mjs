@@ -22,7 +22,12 @@ import {
 	monthRangeQuery,
 	planEntriesByDay,
 } from "../dist/calendar-plan.js";
-import { attachmentFileBlocks, buildMessage } from "../dist/dispatch.js";
+import {
+	attachmentFileBlocks,
+	buildMessage,
+	findWorkspace,
+	workspaceValueSet,
+} from "../dist/dispatch.js";
 import {
 	NUDGE_NOTICE,
 	outputRules,
@@ -8099,6 +8104,69 @@ console.log("\n[14] runtime-index");
 
 	store.close();
 	rmSync(dir, { recursive: true, force: true });
+}
+
+// ── 26. 工作区标识唯一真源（2026-11-09：id → path）──
+console.log("\n[26] 工作区标识唯一真源 / 降级恢复");
+{
+	const srcOf = (p) => readFileSync(join(process.cwd(), "src", p), "utf8");
+	const wsA = { id: "uuid-a", title: "Alpha", path: "/ws/alpha" };
+	const wsB = { id: "uuid-b", title: "Beta", path: "/ws/beta" };
+	const list = [wsA, wsB];
+	const known = workspaceValueSet(list);
+	check(
+		"【唯一真源】findWorkspace 认 path / title / id，path 优先，认不出返回 undefined",
+		findWorkspace(list, "/ws/beta") === wsB &&
+			findWorkspace(list, "Alpha") === wsA &&
+			findWorkspace(list, "uuid-b") === wsB &&
+			findWorkspace(list, "gone") === undefined,
+	);
+	check(
+		"【存在性集合】workspaceValueSet 三种标识齐备（老值不被误杀）",
+		["/ws/alpha", "Alpha", "uuid-a", "/ws/beta", "Beta", "uuid-b"].every((v) => known.has(v)),
+	);
+	check(
+		"【存储口径】任务定义 / 下拉 value 统一写 path，老 title/id 只作 aliases",
+		srcOf("tasks.ts").includes("workspace.path") &&
+			/const value = pathValue/.test(srcOf("client/index.ts")) &&
+			srcOf("client/ui/Field.tsx").includes("aliases?"),
+	);
+	check(
+		"【自愈】执行期把老值写回 path，不再写 id",
+		/healWorkspacePath\?\.\(task\.id, workspace\.path\)/.test(srcOf("scheduler.ts")) &&
+			!/healWorkspaceId/.test(srcOf("scheduler.ts")),
+	);
+	check(
+		"【保存归一】单条 + 整批保存命中后改存 path",
+		srcOf("index.ts").includes("normalizeTasksInlineWorkspaces") &&
+			srcOf("index.ts").includes("workspaceHit !== undefined") &&
+			srcOf("index.ts").includes("def.target.workspace = workspaceHit.path"),
+	);
+	check(
+		"【降级不误杀】列表为空跳过存在性校验，不把「拿不到」当成「不存在」",
+		srcOf("index.ts").includes("if (workspaces.length === 0) return null") &&
+			srcOf("index.ts").includes("workspacesForSave.length === 0"),
+	);
+	check(
+		"【降级恢复】/options 空候选或 degraded 时退避重取，拿到真候选即停",
+		srcOf("client/index.ts").includes("scheduleRetry") &&
+			srcOf("client/index.ts").includes("body.degraded?.workspaces === true") &&
+			srcOf("client/index.ts").includes("clearTimeout(retryTimer)"),
+	);
+	check(
+		"【不露裸值】候选为空时展示归一返回空串；候选齐了才如实显示悬空值",
+		srcOf("client/workspace-options.ts").includes("options.length === 0 ? '' : raw") &&
+			srcOf("client/workspace-options.ts").includes("option.aliases?.includes(raw)"),
+	);
+	check(
+		"【选中态】编辑打开时老 title / id 归一成 path，下拉才不会显示未选择",
+		srcOf("client/workspace-options.ts").includes("export function workspaceValueOf") &&
+			srcOf("client/task-editor.tsx").includes("workspaceValueOf(workspaces, draft.workspace)"),
+	);
+	check(
+		"【同源归一】选文件根目录 / 附件来源 / 前置任务过滤都走同一个 workspaceValueOf",
+		srcOf("client/task-editor.tsx").split("workspaceValueOf(").length - 1 >= 4,
+	);
 }
 
 console.log(`\n冒烟结果：${passed} 项通过，${failures.length} 项失败`);

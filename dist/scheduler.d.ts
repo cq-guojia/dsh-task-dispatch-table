@@ -43,7 +43,7 @@ export interface DependencyVerdict {
      *  不看 enabled（上游跑完一次就被关停的「一次性上游」是正常用法）。 */
     reason?: 'upstream-not-succeeded' | 'upstream-missing';
 }
-export declare function judgeDependencies(store: TaskStore, task: TaskDefinition, logicalDate: string, scheduledAt: string, 
+export declare function judgeDependencies(store: TaskStore, task: TaskDefinition, logicalDate: string, _scheduledAt: string, 
 /**
  * 上游任务定义表（可选）：给了就能区分「上游还没成功 / 上游已删除」两种阻塞，
  * 日志里不再混成一句 dep_blocked（2026-09-30 评审 P4；2026-10-06 起**不看 enabled**）。
@@ -68,7 +68,7 @@ export declare function recordExpiredOnce(store: TaskStore, runtime: RuntimeInde
  * 附件可以选自任意工作区，拿任务目标工作区的 path 去判会误报（评审 P1#8）。
  * 拿不到基准（资产根未就绪 / 来源工作区不存在）⇒ 跳过不判，**绝不猜**。
  */
-export declare function missingAttachments(ctx: HostContext, task: TaskDefinition, workspacePath: string, assets: AssetPaths | null): string[];
+export declare function missingAttachments(ctx: HostContext, task: TaskDefinition, _workspacePath: string, assets: AssetPaths | null): string[];
 export declare function createScheduler(opts: {
     ctx: HostContext;
     logger: HostLogger;
@@ -80,8 +80,8 @@ export declare function createScheduler(opts: {
     /** 主界面运行态内存索引（2026-09-30）；未装配则跳过（不影响调度）。 */
     runtime?: RuntimeIndex;
     /**
-     * 老任务存的工作区是**标题**（用户 2026-11-06）：按标题解析成功后就地改存 id 并落盘。
+     * 老任务存的是 title / id：解析成功后就地改存 path 并落盘（无迁移脚本）。
      * 未传 ⇒ 只解析不改写（目录模式 / 测试）。
      */
-    healWorkspaceId?: (taskId: string, workspaceId: string) => void;
+    healWorkspacePath?: (taskId: string, workspacePath: string) => void;
 }): Scheduler;

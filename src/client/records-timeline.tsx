@@ -42,7 +42,7 @@ import { baseNameOf, formatDateTime, formatDurationHms, formatPlanStamp, formatT
 import { resolvedDepsOf, type ResolvedDependency } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { ProcessFiles } from './process-files'
-// 工作区标识口径（id ↔ 标题）唯一实现（用户 2026-11-06 存 id + 向下兼容）。
+// 工作区展示归一（path / 老 title / 老 id → 当前标题）唯一实现，见 client/workspace-options.ts。
 import { workspaceLabelOf } from './workspace-options'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
@@ -1168,7 +1168,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
                   key: row.id,
                   row,
                   label: snapshotTitleOf(row) || row.task_id,
-                  // 展示当前标题（定义里存 id）；查不到的工作区（历史执行）原样显示路径末段。
+                  // 展示当前标题（定义里存 path）；查不到的工作区（历史执行）原样显示路径末段。
                   workspace: workspaceLabelOf(workspaces, workspaceOf(row)),
                   t,
                   tt,

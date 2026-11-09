@@ -174,8 +174,8 @@ export interface SetWorkspaceResult {
     error: string | null;
 }
 /**
- * 把一条任务的 `target.workspace` 从「工作区标题」改存为「工作区 id」（用户 2026-11-06：
- * 向下兼容自愈 —— 老任务存标题，执行时按标题解析成功后就地写成 id，下次改名不再失联）。
+ * 把一条任务的 `target.workspace` 统一改存为宿主 `workspace.path`（2026-11-09）：
+ * 向下兼容自愈 —— 老任务存 title / id，解析成功后就地写成 path，重启 / 重建 id 都不再失联。
  * 定义不存在 / 表非法 / 值没变 ⇒ 原样返回（不落库）。
  */
 export declare function setWorkspaceDefinitionInline(raw: string, id: string, workspace: string): SetWorkspaceResult;

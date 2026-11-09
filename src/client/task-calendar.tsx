@@ -38,7 +38,7 @@ import { calendarLabelsOf } from './editor-fields'
 import { interpolateTranslate, type Translate } from './locales'
 import type { TaskOverviewRow } from './task-overview'
 import { IconClockOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
-// 工作区展示名（定义里存 id，日历显示当前标题）。
+// 工作区展示名（定义里存 path，日历显示当前标题）。
 import { workspaceLabelOf } from './workspace-options'
 
 // ── 样式（走基础层注入器；只消费 var(--dshpc-*)，不自建 <style>、不硬编码色值）──

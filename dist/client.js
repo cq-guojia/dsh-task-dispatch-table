@@ -65617,7 +65617,7 @@ window.__ModuleLoader__.load({
 			configUnavailable: "读不到当前设置（配置通道未就绪），稍后重新打开本页试试。",
 			vTitleRequired: "还没填任务名称——任务列表里靠它认任务，请给任务起个名字。",
 			vWorkspaceRequired: "还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。",
-			vWorkspaceUnknown: "选中的工作区已经不存在了（可能被重命名或删除）——请在上方下拉里重新选择当前的工作区。",
+			vWorkspaceUnknown: "选中的工作区已经不存在了（可能被删除或移动了目录）——请在上方下拉里重新选择当前的工作区。",
 			vPromptRequired: "还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。",
 			vIntervalInvalid: "执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。",
 			vWeekdayRequired: "每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。",
@@ -66305,7 +66305,7 @@ window.__ModuleLoader__.load({
 			configUnavailable: "Cannot read the current settings (config channel not ready yet) — reopen this page later.",
 			vTitleRequired: "Task name is missing — the list identifies tasks by name. Please give it one.",
 			vWorkspaceRequired: "No workspace selected — a task must belong to a workspace to run. Pick one above.",
-			vWorkspaceUnknown: "The selected workspace no longer exists (it may have been renamed or deleted). Pick a current workspace above.",
+			vWorkspaceUnknown: "The selected workspace no longer exists (it may have been deleted or moved). Pick a current workspace above.",
 			vPromptRequired: "The prompt is empty — it tells the agent what to do and cannot be blank.",
 			vIntervalInvalid: "Invalid interval — N in \"every N minutes/hours\" must be an integer greater than 0.",
 			vWeekdayRequired: "Weekly schedule with no weekday selected — pick at least one, or the task never runs.",
@@ -66467,11 +66467,26 @@ window.__ModuleLoader__.load({
 			})))) : null);
 		}
 		// src/client/workspace-options.ts
-		/** 展示归一：id → 当前标题；认不出原样返回（不编造工作区名）。 */
+		/**
+		* 展示归一：path（或历史 title / id）→ 当前标题。
+		* 候选还没取到（宿主重启 / 降级）时不把内部标识露给用户，返回空串；
+		* 候选齐了却仍认不出 ⇒ 该工作区真的没了，如实显示原值让用户重选（不编造名字）。
+		*/
 		function workspaceLabelOf(options, raw) {
 			if (raw === "") return "";
-			const hit = options.find((option) => option.value === raw);
-			return hit === void 0 ? raw : hit.label;
+			const hit = options.find((option) => option.value === raw || option.aliases?.includes(raw) === true);
+			if (hit !== void 0) return hit.label;
+			return options.length === 0 ? "" : raw;
+		}
+		/**
+		* 选中态归一：老 title / id → 当前选项值（path）。
+		* 下拉只按 value 全等匹配，不做别名 ⇒ 渲染前必须先过这一道，否则老任务打开编辑时显示「未选择」。
+		* 认不出原样返回（保存校验与派发错误会兜底，不在这里猜）。
+		*/
+		function workspaceValueOf(options, raw) {
+			if (raw === "") return "";
+			const hit = options.find((option) => option.value === raw || option.aliases?.includes(raw) === true);
+			return hit === void 0 ? raw : hit.value;
 		}
 		// src/client/status-text.ts
 		/** 状态 → 文案键（唯一映射表）。 */
@@ -79276,7 +79291,15 @@ window.__ModuleLoader__.load({
 				});
 			}, [saveError]);
 			const [showErrors, setShowErrors] = (0, react$1.useState)(false);
-			const knownWorkspaces = props.workspaces.length === 0 ? void 0 : new Set(props.workspaces.map((option) => option.value));
+			let knownWorkspaces;
+			if (props.workspaces.length > 0) {
+				const values = /* @__PURE__ */ new Set();
+				for (const option of props.workspaces) {
+					values.add(option.value);
+					for (const alias of option.aliases ?? []) values.add(alias);
+				}
+				knownWorkspaces = values;
+			}
 			const fieldProblems = showErrors ? validateTaskDraft(draft, tt, knownWorkspaces) : [];
 			const fieldErrorMap = {};
 			for (const p of fieldProblems) if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message;
@@ -79572,7 +79595,7 @@ window.__ModuleLoader__.load({
 					patch({ prompt: value });
 				}
 			}), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-card-foot" }, (0, react$1.createElement)(SelectField, {
-				value: draft.workspace,
+				value: workspaceValueOf(workspaces, draft.workspace),
 				options: workspaces,
 				onChange: (value) => {
 					patch({ workspace: value });
@@ -79620,7 +79643,7 @@ window.__ModuleLoader__.load({
 			const openPicker = () => {
 				const anchor = pickerAnchorRef.current;
 				if (anchor === null || pickerOpen) return;
-				const workspace = draft.workspace !== "" ? draft.workspace : workspaces[0]?.value ?? "";
+				const workspace = workspaceValueOf(workspaces, draft.workspace !== "" ? draft.workspace : workspaces[0]?.value ?? "");
 				setPickerOpen(true);
 				pickWorkspaceFile({
 					anchor,
@@ -79640,7 +79663,7 @@ window.__ModuleLoader__.load({
 						name,
 						kind: "link",
 						ref,
-						workspace: picked.workspace ?? workspace,
+						workspace: workspaceValueOf(workspaces, picked.workspace ?? workspace),
 						isDir: picked.isDir
 					});
 				}, () => {
@@ -80035,7 +80058,7 @@ window.__ModuleLoader__.load({
 			const depGroups = workspaces.map((ws) => ({
 				value: ws.value,
 				label: ws.label,
-				options: tasks.filter((task) => task.workspace === ws.value && !addedDepIds.has(task.id) && task.id !== currentTaskId).map((task) => ({
+				options: tasks.filter((task) => workspaceValueOf(workspaces, task.workspace) === ws.value && !addedDepIds.has(task.id) && task.id !== currentTaskId).map((task) => ({
 					value: task.id,
 					label: task.enabled === false ? `${task.label}${t("editorDepDisabledTag")}` : task.label
 				}))
@@ -80088,7 +80111,7 @@ window.__ModuleLoader__.load({
 						alignItems: "center",
 						gap: "4px"
 					} }, ws === "" ? null : (0, react$1.createElement)(MarqueeText, {
-						text: ws,
+						text: workspaceLabelOf(workspaces, ws),
 						style: {
 							width: "72px",
 							color: "var(--dshpc-fg-2)",
@@ -83116,7 +83139,7 @@ window.__ModuleLoader__.load({
 			whiteSpace: "nowrap"
 		};
 		/** 主页面与占位态共用同一抬头标题，保证两处版本标记一致。 */
-		const renderPanelTitle = (t) => (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"), (0, react$1.createElement)("span", { style: buildTagStyle }, `v0.1.15 261109-185020-677`));
+		const renderPanelTitle = (t) => (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"), (0, react$1.createElement)("span", { style: buildTagStyle }, `v0.1.16 261109-220330-428`));
 		const preStyle = {
 			fontFamily: monoFont,
 			fontSize: "var(--dshpc-font-sm)",
@@ -83688,39 +83711,68 @@ window.__ModuleLoader__.load({
 			const [editorOptions, setEditorOptions] = (0, react$1.useState)(EMPTY_EDITOR_OPTIONS);
 			(0, react$1.useEffect)(() => {
 				let alive = true;
-				fetchWithTimeout(`${DISPATCH_API_PREFIX}/options`, { cache: "no-store" }).then((res) => res.json()).then((body) => {
-					if (!alive || body.ok !== true) return;
-					const workspaceAnchors = {};
-					const workspaces = (body.workspaces ?? []).filter((item) => typeof item.title === "string" && item.title !== "").map((item) => {
-						const id = typeof item.id === "string" && item.id !== "" ? item.id : item.title;
-						if (typeof item.anchorSessionId === "string" && item.anchorSessionId !== "") workspaceAnchors[id] = item.anchorSessionId;
-						return {
-							value: id,
-							label: item.title
-						};
-					});
-					const models = [{
-						value: "",
-						label: t("editorFollowHost")
-					}];
-					for (const model of body.models ?? []) {
-						if (typeof model.provider !== "string" || typeof model.id !== "string") continue;
-						const name = typeof model.name === "string" && model.name !== "" ? model.name : model.id;
-						models.push({
-							value: encodeModelValue(model.provider, model.id),
-							label: `${name}（${model.provider}）`
+				let retryTimer;
+				let attempt = 0;
+				function scheduleRetry() {
+					const delays = [
+						3e3,
+						6e3,
+						12e3,
+						3e4
+					];
+					const delay = delays[Math.min(attempt, delays.length - 1)] ?? 3e4;
+					attempt += 1;
+					retryTimer = setTimeout(load, delay);
+				}
+				function load() {
+					fetchWithTimeout(`${DISPATCH_API_PREFIX}/options`, { cache: "no-store" }).then((res) => res.json()).then((body) => {
+						if (!alive) return;
+						if (body.ok !== true) throw new Error("options-not-ok");
+						const workspaceAnchors = {};
+						const workspaces = (body.workspaces ?? []).filter((item) => typeof item.title === "string" && item.title !== "").map((item) => {
+							const pathValue = typeof item.path === "string" && item.path !== "" ? item.path : void 0;
+							const id = typeof item.id === "string" && item.id !== "" ? item.id : void 0;
+							const value = pathValue ?? id ?? item.title;
+							const aliases = [
+								item.title,
+								id,
+								pathValue
+							].filter((entry) => typeof entry === "string" && entry !== "" && entry !== value);
+							if (typeof item.anchorSessionId === "string" && item.anchorSessionId !== "") for (const key of [value, ...aliases]) workspaceAnchors[key] = item.anchorSessionId;
+							return {
+								value,
+								label: item.title,
+								aliases
+							};
 						});
-					}
-					setEditorOptions({
-						workspaces,
-						models,
-						workspaceAnchors
+						const models = [{
+							value: "",
+							label: t("editorFollowHost")
+						}];
+						for (const model of body.models ?? []) {
+							if (typeof model.provider !== "string" || typeof model.id !== "string") continue;
+							const name = typeof model.name === "string" && model.name !== "" ? model.name : model.id;
+							models.push({
+								value: encodeModelValue(model.provider, model.id),
+								label: `${name}（${model.provider}）`
+							});
+						}
+						setEditorOptions({
+							workspaces,
+							models,
+							workspaceAnchors
+						});
+						if (workspaces.length === 0 || body.degraded?.workspaces === true) scheduleRetry();
+					}).catch(() => {
+						if (!alive) return;
+						setEditorOptions({ ...EMPTY_EDITOR_OPTIONS });
+						scheduleRetry();
 					});
-				}).catch(() => {
-					setEditorOptions({ ...EMPTY_EDITOR_OPTIONS });
-				});
+				}
+				load();
 				return () => {
 					alive = false;
+					if (retryTimer !== void 0) clearTimeout(retryTimer);
 				};
 			}, [t]);
 			const [viewing, setViewing] = (0, react$1.useState)(null);

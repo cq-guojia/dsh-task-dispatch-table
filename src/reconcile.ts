@@ -609,6 +609,17 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
 
   /** 已成功改名的会话（进程内幂等；重启后最多再写一条同名 `session/title` 事件，无害）。 */
   const titledSessions = new Set<string>()
+  /**
+   * 正在改名中的会话（防 append 广播重入）。
+   * ⚠️ `rename` 内部 `session.append('session/title')` 会**同步广播** `session/event`，
+   * 广播会立刻重入本模块的 `onEvent` ⇒ 又调 rename ⇒ 宿主抛
+   * `session append cannot reenter while another append is being published`（2026-11-09 真机实证：
+   * 每次事件都重试一次、每次都撞这个错，标题永远写不进去）。必须单独挡一层。
+   */
+  const renamingSessions = new Set<string>()
+  /** 改名尝试次数：失败由后续事件自然重试，但限次（否则每个流式事件都刷一条日志）。 */
+  const titleAttempts = new Map<string, number>()
+  const TITLE_MAX_ATTEMPTS = 5
 
   /**
    * 会话改名（决策 42）。宿主 `rename` 写 `session/title` 且 source=user ⇒ 会 pin 标题，
@@ -617,16 +628,27 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
    * 抛错（lib/index.js:297）⇒ 任一会话事件都补一次，「未命名」不再取决于单点时机。
    */
   function applySessionTitle(session: HostSession, instance: TaskInstance): void {
-    if (titledSessions.has(session.id)) return
-    const name = snapOf(instance)?.title ?? instance.task_id
+    if (titledSessions.has(session.id) || renamingSessions.has(session.id)) return
+    const attempts = titleAttempts.get(session.id) ?? 0
+    if (attempts >= TITLE_MAX_ATTEMPTS) return
+    const snap = snapOf(instance)
+    const name = snap?.title ?? instance.task_id
     const title = sessionTitleOf(instance.scheduled_at, name, instance.attempt)
-    // 先标记再 append：session.append 会同步广播 session/event，防止自身事件重入。
-    titledSessions.add(session.id)
+    titleAttempts.set(session.id, attempts + 1)
+    renamingSessions.add(session.id)
     try {
       ctx.sessionTitle.rename(session, title)
+      titledSessions.add(session.id)
+      titleAttempts.delete(session.id)
     } catch (error) {
-      titledSessions.delete(session.id)
-      logger.warn(`会话改名失败 ${session.id}: ${String(error)}`)
+      // 只记首次与末次：失败会由后续会话事件重试，不逐条刷日志。
+      const text = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+      if (attempts + 1 === 1 || attempts + 1 >= TITLE_MAX_ATTEMPTS) {
+        logger.warn(`会话改名失败 ${session.id} 第${attempts + 1}次: ${text}`)
+      }
+    } finally {
+      // 顺序要紧：先退重入标记，再让后续事件触发重试。
+      renamingSessions.delete(session.id)
     }
   }
 
@@ -642,7 +664,10 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
         store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'session/created' })
         notifyRow(instance)
       }
-      applySessionTitle(session, instance)
+      // ⚠️ 此刻 `session/created` 的广播**尚未结束**（宿主 announce 内部 announcing=true），
+      // 任何 append 都会被拒：`cannot append before session/created completes`（2026-11-09 真机实证）。
+      // 故推迟到微任务（同步广播栈退栈之后）再改名；万一仍失败，后续会话事件会自然重试。
+      queueMicrotask(() => { applySessionTitle(session, instance) })
     },
 
     onEvent(session: HostSession, event: { type: string }): void {

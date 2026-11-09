@@ -958,7 +958,7 @@ export const zh: Record<LocaleKey, string> = {
   vTitleRequired: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。',
   vWorkspaceRequired: '还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。',
   vWorkspaceUnknown:
-    '选中的工作区已经不存在了（可能被重命名或删除）——请在上方下拉里重新选择当前的工作区。',
+    '选中的工作区已经不存在了（可能被删除或移动了目录）——请在上方下拉里重新选择当前的工作区。',
   vPromptRequired: '还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。',
   vIntervalInvalid: '执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。',
   vWeekdayRequired: '每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。',
@@ -1668,7 +1668,7 @@ export const en: Record<LocaleKey, string> = {
   vTitleRequired: 'Task name is missing — the list identifies tasks by name. Please give it one.',
   vWorkspaceRequired: 'No workspace selected — a task must belong to a workspace to run. Pick one above.',
   vWorkspaceUnknown:
-    'The selected workspace no longer exists (it may have been renamed or deleted). Pick a current workspace above.',
+    'The selected workspace no longer exists (it may have been deleted or moved). Pick a current workspace above.',
   vPromptRequired: 'The prompt is empty — it tells the agent what to do and cannot be blank.',
   vIntervalInvalid: 'Invalid interval — N in "every N minutes/hours" must be an integer greater than 0.',
   vWeekdayRequired: 'Weekly schedule with no weekday selected — pick at least one, or the task never runs.',

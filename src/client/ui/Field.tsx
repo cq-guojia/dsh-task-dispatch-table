@@ -15,6 +15,8 @@ import { ensureControlsStyle } from './controls-css'
 export interface EditorOption {
   value: string
   label: string
+  /** 同一实体的历史标识（工作区用：老 title / 老 id），仅供展示归一与校验，不写入任务定义。 */
+  aliases?: readonly string[]
 }
 
 export interface SelectFieldProps {

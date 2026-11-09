@@ -517,7 +517,7 @@ function scheduleSummary(row: DebugTaskRow): string {
 interface EditorOptions {
 	workspaces: EditorOption[];
 	models: EditorOption[];
-	/** 工作区 title → 浏览锚点会话 id（该工作区最近一个会话；没有会话的工作区无键）。 */
+	/** 工作区标识（path 或老 title / id）→ 浏览锚点会话 id；没有会话的工作区无键。 */
 	workspaceAnchors: Record<string, string>;
 }
 
@@ -1173,70 +1173,95 @@ function TaskPage(props: {
 			/* 删不掉就保持原样，不打断编辑 */
 		}
 	};
-	// 表单下拉数据面（P1）：宿主真实工作区 + 真实模型目录，进面板取一次（不轮询，目录稳定）。
+	// 表单下拉数据面（P1）：宿主真实工作区 + 真实模型目录。
 	//
-	// ⚠️ **工作区候选的唯一真源**（2026-10-04 用户拍板，见 docs/worklog/workspace-options-unification.md）：
-	// 三处「选工作区」（编辑器底部 / 编辑器「前置任务」第①级 / 任务列表顶部）**一律用这一份**，
-	// 不许再从任务表或卡片数据反推 —— 反推会让「暂时没有任务的工作区」凭空消失（用户以为它不存在）。
-	// 取不到（degraded）⇒ 空数组，下拉显示「暂无可选」，**不回退反推**（回退就是又造第二真源）。
+	// ⚠️ **工作区候选的唯一真源**（2026-10-04 用户拍板）：三处「选工作区」一律用这一份，
+	// 不许再从任务表或卡片数据反推 —— 反推会让「暂时没有任务的工作区」凭空消失。
+	// 取不到（degraded / 空列表）⇒ 空数组，下拉显示「暂无可选」，**不回退反推**。
+	// ⚠️ 2026-11-09：宿主重启 / 作用域切换时 workspaceRegistry 会短暂取不到，原先「挂载取一次」
+	// 把这份空候选一直留在界面上 ⇒ 工作区显示成裸 UUID、保存被误判不存在。现在**只在降级态
+	// 退避重取**，拿到真实候选就停（正常态不轮询）。
 	const [editorOptions, setEditorOptions] =
 		useState<EditorOptions>(EMPTY_EDITOR_OPTIONS);
 	useEffect(() => {
 		let alive = true;
-		fetchWithTimeout(`${DISPATCH_API_PREFIX}/options`, { cache: "no-store" })
-			.then(
-				(res) =>
-					res.json() as Promise<{
-						ok?: boolean;
-						workspaces?: { id?: string; title?: string; anchorSessionId?: string }[];
-						models?: { provider?: string; id?: string; name?: string }[];
-						/** 后端明示「这批候选可能是残的」（宿主没接上服务）；前端**必须**如实告诉用户。 */
-						degraded?: { workspaces?: boolean; models?: boolean } | null;
-					}>,
-			)
-			.then((body) => {
-				if (!alive || body.ok !== true) return;
-				const workspaceAnchors: Record<string, string> = {};
-				const workspaces: EditorOption[] = (body.workspaces ?? [])
-					// value 用 **id**（用户 2026-11-06：工作区改名不失效）；label 是给人和搜索用的标题。
-					// 老后端没下发 id ⇒ 退回标题（此时口径与旧版一致，不会整排空）。
-					.filter((item) => typeof item.title === "string" && item.title !== "")
-					.map((item) => {
-						const id = typeof item.id === "string" && item.id !== "" ? item.id : item.title as string;
+		let retryTimer: ReturnType<typeof setTimeout> | undefined;
+		let attempt = 0;
+		function scheduleRetry(): void {
+			const delays = [3000, 6000, 12000, 30000];
+			const delay = delays[Math.min(attempt, delays.length - 1)] ?? 30000;
+			attempt += 1;
+			retryTimer = setTimeout(load, delay);
+		}
+		function load(): void {
+			fetchWithTimeout(`${DISPATCH_API_PREFIX}/options`, { cache: "no-store" })
+				.then(
+					(res) =>
+						res.json() as Promise<{
+							ok?: boolean;
+							workspaces?: { id?: string; title?: string; path?: string; anchorSessionId?: string }[];
+							models?: { provider?: string; id?: string; name?: string }[];
+							/** 后端明示「这批候选可能是残的」（宿主没接上服务）；前端**必须**如实告诉用户。 */
+							degraded?: { workspaces?: boolean; models?: boolean } | null;
+						}>,
+				)
+				.then((body) => {
+					if (!alive) return;
+					if (body.ok !== true) throw new Error("options-not-ok");
+					const workspaceAnchors: Record<string, string> = {};
+					const workspaces: EditorOption[] = (body.workspaces ?? [])
+						// value = **path**（宿主派发即用此值，重启 / 重建 id 都不变）；label = 当前标题。
+						// aliases 收老 title / id ⇒ 老任务的显示、校验与附件锚点都不断（不写入任务定义）。
+						// 老后端没下发 path ⇒ 退回 id / title（口径与旧版一致，不会整排空）。
+						.filter((item) => typeof item.title === "string" && item.title !== "")
+						.map((item) => {
+							const pathValue = typeof item.path === "string" && item.path !== "" ? item.path : undefined;
+							const id = typeof item.id === "string" && item.id !== "" ? item.id : undefined;
+							const value = pathValue ?? id ?? item.title as string;
+							const aliases = [item.title as string, id, pathValue].filter(
+								(entry): entry is string => typeof entry === "string" && entry !== "" && entry !== value,
+							);
+							if (
+								typeof item.anchorSessionId === "string" &&
+								item.anchorSessionId !== ""
+							) {
+								for (const key of [value, ...aliases]) workspaceAnchors[key] = item.anchorSessionId;
+							}
+							return { value, label: item.title as string, aliases };
+						});
+					const models: EditorOption[] = [
+						{ value: "", label: t("editorFollowHost") },
+					];
+					for (const model of body.models ?? []) {
 						if (
-							typeof item.anchorSessionId === "string" &&
-							item.anchorSessionId !== ""
-						) {
-							workspaceAnchors[id] = item.anchorSessionId;
-						}
-						return { value: id, label: item.title as string };
-					});
-				const models: EditorOption[] = [
-					{ value: "", label: t("editorFollowHost") },
-				];
-				for (const model of body.models ?? []) {
-					if (
-						typeof model.provider !== "string" ||
-						typeof model.id !== "string"
-					)
-						continue;
-					const name =
-						typeof model.name === "string" && model.name !== ""
-							? model.name
-							: model.id;
-					models.push({
-						value: encodeModelValue(model.provider, model.id),
-						label: `${name}（${model.provider}）`,
-					});
-				}
-				setEditorOptions({ workspaces, models, workspaceAnchors });
-			})
-			.catch(() => {
-				// 取数失败（HTTP 挂 / 403 / 超时）：候选置空，下拉显示「暂无可选」（不编造）。
-				setEditorOptions({ ...EMPTY_EDITOR_OPTIONS });
-			});
+							typeof model.provider !== "string" ||
+							typeof model.id !== "string"
+						)
+							continue;
+						const name =
+							typeof model.name === "string" && model.name !== ""
+								? model.name
+								: model.id;
+						models.push({
+							value: encodeModelValue(model.provider, model.id),
+							label: `${name}（${model.provider}）`,
+						});
+					}
+					setEditorOptions({ workspaces, models, workspaceAnchors });
+					// 降级 / 空列表 ⇒ 宿主恢复后自动重取；拿到真实候选即停（正常态不轮询）。
+					if (workspaces.length === 0 || body.degraded?.workspaces === true) scheduleRetry();
+				})
+				.catch(() => {
+					if (!alive) return;
+					// 取数失败（HTTP 挂 / 403 / 超时）：候选置空，下拉显示「暂无可选」（不编造）。
+					setEditorOptions({ ...EMPTY_EDITOR_OPTIONS });
+					scheduleRetry();
+				});
+		}
+		load();
 		return () => {
 			alive = false;
+			if (retryTimer !== undefined) clearTimeout(retryTimer);
 		};
 	}, [t]);
 	// 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。

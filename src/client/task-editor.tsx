@@ -112,8 +112,8 @@ import {
 	Textarea,
 	type PickerGroup,
 } from "./ui";
-// 工作区展示名（定义里存 id，界面显示当前标题）。
-import { workspaceLabelOf } from "./workspace-options";
+// 工作区展示名与选中态（定义里存 path，界面显示当前标题；老 title / id 靠别名归一）。
+import { workspaceLabelOf, workspaceValueOf } from "./workspace-options";
 
 /**
  * 「?」说明钮 —— 核心 `FieldHint` 的薄包装（2026-11-06）。
@@ -1981,12 +1981,17 @@ export function TaskEditorDrawer(props: {
 	}, [saveError]);
 	// 保存前的客户端校验总览（用户 2026-09-30：点保存才判定；判定后问题逐项列出、对应框描红，随用户修正实时消退）。
 	const [showErrors, setShowErrors] = useState(false);
-	// 当前真实存在的工作区值（用户 2026-11-06：保存前必须验证工作区，不能「有值就 OK」）。
+	// 当前真实存在的工作区值：path 为主，老 title / id 也算已知（保存时服务端统一改存 path）。
 	// 列表为空 = 降级 / 拿不到，交给服务端兜底，不做本地误杀。
-	const knownWorkspaces =
-		props.workspaces.length === 0
-			? undefined
-			: new Set(props.workspaces.map((option) => option.value));
+	let knownWorkspaces: ReadonlySet<string> | undefined;
+	if (props.workspaces.length > 0) {
+		const values = new Set<string>();
+		for (const option of props.workspaces) {
+			values.add(option.value);
+			for (const alias of option.aliases ?? []) values.add(alias);
+		}
+		knownWorkspaces = values;
+	}
 	const fieldProblems = showErrors ? validateTaskDraft(draft, tt, knownWorkspaces) : [];
 	const fieldErrorMap: Record<string, string> = {};
 	for (const p of fieldProblems)
@@ -2332,8 +2337,9 @@ export function TaskEditorDrawer(props: {
 			"div",
 			{ className: "dsh-tdt-ed-card-foot" },
 			h(SelectField, {
-				// 定义里存 id；不在候选项里就不选（保存校验会拦住，让用户重选）。
-				value: draft.workspace,
+				// 老任务存 title / id ⇒ 先归一成当前 path 再渲染，下拉才会选中；
+				// 认不出才空着（保存校验与派发错误会拦住，让用户重选）。
+				value: workspaceValueOf(workspaces, draft.workspace),
 				options: workspaces,
 				onChange: (value) => {
 					patch({ workspace: value });
@@ -2398,8 +2404,11 @@ export function TaskEditorDrawer(props: {
 	const openPicker = (): void => {
 		const anchor = pickerAnchorRef.current;
 		if (anchor === null || pickerOpen) return;
-		const workspace =
-			draft.workspace !== "" ? draft.workspace : (workspaces[0]?.value ?? "");
+		// 老值先归一成 path：rootName / workspaces 列表都按 path 对齐，否则核心定位不到工作区。
+		const workspace = workspaceValueOf(
+			workspaces,
+			draft.workspace !== "" ? draft.workspace : (workspaces[0]?.value ?? ""),
+		);
 		setPickerOpen(true);
 		void pickWorkspaceFile({
 			anchor,
@@ -2423,7 +2432,8 @@ export function TaskEditorDrawer(props: {
 					name,
 					kind: "link",
 					ref,
-					workspace: picked.workspace ?? workspace,
+					// 核心回传的是显示名 ⇒ 统一存 path（附件解析只认 path，工作区改名后不断）。
+					workspace: workspaceValueOf(workspaces, picked.workspace ?? workspace),
 					isDir: picked.isDir,
 				});
 			},
@@ -3014,7 +3024,8 @@ export function TaskEditorDrawer(props: {
 			options: tasks
 				.filter(
 					(task) =>
-						task.workspace === ws.value &&
+						// 老任务存 title / id ⇒ 先归一成 path 再和工作区分组对齐（否则老任务从候选里消失）。
+						workspaceValueOf(workspaces, task.workspace) === ws.value &&
 						!addedDepIds.has(task.id) &&
 						task.id !== currentTaskId,
 				)
@@ -3103,7 +3114,7 @@ export function TaskEditorDrawer(props: {
 											ws === ""
 												? null
 												: h(MarqueeText, {
-														text: ws,
+														text: workspaceLabelOf(workspaces, ws),
 														style: {
 															width: "72px",
 															color: "var(--dshpc-fg-2)",
