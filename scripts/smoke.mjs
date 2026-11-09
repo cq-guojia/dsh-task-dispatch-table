@@ -2938,13 +2938,42 @@ try {
 					),
 				),
 	);
-	check(
-		"交付卡去重键 = 快照路径与补差卡共用 canonicalPath（一绝对一相对不再重复出卡）",
-		readFileSync(join(process.cwd(), "src", "client", "session-view.ts"), "utf8")
-			.includes("canonicalPath") &&
-			readFileSync(join(process.cwd(), "src", "client", "session-view.ts"), "utf8")
-				.match(/canonicalPath\(/g)?.length >= 3,
-	);
+	// 2026-11-09 会话弹窗收口：审阅出口由页面层注入、交付区全量显示并标明来源。
+	{
+		const srcOf = (file) =>
+			readFileSync(join(process.cwd(), "src", "client", file), "utf8");
+		const reconcileJs = readFileSync(join(process.cwd(), "src", "reconcile.ts"), "utf8");
+		check(
+			"变更文件卡审阅出口 = 页面层注入 + 组件透传（组件不许自己硬编码 dock 落点）",
+			srcOf("index.ts").includes("openSessionReview(") &&
+				srcOf("index.ts").includes('mount: "#dsh-tdt-root"') &&
+				srcOf("session-view.ts").includes("onOpenReview") &&
+				!srcOf("session-view.ts").includes("openSessionReview("),
+		);
+		check(
+			"「任务产出」区全量显示 DB outputs（不做跨源去重，两个真源各自完整）",
+			srcOf("session-view.ts").includes("taskOutputs") &&
+				!srcOf("session-view.ts").includes("presentedPathsOf") &&
+				!srcOf("session-view.ts").includes("snapshotPaths") &&
+				!srcOf("session-view.ts").includes("absWorkspacePath") &&
+				!clientJs.includes("presentedPathsOf"),
+		);
+		check(
+			"补差卡标明来源（任务产出标题 + 发丝线），中英文案与兜底样式同源且进产物",
+			srcOf("mirror/Deliverables.tsx").includes("taskOutputsTitle") &&
+				srcOf("locales.ts").includes("taskOutputsTitle: '任务产出'") &&
+				srcOf("locales.ts").includes("taskOutputsTitle: 'Task outputs'") &&
+				srcOf("archive-session-css.ts").includes(".dsh-tdt-sv-deliv-section{") &&
+				clientJs.includes("data-task-outputs") &&
+				clientJs.includes("taskOutputsTitle"),
+		);
+		check(
+			"会话改名不绑单点时机：onCreated / onEvent 都走幂等 applySessionTitle",
+			reconcileJs.includes("function applySessionTitle") &&
+				reconcileJs.includes("titledSessions") &&
+				reconcileJs.match(/applySessionTitle\(session, instance\)/g)?.length === 2,
+		);
+	}
 	// 过程文件桶（2026-10-10）：三处共用一个展示件，主文件照旧醒目、过程文件次级且默认收起。
 	{
 		const srcOf = (file) =>
@@ -3486,17 +3515,17 @@ try {
 				!tlSrc.includes("dsh-tdt-rec-outname"),
 		);
 		check(
-			"第六轮：**容器不挂交互**（块根无 onClick / 无 cursor），点击与光标只在头部（含「有选中文字就不展开」守卫）",
+			"第六轮：**容器与内层头部都不挂交互**，点击交核心 StripCard 的 onClick（__body 含内距圈，panel 不误触），保留「有选中文字就不展开」守卫",
 			/className: `dsh-tdt-rec-item\$\{running \?/.test(tlSrc) &&
 				!/\.dsh-tdt-rec-item\{[^}]*cursor:pointer/.test(tlSrc) &&
-				/className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick/.test(
-					tlSrc,
-				) &&
+				/onClick: onHeadClick/.test(tlSrc) &&
+				/hoverScope: 'head' as const/.test(tlSrc) &&
+				!/className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick:/.test(tlSrc) &&
+				!/\.dsh-tdt-rec-head\{cursor:pointer;\}/.test(tlSrc) &&
 				/const sel = typeof window === 'undefined' \? null : window\.getSelection\(\)/.test(
 					tlSrc,
 				) &&
-				/if \(sel !== null && sel\.toString\(\) !== ''\) return/.test(tlSrc) &&
-				/\.dsh-tdt-rec-head\{cursor:pointer;\}/.test(tlSrc),
+				/if \(sel !== null && sel\.toString\(\) !== ''\) return/.test(tlSrc),
 		);
 		check(
 			"第六轮：展开区**不可点、无 cursor**（内容可直接拖选复制），且不再需要拦冒泡",

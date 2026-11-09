@@ -607,34 +607,49 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
     // 无回执：不立即判失败——agent 可能只是还没执行提交命令，等 sweep 按宽限期追问。
   }
 
+  /** 已成功改名的会话（进程内幂等；重启后最多再写一条同名 `session/title` 事件，无害）。 */
+  const titledSessions = new Set<string>()
+
+  /**
+   * 会话改名（决策 42）。宿主 `rename` 写 `session/title` 且 source=user ⇒ 会 pin 标题，
+   * 后续自动命名不再覆盖（`@deepseek-ai/dsh-session-title@0.2.0-rc.2` lib/index.js:382）。
+   * 不只靠 `onCreated`：created 对账可能被跳过（插件重启恢复）、或 `rename` 因会话尚未 live
+   * 抛错（lib/index.js:297）⇒ 任一会话事件都补一次，「未命名」不再取决于单点时机。
+   */
+  function applySessionTitle(session: HostSession, instance: TaskInstance): void {
+    if (titledSessions.has(session.id)) return
+    const name = snapOf(instance)?.title ?? instance.task_id
+    const title = sessionTitleOf(instance.scheduled_at, name, instance.attempt)
+    // 先标记再 append：session.append 会同步广播 session/event，防止自身事件重入。
+    titledSessions.add(session.id)
+    try {
+      ctx.sessionTitle.rename(session, title)
+    } catch (error) {
+      titledSessions.delete(session.id)
+      logger.warn(`会话改名失败 ${session.id}: ${String(error)}`)
+    }
+  }
+
   return {
     registerHandle,
     retryOrFail,
 
-    /** dispatched → running + 起租约（state-machine §3）；会话改名只凭快照（决策 41/42）。 */
+    /** dispatched → running + 起租约（state-machine §3）；改名不再绑状态 / 快照（见 applySessionTitle）。 */
     onCreated(session: HostSession): void {
       const instance = store.getBySession(session.id)
-      if (instance === undefined || instance.status !== 'dispatched') return
-      store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'session/created' })
-      notifyRow(instance)
-      const snap = snapOf(instance)
-      if (snap === undefined) {
-        logger.warn(`实例 ${instance.id} 无快照，会话保持默认名（决策 42 改名跳过）`)
-        return
+      if (instance === undefined) return
+      if (instance.status === 'dispatched') {
+        store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'session/created' })
+        notifyRow(instance)
       }
-      // 会话改名（会话列表治理，决策 42：[TASK] <260928-1600> · <标题>（· 第N次））。
-      // Session 对象只能在这里拿——agents.create 自建会话后 announce，handle 上没有 session。
-      // 改名失败只告警不影响对账。
-      try {
-        ctx.sessionTitle.rename(session, sessionTitleOf(instance.scheduled_at, snap.title, instance.attempt))
-      } catch (error) {
-        logger.warn(`会话改名失败 ${session.id}: ${String(error)}`)
-      }
+      applySessionTitle(session, instance)
     },
 
     onEvent(session: HostSession, event: { type: string }): void {
       const instance = store.getBySession(session.id)
       if (instance === undefined) return
+      // created 被跳过 / 首次 rename 失败 ⇒ 任一会话事件再补一次（内部幂等）。
+      applySessionTitle(session, instance)
       // 累计 token 用量分量（决策 32 修订）：宿主事件带用量则累加；不带则留 null，不阻塞链路
       const used = extractTokenUsage(event)
       if (used !== undefined) {

@@ -71,8 +71,9 @@ function DeliveredFileCard(props: {
 }
 
 /**
- * 官方 DeliverablesTail 的 presented 网格（改动文件卡 ChangedFiles 依赖 Host git 摘要路由，
- * 本弹窗无该通道 ⇒ 不渲染，与官方「summary 未就绪时不画」同态）。
+ * 官方 DeliverablesTail 的 presented 网格，只画「快照没覆盖到的 DB outputs」补差集。
+ * 上方核心网格来自会话快照 `deliverables.presented`，本块来自回执落库的 `task_instances.outputs`
+ * —— 两个真源，故加「任务产出」标题 + 发丝线标明来源（2026-11-09 用户拍板），重复出现也不再像 bug。
  */
 export function DeliverablesGridMirror(props: {
   files: readonly DeliveredFileFace[]
@@ -84,33 +85,39 @@ export function DeliverablesGridMirror(props: {
   if (files.length === 0) return null
   const collapsible = files.length > COLLAPSED_DELIVERED_COUNT
   const shown = collapsible && !expanded ? files.slice(0, COLLAPSED_DELIVERED_COUNT) : files
-  return h('div', {
-    className: ocOr('Deliverables', 'root', 'dsh-tdt-sv-deliv'),
-    'data-presented-files-grid': true,
+  return h('section', {
+    className: 'dsh-tdt-sv-deliv-section',
+    'data-task-outputs': true,
   },
+    h('div', { className: 'dsh-tdt-sv-deliv-sectionhead' }, t('taskOutputsTitle')),
     h('div', {
-      className: ocOr('Deliverables', 'presented', 'dsh-tdt-sv-deliv-grid'),
-      'data-presented-files-row': true,
-      'data-single': files.length === 1 ? true : undefined,
+      className: ocOr('Deliverables', 'root', 'dsh-tdt-sv-deliv'),
+      'data-presented-files-grid': true,
     },
-      shown.map((file, index) => h(DeliveredFileCard, {
-        key: `${file.path}:${index}`,
-        file,
-        onPreview: onOpen === undefined ? undefined : () => { onOpen(file.path) },
-        t,
-      })),
+      h('div', {
+        className: ocOr('Deliverables', 'presented', 'dsh-tdt-sv-deliv-grid'),
+        'data-presented-files-row': true,
+        'data-single': files.length === 1 ? true : undefined,
+      },
+        shown.map((file, index) => h(DeliveredFileCard, {
+          key: `${file.path}:${index}`,
+          file,
+          onPreview: onOpen === undefined ? undefined : () => { onOpen(file.path) },
+          t,
+        })),
+      ),
+      collapsible
+        ? h('button', {
+            type: 'button',
+            className: ocOr('Deliverables', 'toggle', 'dsh-tdt-sv-deliv-toggle'),
+            'aria-expanded': expanded,
+            'aria-label': t(expanded ? 'deliverCollapseAria' : 'deliverExpandAria', { count: files.length }),
+            onClick: () => { setExpanded((value) => !value) },
+          },
+            h('span', null, t(expanded ? 'deliverCollapse' : 'deliverAll', { count: files.length })),
+            expanded ? h(IconChevronUpOutlineRegular, {}) : h(IconChevronDownOutlineRegular, {}),
+          )
+        : null,
     ),
-    collapsible
-      ? h('button', {
-          type: 'button',
-          className: ocOr('Deliverables', 'toggle', 'dsh-tdt-sv-deliv-toggle'),
-          'aria-expanded': expanded,
-          'aria-label': t(expanded ? 'deliverCollapseAria' : 'deliverExpandAria', { count: files.length }),
-          onClick: () => { setExpanded((value) => !value) },
-        },
-          h('span', null, t(expanded ? 'deliverCollapse' : 'deliverAll', { count: files.length })),
-          expanded ? h(IconChevronUpOutlineRegular, {}) : h(IconChevronDownOutlineRegular, {}),
-        )
-      : null,
   )
 }

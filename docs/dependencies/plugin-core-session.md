@@ -1,15 +1,19 @@
 # dsh-plugin-core 会话弹窗（`adv/session`）槽位契约
 
 - 类型：🌐 **外部事实** —— 记的是**核心包**（`dsh-plugin-core`）对外暴露的行为，不是本项目的设计
-- 适用版本：`dsh-plugin-core@0.35.0`（与 `package.json` 的依赖声明一致；核心升级后按 §八 复核）
+- 适用版本：`dsh-plugin-core@0.35.0`（槽位基线）；§三「变更文件审阅出口」另按 `0.35.8` 源码核实（核心升级后按 §八 复核）
 - 用途：记录该外部依赖在本项目里实际用到的行为与边界（宿主升级后据此复核）。
 - 版本真源：包名与版本见上「适用版本」；每条结论的 `文件:行号` 就在正文各节。
-- 复核日期：2026-11-08（迁移当日未重新核实，结论沿用各节标注的版本）
-- 状态：✅ 已核实（源码级，2026-11-06）
+- 复核日期：2026-11-09（§三 按 0.35.8 重核；其余沿用各节标注的版本）
+- 状态：✅ 已核实（源码级，2026-11-06 / 2026-11-09）
 - 来源：`node_modules/dsh-plugin-core/dist/adv/session/` 下
+
 > `index.d.ts` / `SessionViewModal.d.ts` / `SessionViewModal.js` / `open-session-view.d.ts` /
+> `open-review.js` / `changes.js` / `mirror/ChangedFilesCard.js` / `docs/help/session.md` /
 > `session-css.generated.js`，以及 `dist/ui/infra/overlay-css.generated.js`
+
 - 配套：[`archive-session-view.md`](../features/archive-session-view.md)（本仓用法）·
+
 > [`session-view-ui-map.md`](session-view-ui-map.md)（官方 UI 元素对照，镜像已移交核心）
 
 ---
@@ -62,6 +66,26 @@
 | `onOpenReview(locator)` | 变更文件卡点击出口；缺省 = 整卡不可点 |
 | `t?: Translate` | **核心自己的字典**。本仓 `t` 的键与核心不同，**不透传**（否则核心文案会变成原始 key） |
 
+### 变更文件审阅出口（`0.35.8` 源码核实）
+
+**核心提供全部零件，但不自动生效；必须由消费方传 `onOpenReview` 并给 `mount`。**
+
+| 层 | 事实 | 证据 |
+|---|---|---|
+| 契约 | `onOpenReview?: (locator: ChangedFileReviewLocator) => void`；注释明写「缺省 = 变更卡整张不可点」 | `SessionViewModal.d.ts:45-47`、`docs/help/session.md:73` |
+| 缺省分支 | `onOpenReview === undefined` ⇒ header 与每行渲染 `<div>` 而非 `<button>`，无 `onClick` | `mirror/ChangedFilesCard.js:101-108,115-122` |
+| 落点 | `openSessionReview({ mount, locator })` 一行接上；diff 内容、面板、宽度、滚动、Esc、关闭钮全归核心 | `open-review.js:12-30`、`docs/help/session.md:41,108` |
+| 数据 | 卡按 `GET api/changes.summary?sessionId&seq` 拉**工作区整体** git 增删汇总，不按本任务产出过滤 | `changes.js`、`mirror/ChangedFilesCard.js:45-70` |
+
+官方点击走宿主 `ctx.sidebarRight.openResource`，本包无该槽（`mirror/ChangedFilesCard.js:11-13`）；核心不知道消费方
+页面里预览 dock 挂哪个 DOM 容器，`mount` 只能由调用方给 ⇒ 这是依赖注入设计，**不是核心缺能力**。核心 explorer
+的 `OpenFilePreviewOptions` 仅 `mount` 必填，其余（`translate` / `workspaces` / `officeToPdf` 等）都可省
+（`open.d.ts:20-76`）。
+
+本仓接线：`src/client/index.ts` 用 `canPreview` 判据注入 `onOpenReview`，落点与页面级 `openFilePreview` 同为
+`#dsh-tdt-root`；`src/client/session-view.ts` 只把回调透传给 `SessionViewModal`，组件不硬编码挂载点。
+预览面未就位时不传 ⇒ 核心按缺省把整卡降级为不可点。
+
 ## 四、外壳与样式归属
 
 - 外壳 = 核心 `Modal`（`size: 'lg'`，`min(1120px,100vw-32px)` × `calc(100%-80px)`）。
@@ -83,10 +107,11 @@
 |---|---|
 | `title` | 「会话预览 · ␣任务名（可点开查看档）␣ · ␣计划时刻」 |
 | `bodyHeader` | 顶部「接收 / 随附」文件区（`TaskFileContextPanel`） |
-| `bodyFooter` | 交付文件**补差**（`task_instances.outputs` 中快照 `deliverables.presented` 没覆盖的）+ 过程文件桶（`ProcessFiles`） |
+| `bodyFooter` | 「任务产出」区（**全量** `task_instances.outputs`，带标题 + 发丝线与上方网格分来源，**不做跨源去重**）+ 过程文件桶（`ProcessFiles`） |
 
-交付文件为什么补差：核心按快照 turn 级 `deliverables.presented` 在最后一轮画官方网格；本仓 `outputs` 是回执落库的
-权威值，老任务 / 投影未重放的会话在快照里是空的。补差 = 两边取并集且不重复。
+交付文件两块各自全量（用户 2026-11-09 决策）：上方核心网格来自会话快照 `deliverables.presented`，下方来自
+回执落库的 `outputs`，两个真源都在就同时显示，靠标题区隔。不做跨源路径比对 —— 核心网格只在最后一轮有
+turn-tail 时才渲染（`SessionViewModal.js:261`），比对会误判「已画过」而把产出整块藏掉。
 
 ## 七、核心并不消费的旧接口（本仓已删）
 

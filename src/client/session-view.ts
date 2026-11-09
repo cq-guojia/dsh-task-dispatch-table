@@ -3,11 +3,11 @@
 //
 //   title       ← 标题行：任务名可点（查看档）+「 · 计划时刻」
 //   bodyHeader  ← 会话顶端：接收 / 随附文件区（前置任务产出、本任务附件）
-//   bodyFooter  ← 会话底端：交付文件（回执 outputs 中**快照没覆盖到**的那些）+ 过程文件桶
+//   bodyFooter  ← 会话底端：补差交付文件（带「任务产出」区隔，与快照交付网格分来源）+ 过程文件桶
 //
-// 为什么交付文件要「去重后补」：核心按快照 turn 级 `deliverables.presented` 在最后一轮
-// turn-tail 处画官方网格；本仓 `task_instances.outputs` 是回执落库的权威值，老任务/投影未重放的
-// 会话在快照里是空的 ⇒ 这里只补差集，既不让同一文件同屏两次，也不让老任务没得看。
+// 交付文件两块各自全量、不做跨源去重（用户 2026-11-09 决策）：上方核心网格来自会话快照
+// `deliverables.presented`，下方「任务产出」区来自回执落库的 `task_instances.outputs`。
+// 两个真源都在就同时显示，靠标题 + 发丝线分来源；跨源路径比对会误判「已画过」而把产出藏掉。
 //
 // ⚠️ 已知取舍：核心不暴露「用户气泡里附件卡让位」的钩子（旧自绘实现有 attachedNames 去重），
 // 所以顶部「随附」区已解析路径的文件，在气泡下方仍会出现官方附件卡（信息重复，非错误）。
@@ -15,11 +15,11 @@
 // 样式：弹窗外壳 / 滚动 / 消息行全部由核心注入（dshpc-sv-*）；本仓只剩 tfc（顶部区）
 // 与 deliv（交付卡兜底）两组规则，见 ./archive-session-css.ts。
 
-import { createElement as h, Fragment, useMemo, useSyncExternalStore } from 'react'
+import { createElement as h, Fragment, useMemo } from 'react'
 import {
   openSessionView as coreOpenSessionView,
   SessionViewModal as CoreSessionViewModal,
-  type ChatViewFace,
+  type ChangedFileReviewLocator,
   type SessionViewTarget,
   type SessionsFace,
   type UiConversationFace,
@@ -33,7 +33,6 @@ import { ProcessFiles } from './process-files'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03）。
 import { TaskFileContextPanel, type AttachedFileView, type UpstreamInputView } from './task-file-context'
-import { absWorkspacePath } from '../workspace-path.js'
 
 export type { SessionsFace, SessionViewTarget, UiConversationFace }
 
@@ -50,48 +49,6 @@ export function openSessionView(
   id: string,
 ): SessionViewTarget | null {
   return coreOpenSessionView(sessions, uiConversation, id, RETAIN_SOURCE)
-}
-
-/** 路径归一：去 './' 前缀（与快照 deliverables 的写法对齐，去重才准）。 */
-function normalizePath(p: string): string {
-  let s = p.trim()
-  while (s.startsWith('./')) s = s.slice(2)
-  return s
-}
-
-/**
- * 去重键：两侧都按**本实例工作区基准**归一成绝对路径再比。
- * 2026-11-09 收口：交付事件（`deliverables/presented`）此前存相对路径、新写的改绝对，
- * 而补差卡的 outputs 走 `query.ts:outputsOf` 也是绝对 ⇒ 若各按各的字符串比，历史快照与新
- * 输出会重复出卡。同一函数两侧共用：绝对值幂等、历史相对值按快照基准补前缀、无基准如实降级。
- */
-function canonicalPath(p: string, workspacePath: string | null): string {
-  const rel = normalizePath(p)
-  return absWorkspacePath(workspacePath, rel) ?? rel
-}
-
-/**
- * 快照里已经画过的交付文件路径集合（会话 turn 级 `deliverables.presented`）。
- * ⚠️ 官方 `turn.data` 是 **Map**（不是普通对象）——对象式访问必为 undefined；两种形态都兼容。
- */
-function presentedPathsOf(turns: unknown, workspacePath: string | null): ReadonlySet<string> {
-  const out = new Set<string>()
-  if (turns === null || turns === undefined) return out
-  const map = turns as ReadonlyMap<unknown, unknown>
-  if (typeof (map as { forEach?: unknown }).forEach !== 'function') return out
-  map.forEach((face) => {
-    const data = (face as { data?: unknown } | null)?.data
-    const delivered = data instanceof Map
-      ? (data as ReadonlyMap<unknown, unknown>).get('deliverables')
-      : (data as { deliverables?: unknown } | null)?.deliverables
-    const presented = (delivered as { presented?: unknown } | null)?.presented
-    if (!Array.isArray(presented)) return
-    for (const file of presented) {
-      const path = (file as { path?: unknown } | null)?.path
-      if (typeof path === 'string' && path.trim() !== '') out.add(canonicalPath(path, workspacePath))
-    }
-  })
-  return out
 }
 
 /**
@@ -115,7 +72,7 @@ export function SessionViewModal(props: {
   onClose: () => void
   /**
    * 本实例的交付物路径（task_instances.outputs，回执落库的真值，非模拟）。
-   * 核心只画快照里有的那些；这里把**快照没覆盖的**补在会话底端，保证老任务也能看到交付物。
+   * 下方「任务产出」区**全量显示**，不与上方快照网格去重（两个真源各自完整）。
    */
   outputs?: readonly string[]
   /** 本实例的**过程文件**路径（`task_instances.process_outputs`，2026-10-10；次级观感、默认展开）。 */
@@ -129,6 +86,11 @@ export function SessionViewModal(props: {
    * 未传 = 预览能力未就位 ⇒ 链接降级纯文本。
    */
   onOpenFile?: (path: string) => void
+  /**
+   * 变更文件卡审阅出口（核心 `ChangedFilesCard` 契约）：不传 = 整卡不可点。
+   * 与 `onOpenFile` 同款由外层注入，落点 / 降级判据都归页面层。
+   */
+  onOpenReview?: (locator: ChangedFileReviewLocator) => void
   /** 接收区（2026-10-03）：前置任务这次给了哪些文件（实例快照 `resolvedDeps`）。 */
   upstream?: readonly UpstreamInputView[]
   /** 随附区（2026-10-03）：本任务设置里加的文件（快照 `attachments` + 服务端解析的路径）。 */
@@ -138,33 +100,25 @@ export function SessionViewModal(props: {
 }): ReturnType<typeof h> {
   const {
     t, heading, sessionId, view, onClose, forkSession, openHostSession,
-    onOpenFile, outputs, processOutputs, upstream, attached, workspacePath, headingTask, headingRest, taskId, onOpenTask,
+    onOpenFile, onOpenReview, outputs, processOutputs, upstream, attached, workspacePath, headingTask, headingRest, taskId, onOpenTask,
   } = props
   ensureArchiveSessionStyle()
   ensureTaskInfoStyle()
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 业务文案统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
 
-  // 只订阅快照，用于把 `outputs` 与「核心已画过的交付文件」去重。
-  const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
-  const getSnapshot = useMemo(() => (): ChatViewFace | undefined => view.target.getSnapshot(), [view])
-  const chat = useSyncExternalStore(subscribe, getSnapshot)
-  const base = workspacePath ?? null
-  const snapshotPaths = useMemo(
-    () => presentedPathsOf(chat?.timeline?.turns, base),
-    [chat, base],
-  )
-  const extraOutputs = useMemo<readonly DeliveredFileFace[]>(() => {
+  // 用户 2026-11-09 决策：不管上方快照网格画了几个，「任务产出」区全量显示回执落库的 outputs。
+  // 只按原路径做块内自身去重，不做跨源比对（两个真源各自完整，重复＝两边一致，不是 bug）。
+  const taskOutputs = useMemo<readonly DeliveredFileFace[]>(() => {
     const seen = new Set<string>()
     const out: DeliveredFileFace[] = []
     for (const path of (outputs ?? [])) {
-      const key = canonicalPath(path, base)
-      if (key === '' || snapshotPaths.has(key) || seen.has(key)) continue
-      seen.add(key)
+      if (path.trim() === '' || seen.has(path)) continue
+      seen.add(path)
       out.push({ path })
     }
     return out
-  }, [outputs, snapshotPaths, base])
+  }, [outputs])
 
   // 标题行：任务名可点（r12 用户：全站任务名都连查看档）——拆开渲染 ⇒ 只有任务名那一段是按钮
   //（hover 变蓝），时刻仍是纯文本；降级（拿不到任务 / 回调未就位）= 整串纯文本。
@@ -191,9 +145,9 @@ export function SessionViewModal(props: {
     t: tt,
   })
 
-  // 会话底端：先补交付文件差集，再挂过程文件桶（两者都自带空态短路）。
+  // 会话底端：先挂「任务产出」区（全量 outputs，自带标题 + 发丝线），再挂过程文件桶。
   const bodyFooter = h(Fragment, null,
-    h(DeliverablesGridMirror, { files: extraOutputs, onOpen: onOpenFile, t: tt }),
+    h(DeliverablesGridMirror, { files: taskOutputs, onOpen: onOpenFile, t: tt }),
     h(ProcessFiles, { paths: processOutputs, onOpen: onOpenFile, defaultOpen: true, t: tt }),
   )
 
@@ -208,5 +162,6 @@ export function SessionViewModal(props: {
     forkSession,
     openHostSession,
     onOpenFile,
+    onOpenReview,
   })
 }

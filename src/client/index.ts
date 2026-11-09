@@ -23,6 +23,7 @@ import {
 	type OfficeToPdfFace,
 	openFilePreview,
 } from "dsh-plugin-core/adv/explorer";
+import { openSessionReview } from "dsh-plugin-core/adv/session";
 import { Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
 import { connectHost, notify as coreNotify } from "dsh-plugin-core/ui";
 import { t as coreT } from "dsh-plugin-core/utils";
@@ -2004,6 +2005,13 @@ function TaskPage(props: {
 					onOpenFile: canPreview
 						? (path: string) => {
 								openFile(viewing.sessionId, path);
+							}
+						: undefined,
+					// 变更文件卡审阅出口：核心只给 locator，落点与 diff 拼装归 openSessionReview；
+					// 与 openFilePreview 同一个页面级 dock 挂载点（预览面未就位 ⇒ 不传 ⇒ 核心整卡不可点）。
+					onOpenReview: canPreview
+						? (locator) => {
+								openSessionReview({ mount: "#dsh-tdt-root", locator });
 							}
 						: undefined,
 					// 接收区（2026-10-03）：上游依赖清单；「查看该会话」→ 直接换成本弹窗打开上游那一次。

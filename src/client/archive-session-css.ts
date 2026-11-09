@@ -35,6 +35,16 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--dshpc-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 
+/* ── 「任务产出」区隔（2026-11-09）：上方是会话快照 deliverables.presented，
+   下方是 DB task_instances.outputs；一条线 + 小字标题标明来源，同路径两张卡不再像 bug。
+   ① 线：逐字对齐官方「已完成 · 用时 N 秒」分隔条的 .5px 描边 + l2 档色
+      （session-view-ui-map.md:197）；本仓不许引宿主变量 ⇒ 用核心映射 --dshpc-border = l2（ui-foundation.md:114）。
+      faint = l1 太浅、1px 太亮，粗细和颜色都不得改。
+   ② 上下等距：本槽挂在核心 TurnTailNodeView 的 tailSlot，线上方 = 该 root 的 16px gap；
+      故**刻意不写 margin-top**（写了会被 16px 叠加成 24px），线下 padding-top 取 space-4(16px) ⇒ 两边相等。 ── */
+.dsh-tdt-sv-deliv-section{border-top:.5px solid var(--dshpc-border);padding-top:var(--dshpc-space-4);min-width:0;display:flex;flex-direction:column;gap:var(--dshpc-space-2);}
+.dsh-tdt-sv-deliv-sectionhead{color:var(--dshpc-fg-3,rgba(128,128,128,.8));font-size:var(--dshpc-font-xs);line-height:var(--dshpc-line-sm);}
+
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
    官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
    ① **左右 0（tfc 不自带）**：左右留白全交给核心会话列的左右内边距（与会话正文同一条基线）。

@@ -90,6 +90,8 @@ export type LocaleKey =
   | 'colOutputs'
   // —— 回执其他产出桶（2026-10-10：主文件之外的次级产出，三处共用一个折叠块）——“过程文件”现已更名为“其他产出”——
   | 'procFilesTitle'
+  // —— 会话弹窗补差交付卡区隔标题（2026-11-09：与上方快照交付网格分来源）——
+  | 'taskOutputsTitle'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
   | 'deliverRowTitle' | 'deliverRowPreparing' | 'deliverRowRunning' | 'deliverRowOk'
   | 'deliverRowError' | 'deliverRowStopped'
@@ -480,6 +482,7 @@ export const zh: Record<LocaleKey, string> = {
   colOutputs: '产出',
   // 过程文件块（回执的第二桶）：次级观感、默认收起（用户 2026-10-10 拍板「都显示，但分主次」）。
   procFilesTitle: '其他产出 · {count} 项',
+  taskOutputsTitle: '任务产出',
   // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
   deliverRowTitle: '交付文件',
   deliverRowPreparing: '准备交付',
@@ -1192,6 +1195,7 @@ export const en: Record<LocaleKey, string> = {
   colOutputs: 'Outputs',
   // Process-files block (the receipt's second bucket): secondary look, collapsed by default.
   procFilesTitle: 'Other outputs · {count}',
+  taskOutputsTitle: 'Task outputs',
   // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).
   deliverRowTitle: 'Deliver files',
   deliverRowPreparing: 'Preparing delivery',

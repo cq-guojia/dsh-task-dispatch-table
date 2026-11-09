@@ -1090,21 +1090,23 @@ function TaskCard(props: {
       hoverable: true,
       hoverScope: 'head',
       expanded: open,
-      panel: open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh, workspaces }) : null,
-    },
-      // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
-      // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
-      // hover 高亮由核心 `__body` 边到边铺满这一溜任务基本信息；
-      // 展开区是它的兄弟节点、**不在**这个 div 里 ⇒ hover 蓝不会蔓延到下面的设置 / 记录 / 日志（用户 2026-10-03）。
-      h('div', {
-      className: 'dsh-tdt-card-row',
-      style: { display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' },
+      // 核心 0.35.10：onClick 绑在 __body（hover 与内距圈同层）⇒ padding 也能点中；
+      // panel 是 __body 的兄弟节点，展开区天然不误触。
       onClick: () => {
         // 拖选文字时**不要**误展开（选区非空 ⇒ 用户在复制，不是要点开卡片）。
         const sel = typeof window === 'undefined' ? null : window.getSelection()
         if (sel !== null && sel.toString() !== '') return
         onToggleOpen()
       },
+      panel: open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh, workspaces }) : null,
+    },
+      // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
+      // 整行展开 / 收起改由上面 Card 的 onClick 承担；箭头保留为同一个动作的显式入口。
+      // hover 高亮由核心 `__body` 边到边铺满这一溜任务基本信息；
+      // 展开区是它的兄弟节点、**不在**这个 div 里 ⇒ hover 蓝不会蔓延到下面的设置 / 记录 / 日志（用户 2026-10-03）。
+      h('div', {
+      className: 'dsh-tdt-card-row',
+      style: { display: 'flex', alignItems: 'center', gap: '12px' },
     },
       h(StatusRail, { row, t }),
       h('div', { style: { flex: '1 1 auto', minWidth: 0 } },

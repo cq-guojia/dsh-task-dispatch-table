@@ -106,8 +106,8 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--dshpc-space-1);}
 /* 条目块 = **容器**（自带状态色浅底；底色由色调类给的局部变量驱动，见下）。
    ⚠️ 三层结构照任务卡片（用户 2026-10-04：「参考前面配置任务的展开」）：
-     容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
-   容器**无 padding、无 cursor**：留白落在头部（这样 hover 高亮正好顶到块边，与卡片主行同观感）。 */
+     容器（**不可点**）→ 头部区「__body」（可点，含内距圈）→ 展开区（不可点，内容可复制）。
+   头部区的点击、内距与手形全归核心 StripCard（0.35.10 的 onClick），本仓头部只排内容。 */
 /* ⚠️ gap 必须是 0：展开时头部的高亮区要**紧贴**下面那条分隔线（用户 2026-10-05：中间别留距离）。 */
 /* 左缘竖条与块底浅底色已归核心 StripCard（2026-11-06）⇒ 本仓不再自算色条宽度、也不维护色调变量。 */
 /* 块底 / 左缘色条 / 浅底色 = 核心 StripCard（2026-11-06 改接，色调走 accent）⇒ 本仓只留块级动画。
@@ -121,15 +121,14 @@ const RECORDS_CSS = `
 @media (prefers-reduced-motion: reduce){
   .dsh-tdt-rec-item{animation:none;}
 }
-/* ── 头部 = 块内两列（左列：标题 + 信息 + 备注 ／ 右列：一排控件）且是**唯一可点区域** ──
+/* ── 头部 = 块内两列（左列：标题 + 信息 + 备注 ／ 右列：一排控件）──
    留白放大（用户 2026-10-04：「左边的间距、上面、下面、右边都大点」）：上/下/右 12、左 16；
    **只有鼠标悬停**才叠一层中性半透明（不盖掉块底的状态色浅底）。
    ⚠️ 2026-10-04 第七轮：删掉「展开态常亮」——用户原话「如果我鼠标不移到这一块，它是不变色的，
    还是没展开时的颜色呀。只是鼠标移到这一块，它才换一个颜色」；展开与否**不再影响**头部底色。 */
 /* 内距由核心 StripCard 统一给（12 / 12 / 12 / 20，色条已含在内）⇒ 头部不再自己加 padding。 */
 .dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--dshpc-space-3);min-width:0;padding:0;}
-/* 2026-11-07：整卡 hover 变色改走核心 StripCard 的 hoverable，本仓不再自写 :hover。 */
-.dsh-tdt-rec-head{cursor:pointer;}
+/* 2026-11-07：hover 变色与手形都归核心 StripCard（hoverable / onClick），本仓不再自写。 */
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--dshpc-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--dshpc-space-2);flex:none;}
 /* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
@@ -499,9 +498,11 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
     hoverable: true,
     hoverScope: 'head' as const,
     expanded: open,
+    // 核心 0.35.10：点击绑在 __body（含内距圈），展开区 panel 是兄弟节点、不会误触。
+    onClick: onHeadClick,
   }
-  // ── 头部（**唯一可点区域**）：标题 + 信息 + 备注 + 右列控件（左缘竖条已由核心 StripCard 提供）──
-  const head = h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick },
+  // ── 头部：标题 + 信息 + 备注 + 右列控件（左缘竖条与可点区域已由核心 StripCard 提供）──
+  const head = h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head' },
       // ── 左列：标题 + 下面那排信息 ──
       h('div', { className: 'dsh-tdt-rec-left' },
         h('div', { className: 'dsh-tdt-rec-r1' },

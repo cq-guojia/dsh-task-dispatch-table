@@ -6,10 +6,12 @@
 - 版本真源：包名与版本见上「适用版本」；每条结论的 `文件:行号` 就在正文各节。
 - 复核日期：2026-11-08（迁移当日未重新核实，结论沿用各节标注的版本）
 - 状态：✅ 持续维护 —— **⚠️ 2026-11-06：镜像实现已移交核心**。`dsh-plugin-core@0.35.0` 起
+
 > `adv/session/mirror/*` 成了唯一实现；本仓 `src/client/mirror/*` 已删（只留 `Deliverables.tsx` 给
-> 交付补差）。下表「回退类」一列里的 `dsh-tdt-sv-*` 是**历史自绘镜像**的类名，现状回退类为
+> 「任务产出」区，全量显示回执 outputs）。下表「回退类」一列里的 `dsh-tdt-sv-*` 是**历史自绘镜像**的类名，现状回退类为
 > 核心的 `dshpc-sv-*`（见 [`plugin-core-session.md`](plugin-core-session.md)）。官方元素取值仍然有效，
 > 用于核对核心镜像是否与官方一致。
+
 - 来源：上述三包源码原文摘录（`lib/client.js` 内嵌 CSS module + `lib/types/*.d.ts`），CSS 值均为源码原文、非目测
 - 配套：[`dsh-capabilities.md`](dsh-capabilities.md)（宿主能力）· 插件自有控件样式走 [`ui-style-guide.md`](../development/ui-style-guide.md)，本表只管**镜像官方**的部分
 
@@ -230,10 +232,10 @@ for (let i=0;i<lines.length;i++){
 | **上下文注入行**「`› retitle · 0913 │ 指令 │ …`」 | `ContextInjectionRow` | `root{min-width:0}` `[data-open]{padding-bottom:4px}`；`source{13px tertiary, flex:none, nowrap, ellipsis}` + `sep{2×2px, margin:0 8px}` + `summary{13px tertiary, flex:auto, ellipsis}`（**flex:auto 把后续内容推右**）；`chevron{color:label-secondary}`；`body{width:calc(100% - 22px - …)}` | ❌ |
 | **注入展开体**（OpaqueBody / ContextBody） | `ContextBody` | `text{pre-wrap; overflow-wrap:anywhere; color:label-secondary}`；`fields{border-top:.5px; gap:2px; padding-top:8px}`；`fieldKey{min-width:96px; color:label-caption}` / `fieldValue{tertiary}`；`files{gap:4px 12px}` 列表（`filePath`/`fileAction`） | ❌ |
 | 工具增删行 | `ContextInjectionRow.toolChanges` / 文案键 `message.toolAdded/toolRemoved/toolsAdded/toolsAddedCount/toolsChanged` | 「已写入文件」这类组行文案同源 | ❌ |
-| `accessibility`（10） | `root, row, leading, title, summary, summaryText, chevron, separator, thinkBody, visuallyHidden` | ❌ |
-| `MessageIconActions` 另有 `visuallyHidden` | — | ❌ |
-| `PreferenceRow`（6）/ `stat-dialog` / `SearchBlock` | — | ❌ |
-| `TurnTriggerNodeView`（10） | `root, header, icon, title, time, body, content, explanation, chevron, openChevron` | ❌ |
+| `accessibility`（10） | `root, row, leading, title, summary, summaryText, chevron, separator, thinkBody, visuallyHidden` | — | ❌ |
+| `MessageIconActions` 另有 `visuallyHidden` | — | — | ❌ |
+| `PreferenceRow`（6）/ `stat-dialog` / `SearchBlock` | — | — | ❌ |
+| `TurnTriggerNodeView`（10） | `root, header, icon, title, time, body, content, explanation, chevron, openChevron` | — | ❌ |
 
 ---
 
@@ -252,7 +254,6 @@ for (let i=0;i<lines.length;i++){
 | `SearchBlock` | SearchBlockLabels | 搜索块 |
 
 > **样式随组件走**：primitives 包自带 **32 个可读 `.module.css`**（`CodeCard` / `TerminalBlock` / `ReadBlock` / `DiffBlock` / `SearchBlock` / `WebBlock` / `DisclosureRow` / `user-text` / `Button` / `Pill` / `Tag` / `Tooltip` / `Modal` / `Menu` / `MenuSurface` / `JsonTree` / `StateDot` / `FoldToggle` / `TextShimmer` / `HoverCard` / `ImageLightbox` / `ImagePreview` / `Input` / `Checkbox` / `Switch` / `SegmentedControl` / `SegmentedTabs` / `ShortcutKeys` / `Toast` / `ConnectionIndicator` / `FileTypeIcon` / `PathLabel` / `RiskConfirmation`），由 primitives **自行注入 document** ⇒ 用官方组件时无需自己发现/挂这些类名。
-
 > ⛔ **用不了的**：官方会话容器 `ChatView`（组件不导出）；`ctx.slots.renderSlot` 只接受 `key='root'`（`ui-renderer registry.d.ts:150-158`，运行时强制）；`retain(source:'mainView')` 会锁死宿主会话导航（已实测回退，见 AGENTS.md/决策记录）。
 
 ---
