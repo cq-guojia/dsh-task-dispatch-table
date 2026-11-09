@@ -1,7 +1,7 @@
 {
   "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
   "tasks": {
-    "20261109-0752-1ae7-修复卡片-padding-点不中": {"category": "缺陷修复", "created": "2026-11-09 07:52:10", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-09 14:03:07", "status": "doing", "tags": ["点击区域", "卡片组件", "核心依赖"], "title": "修复卡片 padding 点不中", "updated": "2026-11-09 14:03:07", "worklog": "worklog/202611/09-0752-1ae7-修复卡片-padding-点不中.md"}
+    "20261109-0752-1ae7-修复卡片-padding-点不中": {"category": "缺陷修复", "created": "2026-11-09 07:52:10", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-09 14:03:07", "status": "doing", "tags": ["点击区域", "卡片组件", "核心依赖"], "title": "修复卡片 padding 点不中", "updated": "2026-11-09 14:07:31", "worklog": "worklog/202611/09-0752-1ae7-修复卡片-padding-点不中.md"}
   },
   "version": "20261022000000"
 }
