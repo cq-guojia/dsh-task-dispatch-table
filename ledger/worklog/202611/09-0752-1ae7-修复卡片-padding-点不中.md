@@ -1,8 +1,9 @@
 # 20261109-0752-1ae7-修复卡片-padding-点不中: 修复卡片 padding 点不中
 
 - **Tags**: 点击区域, 卡片组件, 核心依赖
-- **Status**: doing · 2026-11-09 14:07:31 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: done · 2026-11-09 14:07:36 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 - **Created**: 2026-11-09 07:52:10 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Sealed**: 2026-11-09 14:07:36 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
      The `- **Tags**: …` line is inserted at the top by new --tags; omitted when there are no tags
@@ -42,3 +43,4 @@
 - 2026-11-09 07:52:10 · new · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · created
 - 2026-11-09 14:03:07 · claim · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · claimed → doing
 - 2026-11-09 14:07:31 · log · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · 接入核心 0.35.10 的 Card.onClick：task-list.tsx/records-timeline.tsx 整行可点、smoke.mjs 守卫同步；build+smoke(779/0)+typecheck+codelint 全过
+- 2026-11-09 14:07:36 · close · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · sealed: 接入核心 0.35.10 的 Card.onClick，任务配置卡/执行记录卡整行（含 padding 圈）可点击；hover 与点击同层、panel 不误触、键盘可达；build/smoke/typecheck/codelint 全过
