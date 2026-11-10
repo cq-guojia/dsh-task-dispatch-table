@@ -1161,50 +1161,8 @@ export const PAGE_MIN_WIDTH = 760;
  */
 const PROMPT_SELECT_BASE = "clamp(120px, 14%, 200px)";
 const PROMPT_SELECT_WIDE = "clamp(180px, 22%, 300px)";
-
-/**
- * 模型下拉的分组数据（`ModelPicker` 的 `groups` 口径：一组 = 一个供应商）。
- * 候选来自 `/options`（真实目录）；不在目录里的旧值补一组「当前」，
- * 否则编辑老任务时看不见自己配的模型（值没丢，只是别处选了它）。
- */
-function modelGroupsOf(
-	models: readonly EditorOption[],
-	current: string,
-): PickerGroup[] {
-	const byProvider = new Map<string, PickerGroup>();
-	for (const model of models) {
-		if (model.value === "") continue;
-		const slash = model.value.indexOf("/");
-		const provider = slash < 0 ? "" : model.value.slice(0, slash);
-		// label 由服务端拼成 `名称（供应商）`；分组后组头已经是供应商，去掉重复尾缀。
-		const label =
-			provider === ""
-				? model.label
-				: model.label.replace(`（${provider}）`, "");
-		const group = byProvider.get(provider);
-		if (group === undefined)
-			byProvider.set(provider, {
-				value: provider,
-				label: provider,
-				options: [{ value: model.value, label }],
-			});
-		else group.options.push({ value: model.value, label });
-	}
-	const groups = [...byProvider.values()];
-	if (
-		current !== "" &&
-		!groups.some((group) =>
-			group.options.some((option) => option.value === current),
-		)
-	) {
-		groups.push({
-			value: "__current",
-			label: "",
-			options: [{ value: current, label: current }],
-		});
-	}
-	return groups;
-}
+/** 选模型：核心 `ModelPicker` 的 `width` 轴（原样透传字符串），不再由本仓 CSS 定宽。 */
+const PROMPT_SELECT_MODEL = "clamp(140px, 18%, 260px)";
 
 /** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
 const formatVersionTime = (iso: string): string => formatDateTime(iso);
@@ -1826,9 +1784,6 @@ export function TaskEditorDrawer(props: {
 	onChange: (next: TaskEditorDraft) => void;
 	/** 工作区列表（P1 接真数据；空 ⇒ 下拉显示空态）。 */
 	workspaces: EditorOption[];
-	/** 模型列表（P1 接真数据；空 ⇒ 下拉显示空态）。 */
-	models: EditorOption[];
-
 	/** 可选的前置任务（= 现有任务表，真数据，带所属工作区）。 */
 	tasks: EditorTaskOption[];
 	/** 当前正在编辑的任务 id（编辑态有；新建态无）。用于在前置列表里**排除自己**（防止自我依赖）。 */
@@ -1901,7 +1856,6 @@ export function TaskEditorDrawer(props: {
 		draft,
 		onChange,
 		workspaces,
-		models,
 		tasks,
 		onClose,
 		onSave,
@@ -2367,19 +2321,15 @@ export function TaskEditorDrawer(props: {
 				width: PROMPT_SELECT_BASE,
 			}),
 			h("span", { className: "dsh-tdt-ed-spacer" }),
-			// 选模型 = 核心 `ModelPicker` 分组态（一组 = 一个供应商）；「默认模型」是核心内置首项。
-			// ⚠️ 候选为空但草稿里**已经有模型**（宿主没接上 llm ⇒ degraded 时常发生）⇒ `modelGroupsOf`
-			// 会补一组「当前值」，否则编辑老任务时看不见自己配的是哪个（值没丢、保存也照写）。
+			// 选模型 = 核心 `ModelPicker` 分组态；目录由 `connectHost({ modelsPath })` 喂进核心，
+			// 「默认模型」首项与旧值保留（retainSelectedValue）都由核心负责，本仓只存 `provider/id`。
 			h(ModelPicker, {
 				value: draft.model,
 				variant: "grouped",
-				groups: modelGroupsOf(models, draft.model),
-				// 只有「默认模型」一项 ⇒ 如实降级，不伪装成完整目录。
-				degraded: models.length <= 1,
+				width: PROMPT_SELECT_MODEL,
 				defaultLabel: t("editorFollowHost"),
 				placeholder: t("editorModelPh"),
 				size: "lg",
-				className: "dsh-tdt-ed-model",
 				onChange: (value) => {
 					patch({ model: value });
 				},

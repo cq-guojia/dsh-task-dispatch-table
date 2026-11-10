@@ -56,16 +56,13 @@ export const TASK_EDITOR_CSS = `
    核心 Picker 的根是 inline-block（max-width:100%），这里给行内子项放行收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 选模型（核心 ModelPicker 分组态）：比工作区小一档，最小宽度下先让出空间（用户 2026-11-06 真机反馈）。
-   触发器必须填满定宽根，否则值短时触发器缩到 min-width(120)、右缘留白 ⇒ 看着没靠右；
-   margin-left:auto 兜底，让它在任何排布下都贴右缘（用户 2026-11-06）。 */
-/* 2026-11-07：分栏拉大时模型框跟着自适应变宽，但封顶 260px；默认宽度仍是 140px。 */
-.dsh-tdt-ed-model{width:clamp(140px,18%,260px);margin-left:auto;}
-.dsh-tdt-ed-model .dshpc-picker__trigger{width:100%;}
-/* 设置页「供应商 + 模型」联动态：两个下拉**等宽定住**（核心 __row 默认 flex，按内容自适应会跳宽）。 */
-.dsh-tdt-model-pair .dshpc-picker__row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2);}
-.dsh-tdt-model-pair .dshpc-picker__row > .dshpc-picker{width:100%;min-width:0;}
-.dsh-tdt-model-pair .dshpc-picker__row .dshpc-picker__trigger{width:100%;}
+/* 分组态选模型的宽度已交给核心 width 轴（clamp 表达式原样透传），本仓不再自写尺寸。 */
+/* 设置页 cascade 两列等宽：核心 0.35.13 开放 rowClassName，类名直接挂在 __row 根上。
+   核心 0.35.17 起 __row 的 flex 只作用于菜单内部，外层 row 没有默认布局 ⇒ 这里补一条 grid；
+   双类选择器同时压过同页旧版 core 的单类规则，不依赖 CSS 注入顺序。 */
+.dsh-tdt-model-pair.dshpc-picker__row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--dshpc-space-2);}
+.dsh-tdt-model-pair > .dshpc-picker{width:100%;min-width:0;}
+.dsh-tdt-model-pair .dshpc-picker__trigger{width:100%;}
 /* 提示词大输入框已改接核心 Textarea（dsh-plugin-core/ui，2026-11-06）；本地皮肤整段删除，此处不再自写。 */
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}

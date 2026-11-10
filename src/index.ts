@@ -2,7 +2,7 @@
 // 读任务定义 JSON → 按 cron/窗口/依赖判定 → 在指定工作区派发 agent 会话 → 监听会话事件对账 → SQLite 记状态。
 // 调度层零大模型介入（PROGRESS 背景）；插件零业务逻辑——任务定义见 docs/examples。
 import type {
-  HostContext, HostLlm, HostLogger, HostSettings, HostWorkspaceRegistry, SettingsScope, z_any,
+  HostContext, HostLogger, HostSettings, HostWorkspaceRegistry, SettingsScope, z_any,
 } from './host.js'
 import { CONFIG_DEFAULTS, Config, ENTRY_MODES, readConfigField, resolveStatePath } from './config.js'
 import { isSafeAttachmentRef } from './attachment-allowlist.js'
@@ -33,9 +33,10 @@ import type { RuntimeIndex, TaskOverviewRow } from './runtime-index.js'
 import { createEventBus } from './event-bus.js'
 import type { EventBus } from './event-bus.js'
 import { EventType, HEARTBEAT_TYPE, runEventTypeOf } from './event-catalog.js'
-// 核心 explorer 的文件系统路由（宿主侧注册；客户端用同一条常量 connectFs）。
-import { serveFsRoute } from 'dsh-plugin-core/host'
+// 核心 HTTP 路由（宿主侧注册；客户端用同一条常量连接）。
+import { serveFsRoute, serveModelCatalog } from 'dsh-plugin-core/host'
 import { FS_ROUTE } from './fs-route.js'
+import { MODELS_ROUTE } from './model-catalog-route.js'
 
 export const name = 'dsh-task-dispatch-table'
 
@@ -294,12 +295,20 @@ const writeJson = (res: DispatchWebResponse, code: number, body: unknown): void 
   res.end(JSON.stringify(body))
 }
 
-/** 同源 / loopback 守卫：浏览器 fetch 必带与 Host 同源的 Origin；无 Origin 的只放行本机回环。 */
-const isTrustedDispatchRequest = (req: DispatchWebRequest): boolean => {
-  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined
-  const host = typeof req.headers.host === 'string' ? req.headers.host : undefined
+/**
+ * 同源 / loopback 守卫：浏览器 fetch 必带与 Host 同源的 Origin；无 Origin 的只放行本机回环。
+ * 参数只声明用到的两个字段且都可选 ⇒ 同一个守卫可直接交给核心 `serveModelCatalog` 的
+ * `authorize`（它给的是 `HostHttpRequest`，headers / socket 都是可选）。
+ */
+const isTrustedDispatchRequest = (req: {
+  headers?: Record<string, unknown>
+  socket?: { remoteAddress?: string }
+}): boolean => {
+  const headers = req.headers ?? {}
+  const origin = typeof headers.origin === 'string' ? headers.origin : undefined
+  const host = typeof headers.host === 'string' ? headers.host : undefined
   if (origin === undefined) {
-    const addr = req.socket.remoteAddress
+    const addr = req.socket?.remoteAddress
     return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1'
   }
   if (host === undefined) return false
@@ -543,8 +552,6 @@ const makeDispatchRoutes = (
   getStore: () => TaskStore | null,
   /** 取 workspaceRegistry（归档会话的临时反归档 / 回归档；任务表单的工作区下拉）。 */
   getRegistry: () => HostWorkspaceRegistry | null,
-  /** 取 llm 服务（任务表单的模型下拉）；未挂载时返回 undefined。 */
-  getLlm: () => HostLlm | undefined,
   /** 宿主日志（取证：反归档到底有没有跑、宿主有没有该面）。 */
   log: (msg: string) => void,
   /** 取附件落盘目录（settings inject 就绪后才有值：statePath 在那里定格）；未就绪时上传返回 503。 */
@@ -998,7 +1005,8 @@ const makeDispatchRoutes = (
     },
   },
   {
-    // 任务表单的下拉数据面（P1）：真实工作区 + 真实模型目录，只读、不写任何东西。
+    // 任务表单的下拉数据面（P1）：真实工作区，只读、不写任何东西。
+    // 模型目录已改由核心 `serveModelCatalog` 独供（见 apply），本路由不再下发 models。
     // ⚠️ 只给「宿主真实存在的」——拿不到就是拿不到（返回空数组 + degraded 标记），不塞兜底假值。
     kind: 'exact',
     path: `${DISPATCH_API_PREFIX}/options`,
@@ -1006,7 +1014,6 @@ const makeDispatchRoutes = (
       if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
       if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
       const registry = getRegistry()
-      const llm = getLlm()
       const workspaces = registry === null
         ? []
         // value 用 **path**（宿主派发即用此值，重启 / 重建 id 都不变）；title 只作显示名与搜索用。
@@ -1019,23 +1026,7 @@ const makeDispatchRoutes = (
           const anchorSessionId = sessions !== undefined && sessions.length > 0 ? sessions[sessions.length - 1] : undefined
           return { id: workspace.id, title: workspace.title, path: workspace.path, anchorSessionId }
         })
-      const models: { provider: string; id: string; name: string }[] = []
-      try {
-        for (const provider of llm?.listProviders() ?? []) {
-          try {
-            // 模型目录是 advisory（host.ts:157-163）：单个 provider 失败不影响其他。
-            for (const model of await llm!.listModels(provider.id)) {
-              models.push({ provider: model.provider, id: model.id, name: model.name })
-            }
-          } catch (error) {
-            log(`[表单下拉] provider ${provider.id} 取模型目录失败：${error instanceof Error ? error.message : String(error)}`)
-          }
-        }
-      } catch (error) {
-        log(`[表单下拉] 枚举 provider 失败：${error instanceof Error ? error.message : String(error)}`)
-      }
       if (registry === null) log('[表单下拉] workspaceRegistry 未就绪 ⇒ 工作区下拉为空')
-      if (llm === undefined) log('[表单下拉] 宿主无 llm 服务 ⇒ 模型下拉为空（不填模型仍走决策 22 漏斗）')
       // 宿主真实时区（Intl 解出来）。UI 按用户 2026-09-29 的决定**不再让选时区**（一律跟随宿主），
       // 这里保留下发：排期判定本来就走宿主时区，将来若要显式指定时区，直接接上即可。
       let timezone = ''
@@ -1047,10 +1038,9 @@ const makeDispatchRoutes = (
       writeJson(res, 200, {
         ok: true,
         workspaces,
-        models,
         timezone,
         /** 客户端据此区分「真的没有」与「面没接上」，UI 上不撒谎。 */
-        degraded: { workspaces: registry === null, models: llm === undefined },
+        degraded: { workspaces: registry === null },
       })
     },
   },
@@ -1492,6 +1482,13 @@ const DEBUG_EVENT_LIMIT = 200
 export function apply(ctx: HostContext, config: unknown): void {
   // 文件浏览 / 预览改接核心 `adv/explorer`：宿主提供 fs 路由（只读、绝对路径口径）。
   serveFsRoute(ctx as unknown as Parameters<typeof serveFsRoute>[0], { path: FS_ROUTE })
+  // 模型目录由核心独供：宿主注册只读路由，客户端用同一条常量 connectHost 取，两处选模型控件
+  // 不再自己拼 groups。守卫复用本仓所有路由的同源闸门；核心 0.35.14 起自行惰性取 llm 并
+  // try/catch 兜住 ctx 失活抛错（2026-11-08 事故），本仓不再需要传 getLlm 覆盖口。
+  serveModelCatalog(ctx as unknown as Parameters<typeof serveModelCatalog>[0], {
+    path: MODELS_ROUTE,
+    authorize: isTrustedDispatchRequest,
+  })
 
   // rc.1 兼容：本插件早前版本把 volatile 字段经 settings.update 提交，Loader 把 volatile 默认按
   // `{}` 写进了 profile；重装后 z.number()/z.string() 校验 `{}` 会失败导致 entry 不激活。本插件
@@ -1680,9 +1677,6 @@ export function apply(ctx: HostContext, config: unknown): void {
       // 都要走的路径（2026-11-08 事故）。取不到 ⇒ null，各路由已按「工作区下拉为空 / 503」降级。
       () => {
         try { return ctx.workspaceRegistry } catch { return null }
-      },
-      () => {
-        try { return ctx.get('llm') } catch { return undefined }
       },
       (msg) => { ctx.logger.info(msg) },
       // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。

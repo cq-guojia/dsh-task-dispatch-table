@@ -38,5 +38,6 @@
   - [核心控件 `Picker` / `DateTimePicker` / `FieldHint` / `notify`（源码级事实）](dependencies/plugin-core-controls.md) — 核心 Picker / DateTimePicker / FieldHint / notify 的事实
   - [核心分栏容器 `PanelDock`（源码级事实）](dependencies/plugin-core-dock.md) — 核心分栏容器 PanelDock 的接口事实
   - [dsh-plugin-core/adv/explorer —— 工作区文件浏览与选择](dependencies/plugin-core-explorer.md) — 核心文件浏览与选择器的接口、返回值与坑
+  - [核心模型目录两段式接线（`serveModelCatalog` / `connectHost`）](dependencies/plugin-core-model-catalog.md) — 宿主 / 客户端如何接上核心自带的模型目录
   - [dsh-plugin-core 会话弹窗（`adv/session`）槽位契约](dependencies/plugin-core-session.md) — 核心会话弹窗的槽位契约
   - [会话弹窗「官方样式对照表」（专属任务文档）](dependencies/session-view-ui-map.md) — 官方会话界面元素与本仓镜像的对照表

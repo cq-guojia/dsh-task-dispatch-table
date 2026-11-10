@@ -23,7 +23,7 @@
 | `showToast` | 函数 | 一次性提示（可带 `onDismiss`） |
 | `LoadingToast` / `showLoading` | 组件 / 函数 | 进行中提示 |
 | `Segmented` | React 组件 | 分段控件（用户口语里的「滑块」） |
-| `ModelPicker` | React 组件 | 选模型（`grouped` 分组下拉 / `cascade` 供应商↔模型联动） |
+| `ModelPicker` | React 组件 | 选模型（`grouped` / `flat` / `cascade` 三形态）；自带目录、尺寸与类名轴见 [模型目录两段式接线](plugin-core-model-catalog.md) |
 | `WorkspacePicker` | React 组件 | 选工作区（数据自动来自宿主工作区快照；**本仓未用**，原因见 §八） |
 | `InputGroup` | React 组件 | 「名字 + 输入框」同格组合（`label` 灰底标题格；任务名称 / 编号用） |
 | `Card` / `StripCard` | React 组件 | 卡片外框：框式（Surface 底 + 边框 + 圆角 12） / 浅底条带式（左缘 4px 通高方角条） |

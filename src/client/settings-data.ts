@@ -7,13 +7,6 @@
  */
 import { API_PREFIX } from './query'
 import { fetchWithTimeout } from './http'
-import type { EditorOption } from './ui'
-import type { Translate } from './locales'
-
-/** 模型候选：在基础 `EditorOption` 上多带一个 provider（选中时一并写回 `defaultProvider`）。 */
-export interface ModelOption extends EditorOption {
-  provider?: string
-}
 
 /** 单表查询支持的过滤运算符（与 `store.TABLE_FILTER_OPS` 同形，白名单防注入）。 */
 export type TableFilterOp = '=' | '!=' | '<' | '>' | '<=' | '>=' | 'LIKE'
@@ -80,25 +73,6 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
     throw err
   }
   return body as unknown as T
-}
-
-/**
- * 模型候选目录（`GET /options`，**与任务编辑器同一份真源**）。
- *
- * 首项固定为「默认模型」（value `''`）＝ 用宿主给的那一个，与编辑器下拉同口径（`editorFollowHost`）；
- * 其后是宿主给的 `provider/id`。目录读不到 ⇒ 只留首项（下拉呈灰色不可选，**不编造**候选）。
- */
-export async function fetchModelOptions(t: Translate): Promise<ModelOption[]> {
-  const res = await fetchWithTimeout(`${API_PREFIX}/options`, { cache: 'no-store' })
-  const body = await res.json() as { ok?: boolean; models?: Array<{ provider?: string; id?: string; name?: string }> }
-  if (body.ok !== true) throw new Error('options failed')
-  const out: ModelOption[] = [{ value: '', label: t('editorFollowHost') }]
-  for (const m of body.models ?? []) {
-    if (typeof m.provider !== 'string' || typeof m.id !== 'string') continue
-    const name = typeof m.name === 'string' && m.name !== '' ? m.name : m.id
-    out.push({ value: m.id, label: `${name}（${m.provider}）`, provider: m.provider })
-  }
-  return out
 }
 
 /** 单表查询（现在只有整体日志块在用）。 */

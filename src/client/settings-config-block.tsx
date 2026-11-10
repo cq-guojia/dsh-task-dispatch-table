@@ -16,8 +16,8 @@
  */
 import { createElement as h, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { t as coreT } from 'dsh-plugin-core/utils'
-import { Button, Chip, ensureControlsStyle, Input, ModelPicker, notify, SectionHead, type PickerGroup } from './ui'
-import { fetchConfig, postConfig, fetchModelOptions, type ModelOption, type SettingsConfigValue } from './settings-data'
+import { Button, Chip, ensureControlsStyle, Input, ModelPicker, notify, SectionHead } from './ui'
+import { fetchConfig, postConfig, type SettingsConfigValue } from './settings-data'
 import { HelpButton } from './task-editor'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { IconCordisPluginOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -71,7 +71,6 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
   /** 最后一次「已落盘」的快照 ⇒ 与 form 比对得脏状态（没改动 ⇒ 保存灰着）。 */
   const [baseline, setBaseline] = useState<SettingsConfigValue | null>(null)
   const [defaults, setDefaults] = useState<SettingsConfigValue | null>(null)
-  const [models, setModels] = useState<ModelOption[]>([])
   const [saving, setSaving] = useState(false)
   /** 数字框的自由输入草稿（允许先清空，失焦再回弹），key = 字段名。 */
   const [draft, setDraft] = useState<Partial<Record<string, string>>>({})
@@ -96,14 +95,6 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
         setForm(p.config); setDefaults(p.defaults); setBaseline(p.config)
       })
       .catch(() => { if (alive) { toastSeq.current += 1; setToast({ text: t('settingsLoadFailed'), tone: 'error', seq: toastSeq.current }) } })
-    return () => { alive = false }
-  }, [t])
-
-  useEffect(() => {
-    let alive = true
-    fetchModelOptions(t)
-      .then(list => { if (alive) setModels(list) })
-      .catch(() => { if (alive) setModels([{ value: '', label: t('editorFollowHost') }]) })
     return () => { alive = false }
   }, [t])
 
@@ -212,23 +203,6 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
 
   const dirty = form !== null && baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline)
 
-  /** 模型分组（一组 = 一个供应商），给核心 `ModelPicker` 联动备用；值口径 = `${provider}/${id}`。 */
-  const modelGroups = (): PickerGroup[] => {
-    const byProvider = new Map<string, PickerGroup>()
-    for (const m of models) {
-      if (m.provider === undefined || m.provider === '' || m.value === '') continue
-      // 服务端 label 是 `名称（供应商）`；分组后组头已是供应商，去掉重复尾缀。
-      const label = m.label.replace(`（${m.provider}）`, '')
-      const group = byProvider.get(m.provider)
-      if (group === undefined) {
-        byProvider.set(m.provider, { value: m.provider, label: m.provider, options: [{ value: `${m.provider}/${m.value}`, label }] })
-      } else {
-        group.options.push({ value: `${m.provider}/${m.value}`, label })
-      }
-    }
-    return [...byProvider.values()]
-  }
-
   const renderField = (f: FieldDef): ReturnType<typeof h> => {
     const serverVal = form![f.key]
     const invalid = showErrors && validate().some(p => p.key === f.key)
@@ -254,38 +228,34 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
       })
     } else {
       // 供应商 + 模型 = 核心 `ModelPicker` 联动态（两个下拉自动筛选；换供应商先清模型）。
-      // 值口径与核心一致（`provider/id`），本仓只把两段拆回 `defaultProvider` / `defaultModel`。
-      const groups = modelGroups()
+      // 目录由 `connectHost({ modelsPath })` 喂进核心，本仓只把 `provider/id` 拆回两段配置字段。
       const pairValue = form!.defaultProvider !== '' && form!.defaultModel !== ''
         ? `${form!.defaultProvider}/${form!.defaultModel}`
         : ''
-      control = h('div', { className: 'dsh-tdt-model-pair' },
-        h(ModelPicker, {
-          variant: 'cascade',
-          value: pairValue,
-          groups,
-          // 核心控件内置文案（供应商 / 模型 / 默认）走核心字典；本仓只覆盖自己那几个标签。
-          translate: coreT,
-          // 目录读不到 ⇒ 如实降级（不伪装成完整目录）；「默认」选项由核心内置。
-          degraded: groups.length === 0,
-          defaultLabel: t('settingsDefaultOption'),
-          placeholder: t('editorFollowHost'),
-          // 与其他表单行统一档位（lg = 32），不许比其他框小一号（用户 2026-11-06）。
-          size: 'lg',
-          className: invalid ? 'dsh-tdt-picker--error' : undefined,
-          onChange: (next: string) => {
-            if (next === '') {
-              update(f, '')
-              setForm(prev => prev === null ? prev : { ...prev, defaultProvider: '', defaultModel: '' })
-              return
-            }
-            const slash = next.indexOf('/')
-            const provider = slash < 0 ? '' : next.slice(0, slash)
-            const model = slash < 0 ? next : next.slice(slash + 1)
-            setForm(prev => prev === null ? prev : { ...prev, defaultProvider: provider, defaultModel: model })
-          },
-        }),
-      )
+      control = h(ModelPicker, {
+        variant: 'cascade',
+        value: pairValue,
+        // 核心 0.35.13 开放的三条类名轴：`className` 归位 row，布局与错误态各自挂一条。
+        rowClassName: 'dsh-tdt-model-pair',
+        className: invalid ? 'dsh-tdt-picker--error' : undefined,
+        // 核心控件内置文案（供应商 / 模型 / 默认）走核心字典；本仓只覆盖自己那几个标签。
+        translate: coreT,
+        defaultLabel: t('settingsDefaultOption'),
+        placeholder: t('editorFollowHost'),
+        // 与其他表单行统一档位（lg = 32），不许比其他框小一号（用户 2026-11-06）。
+        size: 'lg',
+        onChange: (next: string) => {
+          if (next === '') {
+            update(f, '')
+            setForm(prev => prev === null ? prev : { ...prev, defaultProvider: '', defaultModel: '' })
+            return
+          }
+          const slash = next.indexOf('/')
+          const provider = slash < 0 ? '' : next.slice(0, slash)
+          const model = slash < 0 ? next : next.slice(slash + 1)
+          setForm(prev => prev === null ? prev : { ...prev, defaultProvider: provider, defaultModel: model })
+        },
+      })
     }
     return h('div', { key: f.key, style: { minWidth: 0 } },
       h('div', { style: headStyle },

@@ -40,6 +40,7 @@ import {
 import { resolvedDepsOf } from "../deps.js";
 import { EventType, RUN_EVENT_TYPES } from "../event-catalog.js";
 import { FS_ROUTE } from "../fs-route.js";
+import { MODELS_ROUTE } from "../model-catalog-route.js";
 // ⚠️ 本文件**不再引 `status-text`**（状态名 / 状态桶 / 在跑语义的唯一真源）：消费者只剩两个业务文件 ——
 // `records-timeline.tsx`（执行记录流水账）与 `task-list.tsx`（卡片三面板）。旧测试版 records 屏
 // （原生 select + 表格）已于 2026-10-04 被时间轴取代（见 worklog/execution-timeline.md）。
@@ -513,23 +514,17 @@ function scheduleSummary(row: DebugTaskRow): string {
 	return "—";
 }
 
-/** 表单下拉的取值状态：P1 起由 `GET /options` 真取（工作区 / 模型都是宿主的真目录）。 */
+/** 表单下拉的取值状态：工作区 / 锚点由 `GET /options` 真取；模型目录归核心 `ModelPicker` 自带。 */
 interface EditorOptions {
 	workspaces: EditorOption[];
-	models: EditorOption[];
 	/** 工作区标识（path 或老 title / id）→ 浏览锚点会话 id；没有会话的工作区无键。 */
 	workspaceAnchors: Record<string, string>;
 }
 
 const EMPTY_EDITOR_OPTIONS: EditorOptions = {
 	workspaces: [],
-	models: [],
 	workspaceAnchors: {},
 };
-
-/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
-const encodeModelValue = (provider: string, id: string): string =>
-	`${provider}/${id}`;
 
 // ── U11 页面级预览 dock（弹窗与整页共用同一个预览面） ──
 
@@ -1200,9 +1195,8 @@ function TaskPage(props: {
 						res.json() as Promise<{
 							ok?: boolean;
 							workspaces?: { id?: string; title?: string; path?: string; anchorSessionId?: string }[];
-							models?: { provider?: string; id?: string; name?: string }[];
 							/** 后端明示「这批候选可能是残的」（宿主没接上服务）；前端**必须**如实告诉用户。 */
-							degraded?: { workspaces?: boolean; models?: boolean } | null;
+							degraded?: { workspaces?: boolean } | null;
 						}>,
 				)
 				.then((body) => {
@@ -1229,25 +1223,7 @@ function TaskPage(props: {
 							}
 							return { value, label: item.title as string, aliases };
 						});
-					const models: EditorOption[] = [
-						{ value: "", label: t("editorFollowHost") },
-					];
-					for (const model of body.models ?? []) {
-						if (
-							typeof model.provider !== "string" ||
-							typeof model.id !== "string"
-						)
-							continue;
-						const name =
-							typeof model.name === "string" && model.name !== ""
-								? model.name
-								: model.id;
-						models.push({
-							value: encodeModelValue(model.provider, model.id),
-							label: `${name}（${model.provider}）`,
-						});
-					}
-					setEditorOptions({ workspaces, models, workspaceAnchors });
+					setEditorOptions({ workspaces, workspaceAnchors });
 					// 降级 / 空列表 ⇒ 宿主恢复后自动重取；拿到真实候选即停（正常态不轮询）。
 					if (workspaces.length === 0 || body.degraded?.workspaces === true) scheduleRetry();
 				})
@@ -2080,7 +2056,6 @@ function TaskPage(props: {
 								setEditor({ ...editor, draft: next });
 							},
 							workspaces: editorOptions.workspaces,
-							models: editorOptions.models,
 							tasks: editorTasks,
 							currentTaskId: editor.mode === "edit" ? editor.id : undefined,
 							// 左列表拨片 → 右抽屉联动（2026-10-05）：把本任务 id 交给抽屉，让它从共享 store 取 enabled 同步。
@@ -2511,7 +2486,7 @@ function TaskPageHost(props: {
 export function apply(ctx: ClientContext): void {
 	// 文件浏览 / 预览改接核心 `adv/explorer`：接上宿主 fs 面 + 官方工作区快照源。
 	connectFs({ path: FS_ROUTE });
-	connectHost(ctx as unknown as Parameters<typeof connectHost>[0]);
+	connectHost(ctx as unknown as Parameters<typeof connectHost>[0], { modelsPath: MODELS_ROUTE });
 	// 先按设置把入口摆好（默认「更多」菜单）：读不到配置就保持默认外观，不阻塞启动。
 	void refreshAppearance();
 	// 核心 `FieldHint` 的气泡本体就是官方 `Tooltip`：插件启动时必须注入一次 renderer，

@@ -88,7 +88,7 @@ export { DateTimePicker, type DateTimeOutput } from 'dsh-plugin-core/ui'
 // 「名字 + 输入框」同格组合：核心 InputGroup（label 与输入框同格灰底）。
 export { InputGroup, type InputGroupProps, type InputGroupAction } from 'dsh-plugin-core/ui'
 export { notify } from 'dsh-plugin-core/ui'
-// 选模型（分组 / 联动两态）与卡片框（框式 / 条带式）：核心唯一的模型选择与卡片外观实现。
+// 选模型（分组 / 联动 / 平铺三态）与卡片框（框式 / 条带式）：核心唯一的模型选择与卡片外观实现。
 export {
   ModelPicker, Card, StripCard, ListRow,
   type ModelPickerProps, type ModelPickerVariant,
