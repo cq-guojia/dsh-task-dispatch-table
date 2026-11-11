@@ -36,7 +36,7 @@
 
 ## 五、配图
 
-对外配图统一放仓库根的 `assets/screenshots/`（根 `README.md` / `README.zh.md` 引用），不进 `docs/` —— `docs/` 根下只允许索引文件与槽位目录。
+对外配图统一放仓库根的 `assets/screenshots/`（根 `README.md` / `README.en.md` 引用），不进 `docs/` —— `docs/` 根下只允许索引文件与槽位目录。
 
 ## 更新日志
 

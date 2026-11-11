@@ -1,118 +1,118 @@
-# dsh-task-dispatch-table · Scheduled task dispatcher
+# dsh-task-dispatch-table · 定时任务调度器
 
-English | [中文](README.zh.md)
+中文 | [English](README.en.md)
 
-One dsh host plugin: **a single table of task definitions drives your recurring agent work** — when a task is due, it is dispatched as an **independent dsh session** that an agent actually executes. The scheduling itself is pure program logic and **never burns a token**.
+一个 dsh 宿主层插件：用**一张任务定义表驱动周期性的 agent 工作**——任务到点后被派发成一个**独立的 dsh 会话**，由 agent 真正执行。调度本身是纯程序逻辑，**一行 token 都不烧**。
 
-![Task list with a task expanded](assets/screenshots/task-overview.jpg)
+![任务列表与展开的任务详情](assets/screenshots/task-overview.jpg)
 
-- **Zero model involvement in scheduling** — tick → check the schedule window → check dependencies → dispatch. Judgment-heavy work goes to the agent session; deciding *when to run* costs nothing
-- **Three schedule modes** — one-off, cron-style daily/weekly, or every-N-hours intervals, each with an **allowed-delay window** so a busy host catches up instead of silently skipping
-- **Dependencies declared by the downstream** — a task can require upstream tasks to have succeeded; the exact upstream instance and its outputs are **frozen at dispatch time** and handed to the downstream session
-- **Every run is an independent session** with its own status, token usage, artifacts and event log — inspectable afterwards, retryable on failure, serialized per task
-- **A full UI** — task list, per-task runs and logs, a cross-task execution timeline, a monthly calendar of planned and actual runs, a split-panel editor, and a settings page
+- **调度零大模型介入**——tick → 判时间窗 → 判依赖 → 派发。判断类工作交给 agent 会话，「什么时候该跑」这个决定不花一分钱
+- **三种排期模式**——单次、cron 式每天/每周、每 N 小时间隔，每种都带**允许延迟窗口**：宿主忙不过来时补跑，而不是悄悄跳过
+- **依赖由下游声明**——任务可以要求上游任务执行成功才放行；派发瞬间**冻结命中的上游实例及其产出**，随任务下传给下游会话
+- **每次执行都是独立会话**——有自己的状态、token 用量、产出物和事件流水，事后可查、失败可重试、任务内串行
+- **完整的界面**——任务列表、单任务执行记录与日志、跨任务执行流水账、月历日程、分栏编辑器、设置页
 
-## Install
+## 安装
 
 ```bash
 dsh plugin --profile web add dsh-task-dispatch-table
 ```
 
-Every release is published to npm, so it works right after installing — no extra configuration and no local build. The UI copy is **bilingual** and follows dsh's interface language (Settings → General → Language).
+每个版本都发布到 npm，装完即用——无需额外配置、无需本地构建。界面文案**中英双语**，跟随 dsh 的界面语言（设置 → 通用 → 语言）。
 
-## How it works
+## 它是怎么工作的
 
-The plugin keeps two layers of state:
+插件维护两层状态：
 
-| Object | What it is | What it decides |
+| 对象 | 代表什么 | 决定什么 |
 | --- | --- | --- |
-| **Task definition** | One row per scheduled unit: title, prompt, schedule, attachments, workspace, model, dependencies, on/off switch | *Whether and how* a task should run |
-| **Task instance** | One row per actual run: status, planned/actual time, session id, token usage, artifacts | *What happened* in a run |
+| **任务定义** | 每个调度单元一行：标题、提示词、排期、附件、工作区、模型、依赖、开关 | 任务**该不该跑、怎么跑** |
+| **执行记录** | 每次实际触发一行：状态、计划/实际时间、会话 id、token 用量、产出物 | 这趟**实际发生了什么** |
 
-The scheduler is a plain loop: on every tick it computes which tasks are due, claims them atomically in SQLite, dispatches each as a new dsh session in the task's workspace, then tracks the session via a receipt tool the session is required to call when done. Missed slots (host was down past the allowed delay) are recorded and marked `skipped` instead of disappearing.
+调度器是一个朴素的循环：每个 tick 算出哪些任务到点，在 SQLite 里原子领取，把每个任务派发成其工作区里的一个新 dsh 会话，再通过一个回执工具跟踪会话（会话干完活必须调它）。错过的刻度（宿主停机超出允许延迟）会补一条记录并标 `skipped`（带原因），而不是无声消失。
 
-## Tasks
+## 任务
 
-### Creating and editing
+### 新建与编辑
 
-![The task editor as a right-hand split panel](assets/screenshots/task-editor.jpg)
+![编辑任务：右侧占布局的分栏表单](assets/screenshots/task-editor.jpg)
 
-Press **New task** (or **Edit** on a card) and the editor opens as a layout split panel, not a floating drawer: basics, schedule, prompt (with version history), advanced options, attachments and upstream tasks. Attachments are either **links** to files already in the workspace or **uploads** (stored in the task's own directory, up to 20 MB each).
+点**新建任务**（或卡片上的**编辑**），编辑器以分栏形式打开（不是浮层抽屉）：基础、排期、提示词（带版本）、高级选项、附加文件、前置任务。附加文件两种来路：**link**（工作区已有文件，只记路径）与 **upload**（落盘到任务自己的目录，单个不超过 20 MB）。
 
-The footer switches between **View / Edit** modes: View is a read-only rendering of the task — configuration, last run, and the prompt — for checking a task without risking an accidental edit.
+底栏可在**查看 / 编辑**两档切换：查看档 = 只读人话视图——配置、上次执行、提示词，用于检查任务而不怕误改。
 
-### Schedules
+### 排期
 
-![Recurring schedule: daily at 18:12 with an allowed delay](assets/screenshots/schedule-recurring.png)
+![周期排期：每天 18:12，允许延迟 4 小时](assets/screenshots/schedule-recurring.png)
 
-Three modes, each showing a plain-language preview of the next run:
+三种模式，每种都用一句人话预览下次执行：
 
-- **Once** — runs at the given moment, then never again
-- **Recurring** — daily / weekly / monthly at a given time
-- **Interval** — every N hours (or days), optionally restricted to selected weekdays
+- **单次**——到点执行一次，之后不再重复
+- **周期**——每天 / 每周 / 每月的固定时刻
+- **间隔**——每 N 小时（或天），可选限定星期几
 
-Every mode has an **allowed delay**: if the host was busy or down when the moment came, the run still fires within the window; past the window the slot is recorded as `skipped` (with the reason) rather than lost silently. A task card's **Run now** button triggers an extra run immediately, outside the schedule.
+每种模式都带**允许延迟**：到点时宿主忙或停机了，窗口内仍然补跑；超出窗口则该刻度记 `skipped`（带原因），不是无声丢掉。任务卡片上的**立即执行**按钮可以在排期之外马上补跑一趟。
 
-### Dependencies
+### 依赖（前置任务）
 
-![Upstream tasks declared in the editor](assets/screenshots/dependencies.png)
+![编辑器里声明的前置任务](assets/screenshots/dependencies.png)
 
-A task declares which upstream tasks must have succeeded before it may run (the Airflow / GitHub Actions `needs` model — **the downstream declares, so adding a downstream never touches the upstream**). When the task fires, the plugin freezes *which upstream instance it matched* together with that instance's outputs and passes them into the new session, so the downstream agent reads exactly the data its run was keyed to — even if the upstream has re-run since.
+任务声明哪些上游任务必须执行成功它才放行（Airflow / GitHub Actions `needs` 的模型——**由下游声明，加下游不动上游**）。任务触发时，插件冻结「命中了哪条上游实例」及其产出，一并传进新会话——下游 agent 读到的就是它这趟所键定的那份数据，哪怕上游后来又跑过。
 
-## Runs and records
+## 执行与记录
 
-### Per task
+### 单任务
 
-![A task expanded: runs table with status, times, token usage and artifacts](assets/screenshots/run-history.jpg)
+![任务展开：执行记录表，含状态、时间、token、产出](assets/screenshots/run-history.jpg)
 
-Expanding a task opens three panels: **basic info** (configuration side by side with the last run), **runs** (one row per instance: status, planned vs actual time, duration, token usage, artifacts, and a button to open the archived session), and **logs** (the plugin's own diagnostic log for that task — missed slots, missing attachments, manual runs).
+展开任务有三个面板：**基础信息**（任务配置与上次执行并排）、**执行记录**（每次执行一行：状态、计划/实际时间、时长、token 用量、产出物，以及打开归档会话的按钮）、**日志**（该任务专属的诊断日志——错过的刻度、附件缺失、手动执行等）。
 
-### Session view
+### 查看会话
 
-![The archived session: files received from upstream tasks, task attachments, the dispatch request and token usage](assets/screenshots/session-view.png)
+![归档会话：来自前置任务的接收文件、任务附件、执行请求与 token 用量](assets/screenshots/session-view.png)
 
-**View session** opens the archived run as a read-only record: the files the session **received from upstream tasks** (frozen at dispatch time), the task's **attachments**, the **dispatch request** with its timing and token usage — and a **continue conversation** button that forks the archived session into a new interactive one.
+**查看会话**把归档的那趟执行以只读记录打开：会话**从前置任务接收了哪些文件**（派发时冻结）、任务的**附加文件**、带时间与 token 用量的**执行请求**——右上的**继续对话**按钮则把这趟归档会话分叉成一个新的可交互会话。
 
-### Execution timeline
+### 执行记录（流水账）
 
-![The cross-task execution timeline, one entry expanded](assets/screenshots/execution-timeline.jpg)
+![跨任务执行流水账，一条已展开](assets/screenshots/execution-timeline.jpg)
 
-The **Records** tab is the ledger across *all* tasks, grouped by day and filtered by time range, workspace, status and task. Each entry expands in place to its full artifact list and raw event log (state changes, dispatch record, receipt); the archived session itself opens only when you press **View session**.
+顶部 **执行记录** tab 是全部任务的总账：按天分组，支持时间 / 工作区 / 状态 / 任务四维过滤。每条就地展开，给出完整产出物列表与原始事件流水（状态迁移、派发记录、回执）；按**查看会话**才打开归档会话本体。
 
-### Calendar
+### 任务日程（月历）
 
-![Monthly calendar with actual runs as filled dots and planned runs as dashed dots](assets/screenshots/calendar.jpg)
+![月历：真实执行为实心点，计划刻度为虚线点](assets/screenshots/calendar.jpg)
 
-The **Schedule** tab is a month view. Days show two kinds of markers: **actual runs** from the instance table (solid dots in status colors) and **planned runs** computed from the current task definitions (dashed dots). Clicking a day expands that week in place with the full run details — the same entry blocks as the timeline, expandable again down to artifacts and events.
+顶部 **任务日程** tab 是月视图。格子里有两类标记：**已执行**（来自实例表的状态色实心点）与**计划**（按当前任务定义现算的虚线空心点）。点某天，那一天所在的一周就地拉开，铺开全部执行信息——与流水账同款条目块，可再展开到产出物与事件。
 
-## Configuration
+## 配置
 
-![Settings page: plugin settings on top, plugin log below](assets/screenshots/settings.jpg)
+![设置页：上为插件设置，下为插件日志](assets/screenshots/settings.jpg)
 
-The **Settings** tab is the primary place to configure the plugin. Each item shows whether it was customized and can be reset individually; changes are staged and written only on **Save**; the log block below shows the plugin's diagnostic log with level coloring and auto-refresh.
+顶部 **设置** tab 是配置的正式主场。每项标注是否「自定义」、可单独恢复默认；改动先暂存、点**保存**才写入；下方日志块带 level 语义着色与自动刷新。
 
-| Item | Default | Meaning |
+| 项 | 默认 | 含义 |
 | --- | --- | --- |
-| Tick interval | 60 s | How often the scheduler scans the task table |
-| Run log retention | 30 days | How long diagnostic log rows are kept |
-| Temp attachment retention | 7 days | How long uploaded temp files are kept |
-| Default model | follow host | Model used when a task does not pick one |
-| Dispatch grace | 60 s | Max wait for a dispatched session to appear |
-| Run lease | 1800 s | How long a silent session keeps its lease before being reclaimed |
-| Observation window | 300 s | How long an unknown-status session is watched before being judged dead |
+| 循环间隔 | 60 秒 | 调度器多久巡检一次任务表 |
+| 运行日志保留 | 30 天 | 诊断日志留多久 |
+| 临时附件保留 | 7 天 | 上传的临时文件留多久 |
+| 默认模型 | 跟随宿主 | 任务未指定模型时用哪个 |
+| 派发宽限 | 60 秒 | 派发后等会话出现的最长时间 |
+| 运行租约 | 1800 秒 | 运行中会话多久没动静才被收回 |
+| 观察宽限 | 300 秒 | 会话状态未知时观察多久再判死 |
 
-Configuration is stored in the plugin's own state database, so it survives host config resets; defaults apply underneath.
+配置存在插件自有状态库里，不随宿主配置重置而丢；其下始终有默认值兜底。
 
-## Development
+## 开发
 
 ```bash
 pnpm install
-pnpm build        # builds host first, then client
+pnpm build        # 先构建 host，再构建 client
 pnpm typecheck
-pnpm smoke        # smoke tests against dist/
+pnpm smoke        # 直接测 dist/ 产物
 ```
 
-> **`dist/` is a build artefact committed to git** — dsh installs plugins from git/npm without running build scripts, so after changing `src/` you must run `pnpm build` and commit `dist/` with it, or the change will not take effect.
+> **`dist/` 是提交进 git 的构建产物**——dsh 从 git/npm 安装插件时不跑构建脚本，所以改了 `src/` 必须重新 `pnpm build` 并把 `dist/` 一并提交，否则改动不生效。
 
 ## License
 
