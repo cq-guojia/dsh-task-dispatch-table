@@ -83870,7 +83870,7 @@ window.__ModuleLoader__.load({
 			whiteSpace: "nowrap"
 		};
 		/** 主页面与占位态共用同一抬头标题，保证两处版本标记一致。 */
-		const renderPanelTitle = (t) => (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"), (0, react$1.createElement)("span", { style: buildTagStyle }, `v0.1.19 261112-000025-321`));
+		const renderPanelTitle = (t) => (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"), (0, react$1.createElement)("span", { style: buildTagStyle }, `v0.1.21 261112-001827-640`));
 		const preStyle = {
 			fontFamily: monoFont,
 			fontSize: "var(--dshpc-font-sm)",
