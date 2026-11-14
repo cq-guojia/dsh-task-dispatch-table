@@ -1,6 +1,7 @@
 {
   "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
   "tasks": {
+    "20261114-1628-1763-把所有手绘图标替换成核心库图标": {"category": "建设", "created": "2026-11-14 16:28:11", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-14 16:28:11", "status": "doing", "tags": ["图标", "核心升级", "物理切割"], "title": "把所有手绘图标替换成核心库图标", "updated": "2026-11-14 16:28:11", "worklog": "worklog/202611/14-1628-1763-把所有手绘图标替换成核心库图标.md"}
   },
   "version": "20261022000000"
 }
