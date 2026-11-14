@@ -24,8 +24,12 @@ import {
 	openFilePreview,
 } from "dsh-plugin-core/adv/explorer";
 import { openSessionReview } from "dsh-plugin-core/adv/session";
-import { Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
-import { connectHost, notify as coreNotify } from "dsh-plugin-core/ui";
+import {
+	IconChevronRightOutlineRegular,
+	Tooltip,
+} from "@deepseek-ai/dsh-client-ui-primitives";
+import { connectHost } from "dsh-plugin-core/ui/host-data";
+import { notify as coreNotify } from "dsh-plugin-core/ui/notify";
 import { t as coreT } from "dsh-plugin-core/utils";
 import {
 	createElement as h,
@@ -2151,7 +2155,7 @@ function TasksConfigPage(props: { t: Translate; open: () => void }) {
 			h("div", { style: cardTitleStyle }, t("title")),
 			h("div", { style: cardDescStyle }, t("description")),
 		),
-		h("span", { style: chevronStyle }, "›"),
+		h("span", { style: chevronStyle }, h(IconChevronRightOutlineRegular, { size: 16 })),
 	);
 }
 

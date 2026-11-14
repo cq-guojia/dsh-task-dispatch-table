@@ -9,7 +9,7 @@
  * 查询边界仍由 `rangeToQuery`（`time-range.ts`）统一算，控件不碰边界。
  */
 import { createElement as h } from 'react'
-import { DateTimePicker, type DateTimeOutput } from 'dsh-plugin-core/ui'
+import { DateTimePicker, type DateTimeOutput } from 'dsh-plugin-core/ui/datetime-picker'
 import { ALL_TIME_PRESETS, type TimePrecision, type TimePresetId, type TimeRangeValue } from './time-range'
 
 /** 各预设档的显示名（由调用方按语言给）。 */

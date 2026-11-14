@@ -8,7 +8,8 @@
  * 空列表 ⇒ 禁用并显示业务空态文案（不塞假值）。
  */
 import { createElement as h, type ReactElement, type ReactNode } from 'react'
-import { Picker, type PickerGroup } from 'dsh-plugin-core/ui'
+import { Picker } from 'dsh-plugin-core/ui/picker'
+import type { PickerGroup } from 'dsh-plugin-core/ui/picker-logic'
 import { ensureControlsStyle } from './controls-css'
 
 /** 下拉 / 日期 / 时分的选项（value = 写进任务定义的真值）。 */

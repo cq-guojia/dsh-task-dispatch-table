@@ -12,7 +12,7 @@
  */
 
 import { createStyleKit, type StyleKit } from 'dsh-plugin-core/design'
-import { getStyleKit, setStyleKit } from 'dsh-plugin-core/ui'
+import { getStyleKit, setStyleKit } from 'dsh-plugin-core/ui/styles'
 
 /** 本插件的样式标签 id（改名 = 大范围回归，不要动）。 */
 export const UI_STYLE_ID = 'dsh-task-dispatch-table-ui'

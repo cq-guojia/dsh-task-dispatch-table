@@ -2777,12 +2777,14 @@ try {
 			!clientJs.includes("dsh-tdt-sv-preview-mdbar") &&
 			!clientJs.includes("dsh-tdt-sv-preview-mdwrap"),
 	);
+	// 刷新图标 0.35.28 起由核心改用字体图标（preview-title-bar.js:42 `common.base:shuaxin`），
+	// 不再走官方 `IconRefreshOutlineRegular` —— 断言跟随核心实现，不是本仓回退。
 	check(
-		"顶栏按钮组由核心 PreviewTitleBar 提供（复制文件 / 刷新 / 关闭，图标钮无中文）",
+		"顶栏按钮组由核心 PreviewTitleBar 提供（复制 / 刷新 / 关闭，刷新走核心字体图标 common.base:shuaxin）",
 		clientJs.includes("dshpc-fb__title") &&
 			clientJs.includes("previewRefresh") &&
 			clientJs.includes("previewCopyPath") &&
-			clientJs.includes("IconRefreshOutlineRegular"),
+			clientJs.includes("common.base:shuaxin"),
 	);
 	check(
 		"拖拽条已归核心 PanelDock（本仓 .dsh-tdt-resizer 命中区皮肤已删）",
@@ -3446,7 +3448,7 @@ try {
 		const tpCode = stripComments(tpSrc);
 		check(
 			"任务选择器 = 核心 Picker 的薄包装（作用域过滤 + UUID 进 keywords + 掉出作用域显式提示）",
-			/from 'dsh-plugin-core\/ui'/.test(tpCode) &&
+			/from 'dsh-plugin-core\/ui\/picker'/.test(tpCode) &&
 				/\bh\(Picker, \{/.test(tpCode) &&
 				/searchable: true/.test(tpCode) &&
 				/limit: props\.recentLimit \?\? 10/.test(tpCode) &&
@@ -3622,7 +3624,7 @@ try {
 		const trCode = stripComments(trSrc);
 		check(
 			"第九轮：时间范围控件改由核心 DateTimePicker 承担（range + presets），本仓不再自绘分框",
-			/from 'dsh-plugin-core\/ui'/.test(trCode) &&
+			/from 'dsh-plugin-core\/ui\/datetime-picker'/.test(trCode) &&
 				/\bh\(DateTimePicker, \{/.test(trCode) &&
 				/mode: 'range'/.test(trCode) &&
 				/presets,/.test(trCode) &&

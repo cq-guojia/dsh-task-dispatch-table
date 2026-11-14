@@ -11,7 +11,9 @@
  */
 import { createElement as h, useMemo } from 'react'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Picker, type PickerOption, type FieldSize } from 'dsh-plugin-core/ui'
+import { Picker } from 'dsh-plugin-core/ui/picker'
+import type { PickerOption } from 'dsh-plugin-core/ui/picker-logic'
+import type { FieldSize } from 'dsh-plugin-core/ui/input'
 import { t as coreT } from 'dsh-plugin-core/utils'
 
 /** 一条任务候选（与 L3 的 `EditorTaskOption` 同形 ⇒ 结构兼容；**刻意不反向 import 业务文件**）。 */

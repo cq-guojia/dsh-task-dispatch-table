@@ -15,7 +15,7 @@ import { createElement as h, Fragment, type ReactNode } from 'react'
 import { baseNameOf, formatDateTime, formatDurationHms, formatTokenCount, formatTokenDetail } from './format'
 import {
   FileTypeIcon, IconCheckCircleFillRegular, IconCloseCircleFillRegular,
-  IconFolderCloseRegular, IconSearchOutlineRegular, Tooltip,
+  IconFolderCloseRegular, IconQueueOutlineRegular, IconSearchOutlineRegular, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 import { Button, Chip, IconButton, Loader, MarqueeText } from './ui'
@@ -73,7 +73,7 @@ export const durationMsOf = (row: InstanceRow): number | null => {
 
 /**
  * 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
- * 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 空心圈。
+ * 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 官方**排队图标**（2026-11-15 替换自绘空心圆）。
  * 卡片展开区、执行记录 tab、右侧栏查看档三处共用（配色走 CSS 域 `domain:task-info`）。
  */
 export function StatusIcon(props: { status: string }): ReturnType<typeof h> {
@@ -81,7 +81,7 @@ export function StatusIcon(props: { status: string }): ReturnType<typeof h> {
   if (status === 'succeeded') return h(IconCheckCircleFillRegular, { size: 15, className: 'dsh-tdt-rec-ic-ok' })
   if (status === 'failed' || status === 'skipped') return h(IconCloseCircleFillRegular, { size: 15, className: 'dsh-tdt-rec-ic-bad' })
   if (status === 'running' || status === 'dispatched') return h(Loader, { variant: 'ring', size: 'sm', className: 'dsh-tdt-rec-ic-run' })
-  return h('span', { className: 'dsh-tdt-rec-ic-idle' })
+  return h(IconQueueOutlineRegular, { size: 15, className: 'dsh-tdt-rec-ic-idle' })
 }
 
 /**

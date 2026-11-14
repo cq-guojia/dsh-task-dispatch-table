@@ -14,7 +14,10 @@
 // 相对路径会解析到别的目录 ⇒ 两个基准各试一次（相对 → 根路径），见 `requestConfig`。
 import { createElement as h, useCallback, useEffect, useState, type ReactNode } from "react";
 import { IconLinkOutlineRegular } from "@deepseek-ai/dsh-client-ui-primitives";
-import { Button, Chip, Input, Picker } from "dsh-plugin-core/ui";
+import { Button } from "dsh-plugin-core/ui/button";
+import { Chip } from "dsh-plugin-core/ui/chip";
+import { Input } from "dsh-plugin-core/ui/input";
+import { Picker } from "dsh-plugin-core/ui/picker";
 import { API_PREFIX } from "./query";
 import { fetchWithTimeout } from "./http";
 import { applyStyle } from "./ui";

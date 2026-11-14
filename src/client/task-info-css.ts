@@ -43,7 +43,8 @@ const TASK_INFO_CSS = [
   // 转圈动画归核心 Loader；本类只定色（用户 2026-11-06）。
   '.dsh-tdt-rec-ic-run { color: var(--dshpc-accent); }',
   '@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }',
-  '.dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--dshpc-border-strong); border-radius: 50%; }',
+  // 排队 / 未知 = 官方 IconQueueOutlineRegular（2026-11-15 替换自绘空心圆），本类只定色。
+  '.dsh-tdt-rec-ic-idle { color: var(--dshpc-border-strong); }',
 ].join('\n')
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。卡片展开区与查看档渲染前都调用它。 */
