@@ -13,7 +13,7 @@
 // 数据走本插件自有 HTTP 通道：设置区渲染在**宿主的插件详情页**，不是本插件面板页，
 // 相对路径会解析到别的目录 ⇒ 两个基准各试一次（相对 → 根路径），见 `requestConfig`。
 import { createElement as h, useCallback, useEffect, useState, type ReactNode } from "react";
-import { IconLinkOutlineRegular } from "@deepseek-ai/dsh-client-ui-primitives";
+import { FontIcon } from "dsh-plugin-core/ui/icons";
 import { Button } from "dsh-plugin-core/ui/button";
 import { Chip } from "dsh-plugin-core/ui/chip";
 import { Input } from "dsh-plugin-core/ui/input";
@@ -120,7 +120,8 @@ const linkButton = (label: string, url: string): ReactNode =>
 		{
 			size: "lg",
 			variant: "outline",
-			icon: h(IconLinkOutlineRegular, { size: 16 }),
+			// 两个按钮都指向 GitHub 仓库 ⇒ 统一用核心字体图标 `common.logo:github`（2026-11-15 用户指定）。
+			icon: h(FontIcon, { name: "common.logo:github", size: 16 }),
 			onClick: () => {
 				window.open(url, "_blank", "noopener");
 			},

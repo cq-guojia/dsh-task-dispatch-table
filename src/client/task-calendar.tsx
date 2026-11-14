@@ -28,7 +28,7 @@ import { logicalDateOf } from '../schedule-next.js'
 // 执行块**唯一实现**从执行记录页复用（不许再写一份条目渲染）+ 它的样式注入（幂等）。
 import { RecordItem, ensureRecordsStyle } from './records-timeline'
 import {
-  Button, IconButton, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, SelectField, TaskPicker,
+  Button, IconButton, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, TaskPicker, WorkspacePicker,
   applyStyle, buildMonthCells,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
@@ -435,10 +435,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     })
   }, [loadDetail])
 
-  const workspaceOptions = useMemo<EditorOption[]>(
-    () => [{ value: '', label: t('listFilterWorkspaceAll') }, ...workspaces],
-    [workspaces, t],
-  )
+  // 工作区候选由核心 `WorkspacePicker` 自持（宿主 workspaces 快照）⇒ 这里不再拼候选数组。
   const dayFormatter = useMemo<Intl.DateTimeFormat | null>(
     () => (typeof Intl === 'undefined' ? null : new Intl.DateTimeFormat(t('localeTag'), { month: 'long', day: 'numeric' })),
     [t],
@@ -597,16 +594,17 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
         })),
         h(Button, { variant: 'outline', size: 'sm', onClick: goToday }, calLabels.today),
         h('div', { className: 'dsh-tdt-cal-right' },
-          h(SelectField, {
+          // 工作区筛选 = 核心 `WorkspacePicker`（2026-11-15 用户：核心封装好了就直接用）。
+          h(WorkspacePicker, {
+            valueKey: 'path',
             value: workspace,
-            options: workspaceOptions,
-            onChange: changeWorkspace,
+            onChange: (value) => { changeWorkspace(value as string) },
             placeholder: t('listFilterWorkspaceAll'),
+            defaultLabel: t('listFilterWorkspaceAll'),
             emptyLabel: t('editorNoOptions'),
             ariaLabel: t('listFilterWorkspaceAll'),
             size: 'md',
             width: 120,
-            // 工作区候选可能很多：下拉必须带搜索框（核心 Picker 自带）。
             searchable: true,
           }),
           h(TaskPicker, {

@@ -33,6 +33,8 @@
 ## 三、本仓落地口径（2026-11-09 修订，推翻 11-06 的「存 id」）
 
 - `target.workspace` **存 `workspace.path`**（绝对路径）：宿主派发的 `meta.cwd` 本就是它，改名 / 宿主重启 / 注册表重建 id 都不变；移动目录才需重选。附件 `workspace` 同口径。
+- **下拉控件（2026-11-15）**：4 处「选工作区」改用核心 `WorkspacePicker` + `valueKey: 'path'`（候选取自宿主快照）。
+  老值 title / id 的归一仍由本仓 `workspaceValueOf(workspaces, …)` 承担 —— 核心快照没有 aliases，`workspaces` 仍来自 `GET /options`（今仅作显示名映射与归一来源）。存储口径未变。
 - **唯一真源** = `findWorkspace(workspaces, raw)`（`src/dispatch.ts`）：按 `path` → `title` → `id` 精确匹配；`workspaceValueSet()` 供保存校验，`resolveWorkspace()` / `resolveWorkspaceByPath()` 都走它。
 - **老数据无迁移程序**：老任务存 title / id 时，保存（单条 + 整批）与执行期解析成功后就地改存 path；`/options` 下发 `path` 作 value、`title` / `id` 作 aliases ⇒ 显示、校验与附件锚点都不断。
 - **降级不误杀**：`registry.list()` 为空（宿主重启 / ctx 失活）⇒ 保存校验跳过、展示不露裸值；`/options` 在降级态退避重取，拿到真实候选即停（正常态不轮询）。
@@ -43,3 +45,4 @@
 
 - 2026-11-08 23:05:00：按 koc-code-docwriter 槽位规范从 design/ 迁入 dependencies/（仅移动，正文未改）
 - 2026-11-09：工作区标识由 `id` 改存 `path`，唯一真源 `findWorkspace`；补齐保存归一、降级重取与降级跳过校验；第二节旧结论标注为历史。
+- 2026-11-15：4 处下拉改核心 `WorkspacePicker`（`valueKey: 'path'`，核心 0.35.31：`ariaLabel` / `error` / `emptyLabel` 齐备），存储口径与 `findWorkspace` 不变。

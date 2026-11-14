@@ -248,9 +248,6 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
     listClassName?: string | undefined
   }>
 
-  /** 外链图标（设置区的 GitHub / 组件库按钮用；官方 0.1.7-rc.2 `icons/index.d.ts:130`）。 */
-  export const IconLinkOutlineRegular: ComponentType<{ size?: number }>
-
   /**
    * 官方菜单行（`role="menuitem"` 的组件式行，与数据式 MenuItem 同款样式）。
    * 「更多」菜单的条目就是这个槽里的一行；事实来源 0.1.7-rc.2 / 0.2.1-rc.5 `lib/types/Menu.d.ts`。

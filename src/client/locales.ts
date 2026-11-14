@@ -232,8 +232,7 @@ export type LocaleKey =
   | 'configGithub' | 'configComponents'
   | 'configOverridden' | 'configReset' | 'configSave' | 'configSaving' | 'configSaveFailed'
   | 'configUnavailable'
-  | 'vTitleRequired' | 'vWorkspaceRequired' | 'vWorkspaceUnknown' | 'vPromptRequired'
-  | 'vIntervalInvalid' | 'vWeekdayRequired' | 'vAttachmentInvalid'
+  | 'vSaveBlocked' | 'vAttachmentInvalid'
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
  */
@@ -624,7 +623,7 @@ export const zh: Record<LocaleKey, string> = {
   editorRestorePromptTitle: '只找回提示词',
   editorRestorePromptDesc: '确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词，其余设置保持现状）。',
   editorTasksTitle: '任务列表',
-  editorTasksEmpty: '还没有任务：点右上角「＋ 新建任务」创建第一条。',
+  editorTasksEmpty: '还没有任务：点右上角「新建任务」创建第一条。',
   editorDisabledTag: '已停用',
   editorModeEdit: '编辑',
   editorModePreview: '预览',
@@ -757,11 +756,11 @@ export const zh: Record<LocaleKey, string> = {
   relYears: '{n} 年后',
   listLastFullTitle: '上次执行：{when}',
   listNextFullTitle: '下次执行：{when}',
-  listEmpty: '还没有任务。点右上角「＋ 新建任务」创建第一个。',
+  listEmpty: '还没有任务。点右上角「新建任务」创建第一个。',
   listEmptyFiltered: '没有符合当前筛选的任务。',
   listEmptyTitle: '创建你的第一个定时任务',
   listEmptyHint: '写好提示词，到点自动执行；支持每天 / 每周 / 间隔循环。',
-  listEmptyAction: '＋ 新建定时任务',
+  listEmptyAction: '新建定时任务',
   listSectionAttachments: '附加文件',
   listSectionDepends: '前置任务',
   listFieldWorkspace: '工作区',
@@ -955,13 +954,7 @@ export const zh: Record<LocaleKey, string> = {
   configUnavailable: '读不到当前设置（配置通道未就绪），稍后重新打开本页试试。',
 
 
-  vTitleRequired: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。',
-  vWorkspaceRequired: '还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。',
-  vWorkspaceUnknown:
-    '选中的工作区已经不存在了（可能被删除或移动了目录）——请在上方下拉里重新选择当前的工作区。',
-  vPromptRequired: '还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。',
-  vIntervalInvalid: '执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。',
-  vWeekdayRequired: '每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。',
+  vSaveBlocked: '暂时无法保存：存在未填写或填写有误的必填项，请根据标红提示修改后重试。',
   vAttachmentInvalid: '附加文件「{name}」的引用路径不合法——必须是工作区内的相对路径。请删掉它、重新选择一次。',
 }
 /** English copy. */
@@ -1338,7 +1331,7 @@ export const en: Record<LocaleKey, string> = {
   editorRestorePromptTitle: 'Restore prompt only',
   editorRestorePromptDesc: 'Restoring will overwrite all your current edits with the history version (prompt only; other settings stay as they are).',
   editorTasksTitle: 'Tasks',
-  editorTasksEmpty: 'No tasks yet — use "＋ New task" in the top-right corner to create the first one.',
+  editorTasksEmpty: 'No tasks yet — use "New task" in the top-right corner to create the first one.',
   editorDisabledTag: 'Disabled',
   editorModeEdit: 'Edit',
   editorModePreview: 'Preview',
@@ -1469,11 +1462,11 @@ export const en: Record<LocaleKey, string> = {
   relYears: 'in {n} years',
   listLastFullTitle: 'Last run: {when}',
   listNextFullTitle: 'Next run: {when}',
-  listEmpty: 'No tasks yet. Use “+ New task” to create the first one.',
+  listEmpty: 'No tasks yet. Use “New task” to create the first one.',
   listEmptyFiltered: 'No task matches the current filter.',
   listEmptyTitle: 'Create your first scheduled task',
   listEmptyHint: 'Write a prompt and it runs automatically on time — every day, every week, or on an interval.',
-  listEmptyAction: '+ New scheduled task',
+  listEmptyAction: 'New scheduled task',
   listSectionAttachments: 'Attachments',
   listSectionDepends: 'Preceding tasks',
   listFieldWorkspace: 'Workspace',
@@ -1665,12 +1658,6 @@ export const en: Record<LocaleKey, string> = {
   configUnavailable: 'Cannot read the current settings (config channel not ready yet) — reopen this page later.',
 
 
-  vTitleRequired: 'Task name is missing — the list identifies tasks by name. Please give it one.',
-  vWorkspaceRequired: 'No workspace selected — a task must belong to a workspace to run. Pick one above.',
-  vWorkspaceUnknown:
-    'The selected workspace no longer exists (it may have been deleted or moved). Pick a current workspace above.',
-  vPromptRequired: 'The prompt is empty — it tells the agent what to do and cannot be blank.',
-  vIntervalInvalid: 'Invalid interval — N in "every N minutes/hours" must be an integer greater than 0.',
-  vWeekdayRequired: 'Weekly schedule with no weekday selected — pick at least one, or the task never runs.',
+  vSaveBlocked: 'Unable to save: some required fields are missing or invalid. Please correct the highlighted fields and try again.',
   vAttachmentInvalid: 'Attachment "{name}" has an invalid ref — it must be a workspace-relative path. Remove and re-pick it.',
 }

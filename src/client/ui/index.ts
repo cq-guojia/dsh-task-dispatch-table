@@ -54,6 +54,16 @@ export {
   type FieldSize,
 } from 'dsh-plugin-core/ui/input'
 export { MarqueeText } from 'dsh-plugin-core/ui/marquee-text'
+// 工作区选择：核心 `WorkspacePicker`（候选自动来自宿主 workspaces 快照，不自持第二份状态机）。
+// `valueKey: 'path'` 是本仓口径（见 docs/dependencies/dsh-workspace-identity.md 第三节）。
+export {
+  WorkspacePicker,
+  workspaceOptionsOf,
+  type WorkspacePickerProps,
+  type WorkspaceKey,
+} from 'dsh-plugin-core/ui/workspace-picker'
+// 宿主工作区快照（实时）：与 `WorkspacePicker` 同一份数据源 —— 校验/归一需要时读它，别再拉第二份。
+export { workspaceList } from 'dsh-plugin-core/ui/host-data'
 export { SectionHead, type SectionHeadProps } from 'dsh-plugin-core/ui/section-head'
 export { LiveText } from 'dsh-plugin-core/ui/live-text'
 export { Textarea, type TextareaProps } from 'dsh-plugin-core/ui/textarea'
@@ -64,6 +74,8 @@ export { buildMonthCells, type DayCell } from 'dsh-plugin-core/ui/datetime-logic
 export type { EditorOption } from './Field'
 export type { DayCell as CalendarCell } from 'dsh-plugin-core/ui/datetime-logic'
 export { CodeViewer } from 'dsh-plugin-core/ui/code-viewer'
+// 图标：`Icon` 管两类来源（字体 / 官方），`FontIcon` 只画字体图标、不吃官方 primitives。
+export { FontIcon, Icon, ICON_SIZES, type IconFontId, type IconProps } from 'dsh-plugin-core/ui/icons'
 import type { SegmentedProps } from 'dsh-plugin-core/ui/segmented'
 /** 段定义单项（核心 `Segmented` 的 items 元素；核心未单独导出该类型）。 */
 export type SegmentedItem<T extends string = string> = SegmentedProps<T>['items'][number]

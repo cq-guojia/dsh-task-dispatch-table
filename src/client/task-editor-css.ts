@@ -52,11 +52,16 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
-/* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
-   核心 Picker 的根是 inline-block（max-width:100%），这里给行内子项放行收缩（min-width:0），
-   配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
-.dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 分组态选模型的宽度已交给核心 width 轴（clamp 表达式原样透传），本仓不再自写尺寸。 */
+/* 提示词卡底部三格（工作区 / 权限 / 模型）：尺寸 = 本行给的**弹性基准**，不是定宽。
+   基准口径沿用 2026-10-02 的「权限为基准、工作区 / 模型 1.5×」及其后「按父宽比例 + 各自封顶」；
+   flex-shrink 负责兜底：窄卡里按基准等比压缩（与选项文字长短无关 ⇒ 不会重新引入换选项就跳），
+   标签照旧走核心 Picker 的省略号 + 跑马灯。于是底行永远不会溢出，右缘恒与上方输入框齐平。
+   ⚠️ 三条规则必须成组存在：核心 Picker.resolveTriggerSizing 一收到 width 就把 width / minWidth /
+   maxWidth 全锁死（控件不可收缩），且不传 minWidth 时自带 120px 下限 —— 调用方因此一律不传 width、
+   传 minWidth:0（2026-11-15 真机：定宽时代三格下限之和超出卡片内容宽，最后一格压到卡片边框上）。 */
+.dsh-tdt-ed-card-foot > .dsh-tdt-ed-foot-ws{flex:0 1 clamp(180px,22%,300px);}
+.dsh-tdt-ed-card-foot > .dsh-tdt-ed-foot-perm{flex:0 1 clamp(120px,14%,200px);}
+.dsh-tdt-ed-card-foot > .dsh-tdt-ed-foot-model{flex:0 1 clamp(140px,18%,260px);}
 /* 设置页 cascade 两列等宽：核心 0.35.13 开放 rowClassName，类名直接挂在 __row 根上。
    核心 0.35.17 起 __row 的 flex 只作用于菜单内部，外层 row 没有默认布局 ⇒ 这里补一条 grid；
    双类选择器同时压过同页旧版 core 的单类规则，不依赖 CSS 注入顺序。 */

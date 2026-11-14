@@ -2,10 +2,10 @@
 
 - 用途：记录该外部依赖在本项目里实际用到的行为与边界（宿主升级后据此复核）。
 - 版本真源：包名与版本见上「适用版本」；每条结论的 `文件:行号` 就在正文各节。
-- 复核日期：2026-11-08（迁移当日未重新核实，结论沿用各节标注的版本）
+- 复核日期：2026-11-08（迁移当日未重新核实，结论沿用各节标注的版本）；2026-11-15 复核 `WorkspacePicker`（0.35.30）
 
 - 类型：外部事实（`dsh-plugin-core` 的 UI 基础控件）
-- 适用版本：`dsh-plugin-core@0.35.1`（`dist/ui/inputs/Picker.js`、`DateTimePicker.js`、`ModelPicker.js`、`WorkspacePicker.js`、`InputGroup.js`、`picker-css.generated.js`、`dist/ui/display/FieldHint.js`、`Card.js`、`StripCard.js`、`dist/ui/feedback/Toast.js`；均为 `dist/ui/index.d.ts` 的导出面）
+- 适用版本：`dsh-plugin-core@0.35.30`（`dist/ui/inputs/Picker.js`、`DateTimePicker.js`、`ModelPicker.js`、`WorkspacePicker.js`、`InputGroup.js`、`picker-css.generated.js`、`dist/ui/display/FieldHint.js`、`Card.js`、`StripCard.js`、`dist/ui/feedback/Toast.js`；均为 `dist/ui/index.d.ts` 的导出面）
 - 状态：已核实（2026-11-06，读实现源码，非试错）
 - 来源：`node_modules/dsh-plugin-core/dist/ui/…`
 - 配套：[`plugin-core-dock.md`](plugin-core-dock.md)、[`plugin-core-session.md`](plugin-core-session.md)、[UI 开发手册（写插件界面时照这个做）](../development/ui-style-guide.md) §二「唯一实现表」
@@ -24,7 +24,7 @@
 | `LoadingToast` / `showLoading` | 组件 / 函数 | 进行中提示 |
 | `Segmented` | React 组件 | 分段控件（用户口语里的「滑块」） |
 | `ModelPicker` | React 组件 | 选模型（`grouped` / `flat` / `cascade` 三形态）；自带目录、尺寸与类名轴见 [模型目录两段式接线](plugin-core-model-catalog.md) |
-| `WorkspacePicker` | React 组件 | 选工作区（数据自动来自宿主工作区快照；**本仓未用**，原因见 §八） |
+| `WorkspacePicker` | React 组件 | 选工作区（数据自动来自宿主工作区快照；本仓 2026-11-15 起 4 处全部改用它，见 §八） |
 | `InputGroup` | React 组件 | 「名字 + 输入框」同格组合（`label` 灰底标题格；任务名称 / 编号用） |
 | `Card` / `StripCard` | React 组件 | 卡片外框：框式（Surface 底 + 边框 + 圆角 12） / 浅底条带式（左缘 4px 通高方角条） |
 | `CardAccent` / `CardBarOptions` / `CardSharedProps` | 类型 | 外框色调档 / 色条几何 / 共用 props |
@@ -116,15 +116,35 @@
 | `StripCard` 的 `bar.side` | 固定贴左，忽略此项 |
 | 色调 | 本仓执行记录：ok→success、bad→danger、warn→warning、busy / planned→business、其余→neutral（`toneAccentOf`）；设置页两块用 `neutral` |
 
-## 八、`WorkspacePicker`（核心提供，但本仓未采用）
+## 八、`WorkspacePicker`（核心提供；本仓 2026-11-15 起采用）
+
+**适用版本：`dsh-plugin-core@0.35.31`**（0.35.30 才有 `valueKey`；0.35.31 补 `ariaLabel` / `error` / `emptyLabel`。
+0.35.28 及以前值只能取 `workspaceId` ⇒ 当时无法采用）。
 
 | 点 | 事实 |
 |---|---|
-| 数据 | **自动来自宿主工作区快照**，调用方不传候选 |
-| 值口径 | `workspaceId`（单选 `string`；`mode:'multiple'` 时 `string[]`） |
-| `allowDefault` | 默认提供「所有工作区」项（只在单选出现）；选中发 `''` |
+| 数据 | **自动来自宿主工作区快照**（`dist/ui/infra/host-data.js` 的 `workspaceList`，`connectHost` 喂），调用方不传候选 |
+| 值口径 | `valueKey?: 'id' \| 'path' \| 'title'`，**默认 `id`**；`value` / `onChange` 第一参随之 |
+| 选项生成 | 导出 `workspaceOptionsOf(items, key)`：缺该字段或与前项撞值的行**置灰保留**（不静默丢、不混用两种口径） |
+| `onChange` | 第一参 = 所选值；第二参 = 对应工作区对象（`HostWorkspaceItem`，可取 `title` / `sessionIds` / `updatedAt`） |
+| `allowDefault` | 默认提供「所有工作区」（只在单选出现），选中发 `''`；编辑器这类必须选一个的场景传 `false` |
 | `searchable` | **默认关**（要就显式 `true`） |
-| 未采用原因 | 本仓任务定义**已改存 workspace.path**（2026-11-09，见 [`dsh-workspace-identity.md`](dsh-workspace-identity.md)），但编辑器除 `id` / `title` 外还依赖 `path` 与 `anchorSessionId`（选择工作区文件时的会话锚点，见 [`dsh-capabilities.md`](dsh-capabilities.md) §workspaceFiles）⇒ 核心控件不下发这两个字段，仍用自有 `Picker`（`searchable:true`）承载。**若核心将来允许调用方附带自定义字段，应改接它** |
+| `icon` | 不传 = 核心自带的文件夹图标；传 `null` = 不显示 |
+| `className` | 落在 `Picker` 根节点 ⇒ 本仓校验描红仍用 `.dsh-tdt-picker--error` |
+| `ariaLabel` / `error` / `emptyLabel` | **0.35.31 起齐了**：`ariaLabel` 透传给 Picker；`error` 描红走核心 `.dshpc-picker--error`（`border-color: var(--dshpc-danger)`，与 Input / Textarea 同口径）；`emptyLabel` 是宿主一个工作区都没有时的触发器文案，且此时**控件自动 `disabled`**（消费方拿不到候选数组，判不了空） |
+| `hint` / `clearable` / `placement` / `max` / `mode` | `hint` 问号提示、`clearable` 允许不选、`placement` 上/下、多选与上限；本仓目前只用到单选 |
+
+**本仓落地**：编辑器工作区字段（`task-editor.tsx`）+ 任务列表 / 执行记录 / 任务日程三处筛选，共 4 处全部改用它，
+一律 `valueKey: 'path'`（与任务定义存储口径一致，见 [`dsh-workspace-identity.md`](dsh-workspace-identity.md) §三）。
+
+**边界（不变）**：
+
+- 老任务存 `title` / `id` 的归一仍由本仓 `workspaceValueOf(workspaces, …)` 负责 —— 核心快照没有 aliases，
+  `workspaces` 仍来自 `GET /options`（仅是**显示名映射 + 老值归一**的来源，不再是下拉候选来源）。
+- 工作区的**会话锚点**（选工作区文件时用哪个会话）仍走 `/options` 的 `workspaceAnchors`，与下拉值无关 ⇒ 换组件不影响它。
+
+**未采用原因（历史，已被 0.35.30 解决）**：0.35.1 时它把值写死成 `workspaceId`，而本仓 2026-11-09 起改存 `workspace.path`；
+且编辑器还依赖 `path` / `anchorSessionId`。0.35.30 补了 `valueKey` / `workspaceOptionsOf` / `onChange` 第二参后，这两条都不再成立。
 
 ## 九、`InputGroup` / `PrefixedInput`（两种「名字 + 输入框」形态的区别）
 
@@ -246,3 +266,4 @@ grep -n "bordered\|tone" -A 3 node_modules/dsh-plugin-core/dist/ui/inputs/Segmen
 ## 更新日志
 
 - 2026-11-08 23:05:00：按 koc-code-docwriter 槽位规范从 design/ 迁入 dependencies/（仅移动，正文未改）
+- 2026-11-15：核心 0.35.30 补 `valueKey` / `workspaceOptionsOf` / `onChange` 第二参，§八「未采用原因」失效 ⇒ 本仓 4 处工作区下拉改接核心 `WorkspacePicker`（`valueKey: 'path'`），§一 与 §八 同步改写

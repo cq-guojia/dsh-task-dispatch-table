@@ -31,7 +31,6 @@ import {
 	IconChevronDownOutlineRegular,
 	IconCloseOutlineRegular,
 	IconFolderCloseRegular,
-	IconFolderOpenOutlineRegular,
 	IconPlanOutlineRegular,
 	IconPlusOutlineRegular,
 	MarkdownText,
@@ -53,6 +52,7 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	useSyncExternalStore,
 } from "react";
 import {
 	ALLOWED_ATTACHMENT_EXT,
@@ -110,6 +110,8 @@ import {
 	Surface,
 	surfaceClass,
 	Textarea,
+	WorkspacePicker,
+	workspaceList,
 	type PickerGroup,
 } from "./ui";
 // 工作区展示名与选中态（定义里存 path，界面显示当前标题；老 title / id 靠别名归一）。
@@ -564,7 +566,8 @@ export type ErrorField =
 /** 一条校验问题：归属字段 + 人话说明（用户 2026-09-30：逐项判断、逐框描红、文案说人话不啰嗦但讲清后果）。 */
 export interface FieldProblem {
 	field: ErrorField;
-	message: string;
+	/** 只有需要点名具体对象的项（目前仅附件）才给；其余只标红，Toast 用一句统一文案（用户 2026-11-15）。 */
+	message?: string;
 }
 
 /**
@@ -584,19 +587,19 @@ export function validateTaskDraft(
 	const problems: FieldProblem[] = [];
 	// ⓪ 必填：任务名称（用户 2026-09-30 明确要求：列表里要靠名字认任务，不能空着保存）。
 	if (draft.title.trim() === "") {
-		problems.push({ field: "title", message: t("vTitleRequired") });
+		problems.push({ field: "title" });
 	}
 	// ① 必填：工作区（target.workspace .min(1)）。
 	if (draft.workspace.trim() === "") {
-		problems.push({ field: "workspace", message: t("vWorkspaceRequired") });
+		problems.push({ field: "workspace" });
 	} else if (knownWorkspaces !== undefined && !knownWorkspaces.has(draft.workspace)) {
 		// ①b 工作区必须**当前存在**（用户 2026-11-06）：只判非空会把「改名 / 删除后残留的旧值」
 		// 放过；列表拿不到（降级）时不传该集合，交由服务端兜底。
-		problems.push({ field: "workspace", message: t("vWorkspaceUnknown") });
+		problems.push({ field: "workspace" });
 	}
 	// ② 必填：提示词（target.prompt .min(1)）；「按任务手册」模式由 manual 兜底，不在此查。
 	if (draft.promptSource !== "manual" && draft.prompt.trim() === "") {
-		problems.push({ field: "prompt", message: t("vPromptRequired") });
+		problems.push({ field: "prompt" });
 	}
 	// ③ 排期冲突：产不出 cron 的组合（每周没勾星期 / 间隔步长非法）⇒ 任务永不执行。
 	const step = Number.parseInt(draft.intervalStep, 10);
@@ -604,13 +607,13 @@ export function validateTaskDraft(
 		draft.scheduleKind === "interval" &&
 		(!Number.isFinite(step) || step <= 0)
 	) {
-		problems.push({ field: "schedule", message: t("vIntervalInvalid") });
+		problems.push({ field: "schedule" });
 	} else if (
 		draft.scheduleKind === "periodic" &&
 		draft.periodFreq === "weekly" &&
 		draft.weekdays.length === 0
 	) {
-		problems.push({ field: "schedule", message: t("vWeekdayRequired") });
+		problems.push({ field: "schedule" });
 	}
 	// ④ 附加文件：link 型 ref 必须**工作区相对**（宿主 zod：不许 `..` / 绝对路径 / 反斜杠）。
 	//    ⚠️ 用户 2026-09-30 真机：选工作区文件曾把**绝对路径**当 ref 存 ⇒ 保存被 422 拒、且**无红框**、文案还是黑话。
@@ -1151,18 +1154,14 @@ function IntervalControls(props: {
 export const PAGE_MIN_WIDTH = 760;
 
 /**
- * 提示词卡底部三下拉的**定宽**（用户 2026-10-02）：
- * 以「权限」为基准 120px，工作区 / 模型 = 1.5 倍 = 180px。
- * 不再按选项文字自适应宽度——那样换一个选项宽度就变一下（先各自撑到上限、三个都长才开始挤），
- * 观感一直在跳；用户很清楚自己选的工作区和模型，显示不下就省略号（MarqueeText 悬停可读全名）。
- * 2026-11-07：分栏拉大时跟着父宽变宽、各自封顶；`clamp` 下限就是原来的定宽 ⇒ 默认观感不变。
- * ⚠️ 核心 `Picker.resolveTriggerSizing` 一收到 `width` 就把 width / minWidth / maxWidth 全设为它，
- *    所以「下限 + 弹性 + 上限」必须写进**这一个** CSS 表达式，另传 maxWidth 会被忽略。
+ * 提示词卡底部三格（工作区 / 权限 / 模型）的尺寸**不在本文件**：真源是 `task-editor-css.ts` 的
+ * `.dsh-tdt-ed-foot-*` —— 尺寸 = 行上的**弹性基准**，宽时按基准铺开、窄时等比收缩，右缘永远与输入框齐平。
+ *
+ * 这里只挂类名，并统一传 `minWidth: 0`。**不许再走核心的 `width` 轴**：`Picker.resolveTriggerSizing`
+ * 一收到 `width` 就把 width / minWidth / maxWidth 全锁成同一个值 ⇒ 控件不可收缩；不传 minWidth 时则自带
+ * 120px 下限。两者叠加的结果就是窄卡里三格下限之和超出卡片内容宽，底行溢出、最后一格压到卡片边框上
+ * （2026-11-15 真机）。
  */
-const PROMPT_SELECT_BASE = "clamp(120px, 14%, 200px)";
-const PROMPT_SELECT_WIDE = "clamp(180px, 22%, 300px)";
-/** 选模型：核心 `ModelPicker` 的 `width` 轴（原样透传字符串），不再由本仓 CSS 定宽。 */
-const PROMPT_SELECT_MODEL = "clamp(140px, 18%, 260px)";
 
 /** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
 const formatVersionTime = (iso: string): string => formatDateTime(iso);
@@ -1808,7 +1807,7 @@ export function TaskEditorDrawer(props: {
 	/** 本抽屉对应任务 id（从 overview.rows 定位该行）；左列表拨片靠它把 enabled 同步进草稿。 */
 	syncTaskId?: string;
 	/**
-	 * 打开时的**默认档**（2026-10-05）：卡片「编辑」与「＋ 新建任务」= `'edit'`；
+	 * 打开时的**默认档**（2026-10-05）：卡片「编辑」与「新建任务」= `'edit'`；
 	 * 从卡片展开区「前置任务」行点任务名进来 = `'view'`（只读人话视图）。
 	 */
 	initialView?: "view" | "edit";
@@ -1936,22 +1935,25 @@ export function TaskEditorDrawer(props: {
 	// 保存前的客户端校验总览（用户 2026-09-30：点保存才判定；判定后问题逐项列出、对应框描红，随用户修正实时消退）。
 	const [showErrors, setShowErrors] = useState(false);
 	// 当前真实存在的工作区值：path 为主，老 title / id 也算已知（保存时服务端统一改存 path）。
-	// 列表为空 = 降级 / 拿不到，交给服务端兜底，不做本地误杀。
+	// 集合 = `/options` 候选（含老值别名）∪ 宿主实时快照的 path：下拉用的是宿主快照，
+	// 只查 `/options`（面板打开时拉一次）会在「刚新建工作区」时误杀。两边都空 = 降级，交给服务端兜底。
+	const liveWorkspaces = useSyncExternalStore(workspaceList.subscribe, workspaceList.getSnapshot);
 	let knownWorkspaces: ReadonlySet<string> | undefined;
-	if (props.workspaces.length > 0) {
+	if (props.workspaces.length > 0 || liveWorkspaces.length > 0) {
 		const values = new Set<string>();
 		for (const option of props.workspaces) {
 			values.add(option.value);
 			for (const alias of option.aliases ?? []) values.add(alias);
 		}
+		for (const workspace of liveWorkspaces) {
+			if (typeof workspace.path === "string" && workspace.path !== "") values.add(workspace.path);
+		}
 		knownWorkspaces = values;
 	}
 	const fieldProblems = showErrors ? validateTaskDraft(draft, tt, knownWorkspaces) : [];
-	const fieldErrorMap: Record<string, string> = {};
-	for (const p of fieldProblems)
-		if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message;
-	const problemsByField = (field: ErrorField): boolean =>
-		field in fieldErrorMap;
+	// 只关心「哪个字段有问题」（描红）；文字已统一成一句 Toast，不再逐项存 message。
+	const errorFields = new Set<ErrorField>(fieldProblems.map((p) => p.field));
+	const problemsByField = (field: ErrorField): boolean => errorFields.has(field);
 	// 校验提示 Toast：**与判断逻辑解耦**（用户 2026-09-30）——红框是持续态（改好才退），
 	// 文字提示是一次性的：点保存弹一次、统一 2.8s 自退，全部问题拼成一句（红框负责逐项指位）。
 	const [problemsToast, setProblemsToast] = useState<{
@@ -2283,29 +2285,30 @@ export function TaskEditorDrawer(props: {
 			},
 		}),
 		// 底部一行：左 = 工作区（真实工作区列表，P1 接）；工作区右侧 = 权限档位（决策 50）；
-		// 右 = 模型（不填 = 默认模型）。
-		// 三框宽度下限沿用 2026-10-02 的定宽口径（权限 120 / 工作区 180 / 模型 140），
-		// 2026-11-07 起分栏拉大时按父宽比例跟着变宽、各自封顶（见 PROMPT_SELECT_*）。
-		// 仍不按选项文字自适应 —— 换选项宽度就跟着变，观感一直在跳；显示不下就省略号。
+		// 右 = 模型（不填 = 默认模型）。三格的尺寸与「能收缩」全在 `.dsh-tdt-ed-foot-*`（见文件头注释），
+		// 这里只挂类名 + 传 `minWidth: 0` 拆掉控件自带下限。
 		h(
 			"div",
 			{ className: "dsh-tdt-ed-card-foot" },
-			h(SelectField, {
-				// 老任务存 title / id ⇒ 先归一成当前 path 再渲染，下拉才会选中；
-				// 认不出才空着（保存校验与派发错误会拦住，让用户重选）。
+			// 工作区 = 核心 `WorkspacePicker`（2026-11-15 用户：核心封装好了就直接用，别自己套 Picker）。
+			// `valueKey: 'path'` 保住本仓存储口径（docs/dependencies/dsh-workspace-identity.md 第三节）；
+			// 候选自动来自宿主 workspaces 快照。老任务存 title / id ⇒ 仍先经 `workspaceValueOf` 归一成 path。
+			// `allowDefault: false`：任务必须有工作区，编辑器不提供「所有工作区」这一项。
+			h(WorkspacePicker, {
+				valueKey: "path",
 				value: workspaceValueOf(workspaces, draft.workspace),
-				options: workspaces,
 				onChange: (value) => {
-					patch({ workspace: value });
+					patch({ workspace: value as string });
 				},
 				placeholder: t("editorWorkspacePh"),
+				allowDefault: false,
+				minWidth: 0,
+				searchable: true,
+				// 核心 0.35.31 起这三项由 WorkspacePicker 自己给：描红 / 空态禁用文案 / 无障碍名。
+				error: problemsByField("workspace"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
-				error: problemsByField("workspace"),
-				icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
-				width: PROMPT_SELECT_WIDE,
-				// 工作区可能很多：候选列表必须带搜索框（核心 Picker 自带）。
-				searchable: true,
+				className: "dsh-tdt-ed-foot-ws",
 			}),
 			// 权限：紧挨工作区（用户 2026-09-29：选完工作区就定权限，两者同一件事的前后脚）。
 			// 2026-11-07：悬停说明去掉（那句提示太长，用户点名不要）；档位名自明，不再套 Tooltip。
@@ -2318,15 +2321,18 @@ export function TaskEditorDrawer(props: {
 				placeholder: t("editorPermDefault"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorPermission"),
-				width: PROMPT_SELECT_BASE,
+				minWidth: 0,
+				className: "dsh-tdt-ed-foot-perm",
 			}),
+			// 「权限紧挨工作区、模型贴右」靠这个弹性占位吃掉富余空间（不是冗余元素）。
 			h("span", { className: "dsh-tdt-ed-spacer" }),
 			// 选模型 = 核心 `ModelPicker` 分组态；目录由 `connectHost({ modelsPath })` 喂进核心，
 			// 「默认模型」首项与旧值保留（retainSelectedValue）都由核心负责，本仓只存 `provider/id`。
 			h(ModelPicker, {
 				value: draft.model,
 				variant: "grouped",
-				width: PROMPT_SELECT_MODEL,
+				minWidth: 0,
+				className: "dsh-tdt-ed-foot-model",
 				defaultLabel: t("editorFollowHost"),
 				placeholder: t("editorModelPh"),
 				size: "lg",
@@ -3571,8 +3577,15 @@ export function TaskEditorDrawer(props: {
 													setShowErrors(true);
 													problemsSeq.current += 1;
 													// 一行一条（\n 换行，Toast 文字区 pre-line），每条以句号收尾——标点统一，不混分号。
+													// 一句综合提示（用户 2026-11-15：别逐项复述，红框负责指位）；只有附件点名具体文件。
+													const detail = problems.flatMap((p) =>
+														p.message === undefined ? [] : [p.message],
+													);
 													setProblemsToast({
-														text: problems.map((p) => p.message).join("\n"),
+														text:
+															detail.length === 0
+																? t("vSaveBlocked")
+																: `${t("vSaveBlocked")} ${detail.join(" ")}`,
 														seq: problemsSeq.current,
 													});
 													return;

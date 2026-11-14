@@ -29,6 +29,7 @@ import {
 	Tooltip,
 } from "@deepseek-ai/dsh-client-ui-primitives";
 import { connectHost } from "dsh-plugin-core/ui/host-data";
+import { FontIcon } from "dsh-plugin-core/ui/icons";
 import { notify as coreNotify } from "dsh-plugin-core/ui/notify";
 import { t as coreT } from "dsh-plugin-core/utils";
 import {
@@ -681,7 +682,7 @@ function TaskPage(props: {
 		history: EditorHistory | null;
 		/**
 		 * 打开时停在**哪一档**（用户 2026-10-05）：
-		 * 「＋ 新建任务」与卡片「编辑」= `'edit'`；从卡片「前置任务」行点任务名进来 = `'view'`（只读人话视图）。
+		 * 「新建任务」与卡片「编辑」= `'edit'`；从卡片「前置任务」行点任务名进来 = `'view'`（只读人话视图）。
 		 */
 		view: "view" | "edit";
 	} | null>(null);
@@ -1591,18 +1592,20 @@ function TaskPage(props: {
 								],
 								onChange: setTab,
 							}),
-							// 右上角「＋ 新建任务」：拉起右侧贴边的任务编辑弹窗（P0 只做界面，不接保存）。
+							// 右上角「新建任务」：拉起右侧贴边的任务编辑弹窗。
+							// 加号不再写进文案（2026-11-15）：走核心字体图标 `common.base:jia` + Button 的 icon 槽。
 							// 高度跟旁边三 tab 分段条同走 md(28)（用户 2026-10-01：此前 sm=24 比滑块矮 4px）。
 							h(
 								Button,
 								{
 									variant: "outline",
 									size: "md",
+									icon: h(FontIcon, { name: "common.base:jia" }),
 									onClick: () => {
 										openCreate();
 									},
 								},
-								`＋ ${t("editorNew")}`,
+								t("editorNew"),
 							),
 						),
 					),
@@ -1680,7 +1683,7 @@ function TaskPage(props: {
 								onViewTask: openViewer,
 								// 工作区筛选候选 = **面板级唯一真源**（`/options`），列表不再从卡片数据反推（2026-10-04）。
 								workspaces: editorOptions.workspaces,
-								// 空状态引导卡「新建定时任务」：走顶部「＋ 新建任务」同一入口（含未保存拦截）。
+								// 空状态引导卡「新建定时任务」：走顶部「新建任务」同一入口（含未保存拦截）。
 								onCreate: openCreate,
 							})
 						: tab === "settings"
@@ -2087,7 +2090,7 @@ function TaskPage(props: {
 							onToggleEnabled: (enabled: boolean) =>
 								toggleTaskEnabled(editor.id, enabled),
 							// ── 查看 / 编辑两档（用户 2026-10-05）──────────────────────────────
-							// 打开时停哪一档由 state 决定（卡片「编辑」/「＋新建」= edit；前置任务名点进来 = view）。
+							// 打开时停哪一档由 state 决定（卡片「编辑」/「新建」= edit；前置任务名点进来 = view）。
 							initialView: editor.view,
 							// 脏状态由抽屉单向上报（真源在抽屉内），这里只存进 ref 供「未保存冲突」判定用。
 							onDirtyChange: (next: boolean) => {

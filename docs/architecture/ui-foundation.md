@@ -315,7 +315,9 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string
 
 **✅ 已拍板的真源口径（2026-10-04，用户拍板「按最干净最规范的来」）**：
 
-- **工作区候选的唯一真源 = `GET /options`** 返回的宿主真实工作区，`value = path`（2026-11-09；老值 title / id 作 aliases，仅供显示与校验）。三处「选工作区」共用面板级同一份（`src/client/index.ts`），**禁止再从任务表或卡片数据反推**——反推会让「暂时没有任务的工作区」凭空消失。
+- **工作区下拉 = 核心 `WorkspacePicker`**（2026-11-15 改接，`valueKey: 'path'`）：候选由核心自持（宿主 workspaces 快照），本仓不再拼候选数组。
+  `GET /options` 仍在用，但只剩两件事：`workspaces` 作**显示名映射 + 老 title/id 归一 aliases**、`workspaceAnchors` 作**会话锚点**。
+  任务定义 `value = path` 的口径不变（2026-11-09）；**禁止从任务表或卡片数据反推候选**——反推会让「暂时没有任务的工作区」凭空消失。
 - **取不到（degraded ⇒ 空数组）不回退**：下拉显示「暂无可选」；宿主重启 / ctx 失活后按 3s / 6s / 12s / 30s 退避重取，拿到真实候选即停（正常态不轮询）。回退反推就等于又造第二真源。
 - **允许空态**：选到真源里有、但当前没有可选任务的工作区 ⇒ 下一级给空态文案（`editorDepTaskEmpty`），不隐藏该工作区。
 

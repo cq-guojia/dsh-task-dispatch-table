@@ -3262,7 +3262,7 @@ try {
 			"过滤行照任务列表：**左侧状态分段控件四档**（全部/成功/失败/进行中）+ 右侧工作区/任务（2026-10-06：时间范围控件已移除，默认拉全量）",
 			/h\(Segmented<StatusBucket \| 'all'>,/.test(tlSrc) &&
 				/statusesOfBucket\(bucket\)/.test(tlSrc) &&
-				["filterRightStyle", "h(SelectField,", "h(TaskPicker,"].every((f) =>
+				["filterRightStyle", "h(WorkspacePicker,", "h(TaskPicker,"].every((f) =>
 					tlSrc.includes(f),
 				) &&
 				!tlSrc.includes("h(TimeRange,"),
@@ -3434,11 +3434,11 @@ try {
 				subSrc.includes("openSource"),
 		);
 		check(
-			"时间轴复用基础层：Loading / Button / SelectField / TaskPicker / MarqueeText 全走 ui/（2026-10-06：时间范围控件已移除）",
+			"时间轴复用基础层：Loading / Button / WorkspacePicker / TaskPicker / MarqueeText 全走 ui/（2026-10-06：时间范围控件已移除；2026-11-15 工作区改核心 WorkspacePicker）",
 			/from '\.\/ui'/.test(tlSrc) &&
 				/h\(Loading,/.test(tlSrc) &&
 				/h\(Button,/.test(tlSrc) &&
-				/h\(SelectField,/.test(tlSrc) &&
+				/h\(WorkspacePicker,/.test(tlSrc) &&
 				/h\(TaskPicker,/.test(tlSrc),
 		);
 		const tpSrc = readFileSync(
@@ -3963,11 +3963,24 @@ try {
 			clientJs.includes("完全权限") &&
 			/permission: ["']default["']/.test(clientJs),
 	);
-	// 2026-10-02：三下拉改**定宽**（工作区/模型 = 180 = 权限 120 的 1.5 倍），不再随选项自适应。
+	// 2026-10-02 定的倍数口径（工作区/模型 = 权限 120 的 1.5×）保留；2026-11-15 起尺寸改**行上的弹性基准**：
+	// 核心一收到 width 就把 width/minWidth/maxWidth 锁死（不可收缩），窄卡里三格下限之和超过内容宽
+	// ⇒ 底行溢出、末格压到卡片边框上、与上方输入框不齐平（用户真机截图）。
 	check(
-		"提示词下三下拉全部定宽（权限 120 基准，工作区 / 模型各 180；不再 maxWidth 自适应）",
-		clientJs.includes("180px") &&
-			clientJs.includes("120px") &&
+		"提示词下三格走弹性基准（权限 120 基准、工作区 / 模型 1.5×；flex 可收缩 + 拆掉控件自带 120 下限）",
+		clientJs.includes(
+			".dsh-tdt-ed-card-foot > .dsh-tdt-ed-foot-ws{flex:0 1 clamp(180px,22%,300px);}",
+		) &&
+			clientJs.includes(
+				".dsh-tdt-ed-card-foot > .dsh-tdt-ed-foot-perm{flex:0 1 clamp(120px,14%,200px);}",
+			) &&
+			clientJs.includes(
+				".dsh-tdt-ed-card-foot > .dsh-tdt-ed-foot-model{flex:0 1 clamp(140px,18%,260px);}",
+			) &&
+			// 三格都不许再走核心 width 轴（否则上面三条 flex 基准会被 inline min/max 锁死）
+			clientJs.includes('className: "dsh-tdt-ed-foot-perm"') &&
+			clientJs.includes('className: "dsh-tdt-ed-foot-model"') &&
+			clientJs.includes('className: "dsh-tdt-ed-foot-ws"') &&
 			!/maxWidth:\s*200/.test(clientJs) &&
 			clientJs.includes("dshpc-mq-in"),
 	);
@@ -7705,7 +7718,7 @@ console.log("\n[14] runtime-index");
 				S("client/task-editor.tsx").includes(
 					"knownWorkspaces?: ReadonlySet<string>",
 				) &&
-				S("client/task-editor.tsx").includes("vTitleRequired"),
+				S("client/task-editor.tsx").includes("vSaveBlocked"),
 		);
 		// ⚠️ 带 `{name}` 占位符的文案**必须走插值席位 `tt`**：本页 `t` 是无参形态，传它 ⇒ 占位符原样显示
 		// （本仓前科：docs/worklog/task-file-context.md「传了宿主原始 t ⇒ {count} 原样显示」）。

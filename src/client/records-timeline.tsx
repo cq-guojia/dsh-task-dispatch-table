@@ -46,7 +46,7 @@ import { ProcessFiles } from './process-files'
 import { workspaceLabelOf } from './workspace-options'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
-  Button, Chip, ensureRunningStyle, IconButton, ListRow, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, StripCard, TaskPicker, type CardAccent,
+  Button, Chip, ensureRunningStyle, IconButton, ListRow, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, StripCard, TaskPicker, WorkspacePicker, type CardAccent,
   applyStyle,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
@@ -877,10 +877,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
     [t],
   )
 
-  const workspaceOptions = useMemo<EditorOption[]>(
-    () => [{ value: '', label: t('listFilterWorkspaceAll') }, ...workspaces],
-    [workspaces, t],
-  )
+  // 工作区候选由核心 `WorkspacePicker` 自持（宿主 workspaces 快照）⇒ 这里不再拼候选数组。
   // 状态四档（与任务列表顶部那排同款分段控件；成员由 `status-text.ts` 单源决定 —— 与卡片面板同一个桶）。
   const statusItems = useMemo(() => ([
     { value: 'all' as const, label: t('filterAll') },
@@ -1103,16 +1100,17 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
           onChange: (next: StatusBucket | 'all') => { setBucket(next === 'all' ? '' : next) },
         }),
         h('div', { style: filterRightStyle },
-          h(SelectField, {
+          // 工作区筛选 = 核心 `WorkspacePicker`（2026-11-15 用户：核心封装好了就直接用）。
+          h(WorkspacePicker, {
+            valueKey: 'path',
             value: workspace,
-            options: workspaceOptions,
-            onChange: changeWorkspace,
+            onChange: (value) => { changeWorkspace(value as string) },
             placeholder: t('listFilterWorkspaceAll'),
+            defaultLabel: t('listFilterWorkspaceAll'),
             emptyLabel: t('editorNoOptions'),
             ariaLabel: t('listFilterWorkspaceAll'),
             size: 'md',
             width: 120,
-            // 工作区候选可能很多：下拉必须带搜索框（核心 Picker 自带，全站统一口径）。
             searchable: true,
           }),
           h(TaskPicker, {

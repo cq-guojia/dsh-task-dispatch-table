@@ -48,7 +48,7 @@ import { ensureTaskEditorStyle } from './task-editor-css'
 // 工作区展示名（定义里存 path，卡片显示当前标题）。
 import { workspaceLabelOf } from './workspace-options'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, Card, Chip, confirmModal, ensureRunningStyle, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, Surface, Table, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TableColumn, type TableRow, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { applyStyle, Button, Card, Chip, confirmModal, ensureRunningStyle, FontIcon, IconButton, Input, Input as TdtInput, LiveText, Loading, MarqueeText, notify, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, Surface, Table, TimeRange, WorkspacePicker, rangeToQuery, useNowMs, type EditorOption, type TableColumn, type TableRow, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
@@ -1203,7 +1203,7 @@ export function TaskListView(props: {
    * `value` = 工作区 title（与宿主 `resolveWorkspace` 匹配口径一致）。
    */
   workspaces: readonly EditorOption[]
-  /** 新建任务（空状态引导卡按钮）：走顶部「＋ 新建任务」同一入口（含未保存拦截）。 */
+  /** 新建任务（空状态引导卡按钮）：走顶部「新建任务」同一入口（含未保存拦截）。 */
   onCreate: () => void
 }): ReturnType<typeof h> {
   const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces, onCreate } = props
@@ -1270,12 +1270,7 @@ export function TaskListView(props: {
   const signature = visible.map(r => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join('|')
   const refOf = useFlip(signature)
 
-  // 工作区筛选候选：置顶「全部工作区」（`value: ''` = 不过滤）+ 真源里的每一个工作区。
-  // ⚠️ 真源由父级传入（`GET /options`），**不从卡片数据反推** ⇒ 暂时没任务的工作区也在列表里。
-  const workspaceOptions = useMemo<EditorOption[]>(
-    () => [{ value: '', label: t('listFilterWorkspaceAll') }, ...workspaces],
-    [workspaces, t],
-  )
+  // 工作区候选改由核心 `WorkspacePicker` 自持（宿主 workspaces 快照）⇒ 本文件不再拼候选数组。
 
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     // 主内容宽度锚点；浮动 loading 据此量右边缘，贴到「主窗口宽度」的右下角。
@@ -1307,20 +1302,19 @@ export function TaskListView(props: {
             placeholder: t('listSearchPlaceholder'),
             onChange: (value: string) => { setQuery(value) },
           }),
-          // 工作区下拉走 UI 基础层唯一实现（2026-10-04 收编）：此前这里是全站最后一个绕过基础层
-          // 手搓的官方 `Menu` + 自绘锚点（自管 `menuOpen`、自带 `.dsh-tdt-tl-ws` 样式）⇒ 已删。
-          // ⚠️ 观感有一处预期变化：选中态由「高亮」变「打勾」（`SelectField` 用 `selection:'check'`），
-          //    与编辑器两处「工作区」下拉完全一致。`size:'md'` = 28，与左侧搜索框同高；定宽 `WS_WIDTH` 不变。
-          h(SelectField, {
+          // 工作区筛选 = 核心 `WorkspacePicker`（2026-11-15 用户：核心封装好了就直接用）。
+          // 候选自动来自宿主 workspaces 快照，不再由 `/options` 下发；`valueKey:'path'` 与存储口径一致。
+          // 「所有工作区」由核心 `allowDefault` 提供（值 = ''），文案沿用本仓的 `listFilterWorkspaceAll`。
+          h(WorkspacePicker, {
+            valueKey: 'path',
             value: workspace,
-            options: workspaceOptions,
-            onChange: setWorkspace,
+            onChange: (value) => { setWorkspace(value as string) },
             placeholder: t('listFilterWorkspaceAll'),
+            defaultLabel: t('listFilterWorkspaceAll'),
             emptyLabel: t('editorNoOptions'),
             ariaLabel: t('listFilterWorkspaceAll'),
             size: 'md',
             width: WS_WIDTH,
-            // 工作区候选可能很多：下拉必须带搜索框（核心 Picker 自带）。
             searchable: true,
           }),
         ),
@@ -1344,7 +1338,8 @@ export function TaskListView(props: {
                 marginTop: '6px', maxWidth: '360px', fontSize: 'var(--dshpc-font-sm)',
                 color: 'var(--dshpc-fg-2)', lineHeight: 'var(--dshpc-line-sm)',
               } }, t('listEmptyHint')),
-              h(Button, { variant: 'primary', size: 'md', style: { marginTop: '16px' }, onClick: () => { onCreate() } }, t('listEmptyAction')),
+              // 「新建」不再把 `＋` 写进文案（2026-11-15）：改用核心字体图标 `common.base:jia`，走 Button 的 icon 槽。
+              h(Button, { variant: 'primary', size: 'md', icon: h(FontIcon, { name: 'common.base:jia' }), style: { marginTop: '16px' }, onClick: () => { onCreate() } }, t('listEmptyAction')),
             )
             // 筛选导致的空：保留原小字提示。
             : h('p', { style: { ...metaStyle, marginTop: '8px' } }, t('listEmptyFiltered'))

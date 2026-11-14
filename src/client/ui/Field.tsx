@@ -39,10 +39,14 @@ export interface SelectFieldProps {
   icon?: ReactNode
   /** 禁用。 */
   disabled?: boolean
-  /** 定宽（数字 = px）。 */
+  /** 定宽（数字 = px）。⚠️ 核心一收到 `width` 就把 width / minWidth / maxWidth 锁成同一个值 ⇒ 不可收缩。 */
   width?: number | string
   /** 最大宽（数字 = px）。 */
   maxWidth?: number | string
+  /** 最小宽（数字 = px）；传 0 = 拆掉核心默认的 120 下限，交给外层弹性布局决定。 */
+  minWidth?: number | string
+  /** 根节点额外类名（布局类由调用方给；校验描红的 `dsh-tdt-picker--error` 由 `error` 自动拼）。 */
+  className?: string
   /** 整行下拉（撑满父宽）。 */
   block?: boolean
   /** 高度档（sm 24 / md 28 / lg 32，默认 lg = 32 标准行）。 */
@@ -67,6 +71,7 @@ export function SelectField(props: SelectFieldProps): ReactElement {
   const usable = !empty && props.disabled !== true
   const width = props.width ?? (props.block === true ? '100%' : undefined)
   const cls = [
+    props.className ?? '',
     props.block === true ? 'dsh-tdt-picker--block' : '',
     props.error === true ? 'dsh-tdt-picker--error' : '',
   ].filter(Boolean).join(' ')
@@ -83,6 +88,7 @@ export function SelectField(props: SelectFieldProps): ReactElement {
     icon: props.icon,
     className: cls === '' ? undefined : cls,
     width,
+    ...(props.minWidth === undefined ? {} : { minWidth: props.minWidth }),
     ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
     ariaLabel: props.ariaLabel,
     ...(props.searchable === true ? { searchable: true } : {}),
